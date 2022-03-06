@@ -13,6 +13,7 @@ services:
       # 8080 is the default port
       - ${EXTERNAL_PORT:-7574}:8080
     volumes:
+      - ./locales/:/home/node/app/locales/
       - ./.env:/home/node/app/.env
       - /home/node/app/node_modules
     networks:

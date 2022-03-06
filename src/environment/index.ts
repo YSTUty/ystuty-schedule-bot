@@ -23,3 +23,8 @@ export const SERVER_PORT: number = +process.env.SERVER_PORT || 7574;
 
 export const YSTUTY_PARSER_URL: string =
     process.env.YSTUTY_PARSER_URL || `http://app_srv:7576`;
+
+export const SOCIAL_VK_GROUP_ID: number =
+    +process.env.SOCIAL_VK_GROUP_ID || null;
+export const SOCIAL_VK_GROUP_TOKEN: string =
+    process.env.SOCIAL_VK_GROUP_TOKEN || '';

@@ -1,0 +1,41 @@
+language_name: Русский
+
+common:
+  error: 💢 Произошла ошибка.
+  no_access: Нет доступа.
+  cooldown: ⏳ Cooldown...
+  canceled: 🔄 Отменено
+
+button:
+  cancel: Отмена
+  schedule:
+    schedule: Расписание
+    for_today: На сегодня
+    for_tomorrow: На завтра
+    for_week: На неделю
+    for_next_week: На следующую
+
+regexp:
+  start: //start/
+  schedule:
+    select_group: /^(?<trigger>(group|группа) ?)?${patternGroupName}?$/i
+    for_one_day: /^(расписание|.тт)((?<tomorrow> на завтра)|( через (?<skipDays>[0-9]{1,3})))?( ${patternGroupName})?$/i
+    for_week: /^((расписание|.тт) на(?<next> (след(ующую)?))? неделю)( ${patternGroupName})?$/i
+
+page:
+  start: |
+    Привет!
+  schedule:
+    nearest_schedule: |
+      Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
+      ${content}
+    not_found_today: На этот день нету расписания
+  select_group:
+    enter_name_with_example: |
+      Напиши название нужной группы.\nНапример, ${randomGroupName} \
+      или ${randomGroupName2.toLowerCase()}
+    selected: |
+      Выбрана группа: ${selectedGroupName}
+    not_found: |
+      Ошибка: Группа '${groupName}' не найдена
+    reset: Группа сброшена

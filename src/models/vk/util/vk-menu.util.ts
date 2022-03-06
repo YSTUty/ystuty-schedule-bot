@@ -1,0 +1,38 @@
+import { IMessageContext, LocalePhrase } from '@my-interfaces';
+import { patternGroupName } from '@my-common';
+
+const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
+
+// Custom template data
+const templateData = { patternGroupName };
+
+export const checkLocaleCondition =
+    (phrases: LocalePhrase[]) =>
+    (value: string = undefined, ctx: IMessageContext) => {
+        const passed = phrases
+            .map((e) => [e, ctx.i18n.t(e, templateData)])
+            .some(([key, phrase]) => {
+                // By keyboard button
+                if (ctx.state?.phrase === phrase) {
+                    return true;
+                }
+
+                if (
+                    key.split('.')[0] === 'regexp' &&
+                    regExpByRegExp.test(phrase)
+                ) {
+                    const { regex_body, regex_flags } =
+                        phrase.match(regExpByRegExp).groups;
+                    const regExp = new RegExp(regex_body, regex_flags);
+
+                    if (regExp.test(value)) {
+                        ctx.$match = value.match(regExp);
+                        return true;
+                    }
+                }
+
+                return phrase === value;
+            });
+
+        return passed;
+    };

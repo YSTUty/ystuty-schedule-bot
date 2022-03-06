@@ -1,0 +1,13 @@
+/.git
+/.github
+/.vscode
+/coverage
+docker-compose.yml
+docker-compose.prod.yml
+README.md
+
+# Node Files #
+/node_modules
+npm-debug.log
+npm-debug.log.*
+

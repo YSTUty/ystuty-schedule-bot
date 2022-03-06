@@ -7,6 +7,7 @@ import { SceneManager } from '@vk-io/scenes';
 import { RedisStorage } from 'vk-io-redis-storage';
 import { NextMiddleware, MiddlewareReturn } from 'middleware-io';
 import { IContext, IMessageContext, LocalePhrase } from '@my-interfaces';
+import * as xEnv from '@my-environment';
 
 import { VKMenuFactory } from '../vk-menu.factory';
 import { i18n } from '../util/i18n.util';
@@ -30,7 +31,13 @@ export class MainMiddleware {
 
         private readonly vkMenuFactory: VKMenuFactory,
     ) {
-        this.redisStorage = new RedisStorage();
+        this.redisStorage = new RedisStorage({
+            host: xEnv.REDIS_HOST,
+            port: xEnv.REDIS_PORT,
+            db: xEnv.REDIS_DATABASE,
+            username: xEnv.REDIS_USER,
+            password: xEnv.REDIS_PASSWORD,
+        });
 
         this.sessionManager = new SessionManager({
             storage: this.redisStorage,

@@ -1021,6 +1021,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/ioredis@4.28.8":
+  version "4.28.8"
+  resolved "https://registry.yarnpkg.com/@types/ioredis/-/ioredis-4.28.8.tgz#a181d6eb70e402a6db670fe54b9c5bb66c0fac17"
+  integrity sha512-mULOyO2smtvkE1zmzRRA4P0+1UjEqusi014kXOL1q3CY0RgqkR5/wKvv+vAJbPw2Q66wPyylKeevUy+m/FaRMg==
+  dependencies:
+    "@types/node" "*"
+
 "@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0", "@types/istanbul-lib-coverage@^2.0.1":
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/@types/istanbul-lib-coverage/-/istanbul-lib-coverage-2.0.4.tgz#8467d4b3c087805d63580480890791277ce35c44"
@@ -6023,11 +6030,12 @@ vk-io-i18n@^0.0.1:
     compile-template "^0.3.1"
     js-yaml "^4.1.0"
 
-vk-io-redis-storage@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/vk-io-redis-storage/-/vk-io-redis-storage-1.0.0.tgz#a79dc2f36ba1341fc7c15e637f777b78b8527a93"
-  integrity sha512-qOpoigMO11mKtr0PgKBgZhYWB1/zKouqekjuKxox2n4PyksPMtOfT7c1/w4ektU2R3ivUwMiTe4LD1gTn7rrqw==
+vk-io-redis-storage@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/vk-io-redis-storage/-/vk-io-redis-storage-1.0.1.tgz#baa88697576931046e359611d3d58623981d99a7"
+  integrity sha512-5XovVahJLqZvDaI7dfZ/Ck8hcodcc+H752z8Sycom4rx9oIQj0giStd2OK1ukdBfsgi70sRng24GRPKJl1h0Tw==
   dependencies:
+    "@types/ioredis" "4.28.8"
     "@vk-io/session" "^2.1.0"
     ioredis "4.28.5"
 

@@ -40,4 +40,4 @@ lerna-debug.log*
 .env.*
 !.env.example
 
-/data
+/redis-data

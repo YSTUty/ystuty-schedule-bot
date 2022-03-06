@@ -19,10 +19,17 @@ export const NODE_ENV: EnvType =
 
 export const INSTANCE_NAME: string = process.env.INSTANCE_NAME || 'ystuty-bot';
 
-export const SERVER_PORT: number = +process.env.SERVER_PORT || 7574;
+export const SERVER_PORT: number = +process.env.SERVER_PORT || 8080;
 
 export const YSTUTY_PARSER_URL: string =
-    process.env.YSTUTY_PARSER_URL || `http://app_srv:7576`;
+    process.env.YSTUTY_PARSER_URL || `http://ystuty_parser:8080`;
+
+// Redis
+export const REDIS_HOST: string = process.env.REDIS_HOST || 'redis';
+export const REDIS_PORT: number = +process.env.REDIS_PORT || 6379;
+export const REDIS_USER: string = process.env.REDIS_USER;
+export const REDIS_PASSWORD: string = process.env.REDIS_PASSWORD;
+export const REDIS_DATABASE: number = +process.env.REDIS_DATABASE || 0;
 
 export const SOCIAL_VK_GROUP_ID: number =
     +process.env.SOCIAL_VK_GROUP_ID || null;

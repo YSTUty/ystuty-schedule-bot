@@ -48,7 +48,7 @@
     "rxjs": "^7.2.0",
     "vk-io": "^4.5.0",
     "vk-io-i18n": "^0.0.1",
-    "vk-io-redis-storage": "^1.0.0"
+    "vk-io-redis-storage": "1.0.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^16.1.0",

@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  app_srv:
+    build:
+      context: .
+      target: base
+      dockerfile: ./Dockerfile
+    command: yarn start:dev
+    links:
+      - redis
+    ports:
+      # 8080 is the default port
+      - ${EXTERNAL_PORT:-7574}:8080
+    volumes:
+      - ./.env:/home/node/app/.env
+      - /home/node/app/node_modules
+    networks:
+      - ystuty_network
+    restart: unless-stopped
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+  redis:
+    image: 'redis:alpine'
+    volumes:
+      - ./redis-data:/data
+    networks:
+      - ystuty_network
+
+networks:
+  ystuty_network:
+    external:
+      name: ystuty_network

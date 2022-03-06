@@ -26,6 +26,10 @@ export class VkUpdate {
 
     @VkHearsLocale(LocalePhrase.RegExp_Start)
     async hearStart(@Ctx() ctx: IMessageContext) {
+        if (ctx.isChat && !ctx.state.appeal) {
+            return;
+        }
+
         const keyboard = this.vkMenuFactory.getStart(ctx);
         ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
     }

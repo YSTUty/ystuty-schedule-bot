@@ -64,9 +64,11 @@ export class YSTUtyService implements OnModuleInit {
     }
 
     public get randomGroupName() {
-        return this.allGroupsList[
-            Math.floor(Math.random() * this.allGroupsList.length)
-        ];
+        return (
+            this.allGroupsList[
+                Math.floor(Math.random() * this.allGroupsList.length)
+            ] || '-'
+        );
     }
 
     public async findNext({

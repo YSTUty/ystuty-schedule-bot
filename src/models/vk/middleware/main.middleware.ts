@@ -9,7 +9,7 @@ import { NextMiddleware, MiddlewareReturn } from 'middleware-io';
 import { IContext, IMessageContext, LocalePhrase } from '@my-interfaces';
 import * as xEnv from '@my-environment';
 
-import { VKMenuFactory } from '../vk-menu.factory';
+import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { i18n } from '../util/i18n.util';
 import { checkLocaleCondition } from '../util/vk-menu.util';
 
@@ -29,7 +29,7 @@ export class MainMiddleware {
         @Inject(VK_SCENE_MANAGER)
         private readonly sceneManager: SceneManager,
 
-        private readonly vkMenuFactory: VKMenuFactory,
+        private readonly keyboardFactory: VKKeyboardFactory,
     ) {
         this.redisStorage = new RedisStorage({
             host: xEnv.REDIS_HOST,
@@ -116,7 +116,7 @@ export class MainMiddleware {
                 return next();
             }
 
-            const keyboard = this.vkMenuFactory.getClose(ctx);
+            const keyboard = this.keyboardFactory.getClose(ctx);
             if (
                 checkLocaleCondition([LocalePhrase.Button_Cancel])(
                     ctx.text,

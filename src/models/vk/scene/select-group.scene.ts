@@ -2,14 +2,14 @@ import { Scene, AddStep, Ctx, SceneLeave } from 'nestjs-vk';
 import { IStepContext, LocalePhrase } from '@my-interfaces';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
-import { VKMenuFactory } from '../vk-menu.factory';
+import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
 @Scene(SELECT_GROUP_SCENE)
 export class SelectGroupScene {
     constructor(
         private readonly ystutyService: YSTUtyService,
-        private readonly vkMenuFactory: VKMenuFactory,
+        private readonly keyboardFactory: VKKeyboardFactory,
     ) {}
 
     @AddStep()
@@ -27,7 +27,7 @@ export class SelectGroupScene {
         }
 
         if (ctx.scene.step.firstTime && !groupName) {
-            const keyboard = this.vkMenuFactory.getCancel(ctx);
+            const keyboard = this.keyboardFactory.getCancel(ctx);
             ctx.send(
                 ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
                     randomGroupName: this.ystutyService.randomGroupName,
@@ -41,7 +41,7 @@ export class SelectGroupScene {
         if (groupName === '0') {
             session.selectedGroupName = undefined;
 
-            const keyboard = this.vkMenuFactory.getStart(ctx);
+            const keyboard = this.keyboardFactory.getStart(ctx);
             ctx.send(ctx.i18n.t(LocalePhrase.Page_SelectGroup_Reset), {
                 keyboard,
             });
@@ -52,7 +52,7 @@ export class SelectGroupScene {
         if (selectedGroupName) {
             session.selectedGroupName = selectedGroupName;
 
-            const keyboard = this.vkMenuFactory.getStart(ctx);
+            const keyboard = this.keyboardFactory.getStart(ctx);
             ctx.send(
                 ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
                     selectedGroupName,
@@ -62,7 +62,7 @@ export class SelectGroupScene {
             return ctx.scene.leave();
         }
 
-        const keyboard = this.vkMenuFactory.getCancel(ctx);
+        const keyboard = this.keyboardFactory.getCancel(ctx);
         return ctx.send(
             ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
             { keyboard },
@@ -71,7 +71,7 @@ export class SelectGroupScene {
 
     @SceneLeave()
     onSceneLeave(@Ctx() ctx: IStepContext) {
-        // const keyboard = this.vkMenuFactory.getClose(ctx);
+        // const keyboard = this.keyboardFactory.getClose(ctx);
         // ctx.send(ctx.i18n.t('Done.'), { keyboard });
     }
 }

@@ -4,7 +4,7 @@ import * as nestVk from 'nestjs-vk';
 
 import { MainMiddleware } from './middleware/main.middleware';
 
-import { VKMenuFactory } from './vk-menu.factory';
+import { VKKeyboardFactory } from './vk-keyboard.factory';
 import { VkUpdate } from './vk.update';
 import { VkService } from './vk.service';
 import { SelectGroupScene } from './scene/select-group.scene';
@@ -35,12 +35,12 @@ const middlewares = [MainMiddleware];
         ],
         providers: [
             ...middlewares,
-            VKMenuFactory,
+            VKKeyboardFactory,
             VkService,
             VkUpdate,
             SelectGroupScene,
         ],
-        exports: [...middlewares, VKMenuFactory, VkService],
+        exports: [...middlewares, VKKeyboardFactory, VkService],
     }),
 })
 export class VkModule {}

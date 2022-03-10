@@ -8,7 +8,7 @@ import { YSTUtyService } from '../ystuty/ystuty.service';
 
 import { VkHearsLocale } from './decorators/vk-hears-locale.decorator';
 import { VkService } from './vk.service';
-import { VKMenuFactory } from './vk-menu.factory';
+import { VKKeyboardFactory } from './vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from './vk.constants';
 
 @Update()
@@ -21,7 +21,7 @@ export class VkUpdate {
         private readonly vk: VK,
         private readonly vkService: VkService,
         private readonly ystutyService: YSTUtyService,
-        private readonly vkMenuFactory: VKMenuFactory,
+        private readonly keyboardFactory: VKKeyboardFactory,
     ) {}
 
     @VkHearsLocale(LocalePhrase.RegExp_Start)
@@ -30,7 +30,7 @@ export class VkUpdate {
             return;
         }
 
-        const keyboard = this.vkMenuFactory.getStart(ctx);
+        const keyboard = this.keyboardFactory.getStart(ctx);
         ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
     }
 
@@ -93,7 +93,7 @@ export class VkUpdate {
             message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
         }
 
-        const keyboard = this.vkMenuFactory
+        const keyboard = this.keyboardFactory
             .getSchedule(ctx, groupName)
             .inline(true);
         ctx.send(`${message}\n[${groupName}]`, { keyboard });
@@ -147,7 +147,7 @@ export class VkUpdate {
             message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
         }
 
-        const keyboard = this.vkMenuFactory
+        const keyboard = this.keyboardFactory
             .getSchedule(ctx, groupName)
             .inline(true);
         ctx.send(`${message}\n[${groupName}]`, { keyboard });

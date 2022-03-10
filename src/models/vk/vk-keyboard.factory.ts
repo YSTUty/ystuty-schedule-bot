@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Keyboard } from 'vk-io';
-import { IMessageContext, LocalePhrase } from '@my-interfaces';
+import { LocalePhrase } from '@my-interfaces';
+import { IMessageContext } from '@my-interfaces/vk';
 
 @Injectable()
-export class VKMenuFactory {
+export class VKKeyboardFactory {
     public getStart(ctx: IMessageContext) {
         return Keyboard.keyboard([
             [

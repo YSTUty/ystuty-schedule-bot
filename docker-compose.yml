@@ -15,7 +15,6 @@ services:
     volumes:
       - ./locales/:/home/node/app/locales/
       - ./.env:/home/node/app/.env
-      - /home/node/app/node_modules
     networks:
       - ystuty_network
     restart: unless-stopped

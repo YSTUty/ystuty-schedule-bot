@@ -117,13 +117,13 @@ export class MainMiddleware {
                 return next();
             }
 
-            const keyboard = this.keyboardFactory.getClose(ctx);
             if (
                 checkLocaleCondition([LocalePhrase.Button_Cancel])(
                     ctx.text,
                     ctx,
                 )
             ) {
+                const keyboard = this.keyboardFactory.getClose(ctx);
                 ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
                     keyboard,
                 });

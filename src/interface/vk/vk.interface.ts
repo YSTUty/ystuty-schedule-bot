@@ -9,12 +9,16 @@ import { ISessionContext } from '@vk-io/session';
 interface ISessionState {
     selectedGroupName?: string;
 }
+interface ISessionConversationState {
+    selectedGroupName?: string;
+    hideStaticKeyboard?: boolean;
+}
 
 type CombinedContext = {
     readonly i18n: I18nContext;
 } & {
     session: ISessionContext & ISessionState;
-    sessionConversation: ISessionContext & ISessionState;
+    sessionConversation: ISessionContext & ISessionConversationState;
 } & {};
 
 export type IContext<T = {}> = VKContext & CombinedContext & T;

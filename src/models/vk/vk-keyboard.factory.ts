@@ -5,6 +5,12 @@ import { IMessageContext } from '@my-interfaces/vk';
 
 @Injectable()
 export class VKKeyboardFactory {
+    public needInline(ctx: IMessageContext) {
+        return (
+            ctx.isChat && ctx.sessionConversation.hideStaticKeyboard !== false
+        );
+    }
+
     public getStart(ctx: IMessageContext) {
         return Keyboard.keyboard([
             [

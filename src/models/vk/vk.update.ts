@@ -1,5 +1,5 @@
 import { Logger, UseFilters } from '@nestjs/common';
-import { InjectVkApi, Update, Ctx, HearFallback } from 'nestjs-vk';
+import { InjectVkApi, Update, Ctx, HearFallback, Hears } from 'nestjs-vk';
 import { VK, APIError } from 'vk-io';
 import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
@@ -31,7 +31,9 @@ export class VkUpdate {
             return;
         }
 
-        const keyboard = this.keyboardFactory.getStart(ctx);
+        const keyboard = this.keyboardFactory
+            .getStart(ctx)
+            .inline(this.keyboardFactory.needInline(ctx));
         ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
     }
 
@@ -185,6 +187,36 @@ export class VkUpdate {
         }
 
         ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+    }
+
+    @Hears(/it(.?)s boom( ?(?<state>false))?$/i)
+    async hearHideStaticKeyboard(@Ctx() ctx: IMessageContext) {
+        const isHide = ctx.$match?.groups?.state?.toLowerCase() !== 'false';
+
+        if (ctx.isChat) {
+            try {
+                const { items } =
+                    await this.vk.api.messages.getConversationMembers({
+                        peer_id: ctx.peerId,
+                    });
+                if (!items.find((e) => e.member_id === ctx.senderId).is_admin) {
+                    return ctx.i18n.t(LocalePhrase.Common_NoAccess);
+                }
+            } catch {}
+
+            ctx.sessionConversation.hideStaticKeyboard = isHide;
+        }
+
+        if (!isHide) {
+            ctx.send('Live', { sticker_id: 14144 }); // Relax
+            return;
+        }
+
+        const keyboard = this.keyboardFactory.getClose(ctx);
+        ctx.send('Boom', {
+            sticker_id: 5574, // Boom
+            keyboard,
+        });
     }
 
     @HearFallback()

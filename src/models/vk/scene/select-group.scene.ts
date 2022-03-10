@@ -28,7 +28,9 @@ export class SelectGroupScene {
         }
 
         if (ctx.scene.step.firstTime && !groupName) {
-            const keyboard = this.keyboardFactory.getCancel(ctx);
+            const keyboard = this.keyboardFactory
+                .getCancel(ctx)
+                .inline(this.keyboardFactory.needInline(ctx));
             ctx.send(
                 ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
                     randomGroupName: this.ystutyService.randomGroupName,
@@ -42,7 +44,9 @@ export class SelectGroupScene {
         if (groupName === '0') {
             session.selectedGroupName = undefined;
 
-            const keyboard = this.keyboardFactory.getStart(ctx);
+            const keyboard = this.keyboardFactory
+                .getStart(ctx)
+                .inline(this.keyboardFactory.needInline(ctx));
             ctx.send(ctx.i18n.t(LocalePhrase.Page_SelectGroup_Reset), {
                 keyboard,
             });
@@ -53,7 +57,9 @@ export class SelectGroupScene {
         if (selectedGroupName) {
             session.selectedGroupName = selectedGroupName;
 
-            const keyboard = this.keyboardFactory.getStart(ctx);
+            const keyboard = this.keyboardFactory
+                .getStart(ctx)
+                .inline(this.keyboardFactory.needInline(ctx));
             ctx.send(
                 ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
                     selectedGroupName,
@@ -63,7 +69,9 @@ export class SelectGroupScene {
             return ctx.scene.leave();
         }
 
-        const keyboard = this.keyboardFactory.getCancel(ctx);
+        const keyboard = this.keyboardFactory
+            .getCancel(ctx)
+            .inline(this.keyboardFactory.needInline(ctx));
         return ctx.send(
             ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
             { keyboard },
@@ -72,7 +80,9 @@ export class SelectGroupScene {
 
     @SceneLeave()
     onSceneLeave(@Ctx() ctx: IStepContext) {
-        // const keyboard = this.keyboardFactory.getClose(ctx);
+        // const keyboard = this.keyboardFactory
+        //     .getClose(ctx)
+        //     .inline(this.keyboardFactory.onlyInline(ctx));
         // ctx.send(ctx.i18n.t('Done.'), { keyboard });
     }
 }

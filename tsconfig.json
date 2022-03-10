@@ -29,6 +29,9 @@
       ],
       "@my-interfaces": [
         "./src/interface"
+      ],
+      "@my-interfaces/*": [
+        "./src/interface/*"
       ]
     }
   }

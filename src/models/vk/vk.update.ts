@@ -1,8 +1,9 @@
 import { Logger, UseFilters } from '@nestjs/common';
 import { InjectVkApi, Update, Ctx, HearFallback } from 'nestjs-vk';
 import { VK, APIError } from 'vk-io';
-import { IMessageContext, LocalePhrase } from '@my-interfaces';
 import { VkExceptionFilter } from '@my-common';
+import { LocalePhrase } from '@my-interfaces';
+import { IMessageContext } from '@my-interfaces/vk';
 
 import { YSTUtyService } from '../ystuty/ystuty.service';
 

@@ -6,15 +6,15 @@ import { I18nContext } from 'vk-io-i18n';
 import { IStepContext as IVKStepContext } from '@vk-io/scenes';
 import { ISessionContext } from '@vk-io/session';
 
-type SessionState = {
+interface ISessionState {
     selectedGroupName?: string;
-};
+}
 
 type CombinedContext = {
     readonly i18n: I18nContext;
 } & {
-    session: ISessionContext & SessionState;
-    sessionConversation: ISessionContext & SessionState;
+    session: ISessionContext & ISessionState;
+    sessionConversation: ISessionContext & ISessionState;
 } & {};
 
 export type IContext<T = {}> = VKContext & CombinedContext & T;

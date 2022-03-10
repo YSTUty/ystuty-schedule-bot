@@ -1,5 +1,6 @@
 import { Scene, AddStep, Ctx, SceneLeave } from 'nestjs-vk';
-import { IStepContext, LocalePhrase } from '@my-interfaces';
+import { LocalePhrase } from '@my-interfaces';
+import { IStepContext } from '@my-interfaces/vk';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';

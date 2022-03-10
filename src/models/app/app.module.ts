@@ -3,11 +3,12 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
-import { VkModule } from '../vk/vk.module';
 import { YSTUtyModule } from '../ystuty/ystuty.module';
+import { VkModule } from '../vk/vk.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-    imports: [VkModule, YSTUtyModule],
+    imports: [YSTUtyModule, VkModule, TelegramModule],
     controllers: [AppController],
     providers: [AppService],
 })

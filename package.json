@@ -34,10 +34,12 @@
     "release:major": "standard-version --release-as major"
   },
   "dependencies": {
+    "@esindger/telegraf-i18n": "^0.5.5",
     "@nestjs/common": "^8.0.0",
     "@nestjs/core": "^8.0.0",
     "@nestjs/platform-express": "^8.0.0",
     "@vk-io/hear": "^1.1.0",
+    "@xtcry/nestjs-telegraf": "^2.2.4",
     "axios": "^0.26.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.13.2",
@@ -46,6 +48,8 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0",
+    "telegraf": "^4.7.0",
+    "telegraf-session-redis": "^5.1.0",
     "vk-io": "^4.5.0",
     "vk-io-i18n": "^0.0.1",
     "vk-io-redis-storage": "1.0.1"

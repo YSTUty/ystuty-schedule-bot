@@ -6,7 +6,8 @@ import { SessionManager } from '@vk-io/session';
 import { SceneManager } from '@vk-io/scenes';
 import { RedisStorage } from 'vk-io-redis-storage';
 import { NextMiddleware, MiddlewareReturn } from 'middleware-io';
-import { IContext, IMessageContext, LocalePhrase } from '@my-interfaces';
+import { LocalePhrase } from '@my-interfaces';
+import { IContext, IMessageContext } from '@my-interfaces/vk';
 import * as xEnv from '@my-environment';
 
 import { VKKeyboardFactory } from '../vk-keyboard.factory';

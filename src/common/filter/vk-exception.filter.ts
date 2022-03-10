@@ -1,7 +1,8 @@
 import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import { VkArgumentsHost } from 'nestjs-vk';
 import { MessageEventContext } from 'vk-io';
-import { IContext, IMessageContext, LocalePhrase } from '@my-interfaces';
+import { LocalePhrase } from '@my-interfaces';
+import { IContext, IMessageContext } from '@my-interfaces/vk';
 
 @Catch()
 export class VkExceptionFilter implements ExceptionFilter {

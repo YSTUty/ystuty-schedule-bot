@@ -1,0 +1,1 @@
+export const SELECT_GROUP_SCENE = 'SELECT_GROUP_SCENE';

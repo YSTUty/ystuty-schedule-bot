@@ -27,7 +27,7 @@ export class YSTUtyService implements OnModuleInit {
 
     public readonly ystutyApi = axios.create({
         baseURL: xEnv.YSTUTY_PARSER_URL,
-        timeout: 3e3,
+        timeout: 60e3,
     });
 
     constructor() {}

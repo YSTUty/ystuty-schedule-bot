@@ -40,15 +40,15 @@ export class SelectGroupScene extends BaseScene {
         } = ctx;
         let { groupName } = state;
 
+        const isChat = ctx.chat.type !== 'private';
+        const session = !isChat ? ctx.session : ctx.sessionConversation;
+
         if (!('text' in ctx.message)) {
             return;
         }
 
         const firstTime = state.firstTime !== false;
         state.firstTime = false;
-
-        const isChat = ctx.chat.type !== 'private';
-        const session = !isChat ? ctx.session : ctx.sessionConversation;
 
         if (!firstTime) {
             groupName = ctx.message.text;
@@ -63,6 +63,10 @@ export class SelectGroupScene extends BaseScene {
                 }),
                 keyboard,
             );
+            return;
+        }
+
+        if (isChat && !ctx.state.appeal) {
             return;
         }
 

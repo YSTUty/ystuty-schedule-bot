@@ -41,6 +41,10 @@ export class SelectGroupScene {
             return;
         }
 
+        if (isChat && !ctx.state.appeal) {
+            return;
+        }
+
         if (groupName === '0') {
             session.selectedGroupName = undefined;
 

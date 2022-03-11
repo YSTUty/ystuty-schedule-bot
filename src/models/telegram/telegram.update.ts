@@ -205,8 +205,6 @@ export class StartTelegramUpdate {
         const groupName = ctx.match?.groups?.groupName;
         const withTrigger = !!ctx.match?.groups?.trigger;
 
-        console.log(ctx.message);
-
         if (chat.type !== 'private') {
             if (!withTrigger && !state.appeal) {
                 return;
@@ -219,7 +217,7 @@ export class StartTelegramUpdate {
 
                 if (
                     !['administrator', 'creator'].includes(
-                        members.find((e) => e.user.id === from.id).status,
+                        members.find((e) => e.user.id === from.id)?.status,
                     )
                 ) {
                     return ctx.i18n.t(LocalePhrase.Common_NoAccess);

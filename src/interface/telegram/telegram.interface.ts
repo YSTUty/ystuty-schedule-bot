@@ -6,6 +6,7 @@ import {
     WizardSessionData,
 } from 'telegraf/typings/scenes';
 import * as tg from 'telegraf/typings/core/types/typegram';
+import { Deunionize } from 'telegraf/typings/deunionize';
 import { I18nContext } from '@esindger/telegraf-i18n';
 import { LocalePhrase } from '@my-interfaces';
 
@@ -22,11 +23,18 @@ type WizardSession = {
     state: any;
 } & WizardSessionData;
 
-export type CombinedContext = {
+type ContextState = {
+    appeal: boolean;
+    [key: string]: any;
+};
+
+type CombinedContext = {
     session: ISessionState;
     sessionConversation: ISessionState;
 
     match?: RegExpExecArray;
+
+    state: ContextState;
 
     scene: Scenes.SceneContextScene<
         Scenes.SceneContext<SceneSession>,
@@ -37,10 +45,12 @@ export type CombinedContext = {
     tryAnswerCbQuery: Context['answerCbQuery'];
 };
 
-export type IContext<T = {}> = CombinedContext & Context & T;
-export type IMessageContext<T = {}> = CombinedContext &
-    Context<tg.Update.MessageUpdate> &
-    T;
+export type IContext<
+    T = {},
+    U extends Deunionize<tg.Update> = tg.Update,
+> = CombinedContext & Context<U> & T;
+
+export type IMessageContext<T = {}> = IContext<T, tg.Update.MessageUpdate>;
 
 export type ISceneContext = IMessageContext & {
     scene: Scenes.SceneContextScene<

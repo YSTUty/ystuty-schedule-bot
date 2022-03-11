@@ -14,6 +14,11 @@ interface ISessionConversationState {
     hideStaticKeyboard?: boolean;
 }
 
+type ContextState = {
+    appeal: boolean;
+    [key: string]: any;
+};
+
 type CombinedContext = {
     readonly i18n: I18nContext;
 } & {
@@ -21,6 +26,8 @@ type CombinedContext = {
     sessionConversation: ISessionContext & ISessionConversationState;
 } & {};
 
-export type IContext<T = {}> = VKContext & CombinedContext & T;
-export type IMessageContext = VKMessageContext & CombinedContext;
+export type IContext<T = {}> = VKContext<{}, ContextState> &
+    CombinedContext &
+    T;
+export type IMessageContext = VKMessageContext<ContextState> & CombinedContext;
 export type IStepContext = IVKStepContext & IMessageContext;

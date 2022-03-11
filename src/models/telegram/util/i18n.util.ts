@@ -6,7 +6,7 @@ import { IContext } from '@my-interfaces/telegram';
 
 export const i18n: I18n = new I18n({
     defaultLanguage: 'ru',
-    directory: resolve(__dirname, '../../../../locales'),
+    directory: resolve(__dirname, '../../../../locales/telegram'),
     defaultLanguageOnMissing: true,
     useSession: true,
 });

@@ -46,8 +46,9 @@ export class VkUpdate {
     async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
         const session = !ctx.isChat ? ctx.session : ctx.sessionConversation;
 
+        const groupNameFromMath = ctx.$match?.groups?.groupName;
         const groupName = this.ystutyService.getGroupByName(
-            ctx.$match?.groups?.groupName ||
+            groupNameFromMath ||
                 ctx.messagePayload?.groupName ||
                 session.selectedGroupName,
         );
@@ -60,6 +61,14 @@ export class VkUpdate {
                 LocalePhrase.Button_Schedule_ForTomorrow;
 
         if (!groupName) {
+            if (session.selectedGroupName) {
+                ctx.replyWithHTML(
+                    ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+                        groupName: groupNameFromMath,
+                    }),
+                );
+                return;
+            }
             ctx.scene.enter(SELECT_GROUP_SCENE);
             return;
         }
@@ -110,8 +119,9 @@ export class VkUpdate {
     async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
         const session = !ctx.isChat ? ctx.session : ctx.sessionConversation;
 
+        const groupNameFromMath = ctx.$match?.groups?.groupName;
         const groupName = this.ystutyService.getGroupByName(
-            ctx.$match?.groups?.groupName ||
+            groupNameFromMath ||
                 ctx.messagePayload?.groupName ||
                 session.selectedGroupName,
         );
@@ -123,6 +133,14 @@ export class VkUpdate {
         let skipDays = isNextWeek ? 7 + 1 : 1;
 
         if (!groupName) {
+            if (session.selectedGroupName) {
+                ctx.replyWithHTML(
+                    ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+                        groupName: groupNameFromMath,
+                    }),
+                );
+                return;
+            }
             ctx.scene.enter(SELECT_GROUP_SCENE);
             return;
         }

@@ -55,8 +55,9 @@ export class StartTelegramUpdate {
         const session =
             ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
 
+        const groupNameFromMath = ctx.match?.groups?.groupName;
         const groupName = this.ystutyService.getGroupByName(
-            ctx.match?.groups?.groupName || session.selectedGroupName,
+            groupNameFromMath || session.selectedGroupName,
         );
 
         const _skipDays = ctx.match?.groups?.skipDays ?? null;
@@ -67,6 +68,14 @@ export class StartTelegramUpdate {
                 LocalePhrase.Button_Schedule_ForTomorrow;
 
         if (!groupName) {
+            if (session.selectedGroupName) {
+                ctx.replyWithHTML(
+                    ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+                        groupName: groupNameFromMath,
+                    }),
+                );
+                return;
+            }
             ctx.scene.enter(SELECT_GROUP_SCENE);
             return;
         }
@@ -145,8 +154,9 @@ export class StartTelegramUpdate {
         const session =
             ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
 
+        const groupNameFromMath = ctx.match?.groups?.groupName;
         const groupName = this.ystutyService.getGroupByName(
-            ctx.match?.groups?.groupName || session.selectedGroupName,
+            groupNameFromMath || session.selectedGroupName,
         );
 
         const isNextWeek =
@@ -156,6 +166,14 @@ export class StartTelegramUpdate {
         let skipDays = isNextWeek ? 7 + 1 : 1;
 
         if (!groupName) {
+            if (session.selectedGroupName) {
+                ctx.replyWithHTML(
+                    ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+                        groupName: groupNameFromMath,
+                    }),
+                );
+                return;
+            }
             ctx.scene.enter(SELECT_GROUP_SCENE);
             return;
         }

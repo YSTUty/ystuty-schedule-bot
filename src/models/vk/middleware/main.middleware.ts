@@ -33,11 +33,14 @@ export class MainMiddleware {
         private readonly keyboardFactory: VKKeyboardFactory,
     ) {
         this.redisStorage = new RedisStorage({
-            host: xEnv.REDIS_HOST,
-            port: xEnv.REDIS_PORT,
-            db: xEnv.REDIS_DATABASE,
-            username: xEnv.REDIS_USER,
-            password: xEnv.REDIS_PASSWORD,
+            redis: {
+                host: xEnv.REDIS_HOST,
+                port: xEnv.REDIS_PORT,
+                db: xEnv.REDIS_DATABASE,
+                username: xEnv.REDIS_USER,
+                password: xEnv.REDIS_PASSWORD,
+            },
+            ttl: 7 * 24 * 3600,
         });
 
         this.sessionManager = new SessionManager({

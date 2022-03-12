@@ -1,17 +1,13 @@
 ##
-# [container] builder
+# [container] deps
 ##
-FROM node:14-alpine AS builder
+FROM node:14-alpine AS deps
 
-WORKDIR /builder
+WORKDIR /deps
 
 # Install node dependencies - done in a separate step so Docker can cache it.
 COPY package*.json yarn.lock ./
 RUN yarn install
-
-COPY . ./
-
-RUN yarn build
 
 ##
 # [container] Production
@@ -20,10 +16,11 @@ FROM node:14-alpine AS base
 
 WORKDIR /home/node/app
 
-COPY --from=builder /builder/node_modules ./node_modules
-COPY --from=builder /builder/package*.json ./
-COPY --from=builder /builder/yarn.lock ./
-COPY --from=builder /builder/dist ./dist
+COPY --from=deps /deps/node_modules ./node_modules
+
+COPY . ./
+
+RUN yarn build
 
 ##
 # [container] Production

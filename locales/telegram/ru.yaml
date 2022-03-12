@@ -17,6 +17,7 @@ button:
 
 regexp:
   start: //?(start|старт|начать)/i
+  help: //?(help|помощь)/i
   schedule:
     select_group: /^(?<trigger>(group|группа) ?)?${patternGroupName}?$/i
     for_one_day: /^(расписание|.тт)((?<tomorrow> на завтра)|( через (?<skipDays>[0-9]{1,3})))?( ${patternGroupName})?$/i
@@ -24,6 +25,9 @@ regexp:
 
 page:
   start: |
+    Привет! Это бот для расписания ЯГТУ
+
+  help: |
     Команды для обращения к боту:
     <code>расписание</code> или сокращенно <code>.тт</code>
     • <code>.тт</code> - Получить расписание на текущий/следующий день

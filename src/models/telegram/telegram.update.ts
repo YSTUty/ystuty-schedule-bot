@@ -30,6 +30,16 @@ export class StartTelegramUpdate {
         ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
     }
 
+    @TgHearsLocale(LocalePhrase.RegExp_Help)
+    hearHelp(@Ctx() ctx: IMessageContext) {
+        if (ctx.chat.type !== 'private' && !ctx.state.appeal) {
+            return;
+        }
+
+        const keyboard = this.keyboardFactory.getStart(ctx);
+        ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Help), keyboard);
+    }
+
     @Command('tt')
     @Command('day')
     @TgHearsLocale([

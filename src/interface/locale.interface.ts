@@ -18,12 +18,14 @@ export enum LocalePhrase {
 
     // RegExps
     RegExp_Start = 'regexp.start',
+    RegExp_Help = 'regexp.help',
     RegExp_Schedule_SelectGroup = 'regexp.schedule.select_group',
     RegExp_Schedule_For_OneDay = 'regexp.schedule.for_one_day',
     RegExp_Schedule_For_Week = 'regexp.schedule.for_week',
 
     // Pages
     Page_Start = 'page.start',
+    Page_Help = 'page.help',
     Page_Schedule_NearestSchedule = 'page.schedule.nearest_schedule',
     Page_Schedule_NotFoundToday = 'page.schedule.not_found_today',
 

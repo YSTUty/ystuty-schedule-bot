@@ -37,6 +37,18 @@ export class VkUpdate {
         ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
     }
 
+    @VkHearsLocale(LocalePhrase.RegExp_Help)
+    hearHelp(@Ctx() ctx: IMessageContext) {
+        if (ctx.isChat && !ctx.state.appeal) {
+            return;
+        }
+
+        const keyboard = this.keyboardFactory
+            .getStart(ctx)
+            .inline(this.keyboardFactory.needInline(ctx));
+        ctx.send(ctx.i18n.t(LocalePhrase.Page_Help), { keyboard });
+    }
+
     @VkHearsLocale([
         LocalePhrase.RegExp_Schedule_For_OneDay,
         LocalePhrase.Button_Schedule_Schedule,

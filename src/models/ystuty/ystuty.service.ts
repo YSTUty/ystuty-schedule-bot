@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import axios from 'axios';
 import * as xEnv from '@my-environment';
 import { OneWeek, WeekNumberType } from '@my-interfaces';
-import { getLessonTypeStrArr } from '@my-common';
+import { getLessonTypeStrArr, matchGroupName } from '@my-common';
 
 const getWeekNumber = (date: Date = new Date()) => {
     const d = new Date(
@@ -61,6 +61,22 @@ export class YSTUtyService implements OnModuleInit {
                 (e) => e.toLowerCase() === groupName.toLowerCase(),
             )
         );
+    }
+
+    public parseGroupName(str: string) {
+        const match = matchGroupName(str, 'gi');
+        if (!match) {
+            return false;
+        }
+
+        for (const name of match) {
+            const groupName = this.getGroupByName(name);
+            if (groupName) {
+                return groupName;
+            }
+        }
+
+        return false;
     }
 
     public get randomGroupName() {

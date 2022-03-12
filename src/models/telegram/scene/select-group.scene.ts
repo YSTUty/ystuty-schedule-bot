@@ -43,30 +43,35 @@ export class SelectGroupScene extends BaseScene {
         const isChat = ctx.chat.type !== 'private';
         const session = !isChat ? ctx.session : ctx.sessionConversation;
 
-        if (!('text' in ctx.message)) {
-            return;
-        }
-
         const firstTime = state.firstTime !== false;
         state.firstTime = false;
 
-        if (!firstTime) {
+        if (ctx.message && 'text' in ctx.message && !firstTime) {
             groupName = ctx.message.text;
         }
 
         if (firstTime && !groupName) {
-            const keyboard = this.keyboardFactory.getCancel(ctx);
-            ctx.replyWithHTML(
-                ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
+            const content = ctx.i18n.t(
+                LocalePhrase.Page_SelectGroup_EnterNameWithExample,
+                {
                     randomGroupName: this.ystutyService.randomGroupName,
                     randomGroupName2: this.ystutyService.randomGroupName,
-                }),
-                keyboard,
+                },
             );
+            if (ctx.callbackQuery) {
+                const keyboard = this.keyboardFactory.getCancelInline(ctx);
+                ctx.editMessageText(content, {
+                    ...keyboard,
+                    parse_mode: 'HTML',
+                });
+            } else {
+                const keyboard = this.keyboardFactory.getCancel(ctx);
+                ctx.replyWithHTML(content, keyboard);
+            }
             return;
         }
 
-        if (isChat && !ctx.state.appeal) {
+        if ((isChat && !ctx.state.appeal) || !ctx.message) {
             return;
         }
 

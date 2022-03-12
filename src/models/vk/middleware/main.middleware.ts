@@ -1,6 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { VK_HEAR_MANAGER, VK_SCENE_MANAGER } from 'nestjs-vk';
-import { MessageContext, Context, Composer } from 'vk-io';
+import {
+    MessageContext,
+    Context,
+    Composer,
+    IMessageContextSendOptions,
+    getRandomId,
+} from 'vk-io';
 import { HearManager } from '@vk-io/hear';
 import { SessionManager } from '@vk-io/session';
 import { SceneManager } from '@vk-io/scenes';
@@ -88,6 +94,19 @@ export class MainMiddleware {
                 if (ctx.isOutbox) {
                     return;
                 }
+            } else {
+                // * safe `send` method for all context events
+                ctx.send = (
+                    text: string | IMessageContextSendOptions,
+                    params?: IMessageContextSendOptions,
+                ) =>
+                    (ctx as any).api.messages.send({
+                        random_id: getRandomId(),
+                        peer_ids: ctx.peerId,
+                        ...(typeof text === 'string'
+                            ? { message: text, ...params }
+                            : text),
+                    });
             }
 
             try {

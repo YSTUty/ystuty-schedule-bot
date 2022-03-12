@@ -1,11 +1,13 @@
-import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, Update } from '@xtcry/nestjs-telegraf';
+import { Logger, UseFilters } from '@nestjs/common';
+import { Action, Command, Ctx, Update, On } from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
+import * as tg from 'telegraf/typings/core/types/typegram';
 import { patternGroupName, TelegrafExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
-import { IMessageContext } from '@my-interfaces/telegram';
+import { IContext, IMessageContext } from '@my-interfaces/telegram';
 
 import { YSTUtyService } from '../ystuty/ystuty.service';
+import { TelegramService } from './telegram.service';
 
 import { TgHearsLocale } from './decorators/tg-hears-locale.decorator';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
@@ -14,9 +16,12 @@ import { SELECT_GROUP_SCENE } from './telegram.constants';
 @Update()
 @UseFilters(TelegrafExceptionFilter)
 export class StartTelegramUpdate {
+    private readonly logger = new Logger(StartTelegramUpdate.name);
+
     constructor(
-        private readonly ystutyService: YSTUtyService,
         private readonly keyboardFactory: TelegramKeyboardFactory,
+        private readonly ystutyService: YSTUtyService,
+        private readonly telegramService: TelegramService,
     ) {}
 
     @TgHearsLocale(LocalePhrase.Button_Cancel)
@@ -38,6 +43,54 @@ export class StartTelegramUpdate {
 
         const keyboard = this.keyboardFactory.getStart(ctx);
         ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Help), keyboard);
+    }
+
+    @On('my_chat_member')
+    async onMyChatMember(
+        @Ctx() ctx: IContext<{}, tg.Update.MyChatMemberUpdate>,
+    ) {
+        const {
+            chat,
+            new_chat_member: { status },
+        } = ctx.myChatMember;
+        if (chat.type === 'private') return;
+
+        this.logger.log(`New bot status: "${status}"`);
+
+        const { title } = chat;
+        if (status === 'member') {
+            const keyboard = this.keyboardFactory.getStart(ctx);
+            await ctx.replyWithHTML(
+                ctx.i18n.t(LocalePhrase.Page_Start),
+                keyboard,
+            );
+            this.telegramService.parseChatTitle(ctx, title);
+            if (!ctx.sessionConversation.selectedGroupName) {
+                const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
+                ctx.replyWithHTML(
+                    ctx.i18n.t(LocalePhrase.Page_InitBot),
+                    keyboard,
+                );
+            }
+        } else if (status === 'left') {
+            // TODO: remove all setting ?
+        }
+    }
+
+    @On('new_chat_title')
+    onNewChatTitle(@Ctx() ctx: IMessageContext) {
+        if ('new_chat_title' in ctx.message) {
+            this.telegramService.parseChatTitle(
+                ctx,
+                ctx.message.new_chat_title,
+            );
+        }
+    }
+
+    @Action(LocalePhrase.Button_SelectGroup)
+    async onSelectGroup(@Ctx() ctx: IMessageContext) {
+        ctx.scene.enter(SELECT_GROUP_SCENE);
+        ctx.answerCbQuery();
     }
 
     @Command('tt')

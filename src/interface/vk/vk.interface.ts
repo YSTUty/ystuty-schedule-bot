@@ -1,6 +1,7 @@
 import {
     Context as VKContext,
     MessageContext as VKMessageContext,
+    MessageEventContext as VKMessageEventContext,
 } from 'vk-io';
 import { I18nContext } from 'vk-io-i18n';
 import { IStepContext as IVKStepContext } from '@vk-io/scenes';
@@ -30,4 +31,7 @@ export type IContext<T = {}> = VKContext<{}, ContextState> &
     CombinedContext &
     T;
 export type IMessageContext = VKMessageContext<ContextState> & CombinedContext;
-export type IStepContext = IVKStepContext & IMessageContext;
+export type IMessageEventContext = VKMessageEventContext<ContextState> &
+    CombinedContext;
+export type IStepContext = IVKStepContext &
+    (IMessageContext | IMessageEventContext);

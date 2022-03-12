@@ -41,7 +41,7 @@ export class SelectGroupScene {
             return;
         }
 
-        if (isChat && !ctx.state.appeal) {
+        if ((isChat && !ctx.state.appeal) || !ctx.is(['message'])) {
             return;
         }
 

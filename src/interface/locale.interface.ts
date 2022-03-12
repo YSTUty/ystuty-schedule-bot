@@ -9,6 +9,7 @@ export enum LocalePhrase {
 
     // Buttons
     Button_Cancel = 'button.cancel',
+    Button_SelectGroup = 'button.select_group',
 
     Button_Schedule_Schedule = 'button.schedule.schedule',
     Button_Schedule_ForToday = 'button.schedule.for_today',
@@ -25,6 +26,7 @@ export enum LocalePhrase {
 
     // Pages
     Page_Start = 'page.start',
+    Page_InitBot = 'page.init_bot',
     Page_Help = 'page.help',
     Page_Schedule_NearestSchedule = 'page.schedule.nearest_schedule',
     Page_Schedule_NotFoundToday = 'page.schedule.not_found_today',

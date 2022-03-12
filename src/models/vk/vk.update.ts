@@ -1,9 +1,9 @@
 import { Logger, UseFilters } from '@nestjs/common';
-import { InjectVkApi, Update, Ctx, HearFallback, Hears } from 'nestjs-vk';
+import { InjectVkApi, Update, Ctx, HearFallback, Hears, On } from 'nestjs-vk';
 import { VK, APIError } from 'vk-io';
 import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
-import { IMessageContext } from '@my-interfaces/vk';
+import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { YSTUtyService } from '../ystuty/ystuty.service';
 
@@ -47,6 +47,48 @@ export class VkUpdate {
             .getStart(ctx)
             .inline(this.keyboardFactory.needInline(ctx));
         ctx.send(ctx.i18n.t(LocalePhrase.Page_Help), { keyboard });
+    }
+
+    @On('chat_invite_user')
+    async onChatInviteUser(@Ctx() ctx: IMessageContext) {
+        if (ctx.eventMemberId !== -ctx.$groupId) {
+            return;
+        }
+
+        this.logger.log(
+            `Bot is invited by '${ctx.senderId}' to a new conversation: '${ctx.peerId}'`,
+        );
+
+        const keyboard = this.keyboardFactory.getStart(ctx);
+        await ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
+
+        // this.vkService.parseChatTitle(ctx, title);
+        if (!ctx.sessionConversation.selectedGroupName) {
+            const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
+            ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot), { keyboard });
+        }
+    }
+
+    @On('chat_title_update')
+    async onChatTitleUpdate(@Ctx() ctx: IMessageContext) {
+        this.vkService.parseChatTitle(ctx, ctx.eventText);
+    }
+
+    @On('message_event')
+    // TODO: add event/action decorator
+    async onMessageEvent(@Ctx() ctx: IMessageEventContext) {
+        const phrase = ctx.eventPayload.phrase as LocalePhrase;
+        if (!phrase) return;
+
+        switch (phrase) {
+            case LocalePhrase.Button_SelectGroup: {
+                ctx.scene.enter(SELECT_GROUP_SCENE);
+                ctx.answer({ type: 'show_snackbar', text: 'Run' });
+                return;
+            }
+        }
+
+        ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
     }
 
     @VkHearsLocale([

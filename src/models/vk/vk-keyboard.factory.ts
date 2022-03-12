@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { Keyboard } from 'vk-io';
 import { LocalePhrase } from '@my-interfaces';
-import { IMessageContext } from '@my-interfaces/vk';
+import { IContext } from '@my-interfaces/vk';
 
 @Injectable()
 export class VKKeyboardFactory {
-    public needInline(ctx: IMessageContext) {
+    public needInline(ctx: IContext) {
         return (
             ctx.isChat && ctx.sessionConversation.hideStaticKeyboard !== false
         );
     }
 
-    public getStart(ctx: IMessageContext) {
+    public getStart(ctx: IContext) {
         return Keyboard.keyboard([
             [
                 Keyboard.textButton({
@@ -23,7 +23,19 @@ export class VKKeyboardFactory {
         ]);
     }
 
-    public getSchedule(ctx: IMessageContext, groupName?: string) {
+    public getSelectGroup(ctx: IContext) {
+        return Keyboard.keyboard([
+            [
+                Keyboard.callbackButton({
+                    label: ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                    payload: { phrase: LocalePhrase.Button_SelectGroup },
+                    color: Keyboard.POSITIVE_COLOR,
+                }),
+            ],
+        ]);
+    }
+
+    public getSchedule(ctx: IContext, groupName?: string) {
         return Keyboard.keyboard([
             [
                 Keyboard.textButton({
@@ -64,7 +76,7 @@ export class VKKeyboardFactory {
         ]);
     }
 
-    public getCancel(ctx: IMessageContext) {
+    public getCancel(ctx: IContext) {
         return Keyboard.keyboard([
             [
                 Keyboard.textButton({
@@ -76,7 +88,7 @@ export class VKKeyboardFactory {
         ]);
     }
 
-    public getClose(ctx?: IMessageContext) {
+    public getClose(ctx?: IContext) {
         return Keyboard.keyboard([]).oneTime();
     }
 }

@@ -51,15 +51,19 @@ export type IContext<
 > = CombinedContext & Context<U> & T;
 
 export type IMessageContext<T = {}> = IContext<T, tg.Update.MessageUpdate>;
+export type ICallbackQueryContext<T = {}> = IContext<
+    T,
+    tg.Update.CallbackQueryUpdate
+>;
 
-export type ISceneContext = IMessageContext & {
+export type ISceneContext = (IMessageContext | ICallbackQueryContext) & {
     scene: Scenes.SceneContextScene<
         Scenes.SceneContext<SceneSession>,
         SceneSession
     > & { state: any };
 };
 
-export type IStepContext = IMessageContext & {
+export type IStepContext = (IMessageContext | ICallbackQueryContext) & {
     scene: Scenes.SceneContextScene<
         WizardContext<WizardSession>,
         WizardSession

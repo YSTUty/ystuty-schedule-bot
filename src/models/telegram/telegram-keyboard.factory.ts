@@ -11,6 +11,17 @@ export class TelegramKeyboardFactory {
         ]).resize();
     }
 
+    public getSelectGroupInline(ctx: IContext) {
+        return Markup.inlineKeyboard([
+            [
+                Markup.button.callback(
+                    ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                    LocalePhrase.Button_SelectGroup,
+                ),
+            ],
+        ]);
+    }
+
     public getScheduleInline(ctx: IContext, groupName: string = '') {
         const makeButton = (phrase: LocalePhrase) =>
             Markup.button.callback(
@@ -30,11 +41,24 @@ export class TelegramKeyboardFactory {
         ]);
     }
 
-    public getCancel(ctx: IContext, withNext = false) {
+    public getCancel(ctx: IContext) {
         return {
             ...Markup.keyboard([
                 [ctx.i18n.t(LocalePhrase.Button_Cancel)],
             ]).resize(),
+        };
+    }
+
+    public getCancelInline(ctx: IContext) {
+        return {
+            ...Markup.inlineKeyboard([
+                [
+                    Markup.button.callback(
+                        ctx.i18n.t(LocalePhrase.Button_Cancel),
+                        LocalePhrase.Button_Cancel,
+                    ),
+                ],
+            ]),
         };
     }
 }

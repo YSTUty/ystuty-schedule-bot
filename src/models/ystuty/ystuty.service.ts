@@ -127,7 +127,7 @@ export class YSTUtyService implements OnModuleInit {
             ? null
             : ((day) => (day > 0 ? day - 1 : 6))(now.getDay());
 
-        const addHashTag = true;
+        const addHashTag = isWeek;
 
         // TODO: add caching or RPC
 
@@ -268,7 +268,7 @@ export class YSTUtyService implements OnModuleInit {
                 )}\n`;
             }
 
-            message += `${msg}\n`;
+            message += fullWeek ? `${msg}\n` : msg;
             if (!fullWeek) {
                 break;
             }

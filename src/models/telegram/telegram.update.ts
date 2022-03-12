@@ -102,7 +102,9 @@ export class StartTelegramUpdate {
         }
 
         if (!message) {
-            message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
+            message = `${ctx.i18n.t(
+                LocalePhrase.Page_Schedule_NotFoundToday,
+            )}\n`;
         }
 
         const keyboard = this.keyboardFactory.getScheduleInline(ctx, groupName);
@@ -180,7 +182,9 @@ export class StartTelegramUpdate {
                 isNextWeek ? 'следющую ' : ''
             }неделю:\n${message}`;
         } else {
-            message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
+            message = `${ctx.i18n.t(
+                LocalePhrase.Page_Schedule_NotFoundToday,
+            )}\n`;
         }
 
         const keyboard = this.keyboardFactory.getScheduleInline(ctx, groupName);

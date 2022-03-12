@@ -34,6 +34,11 @@ const middlewares = [MainMiddleware];
                                 prefix: 'tg:session:',
                             },
                             ttl: 7 * 24 * 3600,
+                            getSessionKey: (ctx) =>
+                                (ctx.from &&
+                                    ctx.chat &&
+                                    `${ctx.from.id}:${ctx.chat.id}`) ||
+                                (ctx.from && `${ctx.from.id}:${ctx.from.id}`),
                         }) as RedisSession.default,
                         // @ts-ignore
                         new RedisSession({
@@ -49,7 +54,9 @@ const middlewares = [MainMiddleware];
                             getSessionKey: (ctx) =>
                                 ctx.chat && `conversation:${ctx.chat.id}`,
                         }) as RedisSession.default,
+                        featuresMiddleware.middlewareCleaner,
                         i18n,
+                        featuresMiddleware.middlewareCleaner,
                     ],
                 }),
                 inject: [...middlewares],

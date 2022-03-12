@@ -63,7 +63,9 @@ export class MainMiddleware {
         composer.use(this.safeTextConverstionMiddleware);
         composer.use(this.sessionManager.middleware);
         composer.use(this.sessionConversationManager.middleware);
+        composer.use(this.middlewareCleaner);
         composer.use(i18n.middleware);
+        composer.use(this.sceneManager.middleware);
 
         return composer.compose();
     }
@@ -71,7 +73,6 @@ export class MainMiddleware {
     get middlewaresAfter() {
         const composer = Composer.builder<Context>();
 
-        composer.use(this.sceneManager.middleware);
         composer.use(this.sceneInterceptMiddleware());
         composer.use(this.hearManagerProvider.middleware);
 
@@ -95,6 +96,23 @@ export class MainMiddleware {
                 this.logger.error('Error:', error);
             }
         };
+    }
+
+    public get middlewareCleaner() {
+        return async (ctx: IContext, next: NextMiddleware) => {
+            await next?.();
+            this.cleanSession(ctx);
+        };
+    }
+
+    private cleanSession(ctx: IContext) {
+        const { session } = ctx;
+        if (!session) return;
+
+        // i18n
+        if (session['__language_code'] === 'ru') {
+            delete session['__language_code'];
+        }
     }
 
     private get safeTextConverstionMiddleware() {

@@ -10,7 +10,7 @@ import { IContext } from '@my-interfaces/telegram';
 
 @Injectable()
 export class MainMiddleware implements MiddlewareObj<IContext> {
-    middleware() {
+    public middleware() {
         const handler = async (
             ctx: IContext,
             next: (...args: any[]) => Promise<any>,
@@ -59,6 +59,16 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         return Composer.fork(handler);
     }
 
+    public get middlewareCleaner() {
+        return async (
+            ctx: IContext,
+            next: (...args: any[]) => Promise<any>,
+        ) => {
+            await next?.();
+            this.cleanSession(ctx);
+        };
+    }
+
     private checkInGroupAppeal(ctx: IContext) {
         if (!('message' in ctx.update)) return;
         const {
@@ -86,6 +96,24 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
             // message.text = message.text.slice(triggerMsg[0].length);
             message.text = message.text.slice(0, -triggerMsg[1].length);
             ctx.state.appeal = true;
+        }
+    }
+
+    private cleanSession(ctx: IContext) {
+        const { session } = ctx;
+        if (!session) return;
+
+        // Scene
+        if (
+            session['__scenes'] &&
+            Object.keys(session['__scenes']).length === 0
+        ) {
+            delete session['__scenes'];
+        }
+
+        // i18n
+        if (session['__language_code'] === 'ru') {
+            delete session['__language_code'];
         }
     }
 }

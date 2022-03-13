@@ -127,6 +127,22 @@ export class StartTelegramUpdate {
         );
 
         if (!groupName) {
+            if (ctx.session?.selectedGroupName) {
+                ctx.answerInlineQuery(
+                    [
+                        {
+                            id: 'schedule:404',
+                            type: 'sticker',
+                            sticker_file_id:
+                                // ? how long will it last
+                                'CAACAgIAAxkBAAEEJypiLmxc-eE-xdTeukvAF29X_VcjXAAC-gADVp29Ckfe-pdxdHEBIwQ',
+                        },
+                    ],
+                    { cache_time: 86400 },
+                );
+                return;
+            }
+
             const switch_pm_parameter = LocalePhrase.Button_SelectGroup.replace(
                 /\./g,
                 '--',

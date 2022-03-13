@@ -27,7 +27,14 @@ export class VkUpdate {
 
     @VkHearsLocale(LocalePhrase.RegExp_Start)
     async hearStart(@Ctx() ctx: IMessageContext) {
-        if (ctx.isChat && !ctx.state.appeal) {
+        if (ctx.isChat) {
+            if (!ctx.state.appeal) return;
+        } else if (!ctx.session.selectedGroupName) {
+            const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
+            const useInline = ctx.clientInfo.inline_keyboard;
+            ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
+                keyboard,
+            });
             return;
         }
 
@@ -65,7 +72,10 @@ export class VkUpdate {
         // this.vkService.parseChatTitle(ctx, title);
         if (!ctx.sessionConversation.selectedGroupName) {
             const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
-            ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot), { keyboard });
+            const useInline = ctx.clientInfo.inline_keyboard;
+            ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
+                keyboard,
+            });
         }
     }
 

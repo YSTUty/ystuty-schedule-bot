@@ -31,6 +31,13 @@ export class StartTelegramUpdate {
             return;
         }
 
+
+        if (ctx.chat.type === 'private' && !ctx.session.selectedGroupName) {
+            const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
+            ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
+            return;
+        }
+
         const keyboard = this.keyboardFactory.getStart(ctx);
         ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
     }

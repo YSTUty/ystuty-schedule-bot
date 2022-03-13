@@ -1,9 +1,16 @@
 import { Logger, UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, Update, On } from '@xtcry/nestjs-telegraf';
+import {
+    Action,
+    Command,
+    Ctx,
+    Update,
+    On,
+    Start,
+} from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
 import * as tg from 'telegraf/typings/core/types/typegram';
 import { patternGroupName, TelegrafExceptionFilter } from '@my-common';
-import { LocalePhrase } from '@my-interfaces';
+import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/telegram';
 
 import { YSTUtyService } from '../ystuty/ystuty.service';
@@ -26,11 +33,21 @@ export class StartTelegramUpdate {
 
     @TgHearsLocale(LocalePhrase.Button_Cancel)
     @TgHearsLocale(LocalePhrase.RegExp_Start)
+    @Start()
     hearStart(@Ctx() ctx: IMessageContext) {
         if (ctx.chat.type !== 'private' && !ctx.state.appeal) {
             return;
         }
 
+        if ('text' in ctx.message) {
+            const [, ...params] = ctx.message.text.split(' ');
+            switch (params[0].replace(/--/g, '.')) {
+                case LocalePhrase.Button_SelectGroup: {
+                    ctx.scene.enter(SELECT_GROUP_SCENE);
+                    return;
+                }
+            }
+        }
 
         if (ctx.chat.type === 'private' && !ctx.session.selectedGroupName) {
             const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
@@ -98,6 +115,138 @@ export class StartTelegramUpdate {
     async onSelectGroup(@Ctx() ctx: IMessageContext) {
         ctx.scene.enter(SELECT_GROUP_SCENE);
         ctx.answerCbQuery();
+    }
+
+    @On('inline_query')
+    async onInlineQuery(@Ctx() ctx: IContext<{}, tg.Update.InlineQueryUpdate>) {
+        // TODO: add to queue and wait
+
+        const groupNameFromQuery = ctx.inlineQuery.query.trim();
+        const groupName = this.ystutyService.getGroupByName(
+            groupNameFromQuery || ctx.session?.selectedGroupName,
+        );
+
+        if (!groupName) {
+            const switch_pm_parameter = LocalePhrase.Button_SelectGroup.replace(
+                /\./g,
+                '--',
+            );
+            ctx.answerInlineQuery([], {
+                // is_personal: true,
+                cache_time: 10,
+                switch_pm_text: ctx.i18n.t(
+                    TelegramLocalePhrase.Page_SelectYourGroup,
+                ),
+                switch_pm_parameter,
+            });
+            return;
+        }
+
+        let messageDay =
+            (await this.ystutyService.getFormatedSchedule({
+                groupName,
+            })) || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+
+        let messageTomorrow =
+            (
+                await this.ystutyService.findNext({
+                    skipDays: 1,
+                    groupName,
+                })
+            )[1] || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+
+        let messageWeek =
+            (
+                await this.ystutyService.findNext({
+                    skipDays: 1,
+                    groupName,
+                    isWeek: true,
+                })
+            )[1] || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+
+        const reply_markup = {
+            inline_keyboard: [
+                [
+                    {
+                        text:
+                            ctx.i18n.t(
+                                TelegramLocalePhrase.Page_Schedule_Share,
+                            ) + ' где-то',
+                        switch_inline_query: groupName,
+                    },
+                ],
+                [
+                    {
+                        text:
+                            ctx.i18n.t(
+                                TelegramLocalePhrase.Page_Schedule_Share,
+                            ) + ' тут',
+                        switch_inline_query_current_chat: groupName,
+                    },
+                ],
+            ],
+        };
+
+        const results: tg.InlineQueryResult[] = [];
+        const cropStr = (str: string) =>
+            str.length > 120 ? `${str.slice(0, 120)}...` : str;
+
+        results.push({
+            type: 'article',
+            id: `schedule:${groupName}:day`,
+            title: ctx.i18n.t(
+                TelegramLocalePhrase.Page_Schedule_Title_ForToday,
+                { groupName },
+            ),
+            description: cropStr(messageDay),
+            input_message_content: {
+                message_text: `${messageDay}[${groupName}]`,
+                parse_mode: 'HTML',
+            },
+            reply_markup,
+        });
+
+        results.push({
+            type: 'article',
+            id: `schedule:${groupName}:tomorrow`,
+            title: ctx.i18n.t(
+                TelegramLocalePhrase.Page_Schedule_Title_ForTomorrow,
+                { groupName },
+            ),
+            description: cropStr(messageTomorrow),
+            input_message_content: {
+                message_text: `${messageTomorrow}[${groupName}]`,
+                parse_mode: 'HTML',
+            },
+            reply_markup,
+        });
+
+        results.push({
+            type: 'article',
+            id: `schedule:${groupName}:week`,
+            title: ctx.i18n.t(
+                TelegramLocalePhrase.Page_Schedule_Title_ForWeek,
+                { groupName },
+            ),
+            description: cropStr(messageWeek),
+            input_message_content: {
+                message_text: `${messageWeek}[${groupName}]`,
+                parse_mode: 'HTML',
+            },
+            reply_markup,
+        });
+
+        ctx.answerInlineQuery(results, {
+            is_personal: true,
+            cache_time: 60,
+        });
+    }
+
+    @On('chosen_inline_result')
+    onChosenInlineResult(
+        @Ctx() ctx: IContext<{}, tg.Update.ChosenInlineResultUpdate>,
+    ) {
+        this.logger.debug('OnChosenInlineResult', ctx.chosenInlineResult);
     }
 
     @Command('tt')

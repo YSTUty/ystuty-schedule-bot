@@ -37,4 +37,18 @@ export enum LocalePhrase {
     Page_SelectGroup_Reset = 'page.select_group.reset',
 }
 
-export type ILocale = Record<LocalePhrase, string>;
+export enum VkLocalePhrase {}
+
+export enum TelegramLocalePhrase {
+    Page_SelectYourGroup = 'page.telegram.select_your_group',
+    Page_Schedule_Share = 'page.telegram.schedule.share',
+    Page_Schedule_Title_ForToday = 'page.telegram.schedule.title.for_today',
+    Page_Schedule_Title_ForTomorrow = 'page.telegram.schedule.title.for_tomorrow',
+    Page_Schedule_Title_ForWeek = 'page.telegram.schedule.title.for_week',
+    Page_Schedule_Title_ForNextWeek = 'page.telegram.schedule.title.for_next_week',
+}
+
+export type LocalePhraseType =
+    | LocalePhrase
+    | TelegramLocalePhrase
+    | VkLocalePhrase;

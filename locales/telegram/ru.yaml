@@ -57,3 +57,17 @@ page:
     not_found: |
       <b>Ошибка:</b> Группа <code>${groupName}</code> не найдена
     reset: Группа сброшена
+
+  telegram:
+    select_your_group: Выбрать свою группу
+    schedule:
+      share: Поделиться расписанием
+      title:
+        for_today: |
+          На сегодня (${groupName})
+        for_tomorrow: |
+          На завтра (${groupName})
+        for_week: |
+          На неделю (${groupName})
+        for_next_week: |
+          На следующую неделю (${groupName})

@@ -1,4 +1,4 @@
-import { Ctx, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IStepContext } from '@my-interfaces/telegram';
 
@@ -34,11 +34,17 @@ export class SelectGroupScene extends BaseScene {
     }
 
     @WizardStep(1)
+    @Hears(/.+/)
+    @Action(/.+/)
     step1(@Ctx() ctx: IStepContext) {
         const {
             scene: { state },
         } = ctx;
         let { groupName } = state;
+
+        // if (!ctx.chat) {
+        //     return;
+        // }
 
         const isChat = ctx.chat.type !== 'private';
         const session = !isChat ? ctx.session : ctx.sessionConversation;

@@ -8,7 +8,7 @@ import {
 import * as tg from 'telegraf/typings/core/types/typegram';
 import { Deunionize } from 'telegraf/typings/deunionize';
 import { I18nContext } from '@esindger/telegraf-i18n';
-import { LocalePhrase } from '@my-interfaces';
+import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 
 interface ISessionState {
     selectedGroupName?: string;
@@ -41,7 +41,12 @@ type CombinedContext = {
         SceneSession
     > & { state: any };
 
-    i18n: I18nContext<Record<LocalePhrase, Record<string, unknown> | never>>;
+    i18n: I18nContext<
+        Record<
+            LocalePhrase | TelegramLocalePhrase,
+            Record<string, unknown> | never
+        >
+    >;
     tryAnswerCbQuery: Context['answerCbQuery'];
 };
 

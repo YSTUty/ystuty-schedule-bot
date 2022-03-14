@@ -38,6 +38,10 @@ export const SOCIAL_VK_GROUP_ID: number =
     +process.env.SOCIAL_VK_GROUP_ID || null;
 export const SOCIAL_VK_GROUP_TOKEN: string =
     process.env.SOCIAL_VK_GROUP_TOKEN || '';
+export const SOCIAL_VK_ADMIN_IDS: number[] =
+    (process.env.SOCIAL_VK_ADMIN_IDS &&
+        JSON.parse(process.env.SOCIAL_VK_ADMIN_IDS)) ||
+    [];
 
 // Telegram
 export const SOCIAL_TELEGRAM_BOT_NAME =

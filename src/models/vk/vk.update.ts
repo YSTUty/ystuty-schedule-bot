@@ -1,7 +1,7 @@
-import { Logger, UseFilters } from '@nestjs/common';
+import { Logger, UseFilters, UseGuards } from '@nestjs/common';
 import { InjectVkApi, Update, Ctx, HearFallback, Hears, On } from 'nestjs-vk';
 import { VK, APIError } from 'vk-io';
-import { VkExceptionFilter } from '@my-common';
+import { VkAdminGuard, VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
@@ -24,6 +24,17 @@ export class VkUpdate {
         private readonly ystutyService: YSTUtyService,
         private readonly keyboardFactory: VKKeyboardFactory,
     ) {}
+
+    @Hears('/admin')
+    @UseGuards(new VkAdminGuard(true))
+    onAdmin(@Ctx() ctx: IMessageContext) {
+        ctx.send('YOUARE ADMIN');
+    }
+
+    @Hears('/broke')
+    onBroke(@Ctx() ctx: IMessageContext) {
+        throw new Error('Whoops');
+    }
 
     @VkHearsLocale(LocalePhrase.RegExp_Start)
     async hearStart(@Ctx() ctx: IMessageContext) {

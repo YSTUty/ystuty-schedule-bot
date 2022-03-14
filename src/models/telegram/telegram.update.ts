@@ -1,4 +1,4 @@
-import { Logger, UseFilters } from '@nestjs/common';
+import { Logger, UseFilters, UseGuards } from '@nestjs/common';
 import {
     Action,
     Command,
@@ -9,7 +9,11 @@ import {
 } from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
 import * as tg from 'telegraf/typings/core/types/typegram';
-import { patternGroupName, TelegrafExceptionFilter } from '@my-common';
+import {
+    patternGroupName,
+    TelegrafExceptionFilter,
+    TelegramAdminGuard,
+} from '@my-common';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/telegram';
 
@@ -30,6 +34,17 @@ export class StartTelegramUpdate {
         private readonly ystutyService: YSTUtyService,
         private readonly telegramService: TelegramService,
     ) {}
+
+    @Command('admin')
+    @UseGuards(new TelegramAdminGuard(true))
+    onAdmin(@Ctx() ctx: IMessageContext) {
+        ctx.reply('YOUARE ADMIN');
+    }
+
+    @Command('broke')
+    async onBroke(@Ctx() ctx: IMessageContext) {
+        throw new Error('Whoops');
+    }
 
     @TgHearsLocale(LocalePhrase.Button_Cancel)
     @TgHearsLocale(LocalePhrase.RegExp_Start)

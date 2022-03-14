@@ -31,7 +31,10 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
 
     public async launch() {
         this.bot.catch((err: Error, ctx) => {
-            this.logger.error(`${ctx?.updateType}: ${err}`, err.stack);
+            this.logger.error(
+                `OnUpdateType(${ctx?.updateType}): ${err}`,
+                err.stack,
+            );
         });
 
         try {

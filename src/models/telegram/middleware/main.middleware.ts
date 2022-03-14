@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MiddlewareObj } from 'telegraf/typings/middleware';
 import { Composer } from 'telegraf';
-import {
-    SOCIAL_TELEGRAM_ADMIN_IDS,
-    SOCIAL_TELEGRAM_BOT_NAME,
-} from '@my-environment';
-import { escapeHTMLCodeChars } from '@my-common';
+import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
 import { IContext } from '@my-interfaces/telegram';
 
 @Injectable()
@@ -23,38 +19,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
             this.checkInGroupAppeal(ctx);
 
-            try {
-                await next?.();
-            } catch (err: unknown) {
-                console.error(err);
-
-                if (err instanceof Error) {
-                    const isAdmin = SOCIAL_TELEGRAM_ADMIN_IDS.includes(
-                        ctx.from.id,
-                    );
-                    if (
-                        ctx.updateType === 'callback_query' &&
-                        ctx.answerCbQuery
-                    ) {
-                        if (isAdmin) {
-                            ctx.answerCbQuery(
-                                `💢 Error: ${escapeHTMLCodeChars(err.message)}`,
-                                { show_alert: true },
-                            );
-                        } else {
-                            ctx.answerCbQuery('💢 Error');
-                        }
-                    } else if (isAdmin) {
-                        ctx.replyWithHTML(
-                            `💢 Error:\n<b>${escapeHTMLCodeChars(
-                                err.message,
-                            )}</b>\n<code>${escapeHTMLCodeChars(
-                                err.stack.split('\n').slice(0, 5).join('\n'),
-                            )}</code>`,
-                        );
-                    }
-                }
-            }
+            await next?.();
         };
         return Composer.fork(handler);
     }

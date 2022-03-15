@@ -21,14 +21,21 @@ export class VkAdminGuard implements CanActivate {
         ) {
             if (this.input) {
                 if (typeof this.input === 'string') {
-                    ctx.replyWithHTML(this.input);
+                    if (ctx.eventPayload && ctx.answer) {
+                        ctx.answer({
+                            type: 'show_snackbar',
+                            text: this.input,
+                        });
+                    } else {
+                        ctx.reply && ctx.reply(this.input);
+                    }
                 } else if (this.input === true) {
                     throw new VkException(LocalePhrase.Common_NoAccess);
                 }
             }
+            // Выдаст ошибку `ForbiddenException`
             return false;
         }
-
         return true;
     }
 }

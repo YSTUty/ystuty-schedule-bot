@@ -1,4 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
+import {
+    ArgumentsHost,
+    Catch,
+    ExceptionFilter,
+    ForbiddenException,
+    Logger,
+} from '@nestjs/common';
 import { VkArgumentsHost } from 'nestjs-vk';
 import { MessageEventContext } from 'vk-io';
 import { LocalePhrase } from '@my-interfaces';
@@ -15,7 +21,12 @@ export class VkExceptionFilter implements ExceptionFilter {
             IContext<MessageEventContext> | IMessageContext
         >();
 
-        if (exception.message !== LocalePhrase.Common_NoAccess) {
+        if (
+            exception.message !== LocalePhrase.Common_NoAccess &&
+            // Не логировать `ForbiddenException`, т.к. ошибка доступа
+            // проверяется по сообщению `LocalePhrase.Common_NoAccess`
+            !(exception instanceof ForbiddenException)
+        ) {
             this.logger.error(
                 `OnUpdateType(${ctx?.type}): ${
                     exception?.message || exception
@@ -24,7 +35,11 @@ export class VkExceptionFilter implements ExceptionFilter {
             );
         }
 
-        if (!(exception instanceof Error) || !(ctx.answer || ctx.reply)) {
+        if (
+            !(exception instanceof Error) ||
+            !(ctx.answer || ctx.reply) ||
+            exception instanceof ForbiddenException
+        ) {
             return;
         }
 

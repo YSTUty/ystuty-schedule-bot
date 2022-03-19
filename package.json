@@ -39,6 +39,7 @@
     "@nestjs/core": "^8.0.0",
     "@nestjs/platform-express": "^8.0.0",
     "@vk-io/hear": "^1.1.0",
+    "@vk-io/scenes": "^1.1.0",
     "@vk-io/session": "^2.1.0",
     "@xtcry/nestjs-telegraf": "^2.2.4",
     "axios": "^0.26.0",
@@ -51,7 +52,7 @@
     "rxjs": "^7.2.0",
     "telegraf": "^4.7.0",
     "telegraf-session-redis": "^5.1.0",
-    "vk-io": "^4.5.0",
+    "vk-io": "^4.5.2",
     "vk-io-i18n": "^0.0.1",
     "vk-io-redis-storage": "1.1.0"
   },

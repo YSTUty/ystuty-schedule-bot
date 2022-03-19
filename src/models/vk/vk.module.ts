@@ -1,4 +1,4 @@
-import { Global, Inject, Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import * as xEnv from '@my-environment';
 import * as nestVk from 'nestjs-vk';
 

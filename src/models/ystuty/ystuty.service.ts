@@ -55,11 +55,10 @@ export class YSTUtyService implements OnModuleInit {
     }
 
     public getGroupByName(groupName?: string) {
+        const parse = (str: string) => str.toLowerCase().replace(/[\)\(]/g, '');
         return (
             groupName &&
-            this.allGroupsList.find(
-                (e) => e.toLowerCase() === groupName.toLowerCase(),
-            )
+            this.allGroupsList.find((e) => parse(e) === parse(groupName))
         );
     }
 

@@ -56,10 +56,12 @@ export class StartTelegramUpdate {
 
         if ('text' in ctx.message) {
             const [, ...params] = ctx.message.text.split(' ');
-            switch (params[0].replace(/--/g, '.')) {
-                case LocalePhrase.Button_SelectGroup: {
-                    ctx.scene.enter(SELECT_GROUP_SCENE);
-                    return;
+            if (params.length > 0) {
+                switch (params[0].replace(/--/g, '.')) {
+                    case LocalePhrase.Button_SelectGroup: {
+                        ctx.scene.enter(SELECT_GROUP_SCENE);
+                        return;
+                    }
                 }
             }
         }

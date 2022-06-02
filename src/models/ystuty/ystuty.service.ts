@@ -1,8 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import axios from 'axios';
 import * as xEnv from '@my-environment';
 import { OneWeek, WeekNumberType } from '@my-interfaces';
-import { getLessonTypeStrArr, matchGroupName } from '@my-common';
+import { delay, getLessonTypeStrArr, matchGroupName } from '@my-common';
 
 const getWeekNumber = (date: Date = new Date()) => {
     const d = new Date(
@@ -35,22 +36,30 @@ export class YSTUtyService implements OnModuleInit {
     private allGroupsList: string[] = [];
 
     onModuleInit() {
+        this.onLoadAllGroups();
+    }
+
+    @Cron(CronExpression.EVERY_10_MINUTES)
+    protected onLoadAllGroups() {
         this.loadAllGroups().then();
     }
 
-    public async loadAllGroups() {
+    protected async loadAllGroups() {
         try {
             const { data } = await this.ystutyApi.get(
                 '/api/ystu/schedule/groups',
             );
             if (!Array.isArray(data.items)) {
                 this.logger.warn('YSTU groups NOT loaded');
-                return;
+                return null;
             }
+
             this.allGroupsList = data.items;
             this.logger.log(`YSTU groups loaded: (${data.items.length})`);
+            return true;
         } catch (error) {
             console.log(error.message);
+            return false;
         }
     }
 

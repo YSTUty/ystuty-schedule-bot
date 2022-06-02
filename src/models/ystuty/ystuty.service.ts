@@ -47,7 +47,7 @@ export class YSTUtyService implements OnModuleInit {
     protected async loadAllGroups() {
         try {
             const { data } = await this.ystutyApi.get(
-                '/api/ystu/schedule/groups',
+                '/api/ystu/schedule/groups?extramural=true',
             );
             if (!Array.isArray(data.items)) {
                 this.logger.warn('YSTU groups NOT loaded');

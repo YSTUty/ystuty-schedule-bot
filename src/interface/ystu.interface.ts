@@ -48,6 +48,10 @@ export enum LessonFlags {
     Practical = 1 << 2,
     Labaratory = 1 << 3,
     CourseProject = 1 << 4,
+    Consultation = 1 << 5,
+    Test = 1 << 6,
+    DifferentiatedTest = 1 << 7,
+    Exam = 1 << 8,
 }
 
 /**

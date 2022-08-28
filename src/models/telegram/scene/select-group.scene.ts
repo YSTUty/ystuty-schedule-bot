@@ -52,7 +52,7 @@ export class SelectGroupScene extends BaseScene {
         const firstTime = state.firstTime !== false;
         state.firstTime = false;
 
-        if (ctx.message && 'text' in ctx.message && !firstTime) {
+        if ('text' in ctx?.message && !firstTime) {
             groupName = ctx.message.text;
         }
 

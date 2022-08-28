@@ -14,7 +14,7 @@ export class SelectGroupScene {
     ) {}
 
     @AddStep()
-    step1(@Ctx() ctx: IStepContext) {
+    step1(@Ctx() ctx: IStepContext<{ groupName: string }>) {
         const {
             isChat,
             scene: { state },

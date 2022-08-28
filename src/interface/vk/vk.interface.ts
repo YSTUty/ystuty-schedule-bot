@@ -33,5 +33,5 @@ export type IContext<T = {}> = VKContext<{}, ContextState> &
 export type IMessageContext = VKMessageContext<ContextState> & CombinedContext;
 export type IMessageEventContext = VKMessageEventContext<ContextState> &
     CombinedContext;
-export type IStepContext = IVKStepContext &
-    (IMessageContext | IMessageEventContext);
+export type IStepContext<S extends Record<string, unknown> = any> =
+    IVKStepContext<S> & (IMessageContext | IMessageEventContext);

@@ -6,12 +6,12 @@
   "private": true,
   "license": "MIT",
   "repository": {
-    "url": "https://github.com/yaponyal/ystuty-bot.git",
+    "url": "https://github.com/YSTUty/ystuty-bot.git",
     "type": "git"
   },
-  "homepage": "https://github.com/yaponyal/ystuty-bot#readme",
+  "homepage": "https://github.com/YSTUty/ystuty-bot#readme",
   "bugs": {
-    "url": "https://github.com/yaponyal/ystuty-bot/issues"
+    "url": "https://github.com/YSTUty/ystuty-bot/issues"
   },
   "scripts": {
     "prebuild": "rimraf dist",

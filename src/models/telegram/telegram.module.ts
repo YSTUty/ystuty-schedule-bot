@@ -31,6 +31,7 @@ export class TelegramModule {
                         launchOptions: false,
 
                         middlewares: [
+                            featuresMiddleware.middlewareForkAll,
                             featuresMiddleware,
                             // @ts-ignore
                             new RedisSession({
@@ -63,9 +64,9 @@ export class TelegramModule {
                                 getSessionKey: (ctx) =>
                                     ctx.chat && `conversation:${ctx.chat.id}`,
                             }) as RedisSession.default,
-                            featuresMiddleware.middlewareCleaner,
+                            featuresMiddleware.middlewareCleaner(),
                             i18n,
-                            featuresMiddleware.middlewareCleaner,
+                            featuresMiddleware.middlewareCleaner(true),
                         ],
                     }),
                     inject: [...middlewares],

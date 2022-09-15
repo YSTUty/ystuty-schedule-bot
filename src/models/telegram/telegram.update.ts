@@ -373,7 +373,7 @@ export class StartTelegramUpdate {
 
         if (ctx.callbackQuery) {
             try {
-                ctx.editMessageText(content, {
+                await ctx.editMessageText(content, {
                     ...keyboard,
                     parse_mode: 'HTML',
                 });
@@ -462,7 +462,7 @@ export class StartTelegramUpdate {
 
         if (ctx.callbackQuery) {
             try {
-                ctx.editMessageText(content, {
+                await ctx.editMessageText(content, {
                     ...keyboard,
                     parse_mode: 'HTML',
                 });

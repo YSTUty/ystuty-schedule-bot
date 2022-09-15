@@ -1,37 +1,20 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import axios from 'axios';
 import * as xEnv from '@my-environment';
 import { OneWeek, WeekNumberType } from '@my-interfaces';
-import { delay, getLessonTypeStrArr, matchGroupName } from '@my-common';
-
-const getWeekNumber = (date: Date = new Date()) => {
-    const d = new Date(
-        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-    );
-
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)).getTime();
-
-    const weekNo = Math.ceil(((d.getTime() - yearStart) / 86400000 + 1) / 7);
-
-    return weekNo;
-};
-
-const CurrentWeek = getWeekNumber();
-const YEAR_WEEKSOFF = CurrentWeek > 34 ? 34 : /* CurrentWeek < 4 ? -17 : */ 5;
+import { getLessonTypeStrArr, matchGroupName } from '@my-common';
+import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+import * as scheduleUtil from './util/schedule.util';
 
 @Injectable()
 export class YSTUtyService implements OnModuleInit {
     private readonly logger = new Logger(YSTUtyService.name);
 
-    public readonly ystutyApi = axios.create({
-        baseURL: xEnv.YSTUTY_PARSER_URL,
-        timeout: 60e3,
-    });
-
-    constructor() {}
+    constructor(private readonly httpService: HttpService) {
+        httpService.axiosRef.defaults.baseURL = xEnv.YSTUTY_PARSER_URL;
+        httpService.axiosRef.defaults.timeout = 60e3;
+    }
 
     private allGroupsList: string[] = [];
 
@@ -46,8 +29,10 @@ export class YSTUtyService implements OnModuleInit {
 
     protected async loadAllGroups() {
         try {
-            const { data } = await this.ystutyApi.get(
-                '/api/ystu/schedule/groups?extramural=true',
+            const { data } = await firstValueFrom(
+                this.httpService.get(
+                    '/api/ystu/schedule/groups?extramural=true',
+                ),
             );
             if (!Array.isArray(data.items)) {
                 this.logger.warn('YSTU groups NOT loaded');
@@ -58,7 +43,7 @@ export class YSTUtyService implements OnModuleInit {
             this.logger.log(`YSTU groups loaded: (${data.items.length})`);
             return true;
         } catch (error) {
-            console.log(error.message);
+            console.log('[loadAllGroups] Error', error.message);
             return false;
         }
     }
@@ -95,6 +80,10 @@ export class YSTUtyService implements OnModuleInit {
         );
     }
 
+    public get groupNames() {
+        return [...this.allGroupsList];
+    }
+
     public async findNext({
         groupName,
         skipDays = 0,
@@ -113,6 +102,8 @@ export class YSTUtyService implements OnModuleInit {
             skipDays,
             isWeek,
         });
+
+        console.log('responseSchedule', responseSchedule);
 
         if (responseSchedule === null && !isWeek) {
             if (weekNumber < WeekNumberType.Sunday) {
@@ -146,7 +137,7 @@ export class YSTUtyService implements OnModuleInit {
         const now = new Date();
         now.setDate(now.getDate() + skipDays);
 
-        const weekNumber = getWeekNumber(now) - YEAR_WEEKSOFF;
+        const weekNumber = scheduleUtil.getWeekNumber(now) - scheduleUtil.YEAR_WEEKSOFF;
         const dayNumber: WeekNumberType = isWeek
             ? null
             : ((day) => (day > 0 ? day - 1 : 6))(now.getDay());
@@ -158,10 +149,12 @@ export class YSTUtyService implements OnModuleInit {
         try {
             const {
                 data: { items },
-            } = await this.ystutyApi.get<{
-                isCache: boolean;
-                items: OneWeek[];
-            }>(`/api/ystu/schedule/group/${encodeURIComponent(groupName)}`);
+            } = await firstValueFrom(
+                this.httpService.get<{
+                    isCache: boolean;
+                    items: OneWeek[];
+                }>(`/api/ystu/schedule/group/${encodeURIComponent(groupName)}`),
+            );
 
             if (!Array.isArray(items)) {
                 return null;
@@ -174,7 +167,7 @@ export class YSTUtyService implements OnModuleInit {
 
             return this.formateWeekDays(week, dayNumber, addHashTag);
         } catch (error) {
-            console.log(error.message);
+            console.log('[getFormatedSchedule] Error', error.message);
         }
 
         return false;

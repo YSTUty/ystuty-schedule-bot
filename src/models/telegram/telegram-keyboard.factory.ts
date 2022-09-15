@@ -61,4 +61,10 @@ export class TelegramKeyboardFactory {
             ]),
         };
     }
+
+    public getICalendarInline(ctx: IContext, link: string, title: string) {
+        return {
+            ...Markup.inlineKeyboard([[Markup.button.url(title, link)]]),
+        };
+    }
 }

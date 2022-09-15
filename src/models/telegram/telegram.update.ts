@@ -6,6 +6,7 @@ import {
     Update,
     On,
     Start,
+    Hears,
 } from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
 import * as tg from 'telegraf/typings/core/types/typegram';
@@ -44,6 +45,47 @@ export class StartTelegramUpdate {
     @Command('broke')
     async onBroke(@Ctx() ctx: IMessageContext) {
         throw new Error('Whoops');
+    }
+
+    @Hears(
+        new RegExp(
+            `\\/(?<command>cal(endar)?)(\\s+)?${patternGroupName}?`,
+            'i',
+        ),
+    )
+    async onCalendar(@Ctx() ctx: IMessageContext) {
+        const session =
+            ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
+
+        const groupNameFromMath = ctx.match?.groups?.groupName;
+        const groupName = this.ystutyService.getGroupByName(
+            groupNameFromMath || session.selectedGroupName,
+        );
+
+        if (!groupName) {
+            if (session.selectedGroupName) {
+                ctx.replyWithHTML(
+                    ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+                        groupName: groupNameFromMath,
+                    }),
+                );
+                return;
+            }
+            ctx.scene.enter(SELECT_GROUP_SCENE);
+            return;
+        }
+
+        const keyboard = this.keyboardFactory.getICalendarInline(
+            ctx,
+            `https://parser.ystuty.ru/api/calendar/group/${groupName}.ical`,
+            `Calendar: ${groupName}`,
+        ); 
+        ctx.replyWithHTML(
+            `Calendar import link:\n` +
+                `<code>https://parser.ystuty.ru/api/calendar/group/${groupName}.ical</code>\n` +
+                `<a href="https://parser.ystuty.ru/api/calendar/group/${groupName}.ical">Try me</a>\n\n`,
+            keyboard,
+        );
     }
 
     @TgHearsLocale(LocalePhrase.Button_Cancel)

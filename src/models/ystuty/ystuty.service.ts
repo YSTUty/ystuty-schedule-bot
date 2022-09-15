@@ -121,8 +121,6 @@ export class YSTUtyService implements OnModuleInit {
             isWeek,
         });
 
-        console.log('responseSchedule', responseSchedule);
-
         if (responseSchedule === null && !isWeek) {
             if (weekNumber < WeekNumberType.Sunday) {
                 const [_skipDays, nextSchedule] = await this.findNext({

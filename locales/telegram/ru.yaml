@@ -20,7 +20,7 @@ regexp:
   start: //?(start|старт|начать)/i
   help: //?(help|помощь)/i
   schedule:
-    select_group: /^(?<trigger>(group|группа) ?)?${patternGroupName}?$/i
+    select_group: /^(?<trigger>(group|группа) ?)?${patternGroupName0}?$/i
     for_one_day: /^(расписание|.тт)((?<tomorrow> на завтра)|( через (?<skipDays>[0-9]{1,3})))?( ${patternGroupName})?$/i
     for_week: /^(((расписание|.тт) на(?<next> (след(ующую)?))? неделю)|\.рбн)( ${patternGroupName})?$/i
 

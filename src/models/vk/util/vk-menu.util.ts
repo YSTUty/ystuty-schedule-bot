@@ -1,11 +1,11 @@
 import { LocalePhrase } from '@my-interfaces';
-import { patternGroupName } from '@my-common';
+import { patternGroupName, patternGroupName0 } from '@my-common';
 import { IMessageContext } from '@my-interfaces/vk';
 
 const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
 
 // Custom template data
-const templateData = { patternGroupName };
+const templateData = { patternGroupName, patternGroupName0 };
 
 export const checkLocaleCondition =
     (phrases: LocalePhrase[]) =>

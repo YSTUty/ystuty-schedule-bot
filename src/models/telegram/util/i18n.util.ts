@@ -1,6 +1,6 @@
 import { resolve } from 'path';
 import { I18n } from '@esindger/telegraf-i18n';
-import { patternGroupName } from '@my-common';
+import { patternGroupName, patternGroupName0 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -14,7 +14,7 @@ export const i18n: I18n = new I18n({
 const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
 
 // Custom template data
-const templateData = { patternGroupName };
+const templateData = { patternGroupName, patternGroupName0 };
 
 export const checkLocaleCondition =
     (phrases: LocalePhrase[]) => (value: string, ctx: IContext) => {

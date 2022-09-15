@@ -52,7 +52,7 @@ export class SelectGroupScene extends BaseScene {
         const firstTime = state.firstTime !== false;
         state.firstTime = false;
 
-        if ('text' in ctx?.message && !firstTime) {
+        if (ctx?.message && 'text' in ctx.message && !firstTime) {
             groupName = ctx.message.text;
         }
 
@@ -82,7 +82,8 @@ export class SelectGroupScene extends BaseScene {
         }
 
         if (groupName === '0') {
-            session.selectedGroupName = undefined;
+            // session.selectedGroupName = undefined;
+            delete session.selectedGroupName;
 
             const keyboard = this.keyboardFactory.getStart(ctx);
             ctx.replyWithHTML(

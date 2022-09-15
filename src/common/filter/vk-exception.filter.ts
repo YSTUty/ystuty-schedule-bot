@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { VkArgumentsHost } from 'nestjs-vk';
 import { MessageEventContext } from 'vk-io';
+import * as Redlock from 'redlock';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 import { SOCIAL_VK_ADMIN_IDS } from '@my-environment';
@@ -25,7 +26,8 @@ export class VkExceptionFilter implements ExceptionFilter {
             exception.message !== LocalePhrase.Common_NoAccess &&
             // Не логировать `ForbiddenException`, т.к. ошибка доступа
             // проверяется по сообщению `LocalePhrase.Common_NoAccess`
-            !(exception instanceof ForbiddenException)
+            !(exception instanceof ForbiddenException) &&
+            !(exception instanceof Redlock.LockError)
         ) {
             this.logger.error(
                 `OnUpdateType(${ctx?.type}): ${
@@ -44,12 +46,23 @@ export class VkExceptionFilter implements ExceptionFilter {
         }
 
         const isAdmin = SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId);
-        const content =
-            exception.message === LocalePhrase.Common_NoAccess
-                ? ctx.i18n.t(LocalePhrase.Common_NoAccess)
-                : isAdmin
-                ? `💢 Error: ${exception.message}`
-                : ctx.i18n.t(LocalePhrase.Common_Error);
+        let content = '';
+        switch (true) {
+            case exception.message === LocalePhrase.Common_NoAccess:
+                content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
+                break;
+            case exception instanceof Redlock.LockError:
+                content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
+                break;
+
+            case isAdmin:
+                content = `💢 Error: ${exception.message}`;
+                break;
+
+            default:
+                content = ctx.i18n.t(LocalePhrase.Common_Error);
+                break;
+        }
 
         try {
             if (ctx.eventPayload && ctx.answer) {

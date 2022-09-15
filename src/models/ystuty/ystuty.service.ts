@@ -5,13 +5,18 @@ import * as xEnv from '@my-environment';
 import { OneWeek, WeekNumberType } from '@my-interfaces';
 import { getLessonTypeStrArr, matchGroupName } from '@my-common';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+
+import { RedisService } from '../redis/redis.service';
 import * as scheduleUtil from './util/schedule.util';
 
 @Injectable()
 export class YSTUtyService implements OnModuleInit {
     private readonly logger = new Logger(YSTUtyService.name);
 
-    constructor(private readonly httpService: HttpService) {
+    constructor(
+        private readonly httpService: HttpService,
+        private readonly redisService: RedisService,
+    ) {
         httpService.axiosRef.defaults.baseURL = xEnv.YSTUTY_PARSER_URL;
         httpService.axiosRef.defaults.timeout = 60e3;
     }
@@ -160,6 +165,10 @@ export class YSTUtyService implements OnModuleInit {
 
         // TODO: add caching or RPC
 
+        const lock = await this.redisService.redlock.lock(
+            `ystuty:schedule:group:${groupName.toLowerCase()}`,
+            10e3,
+        );
         try {
             const {
                 data: { items },
@@ -182,6 +191,8 @@ export class YSTUtyService implements OnModuleInit {
             return this.formateWeekDays(week, dayNumber, addHashTag);
         } catch (error) {
             console.log('[getFormatedSchedule] Error', error.message);
+        } finally {
+            await lock.unlock();
         }
 
         return false;

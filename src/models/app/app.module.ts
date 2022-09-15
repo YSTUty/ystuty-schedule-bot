@@ -8,7 +8,7 @@ import { VkModule } from '../vk/vk.module';
 import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-    imports: [YSTUtyModule, VkModule, TelegramModule],
+    imports: [YSTUtyModule, VkModule.register(), TelegramModule.register()],
     controllers: [AppController],
     providers: [AppService],
 })

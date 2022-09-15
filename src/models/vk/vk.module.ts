@@ -12,35 +12,44 @@ import { SelectGroupScene } from './scene/select-group.scene';
 const middlewares = [MainMiddleware];
 
 @Global()
-@Module({
-    ...(xEnv.SOCIAL_VK_GROUP_TOKEN && {
-        imports: [
-            nestVk.VkModule.forRootAsync({
-                inject: [MainMiddleware],
-                useFactory: async (featuresMiddleware: MainMiddleware) => ({
-                    token: xEnv.SOCIAL_VK_GROUP_TOKEN,
-                    options: {
-                        pollingGroupId: xEnv.SOCIAL_VK_GROUP_ID,
-                        apiMode: 'sequential',
-                    },
-                    useSessionManager: false,
-                    useSceneManager: false,
-                    useHearManager: false,
-                    // launchOptions: false,
-                    // notReplyMessage: true,
-                    middlewaresBefore: [featuresMiddleware.middlewaresBefore],
-                    middlewaresAfter: [featuresMiddleware.middlewaresAfter],
+@Module({})
+export class VkModule {
+    static register() {
+        if (!xEnv.SOCIAL_VK_GROUP_TOKEN) {
+            return { module: VkModule };
+        }
+
+        return {
+            module: VkModule,
+            imports: [
+                nestVk.VkModule.forRootAsync({
+                    inject: [MainMiddleware],
+                    useFactory: async (featuresMiddleware: MainMiddleware) => ({
+                        token: xEnv.SOCIAL_VK_GROUP_TOKEN,
+                        options: {
+                            pollingGroupId: xEnv.SOCIAL_VK_GROUP_ID,
+                            apiMode: 'sequential',
+                        },
+                        useSessionManager: false,
+                        useSceneManager: false,
+                        useHearManager: false,
+                        // launchOptions: false,
+                        // notReplyMessage: true,
+                        middlewaresBefore: [
+                            featuresMiddleware.middlewaresBefore,
+                        ],
+                        middlewaresAfter: [featuresMiddleware.middlewaresAfter],
+                    }),
                 }),
-            }),
-        ],
-        providers: [
-            ...middlewares,
-            VKKeyboardFactory,
-            VkService,
-            VkUpdate,
-            SelectGroupScene,
-        ],
-        exports: [...middlewares, VKKeyboardFactory, VkService],
-    }),
-})
-export class VkModule {}
+            ],
+            providers: [
+                ...middlewares,
+                VKKeyboardFactory,
+                VkService,
+                VkUpdate,
+                SelectGroupScene,
+            ],
+            exports: [...middlewares, VKKeyboardFactory, VkService],
+        };
+    }
+}

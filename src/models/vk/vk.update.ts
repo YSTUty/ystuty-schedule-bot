@@ -112,6 +112,12 @@ export class VkUpdate {
         ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
     }
 
+    @Hears('/glist')
+    // @UseGuards(new VkAdminGuard(true))
+    onGroupsList(@Ctx() ctx: IMessageContext) {
+        ctx.send(`List: ${this.ystutyService.groupNames.join(', ')}`);
+    }
+
     @VkHearsLocale([
         LocalePhrase.RegExp_Schedule_For_OneDay,
         LocalePhrase.Button_Schedule_Schedule,

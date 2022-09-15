@@ -14,9 +14,15 @@ import {
     patternGroupName,
     TelegrafExceptionFilter,
     TelegramAdminGuard,
+    xs,
 } from '@my-common';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
-import { IContext, IMessageContext } from '@my-interfaces/telegram';
+import {
+    IContext,
+    IMessageContext,
+    ICallbackQueryContext,
+    ICbQOrMsg,
+} from '@my-interfaces/telegram';
 
 import { YSTUtyService } from '../ystuty/ystuty.service';
 import { TelegramService } from './telegram.service';
@@ -47,45 +53,10 @@ export class StartTelegramUpdate {
         throw new Error('Whoops');
     }
 
-    @Hears(
-        new RegExp(
-            `\\/(?<command>cal(endar)?)(\\s+)?${patternGroupName}?`,
-            'i',
-        ),
-    )
-    async onCalendar(@Ctx() ctx: IMessageContext) {
-        const session =
-            ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
-
-        const groupNameFromMath = ctx.match?.groups?.groupName;
-        const groupName = this.ystutyService.getGroupByName(
-            groupNameFromMath || session.selectedGroupName,
-        );
-
-        if (!groupName) {
-            if (session.selectedGroupName) {
-                ctx.replyWithHTML(
-                    ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-                        groupName: groupNameFromMath,
-                    }),
-                );
-                return;
-            }
-            ctx.scene.enter(SELECT_GROUP_SCENE);
-            return;
-        }
-
-        const keyboard = this.keyboardFactory.getICalendarInline(
-            ctx,
-            `https://parser.ystuty.ru/api/calendar/group/${groupName}.ical`,
-            `Calendar: ${groupName}`,
-        ); 
-        ctx.replyWithHTML(
-            `Calendar import link:\n` +
-                `<code>https://parser.ystuty.ru/api/calendar/group/${groupName}.ical</code>\n` +
-                `<a href="https://parser.ystuty.ru/api/calendar/group/${groupName}.ical">Try me</a>\n\n`,
-            keyboard,
-        );
+    @Action(/nope(:(?<text>.*))?/)
+    onNopeAction(@Ctx() ctx: ICallbackQueryContext) {
+        const text = ctx.match.groups.text;
+        ctx.tryAnswerCbQuery(text);
     }
 
     @TgHearsLocale(LocalePhrase.Button_Cancel)
@@ -168,12 +139,6 @@ export class StartTelegramUpdate {
                 ctx.message.new_chat_title,
             );
         }
-    }
-
-    @Action(LocalePhrase.Button_SelectGroup)
-    async onSelectGroup(@Ctx() ctx: IMessageContext) {
-        ctx.scene.enter(SELECT_GROUP_SCENE);
-        ctx.answerCbQuery();
     }
 
     @On('inline_query')
@@ -322,6 +287,96 @@ export class StartTelegramUpdate {
         @Ctx() ctx: IContext<{}, tg.Update.ChosenInlineResultUpdate>,
     ) {
         this.logger.debug('OnChosenInlineResult', ctx.chosenInlineResult);
+    }
+
+    @Command('glist')
+    @Action(/pager:glist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
+    async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
+        // ctx.replyWithHTML(`List: ${JSON.stringify(this.ystutyService.groupNames)}`);
+        let page = 1;
+        let count = 10;
+
+        if (ctx.updateType === 'callback_query') {
+            page = Number(ctx.match.groups.page);
+            count = Number(ctx.match.groups.count);
+        } else if ('text' in ctx.message) {
+            [, page = 1, count = 10] = ctx.message.text.split(' ').map(Number);
+        }
+
+        const { items, currentPage, totalPages } =
+            await this.ystutyService.groupsList(page, count);
+
+        const keyboard = this.keyboardFactory.getPagination(
+            `glist-${count}`,
+            currentPage,
+            totalPages,
+            items,
+            'selectGroup',
+        );
+
+        const content = xs`
+            <b>Groups list</b>
+            <pre>---☼ (${currentPage}/${totalPages}) ☼---</pre>
+        `;
+
+        if (ctx.callbackQuery) {
+            try {
+                await ctx.editMessageText(content, {
+                    ...keyboard,
+                    parse_mode: 'HTML',
+                });
+            } catch {}
+            ctx.tryAnswerCbQuery();
+        } else {
+            ctx.replyWithHTML(content, keyboard);
+        }
+    }
+
+    @Hears(
+        new RegExp(
+            `\\/(?<command>cal(endar)?)(\\s+)?${patternGroupName}?`,
+            'i',
+        ),
+    )
+    async onCalendar(@Ctx() ctx: IMessageContext) {
+        const session =
+            ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
+
+        const groupNameFromMath = ctx.match?.groups?.groupName;
+        const groupName = this.ystutyService.getGroupByName(
+            groupNameFromMath || session.selectedGroupName,
+        );
+
+        if (!groupName) {
+            if (session.selectedGroupName) {
+                ctx.replyWithHTML(
+                    ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+                        groupName: groupNameFromMath,
+                    }),
+                );
+                return;
+            }
+            ctx.scene.enter(SELECT_GROUP_SCENE);
+            return;
+        }
+
+        const keyboard = this.keyboardFactory.getICalendarInline(
+            ctx,
+            `https://parser.ystuty.ru/api/calendar/group/${groupName}.ical`,
+            `Calendar: ${groupName}`,
+        );
+        ctx.replyWithHTML(
+            `Calendar import link:\n` +
+                `<code>https://parser.ystuty.ru/api/calendar/group/${groupName}.ical</code>\n` +
+                `<a href="https://parser.ystuty.ru/api/calendar/group/${groupName}.ical">Try me</a>\n\n`,
+            keyboard,
+        );
+    }
+
+    @Action(LocalePhrase.Button_SelectGroup)
+    async onSelectGroup(@Ctx() ctx: IMessageContext) {
+        ctx.scene.enter(SELECT_GROUP_SCENE);
+        ctx.answerCbQuery();
     }
 
     @Command('tt')
@@ -516,13 +571,15 @@ export class StartTelegramUpdate {
     }
 
     @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
-    async hearSelectGroup(@Ctx() ctx: IMessageContext) {
+    @Action(/selectGroup:(?<groupName>(.*))/i)
+    async hearSelectGroup(@Ctx() ctx: ICbQOrMsg) {
         const { from, chat, state } = ctx;
         const groupName = ctx.match?.groups?.groupName;
         const withTrigger = !!ctx.match?.groups?.trigger;
 
         if (chat.type !== 'private') {
             if (!withTrigger && !state.appeal) {
+                ctx.tryAnswerCbQuery();
                 return;
             }
 
@@ -550,6 +607,10 @@ export class StartTelegramUpdate {
             }
         }
 
-        ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
+        await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
+        if (ctx.callbackQuery) {
+            await ctx.tryAnswerCbQuery();
+            ctx.deleteMessage();
+        }
     }
 }

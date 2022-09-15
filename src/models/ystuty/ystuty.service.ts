@@ -84,6 +84,19 @@ export class YSTUtyService implements OnModuleInit {
         return [...this.allGroupsList];
     }
 
+    public async groupsList(page = 1, count = 20) {
+        const { groupNames } = this;
+        const totalCount = groupNames.length;
+        const totalPageCount = page * count;
+        const items = groupNames.slice(totalPageCount - count, totalPageCount);
+
+        return {
+            items,
+            currentPage: page,
+            totalPages: Math.ceil(totalCount / count),
+        };
+    }
+
     public async findNext({
         groupName,
         skipDays = 0,

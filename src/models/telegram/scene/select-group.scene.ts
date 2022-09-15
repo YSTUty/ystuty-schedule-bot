@@ -77,7 +77,7 @@ export class SelectGroupScene extends BaseScene {
             return;
         }
 
-        if ((isChat && !ctx.state.appeal) || !ctx.message) {
+        if ((isChat && !ctx.state.appeal) || false /* !ctx.message */) {
             return;
         }
 

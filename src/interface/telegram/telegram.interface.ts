@@ -60,6 +60,7 @@ export type ICallbackQueryContext<T = {}> = IContext<
     T,
     tg.Update.CallbackQueryUpdate
 >;
+export type ICbQOrMsg = IMessageContext | ICallbackQueryContext;
 
 export type ISceneContext = (IMessageContext | ICallbackQueryContext) & {
     scene: Scenes.SceneContextScene<

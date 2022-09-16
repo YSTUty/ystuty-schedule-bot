@@ -11,7 +11,7 @@ services:
       - redis
     ports:
       # 8080 is the default port
-      - ${EXTERNAL_PORT:-7574}:8080
+      - ${SERVER_EXTERNAL_PORT:-7574}:${SERVER_PORT:-8080}
     volumes:
       - ./locales/:/home/node/app/locales/
       - ./.env:/home/node/app/.env

@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.1](https://github.com/YSTUty/ystuty-bot/compare/v0.1.0...v0.1.1) (2022-09-16)
+
+
+### 🧹 Chore
+
+* **docker:** updated ports ([4eaa3eb](https://github.com/YSTUty/ystuty-bot/commit/4eaa3ebf4ccf4d5706a3fc884ec76401b16b522a))
+* remove console.log ([e35d1b1](https://github.com/YSTUty/ystuty-bot/commit/e35d1b1ba496b5229f239deac98c34d0f77627bc))
+* **vk:** remove `console.log` in middleware ([cbb5a20](https://github.com/YSTUty/ystuty-bot/commit/cbb5a20ebfe7058dd25bd44abbd5aaef5620f454))
+
+
+### 🚀 Features
+
+* **app:** added informer on app new version ([ac97f3e](https://github.com/YSTUty/ystuty-bot/commit/ac97f3ed174340ceefa21c10cf70e9eb42868f27))
+* **metrics:** added metrics (prometheus) ([5566126](https://github.com/YSTUty/ystuty-bot/commit/5566126fcf6b39d6a4caf7e1a249fa5cba16aa1d))
+
 ## 0.1.0 (2022-09-15)
 
 

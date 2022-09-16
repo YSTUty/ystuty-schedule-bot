@@ -99,8 +99,6 @@ export class MainMiddleware {
                     updateType,
                 });
 
-            console.log('updateType', updateType);
-
             try {
                 await next?.();
                 this.metricsService.vkRequestCounter.inc({

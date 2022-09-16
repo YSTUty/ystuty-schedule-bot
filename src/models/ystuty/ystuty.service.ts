@@ -7,6 +7,7 @@ import { getLessonTypeStrArr, matchGroupName } from '@my-common';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
 import { RedisService } from '../redis/redis.service';
+import { MetricsService } from '../metrics/metrics.service';
 import * as scheduleUtil from './util/schedule.util';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class YSTUtyService implements OnModuleInit {
     constructor(
         private readonly httpService: HttpService,
         private readonly redisService: RedisService,
+        private readonly metricsService: MetricsService,
     ) {
         httpService.axiosRef.defaults.baseURL = xEnv.YSTUTY_PARSER_URL;
         httpService.axiosRef.defaults.timeout = 60e3;
@@ -107,39 +109,48 @@ export class YSTUtyService implements OnModuleInit {
         skipDays = 0,
         isWeek = false,
         weekNumber = WeekNumberType.Monday,
-        next = false,
     }: {
         groupName: string;
         skipDays?: number;
         isWeek?: boolean;
         weekNumber?: WeekNumberType;
-        next?: boolean;
-    }): Promise<[number, string | false]> {
-        const responseSchedule = await this.getFormatedSchedule({
-            groupName,
-            skipDays,
-            isWeek,
-        });
+    }) {
 
-        if (responseSchedule === null && !isWeek) {
+        this.metricsService.scheduleCounter.inc({ groupName });
+
+        const findDeep = async (
+            skipDays?: number,
+            weekNumber?: WeekNumberType,
+            isWeek?: boolean,
+            next?: boolean,
+        ): Promise<[number, string | false]> => {
+            // ! TODO: add cache schedule
+            const responseSchedule = await this.getFormatedSchedule({
+                groupName,
+                skipDays,
+                isWeek,
+            });
+            if (responseSchedule !== null || isWeek) {
+                return [skipDays, responseSchedule];
+            }
             if (weekNumber < WeekNumberType.Sunday) {
-                const [_skipDays, nextSchedule] = await this.findNext({
-                    groupName,
-                    skipDays: skipDays + 1,
-                    weekNumber: weekNumber + 1,
-                    next: true,
-                });
+                const [_skipDays, nextSchedule] = await findDeep(
+                    skipDays + 1,
+                    weekNumber + 1,
+                    false,
+                    true,
+                );
 
                 if (next || nextSchedule) {
                     return [_skipDays, nextSchedule];
                 }
-            } else {
-                return [skipDays, false];
             }
-        }
+            return [skipDays, false];
+        };
 
-        return [skipDays, responseSchedule];
+        return await findDeep(skipDays, weekNumber, isWeek);
     }
+
 
     public async getFormatedSchedule({
         groupName,

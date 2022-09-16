@@ -5,6 +5,7 @@ import * as RedisSession from 'telegraf-session-redis';
 import * as xEnv from '@my-environment';
 
 import { MainMiddleware } from './middleware/main.middleware';
+import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { i18n } from './util/i18n.util';
 import { TelegramService } from './telegram.service';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
@@ -12,7 +13,7 @@ import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 import { StartTelegramUpdate } from './telegram.update';
 import { SelectGroupScene } from './scene/select-group.scene';
 
-const middlewares = [MainMiddleware];
+const middlewares = [MainMiddleware, MetricsMiddleware];
 
 @Global()
 @Module({})
@@ -26,13 +27,17 @@ export class TelegramModule {
             module: TelegramModule,
             imports: [
                 TelegrafModule.forRootAsync({
-                    useFactory: async (featuresMiddleware: MainMiddleware) => ({
+                    useFactory: async (
+                        featuresMiddleware: MainMiddleware,
+                        metricsMiddleware: MetricsMiddleware,
+                    ) => ({
                         token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
                         launchOptions: false,
 
                         middlewares: [
                             featuresMiddleware.middlewareForkAll,
                             featuresMiddleware,
+                            metricsMiddleware,
                             // @ts-ignore
                             new RedisSession({
                                 store: {

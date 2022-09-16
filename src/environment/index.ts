@@ -52,3 +52,8 @@ export const SOCIAL_TELEGRAM_ADMIN_IDS: number[] =
     (process.env.SOCIAL_TELEGRAM_ADMIN_IDS &&
         JSON.parse(process.env.SOCIAL_TELEGRAM_ADMIN_IDS)) ||
     [];
+
+// Prometheus
+export const PROMETHEUS_ENABLED: boolean = process.env.PROMETHEUS_ENABLED
+    ? process.env.PROMETHEUS_ENABLED === 'true'
+    : true;

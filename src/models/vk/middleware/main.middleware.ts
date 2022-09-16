@@ -16,6 +16,7 @@ import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 import * as xEnv from '@my-environment';
 
+import { MetricsService } from '../../metrics/metrics.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { i18n } from '../util/i18n.util';
 import { checkLocaleCondition } from '../util/vk-menu.util';
@@ -37,6 +38,7 @@ export class MainMiddleware {
         private readonly sceneManager: SceneManager,
 
         private readonly keyboardFactory: VKKeyboardFactory,
+        private readonly metricsService: MetricsService,
     ) {
         this.redisStorage = new RedisStorage({
             redis: {
@@ -66,6 +68,7 @@ export class MainMiddleware {
         const composer = Composer.builder<Context>();
 
         composer.use(this.featureMiddleware);
+        composer.use(this.middlewareMetrics);
         composer.use(this.safeTextConverstionMiddleware);
         composer.use(this.sessionManager.middleware);
         composer.use(this.sessionConversationManager.middleware);
@@ -85,15 +88,50 @@ export class MainMiddleware {
         return composer.compose();
     }
 
+    private get middlewareMetrics() {
+        return async (
+            ctx: IContext,
+            next: NextMiddleware,
+        ): Promise<MiddlewareReturn> => {
+            const { type: updateType } = ctx;
+            const duration =
+                this.metricsService.vkRequestDurationHistogram.startTimer({
+                    updateType,
+                });
+
+            console.log('updateType', updateType);
+
+            try {
+                await next?.();
+                this.metricsService.vkRequestCounter.inc({
+                    updateType,
+                    status: 'success',
+                });
+                duration({ status: 'success' });
+            } catch (err) {
+                this.metricsService.vkRequestCounter.inc({
+                    updateType,
+                    status: 'error',
+                });
+                duration({ status: 'error' });
+                throw err;
+            } finally {
+                // duration();
+            }
+            return;
+        };
+    }
+
     private get featureMiddleware() {
         return async (
             ctx: IContext,
             next: NextMiddleware,
         ): Promise<MiddlewareReturn> => {
+            if (ctx.isOutbox) {
+                return;
+            }
             if (ctx.is(['message'])) {
-                if (ctx.isOutbox) {
-                    return;
-                }
+                // ...
             } else {
                 // * safe `send` method for all context events
                 ctx.send = (

@@ -4,7 +4,8 @@
   <img src="https://img.shields.io/github/package-json/v/YSTUty/ystuty-bot?style=flat-square" alt="GitHub package.json version"/>
   <img src="https://img.shields.io/github/last-commit/YSTUty/ystuty-bot?style=flat-square" alt="GitHub last commit"/>
   <!-- <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=telegram&label=Used by&suffix= user&query=ip&url=http://ip.jsontest.com" alt="GitHub last commit"/> -->
-  <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=Доступно&suffix= групп&query=$.groups&url=https://parser.ystu.site/api/ystu/schedule/count%253Fextramural=true" alt="Number of available groups"/>
+  <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=Доступно&suffix= групп&query=$.groups&url=https://parser.ystuty.ru/api/ystu/schedule/count?extramural=true" alt="Number of available groups"/>
+  <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=Доступно&suffix= преподавателей&query=$.teachers&url=https://parser.ystuty.ru/api/ystu/schedule/count" alt="Number of available teachers"/>
   <br/>
   <a href="https://vk.com/ss_ystu"><img src="https://img.shields.io/badge/Bot-Use now-9cf?style=flat-square&logo=vk" alt="vk.com/ss_ystu"/></a>
   <a href="https://t.me/ss_ystu_bot"><img src="https://img.shields.io/badge/Bot-Use now-229ED9?style=flat-square&logo=telegram" alt="t.me/ss_ystu_bot"/></a>

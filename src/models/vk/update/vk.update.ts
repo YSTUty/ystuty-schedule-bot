@@ -165,7 +165,7 @@ export class VkUpdate {
 
         if (!groupName) {
             if (session.selectedGroupName) {
-                ctx.replyWithHTML(
+                ctx.send(
                     ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
                         groupName: groupNameFromMath,
                     }),
@@ -237,7 +237,7 @@ export class VkUpdate {
 
         if (!groupName) {
             if (session.selectedGroupName) {
-                ctx.replyWithHTML(
+                ctx.send(
                     ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
                         groupName: groupNameFromMath,
                     }),

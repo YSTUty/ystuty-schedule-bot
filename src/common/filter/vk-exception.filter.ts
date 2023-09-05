@@ -5,7 +5,7 @@ import {
     ForbiddenException,
     Logger,
 } from '@nestjs/common';
-import { VkArgumentsHost } from 'nestjs-vk';
+import { VkArgumentsHost, VkExecutionContext } from 'nestjs-vk';
 import { MessageEventContext } from 'vk-io';
 import * as Redlock from 'redlock';
 import { LocalePhrase } from '@my-interfaces';
@@ -16,8 +16,8 @@ import { SOCIAL_VK_ADMIN_IDS } from '@my-environment';
 export class VkExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(VkExceptionFilter.name);
 
-    async catch(exception: Error, host: ArgumentsHost): Promise<void> {
-        if ((host.getType() as string) !== 'vk-io') {
+    async catch(exception: Error, host: VkExecutionContext): Promise<void> {
+        if (host.getType() !== 'vk-io') {
             return;
         }
 

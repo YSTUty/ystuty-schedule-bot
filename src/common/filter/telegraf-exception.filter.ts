@@ -1,5 +1,8 @@
-import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
-import { TelegrafArgumentsHost } from '@xtcry/nestjs-telegraf';
+import { Catch, ExceptionFilter, Logger } from '@nestjs/common';
+import {
+    TelegrafArgumentsHost,
+    TelegrafExecutionContext,
+} from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
 import * as Redlock from 'redlock';
 import { escapeHTMLCodeChars } from '@my-common';
@@ -11,8 +14,11 @@ import { IContext } from '@my-interfaces/telegram';
 export class TelegrafExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(TelegrafExceptionFilter.name);
 
-    async catch(exception: Error, host: ArgumentsHost): Promise<void> {
-        if ((host.getType() as string) !== 'telegraf') {
+    async catch(
+        exception: Error,
+        host: TelegrafExecutionContext,
+    ): Promise<void> {
+        if (host.getType() !== 'telegraf') {
             return;
         }
 

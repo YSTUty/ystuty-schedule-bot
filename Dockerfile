@@ -1,4 +1,3 @@
-
 ##
 # [container] prepare package.json
 ##
@@ -6,13 +5,13 @@ FROM endeveit/docker-jq AS prePackage
 
 COPY package.json /tmp
 
-RUN jq '{ dependencies, devDependencies, peerDependencies, scripts: (.scripts | { postinstall }) }' < /tmp/package.json > /tmp/prepare-package.json
-# Keep `postinstall` script 
+RUN jq '{ dependencies, devDependencies, peerDependencies, license, scripts: (.scripts | { postinstall }) }' < /tmp/package.json > /tmp/prepare-package.json
+# Keep `postinstall` script
 
 ##
 # [container] deps
 ##
-FROM node:14-alpine AS deps
+FROM node:16-alpine AS deps
 
 WORKDIR /deps
 
@@ -27,15 +26,16 @@ RUN yarn install --pure-lockfile; \
 ##
 # [container] Production
 ##
-FROM node:14-alpine AS base
+FROM node:16-alpine AS base
 
 WORKDIR /home/node/app
+
+# Install dependencies via apk
+RUN apk --update --no-cache add curl
 
 COPY --from=deps /deps/node_modules ./node_modules
 
 COPY . ./
-
-RUN yarn build
 
 ##
 # [container] Production
@@ -44,3 +44,5 @@ FROM base AS production
 
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
+
+RUN yarn build

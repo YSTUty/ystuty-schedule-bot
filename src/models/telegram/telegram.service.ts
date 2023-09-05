@@ -22,7 +22,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     ) {}
 
     async onModuleInit() {
-        await this.launch();
+        this.launch().catch((e) => this.logger.error(e));
     }
 
     async onApplicationShutdown(signal: string) {

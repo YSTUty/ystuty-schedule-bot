@@ -17,7 +17,7 @@ export enum EnvType {
 export const NODE_ENV: EnvType =
     (process.env.NODE_ENV as EnvType) || EnvType.DEV;
 
-export const INSTANCE_NAME: string = process.env.INSTANCE_NAME || 'ystuty-bot';
+export const INSTANCE_NAME: string = process.env.INSTANCE_NAME || 'ystuty-schedule-bot';
 
 export const SERVER_PORT: number = +process.env.SERVER_PORT || 8080;
 

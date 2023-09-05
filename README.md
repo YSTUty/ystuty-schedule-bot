@@ -1,8 +1,8 @@
 <p align="center"><img src="https://ystuty.github.io/docs/assets/img/YSTUty_logo-text-without-bg-shadow.png" width="150"></p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/package-json/v/YSTUty/ystuty-bot?style=flat-square" alt="GitHub package.json version"/>
-  <img src="https://img.shields.io/github/last-commit/YSTUty/ystuty-bot?style=flat-square" alt="GitHub last commit"/>
+  <img src="https://img.shields.io/github/package-json/v/YSTUty/ystuty-schedule-bot?style=flat-square" alt="GitHub package.json version"/>
+  <img src="https://img.shields.io/github/last-commit/YSTUty/ystuty-schedule-bot?style=flat-square" alt="GitHub last commit"/>
   <!-- <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=telegram&label=Used by&suffix= user&query=ip&url=http://ip.jsontest.com" alt="GitHub last commit"/> -->
   <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=Доступно&suffix= групп&query=$.groups&url=https://parser.ystuty.ru/api/ystu/schedule/count?extramural=true" alt="Number of available groups"/>
   <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=Доступно&suffix= преподавателей&query=$.teachers&url=https://parser.ystuty.ru/api/ystu/schedule/count" alt="Number of available teachers"/>
@@ -12,7 +12,7 @@
   <a href="https://view.ystuty.ru" target="_blank"><img src="https://img.shields.io/badge/Viwe%20schedule-YSTUty-9cf?style=flat-square&logo=Internet%20Explorer" alt="view.ystuty.ru"/></a>
 </p>
 
-# [YSTUty] Bot
+# [YSTUty] Schedule bot
 > Решение в виде бота для мессенджера Telegram и VK, использующее данные из сервиса [YSTUty-Parser](https://github.com/YSTUty/ystuty-parser)
 
 

@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.0](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.1.1...v0.2.0) (2023-09-05)
+
+
+### 🧹 Chore
+
+* **app:** add log app version ([8d7c28e](https://github.com/YSTUty/ystuty-schedule-bot/commit/8d7c28eee9ab5672ac38c91ca40c3d8f98cc4d98))
+* **common:** check host type in exception filters ([51594f7](https://github.com/YSTUty/ystuty-schedule-bot/commit/51594f7bea6feb5531ad3cb3ad889fa24cead5c8))
+* **docker:** rename `project_name` in makefile ([462d54f](https://github.com/YSTUty/ystuty-schedule-bot/commit/462d54f8283c25d99626b21b2823c1f0a0cd562d))
+* **locale:** add support payload to `start` regexp ([29c916b](https://github.com/YSTUty/ystuty-schedule-bot/commit/29c916ba99bdd77ad929ba76a5d1d17b3d9bcf50))
+* **project:** rename project to `ystuty-schedule-bot` ([2367e69](https://github.com/YSTUty/ystuty-schedule-bot/commit/2367e693dd9c10a5cd6ea79912eb127e34b4c0ab))
+* **telegram:** no wait launch bot ([92e514e](https://github.com/YSTUty/ystuty-schedule-bot/commit/92e514eade353edac3a4886c266f9aad29ada740))
+* update jest conf ([11ba6c6](https://github.com/YSTUty/ystuty-schedule-bot/commit/11ba6c6967cf6c00100b47bc2cdb1e70eb7dfe96))
+
+
+### 🚀 Features
+
+* **social:** add draw `webViewLink` on `start` ([eb0d2ea](https://github.com/YSTUty/ystuty-schedule-bot/commit/eb0d2eaf9d8762d3994d7abfefc9db123d318020))
+* **social:** add support start payload & ref value for fast select group ([c37c5b1](https://github.com/YSTUty/ystuty-schedule-bot/commit/c37c5b19486c3a4c8c66a4614f2dfe68d3ca56c7))
+* update structure ([ba2cce5](https://github.com/YSTUty/ystuty-schedule-bot/commit/ba2cce550ee86788a102a771c2041c68170480c9))
+
+
+### 🐛 Bug Fixes
+
+* **readme:** change server host on badges ([1f22d84](https://github.com/YSTUty/ystuty-schedule-bot/commit/1f22d848d5f96114295779031a6d4dd4eeff168d))
+* **redis:** add redis prefix to options ([d8b3fbf](https://github.com/YSTUty/ystuty-schedule-bot/commit/d8b3fbf9e6f184517304601022cfd177bc05ba37))
+* **telegram:** no clean scene session in middleware ([dc57e70](https://github.com/YSTUty/ystuty-schedule-bot/commit/dc57e709edf174228a3381691191da30700b7f81))
+* **vk:** fix send method name ([0adf682](https://github.com/YSTUty/ystuty-schedule-bot/commit/0adf682617a28f2225687590c8fb1765838b5f44))
+
 ### [0.1.1](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.1.0...v0.1.1) (2022-09-16)
 
 

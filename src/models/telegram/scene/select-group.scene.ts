@@ -5,7 +5,7 @@ import { IContext, IStepContext } from '@my-interfaces/telegram';
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
-import { BaseScene } from '../base.scene';
+import { BaseScene } from './base.scene';
 
 @Wizard(SELECT_GROUP_SCENE)
 export class SelectGroupScene extends BaseScene {

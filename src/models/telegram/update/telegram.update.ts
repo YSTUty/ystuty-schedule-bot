@@ -10,6 +10,7 @@ import {
 } from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
 import * as tg from 'telegraf/typings/core/types/typegram';
+
 import {
     patternGroupName,
     TelegrafExceptionFilter,
@@ -23,13 +24,13 @@ import {
     ICallbackQueryContext,
     ICbQOrMsg,
 } from '@my-interfaces/telegram';
+import { TgHearsLocale } from '@my-common/decorator/tg';
 
-import { YSTUtyService } from '../ystuty/ystuty.service';
-import { TelegramService } from './telegram.service';
+import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { TelegramService } from '../telegram.service';
 
-import { TgHearsLocale } from './decorators/tg-hears-locale.decorator';
-import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
-import { SELECT_GROUP_SCENE } from './telegram.constants';
+import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
+import { SELECT_GROUP_SCENE } from '../telegram.constants';
 
 @Update()
 @UseFilters(TelegrafExceptionFilter)

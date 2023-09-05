@@ -21,8 +21,8 @@
       "@my-common": [
         "./src/common"
       ],
-      "@my-config": [
-        "./src/config"
+      "@my-common/*": [
+        "./src/common/*"
       ],
       "@my-environment": [
         "./src/environment"

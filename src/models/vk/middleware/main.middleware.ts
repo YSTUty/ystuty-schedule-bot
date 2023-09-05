@@ -12,14 +12,14 @@ import { SessionManager } from '@vk-io/session';
 import { SceneManager } from '@vk-io/scenes';
 import { RedisStorage } from 'vk-io-redis-storage';
 import { NextMiddleware, MiddlewareReturn } from 'middleware-io';
+
+import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
-import * as xEnv from '@my-environment';
+import { checkLocaleCondition, i18n } from '@my-common/util/vk';
 
 import { MetricsService } from '../../metrics/metrics.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
-import { i18n } from '../util/i18n.util';
-import { checkLocaleCondition } from '../util/vk-menu.util';
 
 @Injectable()
 export class MainMiddleware {

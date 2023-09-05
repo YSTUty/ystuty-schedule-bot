@@ -5,7 +5,7 @@ import * as nestVk from 'nestjs-vk';
 import { MainMiddleware } from './middleware/main.middleware';
 
 import { VKKeyboardFactory } from './vk-keyboard.factory';
-import { VkUpdate } from './vk.update';
+import { VkUpdate } from './update/vk.update';
 import { VkService } from './vk.service';
 import { SelectGroupScene } from './scene/select-group.scene';
 

@@ -1,15 +1,16 @@
 import { Global, Module } from '@nestjs/common';
 import { TelegrafModule } from '@xtcry/nestjs-telegraf';
 import * as RedisSession from 'telegraf-session-redis';
+
 import * as xEnv from '@my-environment';
+import { i18n } from '@my-common/util/tg';
 
 import { MainMiddleware } from './middleware/main.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
-import { i18n } from './util/i18n.util';
 import { TelegramService } from './telegram.service';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 
-import { StartTelegramUpdate } from './telegram.update';
+import { StartTelegramUpdate } from './update/telegram.update';
 import { SelectGroupScene } from './scene/select-group.scene';
 
 const middlewares = [MainMiddleware, MetricsMiddleware];

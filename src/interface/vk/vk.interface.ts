@@ -17,6 +17,9 @@ interface ISessionConversationState {
 
 type ContextState = {
     appeal: boolean;
+    foundGroupName?: string;
+    rejectRefGroupName?: boolean;
+
     [key: string]: any;
 };
 

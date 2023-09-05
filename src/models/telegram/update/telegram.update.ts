@@ -63,7 +63,7 @@ export class StartTelegramUpdate {
     @TgHearsLocale(LocalePhrase.Button_Cancel)
     @TgHearsLocale(LocalePhrase.RegExp_Start)
     @Start()
-    hearStart(@Ctx() ctx: IMessageContext) {
+    async hearStart(@Ctx() ctx: IMessageContext & { startPayload: string }) {
         if (ctx.chat.type !== 'private' && !ctx.state.appeal) {
             return;
         }
@@ -73,7 +73,7 @@ export class StartTelegramUpdate {
             if (params.length > 0) {
                 switch (params[0].replace(/--/g, '.')) {
                     case LocalePhrase.Button_SelectGroup: {
-                        ctx.scene.enter(SELECT_GROUP_SCENE);
+                        await ctx.scene.enter(SELECT_GROUP_SCENE);
                         return;
                     }
                 }
@@ -84,6 +84,22 @@ export class StartTelegramUpdate {
             const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
             ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
             return;
+        }
+
+        const msgPayload = ctx.startPayload?.trim().split('_');
+        if (msgPayload?.length > 1) {
+            if (msgPayload[0] === 'g') {
+                const groupNameTest = msgPayload.slice(1).join('_');
+                const groupName =
+                    this.ystutyService.parseGroupName(groupNameTest) ||
+                    this.ystutyService.parseGroupName(
+                        Buffer.from(groupNameTest, 'base64').toString(),
+                    );
+
+                if (groupName) {
+                    await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
+                }
+            }
         }
 
         const keyboard = this.keyboardFactory.getStart(ctx);

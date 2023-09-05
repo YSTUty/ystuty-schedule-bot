@@ -19,7 +19,10 @@ import { IContext, IMessageContext } from '@my-interfaces/vk';
 import { checkLocaleCondition, i18n } from '@my-common/util/vk';
 
 import { MetricsService } from '../../metrics/metrics.service';
+import { YSTUtyService } from '../../ystuty/ystuty.service';
+
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
+import { SELECT_GROUP_SCENE } from '../vk.constants';
 
 @Injectable()
 export class MainMiddleware {
@@ -39,6 +42,7 @@ export class MainMiddleware {
 
         private readonly keyboardFactory: VKKeyboardFactory,
         private readonly metricsService: MetricsService,
+        private readonly ystutyService: YSTUtyService,
     ) {
         this.redisStorage = new RedisStorage({
             redis: {
@@ -76,6 +80,7 @@ export class MainMiddleware {
         composer.use(this.middlewareCleaner);
         composer.use(i18n.middleware);
         composer.use(this.sceneManager.middleware);
+        composer.use(this.middlewareRefValue());
 
         return composer.compose();
     }
@@ -85,6 +90,7 @@ export class MainMiddleware {
 
         composer.use(this.sceneInterceptMiddleware());
         composer.use(this.hearManagerProvider.middleware);
+        composer.use(this.middlewareRefValue(false));
 
         return composer.compose();
     }
@@ -208,6 +214,37 @@ export class MainMiddleware {
             }
 
             return ctx.scene.reenter();
+        };
+    }
+
+    private middlewareRefValue(before = true) {
+        return async (ctx: IMessageContext, next: NextMiddleware) => {
+            const msgPayload = ctx.referralValue?.split('_');
+            if (msgPayload?.length > 1) {
+                if (msgPayload[0] === 'g') {
+                    const groupNameTest = msgPayload.slice(1).join('_');
+
+                    const groupName =
+                        this.ystutyService.parseGroupName(groupNameTest) ||
+                        this.ystutyService.parseGroupName(
+                            Buffer.from(groupNameTest, 'base64').toString(),
+                        );
+                    if (groupName) {
+                        ctx.state.foundGroupName = groupName;
+                    }
+                }
+            }
+
+            await next?.();
+
+            if (
+                ctx.state.foundGroupName &&
+                ctx.state.rejectRefGroupName !== true
+            ) {
+                await ctx.scene.enter(SELECT_GROUP_SCENE, {
+                    state: { groupName: ctx.state.foundGroupName },
+                });
+            }
         };
     }
 }

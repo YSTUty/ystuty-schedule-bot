@@ -39,9 +39,30 @@ export class VkUpdate {
 
     @VkHearsLocale(LocalePhrase.RegExp_Start)
     async hearStart(@Ctx() ctx: IMessageContext) {
-        if (ctx.isChat) {
-            if (!ctx.state.appeal) return;
-        } else if (!ctx.session.selectedGroupName) {
+        if (ctx.isChat && !ctx.state.appeal) {
+            return;
+        }
+
+        const msgPayload = ctx.$match[2]?.trim().split('_');
+        if (msgPayload?.length > 1) {
+            if (msgPayload[0] === 'g') {
+                const groupNameTest = msgPayload.slice(1).join('_');
+                const groupName =
+                    this.ystutyService.parseGroupName(groupNameTest) ||
+                    this.ystutyService.parseGroupName(
+                        Buffer.from(groupNameTest, 'base64').toString(),
+                    );
+
+                if (groupName) {
+                    ctx.state.rejectRefGroupName = true;
+                    await ctx.scene.enter(SELECT_GROUP_SCENE, {
+                        state: { groupName },
+                    });
+                }
+            }
+        }
+
+        if (!ctx.session.selectedGroupName) {
             const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
             const useInline = ctx.clientInfo.inline_keyboard;
             ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {

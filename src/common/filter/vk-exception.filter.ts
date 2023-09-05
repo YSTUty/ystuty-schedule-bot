@@ -17,6 +17,10 @@ export class VkExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(VkExceptionFilter.name);
 
     async catch(exception: Error, host: ArgumentsHost): Promise<void> {
+        if ((host.getType() as string) !== 'vk-io') {
+            return;
+        }
+
         const vkHost = VkArgumentsHost.create(host);
         const ctx = vkHost.getContext<
             IContext<MessageEventContext> | IMessageContext

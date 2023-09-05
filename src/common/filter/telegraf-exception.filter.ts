@@ -12,6 +12,10 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(TelegrafExceptionFilter.name);
 
     async catch(exception: Error, host: ArgumentsHost): Promise<void> {
+        if ((host.getType() as string) !== 'telegraf') {
+            return;
+        }
+
         const telegrafHost = TelegrafArgumentsHost.create(host);
         const ctx = telegrafHost.getContext<IContext>();
 
@@ -44,7 +48,9 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
             case isAdmin:
                 content = ctx.callbackQuery
                     ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
-                    : `💢 Error: <b>${escapeHTMLCodeChars(exception.message)}</b>\n<code>${escapeHTMLCodeChars(
+                    : `💢 Error: <b>${escapeHTMLCodeChars(
+                          exception.message,
+                      )}</b>\n<code>${escapeHTMLCodeChars(
                           exception.stack.split('\n').slice(0, 5).join('\n'),
                       )}</code>`;
                 break;

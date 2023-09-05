@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.1](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.2.0...v0.2.1) (2023-09-05)
+
+
+### 🧹 Chore
+
+* **common:** update host type in exception filters ([2c7ebaf](https://github.com/YSTUty/ystuty-schedule-bot/commit/2c7ebaf543b3606f3adab94b10d53d6133a6dacd))
+* **deps:** update ([6c1f18a](https://github.com/YSTUty/ystuty-schedule-bot/commit/6c1f18a814f05c6d732e58bc47164f504653d631))
+* **docker:** add `restart` option for `redis` ([b062b1c](https://github.com/YSTUty/ystuty-schedule-bot/commit/b062b1ccdb1b77ba285561a206406c1c6763894c))
+
+
+### 🔧 Code Refactoring
+
+* update indent size & add editorconfig ([2560920](https://github.com/YSTUty/ystuty-schedule-bot/commit/2560920f7c7b71dbbc0930d41a5c5b83af0be6cf))
+
+
+### 🚀 Features
+
+* **env:** use `dotenv-expand` ([2520069](https://github.com/YSTUty/ystuty-schedule-bot/commit/25200697f6c04b3c7ad5454f36437cc479f055d6))
+
 ## [0.2.0](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.1.1...v0.2.0) (2023-09-05)
 
 

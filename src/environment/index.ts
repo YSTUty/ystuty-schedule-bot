@@ -1,11 +1,8 @@
-import { resolve } from 'path';
-import { config } from 'dotenv';
+import * as dotenv from 'dotenv';
+import * as dotenvExpand from 'dotenv-expand';
 
-const repoBranch = '';
-
-config({
-  path: resolve(process.cwd(), `.env${repoBranch ? `.${repoBranch}` : ''}`),
-});
+const config = dotenv.config();
+dotenvExpand.expand(config);
 
 export enum EnvType {
   DEV = 'development',

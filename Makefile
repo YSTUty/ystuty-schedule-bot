@@ -1,4 +1,4 @@
-project_name = ystuty_bot
+project_name = ystuty_schedule_bot
 service_name = app_srv
 
 up-prod-build:

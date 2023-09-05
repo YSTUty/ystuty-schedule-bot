@@ -27,6 +27,7 @@ services:
       - ./redis-data:/data
     networks:
       - ystuty_network
+    restart: unless-stopped
 
 networks:
   ystuty_network:

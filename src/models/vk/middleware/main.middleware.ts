@@ -33,13 +33,13 @@ export class MainMiddleware {
 
     private readonly redisStorage: RedisStorage;
 
+    @Inject(VK_HEAR_MANAGER)
+    private readonly hearManagerProvider: HearManager<MessageContext>;
+
+    @Inject(VK_SCENE_MANAGER)
+    private readonly sceneManager: SceneManager;
+
     constructor(
-        @Inject(VK_HEAR_MANAGER)
-        private readonly hearManagerProvider: HearManager<MessageContext>,
-
-        @Inject(VK_SCENE_MANAGER)
-        private readonly sceneManager: SceneManager,
-
         private readonly keyboardFactory: VKKeyboardFactory,
         private readonly metricsService: MetricsService,
         private readonly ystutyService: YSTUtyService,

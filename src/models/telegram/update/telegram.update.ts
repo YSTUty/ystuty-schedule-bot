@@ -10,6 +10,7 @@ import {
 } from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
 import * as tg from 'telegraf/typings/core/types/typegram';
+import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
     patternGroupName,
@@ -63,7 +64,7 @@ export class StartTelegramUpdate {
     @TgHearsLocale(LocalePhrase.Button_Cancel)
     @TgHearsLocale(LocalePhrase.RegExp_Start)
     @Start()
-    async hearStart(@Ctx() ctx: IMessageContext & { startPayload: string }) {
+    async hearStart(@Ctx() ctx: IMessageContext) {
         if (ctx.chat.type !== 'private' && !ctx.state.appeal) {
             return;
         }
@@ -86,7 +87,7 @@ export class StartTelegramUpdate {
             return;
         }
 
-        const msgPayload = ctx.startPayload?.trim().split('_');
+        const msgPayload = ctx.payload?.trim().split('_');
         if (msgPayload?.length > 1) {
             if (msgPayload[0] === 'g') {
                 const groupNameTest = msgPayload.slice(1).join('_');
@@ -118,7 +119,7 @@ export class StartTelegramUpdate {
 
     @On('my_chat_member')
     async onMyChatMember(
-        @Ctx() ctx: IContext<{}, tg.Update.MyChatMemberUpdate>,
+        @Ctx() ctx: IContext<{}, TgUpdate.MyChatMemberUpdate>,
     ) {
         const {
             chat,
@@ -159,7 +160,7 @@ export class StartTelegramUpdate {
     }
 
     @On('inline_query')
-    async onInlineQuery(@Ctx() ctx: IContext<{}, tg.Update.InlineQueryUpdate>) {
+    async onInlineQuery(@Ctx() ctx: IContext<{}, TgUpdate.InlineQueryUpdate>) {
         // TODO: add to queue and wait
 
         const groupNameFromQuery = ctx.inlineQuery.query.trim();
@@ -184,17 +185,17 @@ export class StartTelegramUpdate {
                 return;
             }
 
-            const switch_pm_parameter = LocalePhrase.Button_SelectGroup.replace(
+            const start_parameter = LocalePhrase.Button_SelectGroup.replace(
                 /\./g,
                 '--',
             );
             ctx.answerInlineQuery([], {
                 // is_personal: true,
                 cache_time: 10,
-                switch_pm_text: ctx.i18n.t(
-                    TelegramLocalePhrase.Page_SelectYourGroup,
-                ),
-                switch_pm_parameter,
+                button: {
+                    text: ctx.i18n.t(TelegramLocalePhrase.Page_SelectYourGroup),
+                    start_parameter,
+                },
             });
             return;
         }
@@ -301,7 +302,7 @@ export class StartTelegramUpdate {
 
     @On('chosen_inline_result')
     onChosenInlineResult(
-        @Ctx() ctx: IContext<{}, tg.Update.ChosenInlineResultUpdate>,
+        @Ctx() ctx: IContext<{}, TgUpdate.ChosenInlineResultUpdate>,
     ) {
         this.logger.debug('OnChosenInlineResult', ctx.chosenInlineResult);
     }
@@ -447,7 +448,7 @@ export class StartTelegramUpdate {
         }
 
         if (!ctx.callbackQuery) {
-            ctx.replyWithChatAction('typing');
+            ctx.sendChatAction('typing');
         }
 
         let message: string | false;
@@ -545,7 +546,7 @@ export class StartTelegramUpdate {
         }
 
         if (!ctx.callbackQuery) {
-            ctx.replyWithChatAction('typing');
+            ctx.sendChatAction('typing');
         }
 
         let [days, message] = await this.ystutyService.findNext({

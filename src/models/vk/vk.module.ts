@@ -22,23 +22,23 @@ export class VkModule {
         return {
             module: VkModule,
             imports: [
+                nestVk.VkModule.forManagers({
+                    useSessionManager: false,
+                    useSceneManager: false,
+                    useHearManager: false,
+                }),
                 nestVk.VkModule.forRootAsync({
                     inject: [MainMiddleware],
-                    useFactory: async (featuresMiddleware: MainMiddleware) => ({
+                    useFactory: async (mainMiddleware: MainMiddleware) => ({
                         token: xEnv.SOCIAL_VK_GROUP_TOKEN,
                         options: {
                             pollingGroupId: xEnv.SOCIAL_VK_GROUP_ID,
                             apiMode: 'sequential',
                         },
-                        useSessionManager: false,
-                        useSceneManager: false,
-                        useHearManager: false,
                         // launchOptions: false,
                         // notReplyMessage: true,
-                        middlewaresBefore: [
-                            featuresMiddleware.middlewaresBefore,
-                        ],
-                        middlewaresAfter: [featuresMiddleware.middlewaresAfter],
+                        middlewaresBefore: [mainMiddleware.middlewaresBefore],
+                        middlewaresAfter: [mainMiddleware.middlewaresAfter],
                     }),
                 }),
             ],

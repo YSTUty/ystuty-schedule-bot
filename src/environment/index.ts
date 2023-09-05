@@ -25,6 +25,9 @@ export const SERVER_PORT: number = +process.env.SERVER_PORT || 8080;
 export const YSTUTY_PARSER_URL: string =
     process.env.YSTUTY_PARSER_URL || `http://ystuty_parser:8080`;
 
+export const YSTUTY_WEB_VIEW_ADDRESS: string =
+    process.env.YSTUTY_WEB_VIEW_ADDRESS || '';
+
 // * Redis
 export const REDIS_HOST: string = process.env.REDIS_HOST || 'redis';
 export const REDIS_PORT: number = +process.env.REDIS_PORT || 6379;

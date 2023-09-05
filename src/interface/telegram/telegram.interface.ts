@@ -11,6 +11,7 @@ import { I18nContext } from '@esindger/telegraf-i18n';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 
 interface ISessionState {
+    __language_code?: string;
     selectedGroupName?: string;
     isBlockedBot?: boolean;
 }

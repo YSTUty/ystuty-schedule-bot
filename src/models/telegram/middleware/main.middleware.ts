@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { MiddlewareObj } from 'telegraf/typings/middleware';
+
 import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
 import { IContext } from '@my-interfaces/telegram';
+import { i18n } from '@my-common/util/tg';
 
 @Injectable()
 export class MainMiddleware implements MiddlewareObj<IContext> {
@@ -99,5 +101,29 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         if (session['__language_code'] === 'ru') {
             delete session['__language_code'];
         }
+    }
+
+    public get i18nMiddleware() {
+        return async (ctx: IContext, next: Function) => {
+            const session: IContext['session'] =
+                i18n.config.useSession && ctx[i18n.config.sessionName];
+            const languageCode =
+                session?.__language_code ??
+                ctx.from?.language_code ??
+                i18n.config.defaultLanguage;
+
+            ctx.i18n = i18n.createContext(languageCode, {
+                // * Put `ctx`
+                ctx,
+                from: ctx.from,
+                chat: ctx.chat,
+            }) as any;
+
+            await next();
+
+            if (session) {
+                session.__language_code = ctx.i18n.locale();
+            }
+        };
     }
 }

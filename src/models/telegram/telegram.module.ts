@@ -3,7 +3,6 @@ import { TelegrafModule } from '@xtcry/nestjs-telegraf';
 import * as RedisSession from 'telegraf-session-redis';
 
 import * as xEnv from '@my-environment';
-import { i18n } from '@my-common/util/tg';
 
 import { MainMiddleware } from './middleware/main.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
@@ -28,15 +27,15 @@ export class TelegramModule {
             imports: [
                 TelegrafModule.forRootAsync({
                     useFactory: async (
-                        featuresMiddleware: MainMiddleware,
+                        mainMiddleware: MainMiddleware,
                         metricsMiddleware: MetricsMiddleware,
                     ) => ({
                         token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
                         launchOptions: false,
 
                         middlewares: [
-                            featuresMiddleware.middlewareForkAll,
-                            featuresMiddleware,
+                            mainMiddleware.middlewareForkAll,
+                            mainMiddleware,
                             metricsMiddleware,
                             // @ts-ignore
                             new RedisSession({
@@ -72,9 +71,10 @@ export class TelegramModule {
                                     ctx.chat &&
                                     `tg:session:conversation:${ctx.chat.id}`,
                             }) as RedisSession.default,
-                            featuresMiddleware.middlewareCleaner(),
-                            i18n,
-                            featuresMiddleware.middlewareCleaner(true),
+                            mainMiddleware.middlewareCleaner(),
+                            mainMiddleware.i18nMiddleware,
+                            // i18n,
+                            mainMiddleware.middlewareCleaner(true),
                         ],
                     }),
                     inject: [...middlewares],

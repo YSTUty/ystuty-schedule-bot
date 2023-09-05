@@ -27,6 +27,8 @@ regexp:
 page:
   start: |
     Привет! Это бот для расписания ЯГТУ
+    ${ctx.session.selectedGroupName ? '' : '\nНапиши help для получения списка команд'} \
+    ${webViewLink ? ('\nПросмотр расписания в браузере — ' + webViewLink + (ctx.session.selectedGroupName ? '/g/' + ctx.session.selectedGroupName : '')) : ''}
 
   init_bot: |
     Чтобы продолжить, необходимо выбрать учебную группу.\

@@ -6,6 +6,7 @@ import {
     REDIS_HOST,
     REDIS_PASSWORD,
     REDIS_PORT,
+    REDIS_PREFIX,
     REDIS_USER,
 } from '@my-environment';
 
@@ -17,9 +18,9 @@ export class RedisService {
     constructor() {
         this.redis = new Redis(REDIS_PORT, REDIS_HOST, {
             db: REDIS_DATABASE,
-            keyPrefix: 'bot:',
             username: REDIS_USER,
             password: REDIS_PASSWORD,
+            keyPrefix: REDIS_PREFIX,
         });
 
         this.redlock = new Redlock([this.redis]);

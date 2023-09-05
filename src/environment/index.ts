@@ -17,7 +17,8 @@ export enum EnvType {
 export const NODE_ENV: EnvType =
     (process.env.NODE_ENV as EnvType) || EnvType.DEV;
 
-export const INSTANCE_NAME: string = process.env.INSTANCE_NAME || 'ystuty-schedule-bot';
+export const INSTANCE_NAME: string =
+    process.env.INSTANCE_NAME || 'ystuty-schedule-bot';
 
 export const SERVER_PORT: number = +process.env.SERVER_PORT || 8080;
 
@@ -30,6 +31,8 @@ export const REDIS_PORT: number = +process.env.REDIS_PORT || 6379;
 export const REDIS_USER: string = process.env.REDIS_USER;
 export const REDIS_PASSWORD: string = process.env.REDIS_PASSWORD;
 export const REDIS_DATABASE: number = +process.env.REDIS_DATABASE || 0;
+export const REDIS_PREFIX: string =
+    process.env.REDIS_PREFIX ?? 'ystuty.schedule.bot:';
 
 // * Socials
 

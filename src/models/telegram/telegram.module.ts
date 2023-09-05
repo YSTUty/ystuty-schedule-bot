@@ -1,4 +1,3 @@
-import { HttpModule } from '@nestjs/axios';
 import { Global, Module } from '@nestjs/common';
 import { TelegrafModule } from '@xtcry/nestjs-telegraf';
 import * as RedisSession from 'telegraf-session-redis';
@@ -45,15 +44,17 @@ export class TelegramModule {
                                     port: xEnv.REDIS_PORT,
                                     db: xEnv.REDIS_DATABASE,
                                     password: xEnv.REDIS_PASSWORD,
-                                    prefix: 'tg:session:',
+                                    prefix: xEnv.REDIS_PREFIX,
                                 },
                                 ttl: 7 * 24 * 3600,
                                 getSessionKey: (ctx) =>
-                                    (ctx.from &&
-                                        ctx.chat &&
-                                        `${ctx.from.id}:${ctx.chat.id}`) ||
-                                    (ctx.from &&
-                                        `${ctx.from.id}:${ctx.from.id}`),
+                                    `tg:session:${
+                                        (ctx.from &&
+                                            ctx.chat &&
+                                            `${ctx.from.id}:${ctx.chat.id}`) ||
+                                        (ctx.from &&
+                                            `${ctx.from.id}:${ctx.from.id}`)
+                                    }`,
                             }) as RedisSession.default,
                             // @ts-ignore
                             new RedisSession({
@@ -62,12 +63,13 @@ export class TelegramModule {
                                     port: xEnv.REDIS_PORT,
                                     db: xEnv.REDIS_DATABASE,
                                     password: xEnv.REDIS_PASSWORD,
-                                    prefix: 'tg:session:',
+                                    prefix: xEnv.REDIS_PREFIX,
                                 },
                                 ttl: 7 * 24 * 3600,
                                 property: 'sessionConversation',
                                 getSessionKey: (ctx) =>
-                                    ctx.chat && `conversation:${ctx.chat.id}`,
+                                    ctx.chat &&
+                                    `tg:session:conversation:${ctx.chat.id}`,
                             }) as RedisSession.default,
                             featuresMiddleware.middlewareCleaner(),
                             i18n,

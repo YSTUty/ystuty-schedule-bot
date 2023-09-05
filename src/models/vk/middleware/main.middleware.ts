@@ -54,13 +54,14 @@ export class MainMiddleware {
         this.sessionManager = new SessionManager({
             storage: this.redisStorage,
             getStorageKey: (ctx: IContext) =>
-                `${ctx.peerId}:${ctx.senderId || ctx.userId}`,
+                `vk:session:${ctx.peerId}:${ctx.senderId || ctx.userId}`,
         });
 
         this.sessionConversationManager = new SessionManager({
             contextKey: 'sessionConversation',
             storage: this.redisStorage,
-            getStorageKey: (ctx: IContext) => `conversation:${ctx.peerId}`,
+            getStorageKey: (ctx: IContext) =>
+                `vk:session:conversation:${ctx.peerId}`,
         });
     }
 

@@ -86,7 +86,8 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
         // Scene
         if (revert) {
-            session['__scenes'] = {};
+            // ? why?
+            // session['__scenes'] = {};
         } else if (
             session['__scenes'] &&
             Object.keys(session['__scenes']).length === 0

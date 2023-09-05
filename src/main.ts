@@ -7,6 +7,11 @@ import { HttpExceptionFilter } from '@my-common';
 import { AppModule } from './models/app/app.module';
 
 async function bootstrap() {
+    Logger.log(
+        `🥙 Application (${process.env.npm_package_name}@v${process.env.npm_package_version})`,
+        'NestJS',
+    );
+
     const app = await NestFactory.create(AppModule);
 
     app.useGlobalFilters(new HttpExceptionFilter());

@@ -17,77 +17,73 @@ const middlewares = [MainMiddleware, MetricsMiddleware];
 @Global()
 @Module({})
 export class TelegramModule {
-    static register() {
-        if (!xEnv.SOCIAL_TELEGRAM_BOT_TOKEN) {
-            return { module: TelegramModule };
-        }
-
-        return {
-            module: TelegramModule,
-            imports: [
-                TelegrafModule.forRootAsync({
-                    useFactory: async (
-                        mainMiddleware: MainMiddleware,
-                        metricsMiddleware: MetricsMiddleware,
-                    ) => ({
-                        token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
-                        launchOptions: false,
-
-                        middlewares: [
-                            mainMiddleware.middlewareForkAll,
-                            mainMiddleware,
-                            metricsMiddleware,
-                            // @ts-ignore
-                            new RedisSession({
-                                store: {
-                                    host: xEnv.REDIS_HOST,
-                                    port: xEnv.REDIS_PORT,
-                                    db: xEnv.REDIS_DATABASE,
-                                    password: xEnv.REDIS_PASSWORD,
-                                    prefix: xEnv.REDIS_PREFIX,
-                                },
-                                ttl: 7 * 24 * 3600,
-                                getSessionKey: (ctx) =>
-                                    `tg:session:${
-                                        (ctx.from &&
-                                            ctx.chat &&
-                                            `${ctx.from.id}:${ctx.chat.id}`) ||
-                                        (ctx.from &&
-                                            `${ctx.from.id}:${ctx.from.id}`)
-                                    }`,
-                            }) as RedisSession.default,
-                            // @ts-ignore
-                            new RedisSession({
-                                store: {
-                                    host: xEnv.REDIS_HOST,
-                                    port: xEnv.REDIS_PORT,
-                                    db: xEnv.REDIS_DATABASE,
-                                    password: xEnv.REDIS_PASSWORD,
-                                    prefix: xEnv.REDIS_PREFIX,
-                                },
-                                ttl: 7 * 24 * 3600,
-                                property: 'sessionConversation',
-                                getSessionKey: (ctx) =>
-                                    ctx.chat &&
-                                    `tg:session:conversation:${ctx.chat.id}`,
-                            }) as RedisSession.default,
-                            mainMiddleware.middlewareCleaner(),
-                            mainMiddleware.i18nMiddleware,
-                            // i18n,
-                            mainMiddleware.middlewareCleaner(true),
-                        ],
-                    }),
-                    inject: [...middlewares],
-                }),
-            ],
-            providers: [
-                TelegramService,
-                TelegramKeyboardFactory,
-                ...middlewares,
-                SelectGroupScene,
-                StartTelegramUpdate,
-            ],
-            exports: [TelegramService, TelegramKeyboardFactory, ...middlewares],
-        };
+  static register() {
+    if (!xEnv.SOCIAL_TELEGRAM_BOT_TOKEN) {
+      return { module: TelegramModule };
     }
+
+    return {
+      module: TelegramModule,
+      imports: [
+        TelegrafModule.forRootAsync({
+          useFactory: async (
+            mainMiddleware: MainMiddleware,
+            metricsMiddleware: MetricsMiddleware,
+          ) => ({
+            token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
+            launchOptions: false,
+
+            middlewares: [
+              mainMiddleware.middlewareForkAll,
+              mainMiddleware,
+              metricsMiddleware,
+              // @ts-ignore
+              new RedisSession({
+                store: {
+                  host: xEnv.REDIS_HOST,
+                  port: xEnv.REDIS_PORT,
+                  db: xEnv.REDIS_DATABASE,
+                  password: xEnv.REDIS_PASSWORD,
+                  prefix: xEnv.REDIS_PREFIX,
+                },
+                ttl: 7 * 24 * 3600,
+                getSessionKey: (ctx) =>
+                  `tg:session:${
+                    (ctx.from && ctx.chat && `${ctx.from.id}:${ctx.chat.id}`) ||
+                    (ctx.from && `${ctx.from.id}:${ctx.from.id}`)
+                  }`,
+              }) as RedisSession.default,
+              // @ts-ignore
+              new RedisSession({
+                store: {
+                  host: xEnv.REDIS_HOST,
+                  port: xEnv.REDIS_PORT,
+                  db: xEnv.REDIS_DATABASE,
+                  password: xEnv.REDIS_PASSWORD,
+                  prefix: xEnv.REDIS_PREFIX,
+                },
+                ttl: 7 * 24 * 3600,
+                property: 'sessionConversation',
+                getSessionKey: (ctx) =>
+                  ctx.chat && `tg:session:conversation:${ctx.chat.id}`,
+              }) as RedisSession.default,
+              mainMiddleware.middlewareCleaner(),
+              mainMiddleware.i18nMiddleware,
+              // i18n,
+              mainMiddleware.middlewareCleaner(true),
+            ],
+          }),
+          inject: [...middlewares],
+        }),
+      ],
+      providers: [
+        TelegramService,
+        TelegramKeyboardFactory,
+        ...middlewares,
+        SelectGroupScene,
+        StartTelegramUpdate,
+      ],
+      exports: [TelegramService, TelegramKeyboardFactory, ...middlewares],
+    };
+  }
 }

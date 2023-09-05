@@ -4,29 +4,29 @@ import { config } from 'dotenv';
 const repoBranch = '';
 
 config({
-    path: resolve(process.cwd(), `.env${repoBranch ? `.${repoBranch}` : ''}`),
+  path: resolve(process.cwd(), `.env${repoBranch ? `.${repoBranch}` : ''}`),
 });
 
 export enum EnvType {
-    DEV = 'development',
-    PROD = 'production',
-    TEST = 'testing',
+  DEV = 'development',
+  PROD = 'production',
+  TEST = 'testing',
 }
 
 // environment
 export const NODE_ENV: EnvType =
-    (process.env.NODE_ENV as EnvType) || EnvType.DEV;
+  (process.env.NODE_ENV as EnvType) || EnvType.DEV;
 
 export const INSTANCE_NAME: string =
-    process.env.INSTANCE_NAME || 'ystuty-schedule-bot';
+  process.env.INSTANCE_NAME || 'ystuty-schedule-bot';
 
 export const SERVER_PORT: number = +process.env.SERVER_PORT || 8080;
 
 export const YSTUTY_PARSER_URL: string =
-    process.env.YSTUTY_PARSER_URL || `http://ystuty_parser:8080`;
+  process.env.YSTUTY_PARSER_URL || `http://ystuty_parser:8080`;
 
 export const YSTUTY_WEB_VIEW_ADDRESS: string =
-    process.env.YSTUTY_WEB_VIEW_ADDRESS || '';
+  process.env.YSTUTY_WEB_VIEW_ADDRESS || '';
 
 // * Redis
 export const REDIS_HOST: string = process.env.REDIS_HOST || 'redis';
@@ -35,31 +35,31 @@ export const REDIS_USER: string = process.env.REDIS_USER;
 export const REDIS_PASSWORD: string = process.env.REDIS_PASSWORD;
 export const REDIS_DATABASE: number = +process.env.REDIS_DATABASE || 0;
 export const REDIS_PREFIX: string =
-    process.env.REDIS_PREFIX ?? 'ystuty.schedule.bot:';
+  process.env.REDIS_PREFIX ?? 'ystuty.schedule.bot:';
 
 // * Socials
 
 // VKontakte
 export const SOCIAL_VK_GROUP_ID: number =
-    +process.env.SOCIAL_VK_GROUP_ID || null;
+  +process.env.SOCIAL_VK_GROUP_ID || null;
 export const SOCIAL_VK_GROUP_TOKEN: string =
-    process.env.SOCIAL_VK_GROUP_TOKEN || '';
+  process.env.SOCIAL_VK_GROUP_TOKEN || '';
 export const SOCIAL_VK_ADMIN_IDS: number[] =
-    (process.env.SOCIAL_VK_ADMIN_IDS &&
-        JSON.parse(process.env.SOCIAL_VK_ADMIN_IDS)) ||
-    [];
+  (process.env.SOCIAL_VK_ADMIN_IDS &&
+    JSON.parse(process.env.SOCIAL_VK_ADMIN_IDS)) ||
+  [];
 
 // Telegram
 export const SOCIAL_TELEGRAM_BOT_NAME =
-    process.env.SOCIAL_TELEGRAM_BOT_NAME || '';
+  process.env.SOCIAL_TELEGRAM_BOT_NAME || '';
 export const SOCIAL_TELEGRAM_BOT_TOKEN =
-    process.env.SOCIAL_TELEGRAM_BOT_TOKEN || '';
+  process.env.SOCIAL_TELEGRAM_BOT_TOKEN || '';
 export const SOCIAL_TELEGRAM_ADMIN_IDS: number[] =
-    (process.env.SOCIAL_TELEGRAM_ADMIN_IDS &&
-        JSON.parse(process.env.SOCIAL_TELEGRAM_ADMIN_IDS)) ||
-    [];
+  (process.env.SOCIAL_TELEGRAM_ADMIN_IDS &&
+    JSON.parse(process.env.SOCIAL_TELEGRAM_ADMIN_IDS)) ||
+  [];
 
 // Prometheus
 export const PROMETHEUS_ENABLED: boolean = process.env.PROMETHEUS_ENABLED
-    ? process.env.PROMETHEUS_ENABLED === 'true'
-    : true;
+  ? process.env.PROMETHEUS_ENABLED === 'true'
+  : true;

@@ -10,14 +10,14 @@ import { VkModule } from '../vk/vk.module';
 import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-    imports: [
-        MetricsModule.forRoot(),
-        YSTUtyModule,
-        RedisModule,
-        VkModule.register(),
-        TelegramModule.register(),
-    ],
-    controllers: [AppController],
-    providers: [AppService],
+  imports: [
+    MetricsModule.forRoot(),
+    YSTUtyModule,
+    RedisModule,
+    VkModule.register(),
+    TelegramModule.register(),
+  ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

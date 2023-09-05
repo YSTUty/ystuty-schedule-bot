@@ -7,4 +7,4 @@ export const ALLOWED_ROLES_KEY = 'allowedRoles';
  * Allowed Access Roles
  */
 export const AllowedRoles = (...allowedRoles: UserRole[]) =>
-    SetMetadata(ALLOWED_ROLES_KEY, allowedRoles);
+  SetMetadata(ALLOWED_ROLES_KEY, allowedRoles);

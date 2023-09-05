@@ -6,8 +6,8 @@ import { YSTUtyService } from './ystuty.service';
 
 @Global()
 @Module({
-    imports: [ScheduleModule.forRoot(), HttpModule.register({})],
-    providers: [YSTUtyService],
-    exports: [YSTUtyService],
+  imports: [ScheduleModule.forRoot(), HttpModule.register({})],
+  providers: [YSTUtyService],
+  exports: [YSTUtyService],
 })
 export class YSTUtyModule {}

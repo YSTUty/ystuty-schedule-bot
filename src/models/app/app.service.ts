@@ -13,10 +13,6 @@ export class AppService {
     this.checkVersion().catch(console.error);
   }
 
-  getHello(): string {
-    return 'Hello World!';
-  }
-
   async checkVersion() {
     const curVer = process.env.npm_package_version;
     const lastVer =

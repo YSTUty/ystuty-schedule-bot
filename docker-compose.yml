@@ -17,6 +17,12 @@ services:
       - ./.env:/home/node/app/.env
     networks:
       - ystuty_network
+    healthcheck:
+      test: curl --fail http://localhost:${SERVER_PORT:-8080}/api/uptime || exit 1
+      interval: 2m
+      retries: 3
+      start_period: 40s
+      timeout: 10s
     restart: unless-stopped
     stdin_open: true # docker run -i
     tty: true        # docker run -t

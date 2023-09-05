@@ -8,6 +8,7 @@ import { IStepContext as IVKStepContext } from '@vk-io/scenes';
 import { ISessionContext } from '@vk-io/session';
 
 interface ISessionState {
+  __language_code?: string;
   selectedGroupName?: string;
 }
 interface ISessionConversationState {

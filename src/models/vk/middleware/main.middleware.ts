@@ -19,6 +19,7 @@ import { IContext, IMessageContext } from '@my-interfaces/vk';
 import { checkLocaleCondition, i18n } from '@my-common/util/vk';
 
 import { MetricsService } from '../../metrics/metrics.service';
+import { RedisService } from '../../redis/redis.service';
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
@@ -41,17 +42,12 @@ export class MainMiddleware {
 
   constructor(
     private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly redisService: RedisService,
     private readonly metricsService: MetricsService,
     private readonly ystutyService: YSTUtyService,
   ) {
     this.redisStorage = new RedisStorage({
-      redis: {
-        host: xEnv.REDIS_HOST,
-        port: xEnv.REDIS_PORT,
-        db: xEnv.REDIS_DATABASE,
-        username: xEnv.REDIS_USER,
-        password: xEnv.REDIS_PASSWORD,
-      },
+      redis: this.redisService.redis,
       ttl: 7 * 24 * 3600,
     });
 
@@ -166,10 +162,9 @@ export class MainMiddleware {
 
   private cleanSession(ctx: IContext) {
     const { session } = ctx;
-    if (!session) return;
 
     // i18n
-    if (session['__language_code'] === 'ru') {
+    if (session?.__language_code === 'ru') {
       delete session['__language_code'];
     }
   }

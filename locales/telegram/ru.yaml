@@ -17,7 +17,7 @@ button:
     for_next_week: На следующую
 
 regexp:
-  start: //?(start|старт|начать)/i
+  start: //?(start|старт|начать)( .*)?/i
   help: //?(help|помощь)/i
   schedule:
     select_group: /^(?<trigger>(group|группа) ?)?${patternGroupName0}?$/i

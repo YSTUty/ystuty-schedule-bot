@@ -40,7 +40,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
         { command: 'day', description: 'Расписание на день' },
         { command: 'week', description: 'Расписание на неделю' },
       ]);
-      await this.bot.launch();
+      this.bot.launch().catch((err) => this.logger.error(err));
       this.logger.log('[Bot] Started');
       await this.notifyAdmin('🚀 BotServer is running');
     } catch (err) {

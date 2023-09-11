@@ -81,12 +81,6 @@ export class StartTelegramUpdate {
       }
     }
 
-    if (ctx.chat.type === 'private' && !ctx.session.selectedGroupName) {
-      const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
-      ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
-      return;
-    }
-
     const msgPayload = ctx.payload?.trim().split('_');
     if (msgPayload?.length > 1) {
       if (msgPayload[0] === 'g') {
@@ -101,6 +95,12 @@ export class StartTelegramUpdate {
           await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
         }
       }
+    }
+
+    if (ctx.chat.type === 'private' && !ctx.session.selectedGroupName) {
+      const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
+      ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
+      return;
     }
 
     const keyboard = this.keyboardFactory.getStart(ctx);

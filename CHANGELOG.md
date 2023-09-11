@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.2.1...v0.2.2) (2023-09-11)
+
+
+### 🧹 Chore
+
+* **docker:** add healthcheck ([19a32af](https://github.com/YSTUty/ystuty-schedule-bot/commit/19a32afad73792fea44a7f740c19cf262df09a62))
+* **docker:** update node version to `16` ([c313bb9](https://github.com/YSTUty/ystuty-schedule-bot/commit/c313bb94933d2af5d71a06b790d5ef9ed73687b6))
+* **locale:** change hash to slash for web view link ([4438a29](https://github.com/YSTUty/ystuty-schedule-bot/commit/4438a298e76050227a409e5e7b752fe30829f508))
+* **telegram:** skip await bot `launch` ([ec62259](https://github.com/YSTUty/ystuty-schedule-bot/commit/ec62259992da4072faa02a1e1d27dde88d498b7f))
+* **vk:** update vk session redis option ([4282712](https://github.com/YSTUty/ystuty-schedule-bot/commit/42827121e438c052552d4e49553bc54a629f4226))
+
+
+### 🐛 Bug Fixes
+
+* **docker:** change healthcheck test url ([839ef1b](https://github.com/YSTUty/ystuty-schedule-bot/commit/839ef1bf221c41460135e9319b09551bc1db5a9c))
+
 ### [0.2.1](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.2.0...v0.2.1) (2023-09-05)
 
 

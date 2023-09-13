@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { VkArgumentsHost, VkExecutionContext } from 'nestjs-vk';
-import { MessageEventContext } from 'vk-io';
+import { APIError, MessageEventContext } from 'vk-io';
 import * as Redlock from 'redlock';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
@@ -42,7 +42,9 @@ export class VkExceptionFilter implements ExceptionFilter {
     if (
       !(exception instanceof Error) ||
       !(ctx.answer || ctx.reply) ||
-      exception instanceof ForbiddenException
+      exception instanceof ForbiddenException ||
+      // * One of the parameters specified was missing or invalid
+      (exception instanceof APIError && exception.code == 100)
     ) {
       return;
     }
@@ -68,12 +70,12 @@ export class VkExceptionFilter implements ExceptionFilter {
 
     try {
       if (ctx.eventPayload && ctx.answer) {
-        ctx.answer({
+        await ctx.answer({
           type: 'show_snackbar',
           text: content,
         });
       } else {
-        ctx.reply(content);
+        await ctx.reply(content);
       }
     } catch {}
   }

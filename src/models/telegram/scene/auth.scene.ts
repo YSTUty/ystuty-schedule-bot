@@ -53,7 +53,6 @@ export class AuthScene extends BaseScene {
       SocialType.Telegram,
       ctx.from.id,
     );
-    console.log({ result });
 
     if ('error' in result) {
       throw new Error(result.error);
@@ -61,11 +60,12 @@ export class AuthScene extends BaseScene {
 
     if (result.status === 'unauth') {
       const link = `https://t.me/${result.botName}?start=${result.payload}`;
-      ctx.session.socialConnectLink = link;
       const keyboard = this.keyboardFactory.getAuth(
         ctx,
         true,
-        true /* , link */,
+        true,
+        false,
+        link,
       );
       ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_SocialConnect_NeedConnect, {

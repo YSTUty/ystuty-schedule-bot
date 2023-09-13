@@ -21,20 +21,22 @@ export class TelegramKeyboardFactory {
     ctx: IContext,
     inline?: true,
     social?: boolean,
-    addSelectGroup?: boolean, // authLink?: string,
+    addSelectGroup?: boolean,
+    authLink?: string,
   ): Markup.Markup<InlineKeyboardMarkup>;
   public getAuth(
     ctx: IContext,
     inline: false,
     social?: boolean,
-    addSelectGroup?: boolean, // authLink?: string,
+    addSelectGroup?: boolean,
+    authLink?: string,
   ): Markup.Markup<ReplyKeyboardMarkup>;
   public getAuth(
     ctx: IContext,
     social = false,
     inline = true,
     addSelectGroup = false,
-    // authLink?: string,
+    authLink?: string,
   ) {
     const phrase = social
       ? LocalePhrase.Button_AuthLink_SocialConnect
@@ -42,8 +44,11 @@ export class TelegramKeyboardFactory {
     return {
       ...(inline
         ? Markup.inlineKeyboard([
-            // [Markup.button.url(ctx.i18n.t(phrase), authLink)],
-            [Markup.button.callback(ctx.i18n.t(phrase), phrase)],
+            [
+              authLink
+                ? Markup.button.url(ctx.i18n.t(phrase), authLink)
+                : Markup.button.callback(ctx.i18n.t(phrase), phrase),
+            ],
             ...(addSelectGroup
               ? [
                   [

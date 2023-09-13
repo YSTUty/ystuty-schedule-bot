@@ -12,11 +12,10 @@ import { LocalePhrase, TelegramLocalePhrase, UserInfo } from '@my-interfaces';
 
 interface ISessionState {
   __language_code?: string;
-  selectedGroupName?: string;
-  socialConnectLink?: string;
-  isBlockedBot?: boolean;
-
   __scenes?: { current?: string; state?: any; cursor?: number };
+
+  selectedGroupName?: string;
+  isBlockedBot?: boolean;
 
   user?: UserInfo;
 }

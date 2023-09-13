@@ -137,9 +137,16 @@ export class MainUpdate {
     LocalePhrase.Button_AuthLink,
     LocalePhrase.Button_AuthLink_SocialConnect,
   ])
-  onAuth(@Ctx() ctx: IMessageContext) {
-    // ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Auth_Intro));
-    ctx.scene.enter(AUTH_SCENE);
+  @Action([
+    LocalePhrase.Button_AuthLink,
+    LocalePhrase.Button_AuthLink_SocialConnect,
+  ])
+  async onAuth(@Ctx() ctx: ICbQOrMsg) {
+    await ctx.editMessageReplyMarkup(
+      this.keyboardFactory.getClear().reply_markup,
+    );
+    await ctx.tryAnswerCbQuery('Enter');
+    await ctx.scene.enter(AUTH_SCENE);
   }
 
   @TgHearsLocale(LocalePhrase.RegExp_Help)
@@ -280,27 +287,9 @@ export class MainUpdate {
   }
 
   @Action(LocalePhrase.Button_SelectGroup)
-  async onSelectGroup(@Ctx() ctx: IMessageContext) {
+  async onSelectGroup(@Ctx() ctx: ICallbackQueryContext) {
     ctx.scene.enter(SELECT_GROUP_SCENE);
     ctx.answerCbQuery();
-  }
-
-  @Action([
-    LocalePhrase.Button_AuthLink,
-    LocalePhrase.Button_AuthLink_SocialConnect,
-  ])
-  async onAuthLink(@Ctx() ctx: IMessageContext) {
-    const { socialConnectLink } = ctx.session;
-    if (socialConnectLink) {
-      await ctx.answerCbQuery('Go', { url: socialConnectLink });
-      delete ctx.session.socialConnectLink;
-    } else {
-      await ctx.editMessageReplyMarkup(
-        this.keyboardFactory.getClear().reply_markup,
-      );
-      await ctx.answerCbQuery('Enter');
-      await ctx.scene.enter(AUTH_SCENE);
-    }
   }
 
   @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)

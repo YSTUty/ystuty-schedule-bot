@@ -37,7 +37,6 @@ export class AuthScene {
       SocialType.Vkontakte,
       ctx.peerId,
     );
-    console.log({ result });
 
     if ('error' in result) {
       throw new Error(result.error);

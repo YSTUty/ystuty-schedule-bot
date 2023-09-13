@@ -82,6 +82,7 @@ export class SocialConnectService {
             socialId: number;
             accessToken: string;
             refreshToken: string;
+            status: 'confirm' | 'cancel';
           }[];
         }>(`connect/check`, {
           client_id: xEnv.OAUTH_CLIENT_ID,
@@ -93,19 +94,21 @@ export class SocialConnectService {
         return;
       }
 
-      console.log('checkAuth', data);
+      // console.log('checkAuth', data);
       const { result } = data;
       for (const item of result) {
         try {
-          const res = await this.userService.auth(
+          const result = await this.userService.auth(
             item.socialType,
             item.socialId,
-            {
+            item.status === 'confirm' && {
               access_token: item.accessToken,
               refresh_token: item.refreshToken,
             },
           );
-          this.logger.log(`res (${item.socialId}): ${res}`);
+          this.logger.log(
+            `Auth [${item.socialType}](${item.socialId}): ${result}`,
+          );
         } catch (err) {
           this.logger.error(err);
         }

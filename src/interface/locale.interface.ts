@@ -36,6 +36,7 @@ export enum LocalePhrase {
 
   Page_Auth_NeedAuth = 'page.auth.need_auth',
   Page_Auth_Done = 'page.auth.done',
+  Page_Auth_Cancel = 'page.auth.cancel',
   Page_Auth_Fail = 'page.auth.fail',
 
   Page_SocialConnect_Other = 'page.social_connect.other',

@@ -3,6 +3,7 @@ import { IncomingMessage } from 'http';
 
 import * as xEnv from '@my-environment';
 import { LocalePhrase, UserInfo } from '@my-interfaces';
+import { ISessionState as VkISessionState } from '@my-interfaces/vk';
 import { oAuth } from '@my-common';
 import { SocialType } from '@my-common/constants';
 import { i18n as i18nTg } from '@my-common/util/tg';
@@ -28,100 +29,86 @@ export class UserService {
   public async auth(
     socialType: SocialType,
     socialId: number,
-    auth: { code?: string; access_token?: string; refresh_token?: string },
+    auth:
+      | { code?: string; access_token?: string; refresh_token?: string }
+      | false,
   ) {
-    let userSocial: { user?: UserInfo } & Record<string, any> /* UserSocial */;
-
     const i18n = (
       socialType === SocialType.Telegram ? i18nTg : i18nVk
     ).createContext('ru', {});
 
-    if (socialType === SocialType.Telegram) {
-      const [session = {}, close] =
-        await this.telegramService.emulateSession(socialId);
+    const socialService =
+      socialType === SocialType.Telegram
+        ? this.telegramService
+        : this.vkService;
 
-      const inScene =
-        session.__scenes?.current === telegramConstants.AUTH_SCENE;
+    const [session, close] = await (socialType === SocialType.Telegram
+      ? this.telegramService
+      : this.vkService
+    ).emulateSession(socialId);
 
-      const uscl = await this.authUserSocial(
+    if (auth) {
+      const userSocial = await this.authUserSocial(
         socialType,
         socialId,
         auth,
         session,
       );
-      if (uscl === false) {
-        await this.telegramService.sendMessage(
+      if (userSocial === false) {
+        await socialService.sendMessage(
           socialId,
           i18n.t(LocalePhrase.Page_Auth_Fail),
         );
       }
-      if (!uscl) {
+      if (!userSocial) {
         return false;
       }
-      userSocial = uscl;
 
-      const text = i18n.t(LocalePhrase.Page_Auth_Done, {
-        user: userSocial.user,
-      });
-      await this.telegramService.sendMessage(socialId, text);
-
-      if (userSocial.user.groupName) {
-        const keyboard = this.tgKeyboardFactory.getSelectGroupInline(
-          { i18n } as any,
-          userSocial.user.groupName,
-        );
-        await this.telegramService.sendMessage(socialId, 'Action', keyboard);
-      }
-
-      if (inScene) {
-        delete session.__scenes;
-      }
-      await close();
-
-      return true;
-    } else if (socialType === SocialType.Vkontakte) {
-      const [session, close] = await this.vkService.emulateSession(socialId);
-      const inScene = session?.__scene?.current === vkConstants.AUTH_SCENE;
-
-      const uscl = await this.authUserSocial(
-        socialType,
+      await socialService.sendMessage(
         socialId,
-        auth,
-        session,
+        i18n.t(LocalePhrase.Page_Auth_Done, {
+          user: userSocial.user,
+        }),
       );
-      if (uscl === false) {
-        await this.vkService.sendMessage(
-          socialId,
-          i18n.t(LocalePhrase.Page_Auth_Fail),
-        );
-      }
-      if (!uscl) {
-        return false;
-      }
-      userSocial = uscl;
 
-      const text = i18n.t(LocalePhrase.Page_Auth_Done, {
-        user: userSocial.user,
-      });
-      await this.vkService.sendMessage(socialId, text);
-
-      if (userSocial.user.groupName) {
-        const keyboard = this.vkKeyboardFactory
-          .getSelectGroup({ i18n } as any, userSocial.user.groupName)
-          .inline();
-        await this.vkService.sendMessage(socialId, 'Action', { keyboard });
+      if (socialType === SocialType.Telegram) {
+        if (userSocial.user.groupName) {
+          const keyboard = this.tgKeyboardFactory.getSelectGroupInline(
+            { i18n } as any,
+            userSocial.user.groupName,
+          );
+          await socialService.sendMessage(socialId, 'Action', keyboard);
+        }
+      } else if (socialType === SocialType.Vkontakte) {
+        if (userSocial.user.groupName) {
+          const keyboard = this.vkKeyboardFactory
+            .getSelectGroup({ i18n } as any, userSocial.user.groupName)
+            .inline();
+          await this.vkService.sendMessage(socialId, 'Action', { keyboard });
+        }
       }
-
-      if (inScene) {
-        delete session.__scene;
-      }
-      await close();
-
-      return true;
+    } else {
+      await socialService.sendMessage(
+        socialId,
+        i18n.t(LocalePhrase.Page_Auth_Cancel),
+      );
     }
 
-    console.log('Fail: other');
-    return false;
+    if (socialType === SocialType.Telegram) {
+      if (session.__scenes?.current === telegramConstants.AUTH_SCENE) {
+        delete session.__scenes;
+      }
+    } else if (socialType === SocialType.Vkontakte) {
+      if (
+        (session as VkISessionState)?.__scene?.current ===
+        vkConstants.AUTH_SCENE
+      ) {
+        delete (session as VkISessionState).__scene;
+      }
+    }
+
+    await close();
+    return true;
   }
 
   async authUserSocial(

@@ -8,8 +8,10 @@ import { IStepContext as IVKStepContext, SceneContext } from '@vk-io/scenes';
 import { ISessionContext } from '@vk-io/session';
 import { UserInfo } from '@my-interfaces';
 
-interface ISessionState {
+export interface ISessionState {
   __language_code?: string;
+  __scene?: { current: string };
+
   selectedGroupName?: string;
   socialConnectLink?: string;
 

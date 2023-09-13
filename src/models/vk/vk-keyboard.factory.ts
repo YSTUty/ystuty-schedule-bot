@@ -21,14 +21,48 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getSelectGroup(ctx: IContext) {
+  public getAuth(ctx: IContext, social = true, addSelectGroup = false) {
+    const phrase = social
+      ? LocalePhrase.Button_AuthLink_SocialConnect
+      : LocalePhrase.Button_AuthLink;
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_SelectGroup),
-          payload: { phrase: LocalePhrase.Button_SelectGroup },
-          color: Keyboard.POSITIVE_COLOR,
+          label: ctx.i18n.t(phrase),
+          color: Keyboard.SECONDARY_COLOR,
+          payload: { phrase },
         }),
+      ],
+      ...(addSelectGroup
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                payload: { phrase: LocalePhrase.Button_SelectGroup },
+                color: Keyboard.POSITIVE_COLOR,
+              }),
+            ],
+          ]
+        : []),
+    ]);
+  }
+
+  public getSelectGroup(ctx: IContext, groupName?: string) {
+    return Keyboard.keyboard([
+      [
+        groupName
+          ? Keyboard.callbackButton({
+              label: ctx.i18n.t(LocalePhrase.Button_SelectGroup_X, {
+                groupName,
+              }),
+              payload: { phrase: LocalePhrase.Button_SelectGroup, groupName },
+              color: Keyboard.POSITIVE_COLOR,
+            })
+          : Keyboard.callbackButton({
+              label: ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+              payload: { phrase: LocalePhrase.Button_SelectGroup },
+              color: Keyboard.POSITIVE_COLOR,
+            }),
       ],
     ]);
   }

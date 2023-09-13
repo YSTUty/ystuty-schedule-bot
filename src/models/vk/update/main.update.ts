@@ -1,8 +1,17 @@
 import { Logger, UseFilters, UseGuards } from '@nestjs/common';
-import { InjectVkApi, Update, Ctx, HearFallback, Hears, On } from 'nestjs-vk';
+import {
+  InjectVkApi,
+  Update,
+  Ctx,
+  HearFallback,
+  Hears,
+  On,
+  Next,
+} from 'nestjs-vk';
 import { VK, APIError } from 'vk-io';
+import { NextMiddleware } from 'middleware-io';
 
-import { VkAdminGuard, VkExceptionFilter } from '@my-common';
+import { VkAdminGuard, VkExceptionFilter, xs } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 import { VkHearsLocale } from '@my-common/decorator/vk';
@@ -11,12 +20,12 @@ import { YSTUtyService } from '../../ystuty/ystuty.service';
 
 import { VkService } from '../vk.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
-import { SELECT_GROUP_SCENE } from '../vk.constants';
+import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../vk.constants';
 
 @Update()
 @UseFilters(VkExceptionFilter)
-export class VkUpdate {
-  private readonly logger = new Logger(VkUpdate.name);
+export class MainUpdate {
+  private readonly logger = new Logger(MainUpdate.name);
 
   constructor(
     @InjectVkApi()
@@ -62,8 +71,12 @@ export class VkUpdate {
       }
     }
 
-    if (!ctx.session.selectedGroupName) {
-      const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
+    if (!ctx.isChat && (!ctx.session.selectedGroupName || !ctx.session.user)) {
+      const keyboard = !ctx.session.user
+        ? this.keyboardFactory
+            .getAuth(ctx, true, !ctx.session.selectedGroupName)
+            .inline()
+        : this.keyboardFactory.getSelectGroup(ctx).inline();
       const useInline = ctx.clientInfo.inline_keyboard;
       ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
         keyboard,
@@ -75,6 +88,33 @@ export class VkUpdate {
       .getStart(ctx)
       .inline(this.keyboardFactory.needInline(ctx));
     ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
+  }
+
+  @Hears('/profile')
+  async onProfile(@Ctx() ctx: IMessageContext) {
+    const { user = null } = ctx.session;
+    if (!user) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
+      await ctx.scene.enter(AUTH_SCENE);
+      return;
+    }
+
+    const keyboard = user.groupName
+      ? this.keyboardFactory.getSelectGroup(ctx, user.groupName).inline()
+      : null;
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Profile_Info, { user }), {
+      keyboard,
+    });
+  }
+
+  @Hears(['/auth', 'login', 'войти'])
+  // @VkHearsLocale([
+  //   LocalePhrase.Button_AuthLink,
+  //   LocalePhrase.Button_AuthLink_SocialConnect,
+  // ])
+  onAuth(@Ctx() ctx: IMessageContext) {
+    // await ctx.send(ctx.i18n.t(LocalePhrase.Page_Auth_Intro));
+    ctx.scene.enter(AUTH_SCENE);
   }
 
   @VkHearsLocale(LocalePhrase.RegExp_Help)
@@ -119,18 +159,36 @@ export class VkUpdate {
 
   @On('message_event')
   // TODO: add event/action decorator
-  async onMessageEvent(@Ctx() ctx: IMessageEventContext) {
+  async onMessageEvent(
+    @Ctx() ctx: IMessageEventContext,
+    @Next() next: NextMiddleware,
+  ) {
     const phrase = ctx.eventPayload.phrase as LocalePhrase;
-    if (!phrase) return;
+    if (!phrase) return next();
 
     switch (phrase) {
       case LocalePhrase.Button_SelectGroup: {
-        ctx.scene.enter(SELECT_GROUP_SCENE);
-        ctx.answer({ type: 'show_snackbar', text: 'Run' });
+        const groupName = ctx.eventPayload.groupName as string;
+        await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+        await ctx.answer({ type: 'show_snackbar', text: 'Run' });
+        return;
+      }
+      case LocalePhrase.Button_AuthLink_SocialConnect:
+      case LocalePhrase.Button_AuthLink: {
+        const { socialConnectLink } = ctx.session;
+        if (socialConnectLink) {
+          // ...
+          await ctx.answer({ type: 'open_link', link: socialConnectLink });
+          delete ctx.session.socialConnectLink;
+        } else {
+          await ctx.scene.enter(AUTH_SCENE);
+          await ctx.answer({ type: 'show_snackbar', text: 'Enter' });
+        }
         return;
       }
     }
 
+    // return next();
     ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
   }
 
@@ -138,141 +196,6 @@ export class VkUpdate {
   // @UseGuards(new VkAdminGuard(true))
   onGroupsList(@Ctx() ctx: IMessageContext) {
     ctx.send(`List: ${this.ystutyService.groupNames.join(', ')}`);
-  }
-
-  @VkHearsLocale([
-    LocalePhrase.RegExp_Schedule_For_OneDay,
-    LocalePhrase.Button_Schedule_Schedule,
-    LocalePhrase.Button_Schedule_ForToday,
-    LocalePhrase.Button_Schedule_ForTomorrow,
-  ])
-  async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
-    const session = !ctx.isChat ? ctx.session : ctx.sessionConversation;
-
-    const groupNameFromMath = ctx.$match?.groups?.groupName;
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath ||
-        ctx.messagePayload?.groupName ||
-        session.selectedGroupName,
-    );
-
-    const _skipDays = ctx.$match?.groups?.skipDays ?? null;
-    let skipDays = Number(_skipDays) || 0;
-    const isTomorrow =
-      !!ctx.$match?.groups?.tomorrow ||
-      ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
-
-    if (!groupName) {
-      if (session.selectedGroupName) {
-        ctx.send(
-          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-            groupName: groupNameFromMath,
-          }),
-        );
-        return;
-      }
-      ctx.scene.enter(SELECT_GROUP_SCENE);
-      return;
-    }
-
-    ctx.setActivity();
-
-    let message: string | false;
-    let days: number;
-    if (isTomorrow) {
-      skipDays = 1;
-      [days, message] = await this.ystutyService.findNext({
-        skipDays,
-        groupName,
-      });
-    } else if (_skipDays !== null) {
-      message = await this.ystutyService.getFormatedSchedule({
-        skipDays,
-        groupName,
-      });
-    } else {
-      [days, message] = await this.ystutyService.findNext({
-        groupName,
-      });
-    }
-
-    if (message && days - 1 > skipDays) {
-      message = ctx.i18n.t(LocalePhrase.Page_Schedule_NearestSchedule, {
-        days,
-        content: message,
-      });
-    }
-
-    if (!message) {
-      message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
-    }
-
-    const keyboard = this.keyboardFactory
-      .getSchedule(ctx, groupName)
-      .inline(true);
-    ctx.send(`${message}\n[${groupName}]`, { keyboard });
-  }
-
-  @VkHearsLocale([
-    LocalePhrase.RegExp_Schedule_For_Week,
-    LocalePhrase.Button_Schedule_ForWeek,
-    LocalePhrase.Button_Schedule_ForNextWeek,
-  ])
-  async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
-    const session = !ctx.isChat ? ctx.session : ctx.sessionConversation;
-
-    const groupNameFromMath = ctx.$match?.groups?.groupName;
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath ||
-        ctx.messagePayload?.groupName ||
-        session.selectedGroupName,
-    );
-
-    const isNextWeek =
-      !!ctx.$match?.groups?.next ||
-      ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
-    let skipDays = isNextWeek ? 7 + 1 : 1;
-
-    if (!groupName) {
-      if (session.selectedGroupName) {
-        ctx.send(
-          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-            groupName: groupNameFromMath,
-          }),
-        );
-        return;
-      }
-      ctx.scene.enter(SELECT_GROUP_SCENE);
-      return;
-    }
-
-    ctx.setActivity();
-
-    let [days, message] = await this.ystutyService.findNext({
-      skipDays,
-      groupName,
-      isWeek: true,
-    });
-
-    if (message) {
-      if (days - 1 > skipDays) {
-        message = ctx.i18n.t(LocalePhrase.Page_Schedule_NearestSchedule, {
-          days,
-          content: message,
-        });
-      }
-
-      message = `Расписание на ${
-        isNextWeek ? 'следющую ' : ''
-      }неделю:\n${message}`;
-    } else {
-      message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
-    }
-
-    const keyboard = this.keyboardFactory
-      .getSchedule(ctx, groupName)
-      .inline(true);
-    ctx.send(`${message}\n[${groupName}]`, { keyboard });
   }
 
   @VkHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)

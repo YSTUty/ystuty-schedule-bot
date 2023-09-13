@@ -9,10 +9,20 @@ import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { TelegramService } from './telegram.service';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 
-import { StartTelegramUpdate } from './update/telegram.update';
+import { MainUpdate } from './update/main.update';
+import { ScheduleUpdate } from './update/schedule.update';
+import { AuthScene } from './scene/auth.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
 
 const middlewares = [MainMiddleware, MetricsMiddleware];
+const providers = [
+  ...middlewares,
+  // updates
+  MainUpdate,
+  ScheduleUpdate,
+  AuthScene,
+  SelectGroupScene,
+];
 
 @Global()
 @Module({})
@@ -76,13 +86,7 @@ export class TelegramModule {
           inject: [...middlewares],
         }),
       ],
-      providers: [
-        TelegramService,
-        TelegramKeyboardFactory,
-        ...middlewares,
-        SelectGroupScene,
-        StartTelegramUpdate,
-      ],
+      providers: [TelegramService, TelegramKeyboardFactory, ...providers],
       exports: [TelegramService, TelegramKeyboardFactory, ...middlewares],
     };
   }

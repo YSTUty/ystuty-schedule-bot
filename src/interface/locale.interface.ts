@@ -9,7 +9,10 @@ export enum LocalePhrase {
 
   // Buttons
   Button_Cancel = 'button.cancel',
+  Button_AuthLink = 'button.auth_link',
+  Button_AuthLink_SocialConnect = 'button.auth_link_connect',
   Button_SelectGroup = 'button.select_group',
+  Button_SelectGroup_X = 'button.select_group_x',
 
   Button_Schedule_Schedule = 'button.schedule.schedule',
   Button_Schedule_ForToday = 'button.schedule.for_today',
@@ -30,6 +33,17 @@ export enum LocalePhrase {
   Page_Help = 'page.help',
   Page_Schedule_NearestSchedule = 'page.schedule.nearest_schedule',
   Page_Schedule_NotFoundToday = 'page.schedule.not_found_today',
+
+  Page_Auth_NeedAuth = 'page.auth.need_auth',
+  Page_Auth_Done = 'page.auth.done',
+  Page_Auth_Fail = 'page.auth.fail',
+
+  Page_SocialConnect_Other = 'page.social_connect.other',
+  Page_SocialConnect_NeedConnect = 'page.social_connect.need_connect',
+  Page_SocialConnect_WaitConfirm = 'page.social_connect.wait_confirm',
+  Page_SocialConnect_AlreadySent = 'page.social_connect.already_sent',
+
+  Page_Profile_Info = 'page.profile.info',
 
   Page_SelectGroup_EnterNameWithExample = 'page.select_group.enter_name_with_example',
   Page_SelectGroup_Selected = 'page.select_group.selected',

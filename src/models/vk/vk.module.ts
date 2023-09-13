@@ -2,14 +2,24 @@ import { Global, Module } from '@nestjs/common';
 import * as xEnv from '@my-environment';
 import * as nestVk from 'nestjs-vk';
 
-import { MainMiddleware } from './middleware/main.middleware';
-
 import { VKKeyboardFactory } from './vk-keyboard.factory';
-import { VkUpdate } from './update/vk.update';
 import { VkService } from './vk.service';
+
+import { MainMiddleware } from './middleware/main.middleware';
+import { MainUpdate } from './update/main.update';
+import { ScheduleUpdate } from './update/schedule.update';
 import { SelectGroupScene } from './scene/select-group.scene';
+import { AuthScene } from './scene/auth.scene';
 
 const middlewares = [MainMiddleware];
+const providers = [
+  ...middlewares,
+  // updates
+  MainUpdate,
+  ScheduleUpdate,
+  AuthScene,
+  SelectGroupScene,
+];
 
 @Global()
 @Module({})
@@ -42,12 +52,10 @@ export class VkModule {
           }),
         }),
       ],
-      providers: [
-        ...middlewares,
+      providers: [        VkService,
         VKKeyboardFactory,
-        VkService,
-        VkUpdate,
-        SelectGroupScene,
+        ...providers,
+
       ],
       exports: [...middlewares, VKKeyboardFactory, VkService],
     };

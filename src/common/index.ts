@@ -11,6 +11,7 @@ export * from './guard/vk-admin.guard';
 
 export * from './pipe/validation-http.pipe';
 
+export * from './util/oauth.util';
 export * from './util/other.util';
 export * from './util/scheduler.util';
 export * from './util/ystuty.util';

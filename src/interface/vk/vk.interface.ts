@@ -4,13 +4,18 @@ import {
   MessageEventContext as VKMessageEventContext,
 } from 'vk-io';
 import { I18nContext } from 'vk-io-i18n';
-import { IStepContext as IVKStepContext } from '@vk-io/scenes';
+import { IStepContext as IVKStepContext, SceneContext } from '@vk-io/scenes';
 import { ISessionContext } from '@vk-io/session';
+import { UserInfo } from '@my-interfaces';
 
 interface ISessionState {
   __language_code?: string;
   selectedGroupName?: string;
+  socialConnectLink?: string;
+
+  user?: UserInfo;
 }
+
 interface ISessionConversationState {
   selectedGroupName?: string;
   hideStaticKeyboard?: boolean;
@@ -27,6 +32,7 @@ type ContextState = {
 type CombinedContext = {
   readonly i18n: I18nContext;
 } & {
+  scene: SceneContext<Record<string, any>>;
   session: ISessionContext & ISessionState;
   sessionConversation: ISessionContext & ISessionConversationState;
 } & {};

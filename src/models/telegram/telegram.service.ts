@@ -11,6 +11,7 @@ import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
 import { IContext } from '@my-interfaces/telegram';
 
 import { YSTUtyService } from '../ystuty/ystuty.service';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnApplicationShutdown {
@@ -18,6 +19,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
 
   constructor(
     @InjectBot() public readonly bot: Telegraf,
+    private readonly redisService: RedisService,
     private readonly ystutyService: YSTUtyService,
   ) {}
 
@@ -93,5 +95,44 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
       this.logger.log(`Group name not found from "${str}"`);
     }
     return false;
+  }
+
+  public async emulateSession(
+    socialId: number,
+  ): Promise<[IContext['session'], () => Promise<void>]> {
+    const lock = await this.redisService.redlock.lock(
+      `emulateSession:telegram:${socialId}`,
+      10e3,
+    );
+
+    const sessionJson = await this.redisService.redis.get(
+      `tg:session:${socialId}:${socialId}`,
+    );
+    if (!sessionJson) {
+      return [null, async () => void 0];
+    }
+
+    let session: IContext['session'] = {};
+    try {
+      session = JSON.parse(sessionJson);
+    } catch {}
+
+    const close = async () => {
+      try {
+        if (Object.keys(session).length > 0) {
+          await this.redisService.redis.set(
+            `tg:session:${socialId}:${socialId}`,
+            JSON.stringify(session),
+          );
+        } else {
+          await this.redisService.redis.del(
+            `tg:session:${socialId}:${socialId}`,
+          );
+        }
+      } finally {
+        await lock.unlock();
+      }
+    };
+    return [session, close];
   }
 }

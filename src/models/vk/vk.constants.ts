@@ -1,1 +1,2 @@
+export const AUTH_SCENE = 'AUTH_SCENE';
 export const SELECT_GROUP_SCENE = 'SELECT_GROUP_SCENE';

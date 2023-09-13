@@ -8,12 +8,17 @@ import type {
 import type { Update } from 'telegraf/types';
 import { Deunionize } from 'telegraf/typings/deunionize';
 import { I18nContext } from '@esindger/telegraf-i18n';
-import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
+import { LocalePhrase, TelegramLocalePhrase, UserInfo } from '@my-interfaces';
 
 interface ISessionState {
   __language_code?: string;
   selectedGroupName?: string;
+  socialConnectLink?: string;
   isBlockedBot?: boolean;
+
+  __scenes?: { current?: string; state?: any; cursor?: number };
+
+  user?: UserInfo;
 }
 
 type SceneSession = {

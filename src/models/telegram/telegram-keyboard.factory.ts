@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Markup } from 'telegraf';
 import { Markup as MarkupType } from 'telegraf/typings/markup';
-import { InlineKeyboardMarkup } from 'telegraf/typings/core/types/typegram';
+import {
+  InlineKeyboardMarkup,
+  ReplyKeyboardMarkup,
+  ReplyKeyboardRemove,
+} from 'telegraf/typings/core/types/typegram';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -13,13 +17,60 @@ export class TelegramKeyboardFactory {
     ]).resize();
   }
 
-  public getSelectGroupInline(ctx: IContext) {
+  public getAuth(
+    ctx: IContext,
+    inline?: true,
+    social?: boolean,
+    addSelectGroup?: boolean, // authLink?: string,
+  ): Markup.Markup<InlineKeyboardMarkup>;
+  public getAuth(
+    ctx: IContext,
+    inline: false,
+    social?: boolean,
+    addSelectGroup?: boolean, // authLink?: string,
+  ): Markup.Markup<ReplyKeyboardMarkup>;
+  public getAuth(
+    ctx: IContext,
+    social = false,
+    inline = true,
+    addSelectGroup = false,
+    // authLink?: string,
+  ) {
+    const phrase = social
+      ? LocalePhrase.Button_AuthLink_SocialConnect
+      : LocalePhrase.Button_AuthLink;
+    return {
+      ...(inline
+        ? Markup.inlineKeyboard([
+            // [Markup.button.url(ctx.i18n.t(phrase), authLink)],
+            [Markup.button.callback(ctx.i18n.t(phrase), phrase)],
+            ...(addSelectGroup
+              ? [
+                  [
+                    Markup.button.callback(
+                      ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                      LocalePhrase.Button_SelectGroup,
+                    ),
+                  ],
+                ]
+              : []),
+          ])
+        : Markup.keyboard([[ctx.i18n.t(phrase)]]).resize()),
+    };
+  }
+
+  public getSelectGroupInline(ctx: IContext, groupName?: string) {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_SelectGroup),
-          LocalePhrase.Button_SelectGroup,
-        ),
+        groupName
+          ? Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_SelectGroup_X, { groupName }),
+              `selectGroup:${groupName}`,
+            )
+          : Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+              LocalePhrase.Button_SelectGroup,
+            ),
       ],
     ]);
   }
@@ -97,6 +148,14 @@ export class TelegramKeyboardFactory {
     return Markup.inlineKeyboard(
       buttons1.length > 0 ? [...buttons1, buttons2] : [buttons2],
     );
+  }
+
+  public getClear(inline?: true): Markup.Markup<InlineKeyboardMarkup>;
+  public getClear(inline: false): Markup.Markup<ReplyKeyboardRemove>;
+  public getClear(inline = true) {
+    return {
+      ...(inline ? Markup.inlineKeyboard([]) : Markup.removeKeyboard()),
+    };
   }
 
   public getCancel(ctx: IContext) {

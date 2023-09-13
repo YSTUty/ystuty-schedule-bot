@@ -60,3 +60,13 @@ export const SOCIAL_TELEGRAM_ADMIN_IDS: number[] =
 export const PROMETHEUS_ENABLED: boolean = process.env.PROMETHEUS_ENABLED
   ? process.env.PROMETHEUS_ENABLED === 'true'
   : true;
+
+// * oAuth
+export const OAUTH_URL = process.env.OAUTH_URL || 'http://ystuty_oauth';
+export const OAUTH_CLIENT_ID = process.env.OAUTH_CLIENT_ID || 'ystuty-invite';
+export const OAUTH_CLIENT_SECRET = process.env.OAUTH_CLIENT_SECRET || '';
+// export const OAUTH_REDIRECT_URI =
+//   process.env.OAUTH_REDIRECT_URI || `${SERVER_URL}/callback/oauth`;
+
+//
+export const SOCAIL_CONNECT_URI = process.env.SOCAIL_CONNECT_URI || '';

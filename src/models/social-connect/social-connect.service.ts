@@ -15,6 +15,8 @@ export class SocialConnectService {
 
   private checkAuthProcess = 0;
 
+  private rateLimitter = new Map<string, number>();
+
   constructor(
     private readonly httpService: HttpService,
     private readonly userService: UserService,
@@ -24,7 +26,28 @@ export class SocialConnectService {
     return !!xEnv.SOCAIL_CONNECT_URI;
   }
 
+  public checkRate(socialType: SocialType, socialId: number) {
+    const key = `${socialType}:${socialId}`;
+    const time = this.rateLimitter.get(key);
+    return !time || Date.now() - time > 10e3;
+  }
+
+  public makeRate(socialType: SocialType, socialId: number) {
+    const key = `${socialType}:${socialId}`;
+    const check = this.checkRate(socialType, socialId);
+    if (!check) {
+      return false;
+    }
+    this.rateLimitter.set(key, Date.now());
+    return true;
+  }
+
   public async requestAuth(socialType: SocialType, socialId: number) {
+    const check = this.makeRate(socialType, socialId);
+    if (!check) {
+      return { error: 'rate limit' };
+    }
+
     try {
       // * Создане запроса на разрешение авторизаци в этом сервисе
       const { data } = await rxjs.firstValueFrom(
@@ -126,6 +149,13 @@ export class SocialConnectService {
       this.logger.error(err);
     } finally {
       this.checkAuthProcess = 0;
+    }
+
+    // Clear old rates
+    for (const [key, time] of this.rateLimitter) {
+      if (Date.now() - time > 15e3) {
+        this.rateLimitter.delete(key);
+      }
     }
   }
 }

@@ -1,14 +1,16 @@
+import { UseFilters } from '@nestjs/common';
 import { Scene, AddStep, Ctx } from 'nestjs-vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 import * as xEnv from '@my-environment';
-import { SocialType } from '@my-common';
+import { SocialType, VkExceptionFilter } from '@my-common';
 
 import { SocialConnectService } from '../../social-connect/social-connect.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { AUTH_SCENE } from '../vk.constants';
 
 @Scene(AUTH_SCENE)
+@UseFilters(VkExceptionFilter)
 export class AuthScene {
   constructor(
     private readonly keyboardFactory: VKKeyboardFactory,

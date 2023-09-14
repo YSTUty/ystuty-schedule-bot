@@ -59,7 +59,7 @@ export class TelegramModule {
                   password: xEnv.REDIS_PASSWORD,
                   prefix: xEnv.REDIS_PREFIX,
                 },
-                ttl: 7 * 24 * 3600,
+                ttl: 3 * 7 * 24 * 3600,
                 getSessionKey: (ctx) =>
                   `tg:session:${
                     (ctx.from && ctx.chat && `${ctx.from.id}:${ctx.chat.id}`) ||
@@ -75,7 +75,7 @@ export class TelegramModule {
                   password: xEnv.REDIS_PASSWORD,
                   prefix: xEnv.REDIS_PREFIX,
                 },
-                ttl: 7 * 24 * 3600,
+                ttl: 3 * 7 * 24 * 3600,
                 property: 'sessionConversation',
                 getSessionKey: (ctx) =>
                   ctx.chat && `tg:session:conversation:${ctx.chat.id}`,

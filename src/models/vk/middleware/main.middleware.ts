@@ -50,7 +50,7 @@ export class MainMiddleware {
   ) {
     this.redisStorage = new RedisStorage({
       redis: this.redisService.redis,
-      ttl: 7 * 24 * 3600,
+      ttl: 3 * 7 * 24 * 3600,
     });
 
     this.sessionManager = new SessionManager({

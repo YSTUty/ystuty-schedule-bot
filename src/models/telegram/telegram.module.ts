@@ -4,17 +4,19 @@ import * as RedisSession from 'telegraf-session-redis';
 
 import * as xEnv from '@my-environment';
 
-import { MainMiddleware } from './middleware/main.middleware';
-import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { TelegramService } from './telegram.service';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
+
+import { MainMiddleware } from './middleware/main.middleware';
+import { MetricsMiddleware } from './middleware/metrics.middleware';
+import { UserMiddleware } from './middleware/user.middleware';
 
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
 import { AuthScene } from './scene/auth.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
 
-const middlewares = [MainMiddleware, MetricsMiddleware];
+const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
 const providers = [
   ...middlewares,
   // updates
@@ -39,6 +41,7 @@ export class TelegramModule {
           useFactory: async (
             mainMiddleware: MainMiddleware,
             metricsMiddleware: MetricsMiddleware,
+            userMiddleware: UserMiddleware,
           ) => ({
             token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
             launchOptions: false,
@@ -79,7 +82,7 @@ export class TelegramModule {
               }) as RedisSession.default,
               mainMiddleware.middlewareCleaner(),
               mainMiddleware.i18nMiddleware,
-              // i18n,
+              userMiddleware,
               mainMiddleware.middlewareCleaner(true),
             ],
           }),

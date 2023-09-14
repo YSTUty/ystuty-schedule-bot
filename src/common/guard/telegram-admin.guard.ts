@@ -3,9 +3,11 @@ import {
   TelegrafExecutionContext,
   TelegrafException,
 } from '@xtcry/nestjs-telegraf';
+
 import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
+import { UserRole } from '@my-common';
 
 @Injectable()
 export class TelegramAdminGuard implements CanActivate {
@@ -19,7 +21,7 @@ export class TelegramAdminGuard implements CanActivate {
 
     if (
       !SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id)
-      // && ctx.user?.role !== UserRole.ADMIN
+      && ctx.user?.role !== UserRole.ADMIN
     ) {
       if (this.input) {
         if (typeof this.input === 'string') {

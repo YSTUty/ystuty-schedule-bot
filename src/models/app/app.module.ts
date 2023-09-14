@@ -1,4 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import * as xEnv from '@my-environment';
+import { RolesGuard } from '@my-common/guard/roles.guard';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -13,6 +18,16 @@ import { SocialConnectModule } from '../social-connect/social-connect.module';
 
 @Module({
   imports: [
+    TypeOrmModule.forRootAsync({
+      useFactory: async () => ({
+        ...xEnv.TYPEORM_CONFIG,
+
+        type: 'postgres' as const,
+
+        autoLoadEntities: true,
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      }),
+    }),
     SocialConnectModule,
     MetricsModule.forRoot(),
     YSTUtyModule,
@@ -22,6 +37,6 @@ import { SocialConnectModule } from '../social-connect/social-connect.module';
     UserModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [{ provide: APP_GUARD, useClass: RolesGuard }, AppService],
 })
 export class AppModule {}

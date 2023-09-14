@@ -25,6 +25,20 @@ export const YSTUTY_PARSER_URL: string =
 export const YSTUTY_WEB_VIEW_ADDRESS: string =
   process.env.YSTUTY_WEB_VIEW_ADDRESS || '';
 
+// * Postgres
+export const TYPEORM_CONFIG = {
+  logging: process.env.POSTGRES_LOGGING === 'true',
+  synchronize: false,
+  host: process.env.POSTGRES_HOST || 'postgres',
+  port: +process.env.POSTGRES_PORT || 5432,
+  username: process.env.POSTGRES_USER || 'postgres',
+  password: process.env.POSTGRES_PASSWORD,
+  database: process.env.POSTGRES_DATABASE || 'ystuty-schedule-bot',
+};
+TYPEORM_CONFIG.synchronize = process.env.POSTGRES_SYNCHRONIZE
+  ? process.env.POSTGRES_SYNCHRONIZE === 'true'
+  : TYPEORM_CONFIG.database.endsWith('dev');
+
 // * Redis
 export const REDIS_HOST: string = process.env.REDIS_HOST || 'redis';
 export const REDIS_PORT: number = +process.env.REDIS_PORT || 6379;

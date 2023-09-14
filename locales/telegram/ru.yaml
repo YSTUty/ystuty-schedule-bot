@@ -2,6 +2,7 @@ language_name: Русский
 
 common:
   error: 💢 Произошла ошибка.
+  banned: Вы в бане.
   no_access: Нет доступа.
   cooldown: ⏳ Cooldown...
   canceled: 🔄 Отменено
@@ -30,8 +31,8 @@ regexp:
 page:
   start: |
     Привет! Это бот для расписания ЯГТУ
-    ${ctx.session.selectedGroupName ? '' : '\nНапиши <code>help</code> для получения списка команд'} \
-    ${webViewLink ? ('\nПросмотр расписания в браузере — <a href="https://' + webViewLink + (ctx.session.selectedGroupName ? ('/g/' + ctx.session.selectedGroupName) : '') + '">View</a>') : ''}
+    ${ctx.userSocial.groupName ? '' : '\nНапиши <code>help</code> для получения списка команд'} \
+    ${webViewLink ? ('\nПросмотр расписания в браузере — <a href="https://' + webViewLink + (ctx.userSocial.groupName ? ('/g/' + ctx.userSocial.groupName) : '') + '">View</a>') : ''}
 
   init_bot: |
     Чтобы продолжить, необходимо <b>авторизироваться</b> или <i>выбрать учебную группу</i>.

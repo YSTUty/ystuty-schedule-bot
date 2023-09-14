@@ -29,7 +29,7 @@ export class AuthScene {
       return;
     }
 
-    if (ctx.session.user) {
+    if (ctx.state.user) {
       ctx.send('Already auth');
       await ctx.scene.leave({ canceled: true });
       return;

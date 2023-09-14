@@ -3,6 +3,7 @@ import { LocalePhrase } from '@my-interfaces';
 import { IContext, IStepContext } from '@my-interfaces/telegram';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
+// import { UserService } from '../../user/user.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
 import { BaseScene } from './base.scene';
@@ -10,17 +11,11 @@ import { BaseScene } from './base.scene';
 @Wizard(SELECT_GROUP_SCENE)
 export class SelectGroupScene extends BaseScene {
   constructor(
-    private readonly ystutyService: YSTUtyService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly ystutyService: YSTUtyService, // private readonly userService: UserService,
   ) {
     super();
   }
-
-  // // @SceneLeave()
-  // async onLeave(@Ctx() ctx: IStepContext) {
-  //     const keyboard = this.keyboardFactory.getStart(ctx);
-  //     ctx.replyWithHTML('Main page', keyboard);
-  // }
 
   onСancel(ctx: IContext) {
     const msg = ctx.i18n.t(LocalePhrase.Common_Canceled);
@@ -39,6 +34,7 @@ export class SelectGroupScene extends BaseScene {
   step1(@Ctx() ctx: IStepContext) {
     const {
       scene: { state },
+      userSocial,
     } = ctx;
     let { groupName } = state;
 
@@ -47,7 +43,6 @@ export class SelectGroupScene extends BaseScene {
     // }
 
     const isChat = ctx.chat.type !== 'private';
-    const session = !isChat ? ctx.session : ctx.sessionConversation;
 
     const firstTime = state.firstTime !== false;
     state.firstTime = false;
@@ -60,7 +55,8 @@ export class SelectGroupScene extends BaseScene {
       const content = ctx.i18n.t(
         LocalePhrase.Page_SelectGroup_EnterNameWithExample,
         {
-          randomGroupName: this.ystutyService.randomGroupName,
+          randomGroupName:
+            ctx.user?.groupName || this.ystutyService.randomGroupName,
           randomGroupName2: this.ystutyService.randomGroupName,
         },
       );
@@ -82,8 +78,11 @@ export class SelectGroupScene extends BaseScene {
     }
 
     if (groupName === '0') {
-      // session.selectedGroupName = undefined;
-      delete session.selectedGroupName;
+      if (isChat) {
+        delete ctx.sessionConversation.selectedGroupName;
+      } else {
+        userSocial.groupName = null;
+      }
 
       const keyboard = this.keyboardFactory.getStart(ctx);
       ctx.replyWithHTML(
@@ -96,7 +95,12 @@ export class SelectGroupScene extends BaseScene {
 
     const selectedGroupName = this.ystutyService.getGroupByName(groupName);
     if (selectedGroupName) {
-      session.selectedGroupName = selectedGroupName;
+      if (isChat) {
+        ctx.sessionConversation.selectedGroupName = selectedGroupName;
+      } else {
+        userSocial.groupName = selectedGroupName;
+        // await this.userService.saveUserSocial(ctx.userSocial);
+      }
 
       const keyboard = this.keyboardFactory.getStart(ctx);
       ctx.replyWithHTML(

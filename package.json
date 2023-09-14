@@ -41,6 +41,7 @@
     "@nestjs/core": "^9.0.0",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/schedule": "^3.0.0",
+    "@nestjs/typeorm": "^9.0.0",
     "@vk-io/hear": "^1.1.1",
     "@vk-io/scenes": "^1.2.1",
     "@vk-io/session": "^2.2.1",
@@ -54,6 +55,7 @@
     "moment": "^2.29.4",
     "nestjs-vk": "^4.6.0",
     "oauth": "^0.10.0",
+    "pg": "^8.11.3",
     "prom-client": "^13.2.0",
     "redlock": "^4.2.0",
     "reflect-metadata": "^0.1.13",
@@ -61,6 +63,7 @@
     "rxjs": "^7.8.1",
     "telegraf": "^4.13.1",
     "telegraf-session-redis": "^5.1.0",
+    "typeorm": "^0.2",
     "vk-io": "^4.8.0",
     "vk-io-i18n": "^0.0.1",
     "vk-io-redis-storage": "1.1.0"

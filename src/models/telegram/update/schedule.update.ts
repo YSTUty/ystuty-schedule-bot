@@ -29,11 +29,11 @@ export class ScheduleUpdate {
 
     const groupNameFromQuery = ctx.inlineQuery.query.trim();
     const groupName = this.ystutyService.getGroupByName(
-      groupNameFromQuery || ctx.session?.selectedGroupName,
+      groupNameFromQuery || ctx.userSocial?.groupName,
     );
 
     if (!groupName) {
-      if (ctx.session?.selectedGroupName) {
+      if (ctx.userSocial?.groupName) {
         ctx.answerInlineQuery(
           [
             {
@@ -178,12 +178,14 @@ export class ScheduleUpdate {
     ),
   )
   async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
-    const session =
-      ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
+    const selectedGroupName =
+      ctx.chat.type === 'private'
+        ? ctx.userSocial.groupName
+        : ctx.sessionConversation.selectedGroupName;
 
     const groupNameFromMath = ctx.match?.groups?.groupName;
     const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath || session.selectedGroupName,
+      groupNameFromMath || selectedGroupName,
     );
 
     const _skipDays = ctx.match?.groups?.skipDays ?? null;
@@ -193,7 +195,7 @@ export class ScheduleUpdate {
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
 
     if (!groupName) {
-      if (session.selectedGroupName) {
+      if (selectedGroupName) {
         ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,
@@ -274,12 +276,14 @@ export class ScheduleUpdate {
     ),
   )
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
-    const session =
-      ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
+    const selectedGroupName =
+      ctx.chat.type === 'private'
+        ? ctx.userSocial.groupName
+        : ctx.sessionConversation.selectedGroupName;
 
     const groupNameFromMath = ctx.match?.groups?.groupName;
     const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath || session.selectedGroupName,
+      groupNameFromMath || selectedGroupName,
     );
 
     const isNextWeek =
@@ -288,7 +292,7 @@ export class ScheduleUpdate {
     let skipDays = isNextWeek ? 7 + 1 : 1;
 
     if (!groupName) {
-      if (session.selectedGroupName) {
+      if (selectedGroupName) {
         ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,

@@ -4,6 +4,7 @@ export enum LocalePhrase {
   // Common
   Common_Error = 'common.error',
   Common_NoAccess = 'common.no_access',
+  Common_Banned = 'common.banned',
   Common_Cooldown = 'common.cooldown',
   Common_Canceled = 'common.canceled',
 

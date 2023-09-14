@@ -1,4 +1,5 @@
 import {
+  API,
   Context as VKContext,
   MessageContext as VKMessageContext,
   MessageEventContext as VKMessageEventContext,
@@ -6,25 +7,32 @@ import {
 import { I18nContext } from 'vk-io-i18n';
 import { IStepContext as IVKStepContext, SceneContext } from '@vk-io/scenes';
 import { ISessionContext } from '@vk-io/session';
-import { UserInfo } from '@my-interfaces';
+
+import { UserSocial } from '../../models/user/entity/user-social.entity';
+import { User } from '../../models/user/entity/user.entity';
 
 export interface ISessionState {
   __language_code?: string;
   __scene?: { current: string };
 
+  // TODO: remove it. Use `user.groupName`
+  /** @deprecated Use `user.groupName` */
   selectedGroupName?: string;
   socialConnectLink?: string;
-
-  user?: UserInfo;
 }
 
 interface ISessionConversationState {
+  // // TODO: remove it. Use `conversation.groupName`
   selectedGroupName?: string;
   hideStaticKeyboard?: boolean;
 }
 
 type ContextState = {
   appeal: boolean;
+
+  userSocial: UserSocial;
+  user?: User;
+
   foundGroupName?: string;
   rejectRefGroupName?: boolean;
 
@@ -33,6 +41,7 @@ type ContextState = {
 
 type CombinedContext = {
   readonly i18n: I18nContext;
+  readonly api: API;
 } & {
   scene: SceneContext<Record<string, any>>;
   session: ISessionContext & ISessionState;

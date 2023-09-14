@@ -1,14 +1,18 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { IncomingMessage } from 'http';
 
 import * as xEnv from '@my-environment';
-import { LocalePhrase, UserInfo } from '@my-interfaces';
+import { LocalePhrase } from '@my-interfaces';
 import { ISessionState as VkISessionState } from '@my-interfaces/vk';
 import { oAuth } from '@my-common';
 import { SocialType } from '@my-common/constants';
 import { i18n as i18nTg } from '@my-common/util/tg';
 import { i18n as i18nVk } from '@my-common/util/vk';
 
+import { RedisService } from '../redis/redis.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { TelegramKeyboardFactory } from '../telegram/telegram-keyboard.factory';
 import * as telegramConstants from '../telegram/telegram.constants';
@@ -16,15 +20,104 @@ import { VkService } from '../vk/vk.service';
 import { VKKeyboardFactory } from '../vk/vk-keyboard.factory';
 import * as vkConstants from '../vk/vk.constants';
 
+import { User } from './entity/user.entity';
+import { UserSocial } from './entity/user-social.entity';
+
 @Injectable()
 export class UserService {
   constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserSocial)
+    private readonly userSocialRepository: Repository<UserSocial>,
+
+    private readonly redisService: RedisService,
+    private readonly metricsService: MetricsService,
     private readonly telegramService: TelegramService,
     @Inject(forwardRef(() => VkService))
     private readonly vkService: VkService,
     private readonly tgKeyboardFactory: TelegramKeyboardFactory,
     private readonly vkKeyboardFactory: VKKeyboardFactory,
   ) {}
+
+  public async getUser(userId: number, lock = false) {
+    return await this.userRepository.findOne(userId, {
+      ...(lock && { lock: { mode: 'pessimistic_write' } }),
+    });
+  }
+
+  /** Create or Update user */
+  public async save(user: Partial<User>, useLock = true) {
+    const lock =
+      useLock &&
+      (await this.redisService.redlock.lock(
+        `save.${user.id || user.externalId + 'x'}`,
+        30e3,
+      ));
+    try {
+      // let curUser = await this.userRepository.findOne(user);
+      let curUser = await this.userRepository.findOne({
+        where: [{ id: user.id }, { externalId: user.externalId }],
+      });
+      if (curUser) {
+        user = { ...curUser, ...user };
+      } else {
+        this.metricsService.userCounter.inc();
+      }
+      return await this.userRepository.save(new User(user));
+    } finally {
+      useLock && (await lock.unlock());
+    }
+  }
+
+  public async getOrCreate(user: Partial<User>, useLock = true) {
+    const lock =
+      useLock &&
+      (await this.redisService.redlock.lock(
+        `getOrCreateUser.${user.id || user.externalId + 'x'}`,
+        30e3,
+      ));
+    try {
+      let curUser = await this.userRepository.findOne({
+        where: [{ id: user.id }, { externalId: user.externalId }],
+      });
+
+      if (!curUser) {
+        curUser = await this.userRepository.save(new User(user));
+        this.metricsService.userCounter.inc();
+      }
+      return curUser;
+    } finally {
+      useLock && (await lock.unlock());
+    }
+  }
+
+  public async saveUserSocial(userSocial: UserSocial) {
+    return await this.userSocialRepository.save(userSocial);
+  }
+
+  public async createUserSocial(
+    provider: SocialType,
+    profile: Partial<UserSocial>,
+    user?: User,
+  ) {
+    profile.social = provider;
+    profile.user = user;
+    const userSocial = new UserSocial(
+      await this.userSocialRepository.save(profile),
+    );
+
+    return userSocial;
+  }
+
+  public async findBySocialId(social: SocialType, socialId: number) {
+    const userSocial = await this.userSocialRepository.findOne(
+      { socialId, social },
+      { relations: ['user'] },
+    );
+
+    return userSocial;
+  }
 
   public async auth(
     socialType: SocialType,
@@ -48,12 +141,7 @@ export class UserService {
     ).emulateSession(socialId);
 
     if (auth) {
-      const userSocial = await this.authUserSocial(
-        socialType,
-        socialId,
-        auth,
-        session,
-      );
+      const userSocial = await this.authUserSocial(socialType, socialId, auth);
       if (userSocial === false) {
         await socialService.sendMessage(
           socialId,
@@ -71,20 +159,27 @@ export class UserService {
         }),
       );
 
-      if (socialType === SocialType.Telegram) {
-        if (userSocial.user.groupName) {
+      if (
+        userSocial.user.groupName &&
+        userSocial.user.groupName !== userSocial.groupName
+      ) {
+        if (socialType === SocialType.Telegram) {
           const keyboard = this.tgKeyboardFactory.getSelectGroupInline(
             { i18n } as any,
             userSocial.user.groupName,
           );
-          await socialService.sendMessage(socialId, 'Action', keyboard);
-        }
-      } else if (socialType === SocialType.Vkontakte) {
-        if (userSocial.user.groupName) {
+          await socialService.sendMessage(
+            socialId,
+            '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴',
+            keyboard,
+          );
+        } else if (socialType === SocialType.Vkontakte) {
           const keyboard = this.vkKeyboardFactory
             .getSelectGroup({ i18n } as any, userSocial.user.groupName)
             .inline();
-          await this.vkService.sendMessage(socialId, 'Action', { keyboard });
+          await this.vkService.sendMessage(socialId, '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴', {
+            keyboard,
+          });
         }
       }
     } else {
@@ -115,12 +210,8 @@ export class UserService {
     socialType: SocialType,
     socialId: number,
     auth: { code?: string; access_token?: string; refresh_token?: string },
-    userSocial: {
-      user?: UserInfo;
-      selectedGroupName?: string;
-    } & Record<string, any>,
   ) {
-    // const userSocial = await this.findBySocialId(socialType, socialId);
+    const userSocial = await this.findBySocialId(socialType, socialId);
 
     if (!userSocial || userSocial.userId) {
       console.log('Fail: userSocial');
@@ -192,31 +283,20 @@ export class UserService {
       return false;
     }
 
-    /* const user = await this.save(
-      {
-        externalId: userData.user.id,
-        fullname: userData.user.fullName,
-        login: userData.user.login,
-        groupName: userData.user.groupName,
-        accessToken: auth.access_token,
-        refreshToken: auth.refresh_token,
-      },
-      // false,
-    ); */
-    const user = {
+    const user = await this.save({
       externalId: userData.user.id,
       fullname: userData.user.fullName,
       login: userData.user.login,
       groupName: userData.user.groupName,
       accessToken: auth.access_token,
       refreshToken: auth.refresh_token,
-    };
-
-    // if (!userSocial.selectedGroupName) {
-    //   userSocial.selectedGroupName = userData.user.groupName;
-    // }
+    });
     userSocial.user = user;
-    // await this.saveUserSocial(userSocial);
+
+    // if (!user.groupName) {
+    //   userSocial.groupName = userData.user.groupName;
+    // }
+    await this.saveUserSocial(userSocial);
     return userSocial;
   }
 }

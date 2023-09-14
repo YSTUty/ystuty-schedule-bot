@@ -98,29 +98,28 @@ export class MainUpdate {
       }
     }
 
+    const keyboard = this.keyboardFactory.getStart(ctx);
+    ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
+
     if (
       ctx.chat.type === 'private' &&
-      (!ctx.session.selectedGroupName || !ctx.session.user)
+      (!ctx.userSocial.groupName || !ctx.user)
     ) {
-      const keyboard = !ctx.session.user
+      const keyboard = !ctx.user
         ? this.keyboardFactory.getAuth(
             ctx,
             true,
             true,
-            !ctx.session.selectedGroupName,
+            !ctx.userSocial.groupName,
           )
         : this.keyboardFactory.getSelectGroupInline(ctx);
       ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
-      return;
     }
-
-    const keyboard = this.keyboardFactory.getStart(ctx);
-    ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
   }
 
   @Hears('/profile')
   async onProfile(@Ctx() ctx: IMessageContext) {
-    const { user = null } = ctx.session;
+    const { user = null } = ctx;
     if (!user) {
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
       await ctx.scene.enter(AUTH_SCENE);
@@ -254,16 +253,18 @@ export class MainUpdate {
     new RegExp(`\\/(?<command>cal(endar)?)(\\s+)?${patternGroupName}?`, 'i'),
   )
   async onCalendar(@Ctx() ctx: IMessageContext) {
-    const session =
-      ctx.chat.type === 'private' ? ctx.session : ctx.sessionConversation;
+    const selectedGroupName =
+      ctx.chat.type === 'private'
+        ? ctx.userSocial.groupName
+        : ctx.sessionConversation.selectedGroupName;
 
     const groupNameFromMath = ctx.match?.groups?.groupName;
     const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath || session.selectedGroupName,
+      groupNameFromMath || selectedGroupName,
     );
 
     if (!groupName) {
-      if (session.selectedGroupName) {
+      if (selectedGroupName) {
         ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,

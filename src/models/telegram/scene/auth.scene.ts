@@ -1,5 +1,4 @@
 import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
-import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 import { SocialType } from '@my-common';
@@ -43,7 +42,7 @@ export class AuthScene extends BaseScene {
       return;
     }
 
-    if (ctx.session.user) {
+    if (ctx.user) {
       ctx.replyWithHTML('Already auth');
       await ctx.scene.leave();
       return;

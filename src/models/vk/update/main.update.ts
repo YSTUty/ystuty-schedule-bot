@@ -71,23 +71,22 @@ export class MainUpdate {
       }
     }
 
-    if (!ctx.isChat && (!ctx.session.selectedGroupName || !ctx.session.user)) {
-      const keyboard = !ctx.session.user
+    const keyboard = this.keyboardFactory
+      .getStart(ctx)
+      .inline(this.keyboardFactory.needInline(ctx));
+    ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
+
+    if (!ctx.isChat && (!ctx.state.userSocial.groupName || !ctx.state.user)) {
+      const keyboard = !ctx.state.user
         ? this.keyboardFactory
-            .getAuth(ctx, true, !ctx.session.selectedGroupName)
+            .getAuth(ctx, true, !ctx.state.userSocial.groupName)
             .inline()
         : this.keyboardFactory.getSelectGroup(ctx).inline();
       const useInline = ctx.clientInfo.inline_keyboard;
       ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
         keyboard,
       });
-      return;
     }
-
-    const keyboard = this.keyboardFactory
-      .getStart(ctx)
-      .inline(this.keyboardFactory.needInline(ctx));
-    ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
   }
 
   @Hears('/profile')

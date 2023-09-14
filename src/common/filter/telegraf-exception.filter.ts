@@ -68,8 +68,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
         exception.description.includes('chat not found')
       ) {
         try {
-          // ctx.user.isBlockedBot = true;
-          ctx.session.isBlockedBot = true;
+          ctx.userSocial.isBlockedBot = true;
         } catch (err) {
           console.error(err);
         }

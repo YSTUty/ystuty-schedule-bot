@@ -10,6 +10,7 @@ import { linearBuckets } from 'prom-client';
 export class MetricsService {
   public readonly prefix = 'ystuty_';
 
+  public readonly userCounter: CounterMetric;
   public readonly scheduleCounter: CounterMetric;
 
   public readonly telegramRequestCounter: CounterMetric;
@@ -21,6 +22,11 @@ export class MetricsService {
   // public readonly anyGauge: GaugeMetric;
 
   constructor(public readonly promService: PromService) {
+    this.userCounter = this.promService.getCounter({
+      name: `${this.prefix}user_total`,
+      help: 'User counter',
+      labelNames: [],
+    });
     this.scheduleCounter = this.promService.getCounter({
       name: `${this.prefix}schedule_total`,
       help: 'Schedule request counter',

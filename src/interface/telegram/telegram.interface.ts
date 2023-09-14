@@ -8,16 +8,23 @@ import type {
 import type { Update } from 'telegraf/types';
 import { Deunionize } from 'telegraf/typings/deunionize';
 import { I18nContext } from '@esindger/telegraf-i18n';
-import { LocalePhrase, TelegramLocalePhrase, UserInfo } from '@my-interfaces';
+import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
+
+import { UserSocial } from '../../models/user/entity/user-social.entity';
+import { User } from '../../models/user/entity/user.entity';
 
 interface ISessionState {
   __language_code?: string;
   __scenes?: { current?: string; state?: any; cursor?: number };
 
+  // TODO: remove it. Use `user.groupName`
+  /** @deprecated Use `user.groupName` */
   selectedGroupName?: string;
-  isBlockedBot?: boolean;
+}
 
-  user?: UserInfo;
+interface ISessionConversationState {
+  // // TODO: remove it. Use `conversation.groupName`
+  selectedGroupName?: string;
 }
 
 type SceneSession = {
@@ -35,9 +42,12 @@ type ContextState = {
 
 type CombinedContext = {
   session: ISessionState;
-  sessionConversation: ISessionState;
+  sessionConversation: ISessionConversationState;
 
   match?: RegExpExecArray;
+
+  userSocial: UserSocial;
+  user?: User;
 
   state: ContextState;
 

@@ -21,8 +21,6 @@ export class SelectGroupScene {
     } = ctx;
     let { groupName } = state;
 
-    const session = !isChat ? ctx.session : ctx.sessionConversation;
-
     if (!ctx.scene.step.firstTime) {
       groupName = ctx.text;
     }
@@ -33,7 +31,8 @@ export class SelectGroupScene {
         .inline(this.keyboardFactory.needInline(ctx));
       ctx.send(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
-          randomGroupName: this.ystutyService.randomGroupName,
+          randomGroupName:
+            ctx.state.user?.groupName || this.ystutyService.randomGroupName,
           randomGroupName2: this.ystutyService.randomGroupName,
         }),
         { keyboard },
@@ -49,7 +48,11 @@ export class SelectGroupScene {
     }
 
     if (groupName === '0') {
-      session.selectedGroupName = undefined;
+      if (isChat) {
+        ctx.sessionConversation.selectedGroupName = undefined;
+      } else {
+        ctx.state.userSocial.groupName = null;
+      }
 
       const keyboard = this.keyboardFactory
         .getStart(ctx)
@@ -62,7 +65,11 @@ export class SelectGroupScene {
 
     const selectedGroupName = this.ystutyService.getGroupByName(groupName);
     if (selectedGroupName) {
-      session.selectedGroupName = selectedGroupName;
+      if (isChat) {
+        ctx.sessionConversation.selectedGroupName = selectedGroupName;
+      } else {
+        ctx.state.userSocial.groupName = selectedGroupName;
+      }
 
       const keyboard = this.keyboardFactory
         .getStart(ctx)

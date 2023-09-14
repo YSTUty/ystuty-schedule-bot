@@ -26,13 +26,13 @@ export class ScheduleUpdate {
     LocalePhrase.Button_Schedule_ForTomorrow,
   ])
   async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
-    const session = !ctx.isChat ? ctx.session : ctx.sessionConversation;
+    const selectedGroupName = !ctx.isChat
+      ? ctx.state.userSocial.groupName
+      : ctx.sessionConversation.selectedGroupName;
 
     const groupNameFromMath = ctx.$match?.groups?.groupName;
     const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath ||
-        ctx.messagePayload?.groupName ||
-        session.selectedGroupName,
+      groupNameFromMath || ctx.messagePayload?.groupName || selectedGroupName,
     );
 
     const _skipDays = ctx.$match?.groups?.skipDays ?? null;
@@ -42,7 +42,7 @@ export class ScheduleUpdate {
       ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
 
     if (!groupName) {
-      if (session.selectedGroupName) {
+      if (selectedGroupName) {
         ctx.send(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,
@@ -98,13 +98,13 @@ export class ScheduleUpdate {
     LocalePhrase.Button_Schedule_ForNextWeek,
   ])
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
-    const session = !ctx.isChat ? ctx.session : ctx.sessionConversation;
+    const selectedGroupName = !ctx.isChat
+      ? ctx.state.userSocial.groupName
+      : ctx.sessionConversation.selectedGroupName;
 
     const groupNameFromMath = ctx.$match?.groups?.groupName;
     const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath ||
-        ctx.messagePayload?.groupName ||
-        session.selectedGroupName,
+      groupNameFromMath || ctx.messagePayload?.groupName || selectedGroupName,
     );
 
     const isNextWeek =
@@ -113,7 +113,7 @@ export class ScheduleUpdate {
     let skipDays = isNextWeek ? 7 + 1 : 1;
 
     if (!groupName) {
-      if (session.selectedGroupName) {
+      if (selectedGroupName) {
         ctx.send(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,

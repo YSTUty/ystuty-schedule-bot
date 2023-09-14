@@ -142,10 +142,12 @@ export class MainUpdate {
     LocalePhrase.Button_AuthLink_SocialConnect,
   ])
   async onAuth(@Ctx() ctx: ICbQOrMsg) {
-    await ctx.editMessageReplyMarkup(
-      this.keyboardFactory.getClear().reply_markup,
-    );
-    await ctx.tryAnswerCbQuery('Enter');
+    if (ctx.updateType === 'callback_query') {
+      await ctx.editMessageReplyMarkup(
+        this.keyboardFactory.getClear().reply_markup,
+      );
+      await ctx.tryAnswerCbQuery('Enter');
+    }
     await ctx.scene.enter(AUTH_SCENE);
   }
 

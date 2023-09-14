@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.3.0](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.2.2...v0.3.0) (2023-09-14)
+
+
+### 🐛 Bug Fixes
+
+* **telegram:** add inline keyboard url button instead callback ([8a5f646](https://github.com/YSTUty/ystuty-schedule-bot/commit/8a5f6466803108bb3f1f6eed763693b0dcb8bdd1))
+* **telegram:** edit message only from callback ([e580e5e](https://github.com/YSTUty/ystuty-schedule-bot/commit/e580e5ee4110e89f586e4f5a2db8f0ba6e1fa502))
+* **telegram:** fix order of group validation ([70747a8](https://github.com/YSTUty/ystuty-schedule-bot/commit/70747a819004fb8ab0f8701e85fc71e8af4cc2e7))
+
+
+### 🧹 Chore
+
+* **auth:** update auth method; add cancellation auth check ([9250a08](https://github.com/YSTUty/ystuty-schedule-bot/commit/9250a08d59ef4c3c9a7a135c407040a3167ae83a))
+* **common:** update filters ([0577509](https://github.com/YSTUty/ystuty-schedule-bot/commit/0577509ea190ba67c74b2ff61a247ffae3d617cc))
+* **common:** update vk exception filter ([ff68a8e](https://github.com/YSTUty/ystuty-schedule-bot/commit/ff68a8e063ad2fe5bd2647b8fa04795dc445f6db))
+* **locale:** add emoji ([6018063](https://github.com/YSTUty/ystuty-schedule-bot/commit/60180631e17f6d02f4567b115cba4d4b2e411b87))
+* **social:** increase session ttl in redis ([2aa755b](https://github.com/YSTUty/ystuty-schedule-bot/commit/2aa755b3c58fb5600b5f74be0db9d6ed5c944007))
+
+
+### 🚀 Features
+
+* add `social-connect` model (auth) ([ddf9e79](https://github.com/YSTUty/ystuty-schedule-bot/commit/ddf9e7919d8e708537e7957a5657a29ceecf7457))
+* add typeorm & postgres ([04ad43a](https://github.com/YSTUty/ystuty-schedule-bot/commit/04ad43a13fac38acbfb8ea6a33f4ecc1a486650a))
+* **connect:** add rate limit for request auth ([c0f5410](https://github.com/YSTUty/ystuty-schedule-bot/commit/c0f54103c50c1bd10d96d4412aedc55063e7ac49))
+* **social:** add profile button ([b3cef3c](https://github.com/YSTUty/ystuty-schedule-bot/commit/b3cef3cbc2ce905a8ac141c18edba47a8b1674df))
+
 ### [0.2.2](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.2.1...v0.2.2) (2023-09-11)
 
 

@@ -1,5 +1,4 @@
 import {
-  ArgumentsHost,
   Catch,
   ExceptionFilter,
   ForbiddenException,

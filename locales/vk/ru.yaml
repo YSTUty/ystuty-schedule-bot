@@ -11,6 +11,7 @@ button:
   cancel: Отмена
   auth_link: Войти через ЯГТУ ID 🤖
   auth_link_connect: Войти через Social connect 🤖 (ЯГТУ ID)
+  profile: Профиль 👤
   select_group: Выбрать группу
   select_group_x: Выбрать группу "${groupName}"
   schedule:

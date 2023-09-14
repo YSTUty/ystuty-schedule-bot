@@ -117,13 +117,15 @@ export class MainUpdate {
     }
   }
 
-  @Hears('/profile')
-  async onProfile(@Ctx() ctx: IMessageContext) {
+  @TgHearsLocale(LocalePhrase.Button_Profile)
+  @Action(LocalePhrase.Button_Profile)
+  @Command('profile')
+  async onProfile(@Ctx() ctx: ICbQOrMsg) {
     const { user = null } = ctx;
+    ctx.tryAnswerCbQuery();
     if (!user) {
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
-      await ctx.scene.enter(AUTH_SCENE);
-      return;
+      return ctx.scene.enter(AUTH_SCENE);
     }
 
     await ctx.replyWithHTML(

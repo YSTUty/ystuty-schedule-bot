@@ -90,8 +90,9 @@ export class MainUpdate {
   }
 
   @Hears('/profile')
+  @VkHearsLocale(LocalePhrase.Button_Profile)
   async onProfile(@Ctx() ctx: IMessageContext) {
-    const { user = null } = ctx.session;
+    const { user = null } = ctx.state;
     if (!user) {
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
       await ctx.scene.enter(AUTH_SCENE);

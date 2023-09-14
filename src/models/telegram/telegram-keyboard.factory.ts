@@ -14,6 +14,11 @@ export class TelegramKeyboardFactory {
   public getStart(ctx: IContext) {
     return Markup.keyboard([
       [ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)],
+      [
+        ...(ctx.chat.type === 'private' && ctx.user
+          ? [ctx.i18n.t(LocalePhrase.Button_Profile)]
+          : []),
+      ],
     ]).resize();
   }
 

@@ -18,6 +18,17 @@ export class VKKeyboardFactory {
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],
+      [
+        ...(ctx.isChat && ctx.state.user
+          ? [
+              Keyboard.textButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Profile),
+                payload: { phrase: LocalePhrase.Button_Profile },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ]
+          : []),
+      ],
     ]);
   }
 

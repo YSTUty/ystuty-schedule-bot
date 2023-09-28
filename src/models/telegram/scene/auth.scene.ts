@@ -33,6 +33,7 @@ export class AuthScene extends BaseScene {
     } = ctx;
 
     if (!ctx.chat) {
+      await ctx.scene.leave();
       return;
     }
 

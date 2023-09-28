@@ -262,12 +262,6 @@ export class MainMiddleware {
         return;
       }
 
-      // TODO!: remove it after pair months
-      if (ctx.session.selectedGroupName && !ctx.state.userSocial.groupName) {
-        ctx.state.userSocial.groupName = ctx.session.selectedGroupName;
-        delete ctx.session.selectedGroupName;
-      }
-
       try {
         await next();
       } finally {

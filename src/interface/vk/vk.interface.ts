@@ -15,9 +15,6 @@ export interface ISessionState {
   __language_code?: string;
   __scene?: { current: string };
 
-  // TODO: remove it. Use `user.groupName`
-  /** @deprecated Use `user.groupName` */
-  selectedGroupName?: string;
   socialConnectLink?: string;
 }
 

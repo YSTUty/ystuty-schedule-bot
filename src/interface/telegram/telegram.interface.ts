@@ -16,10 +16,6 @@ import { User } from '../../models/user/entity/user.entity';
 interface ISessionState {
   __language_code?: string;
   __scenes?: { current?: string; state?: any; cursor?: number };
-
-  // TODO: remove it. Use `user.groupName`
-  /** @deprecated Use `user.groupName` */
-  selectedGroupName?: string;
 }
 
 interface ISessionConversationState {

@@ -61,12 +61,6 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
         return ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Common_Banned));
       }
 
-      // TODO!: remove it after pair months
-      if (ctx.session.selectedGroupName && !ctx.userSocial.groupName) {
-        ctx.userSocial.groupName = ctx.session.selectedGroupName;
-        delete ctx.session.selectedGroupName;
-      }
-
       try {
         await next();
       } finally {

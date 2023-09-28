@@ -1,14 +1,15 @@
-import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, Hears, Scene } from '@xtcry/nestjs-telegraf';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 import { SocialType, UserException } from '@my-common';
+import { TgHearsLocale } from '@my-common/decorator/tg';
 
 import { SocialConnectService } from '../../social-connect/social-connect.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE } from '../telegram.constants';
 import { BaseScene } from './base.scene';
 
-@Wizard(AUTH_SCENE)
+@Scene(AUTH_SCENE)
 export class AuthScene extends BaseScene {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
@@ -17,9 +18,15 @@ export class AuthScene extends BaseScene {
     super();
   }
 
-  @WizardStep(1)
-  @Hears(/.+/)
-  @Action(/.+/)
+  @Hears(['/auth', 'login', 'войти'])
+  @TgHearsLocale([
+    LocalePhrase.Button_AuthLink,
+    LocalePhrase.Button_AuthLink_SocialConnect,
+  ])
+  @Action([
+    LocalePhrase.Button_AuthLink,
+    LocalePhrase.Button_AuthLink_SocialConnect,
+  ])
   async step1(@Ctx() ctx: IStepContext) {
     const {
       scene: { state },
@@ -64,6 +71,7 @@ export class AuthScene extends BaseScene {
         true,
         true,
         false,
+        true,
         link,
       );
       ctx.replyWithHTML(

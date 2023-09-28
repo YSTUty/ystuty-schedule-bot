@@ -27,6 +27,7 @@ export class TelegramKeyboardFactory {
     inline?: true,
     social?: boolean,
     addSelectGroup?: boolean,
+    addCancel?: boolean,
     authLink?: string,
   ): Markup.Markup<InlineKeyboardMarkup>;
   public getAuth(
@@ -34,6 +35,7 @@ export class TelegramKeyboardFactory {
     inline: false,
     social?: boolean,
     addSelectGroup?: boolean,
+    addCancel?: boolean,
     authLink?: string,
   ): Markup.Markup<ReplyKeyboardMarkup>;
   public getAuth(
@@ -41,6 +43,7 @@ export class TelegramKeyboardFactory {
     social = false,
     inline = true,
     addSelectGroup = false,
+    addCancel = true,
     authLink?: string,
   ) {
     const phrase = social
@@ -64,8 +67,21 @@ export class TelegramKeyboardFactory {
                   ],
                 ]
               : []),
+            ...(addCancel
+              ? [
+                  [
+                    Markup.button.callback(
+                      ctx.i18n.t(LocalePhrase.Button_Cancel),
+                      LocalePhrase.Button_Cancel,
+                    ),
+                  ],
+                ]
+              : []),
           ])
-        : Markup.keyboard([[ctx.i18n.t(phrase)]]).resize()),
+        : Markup.keyboard([
+            [ctx.i18n.t(phrase)],
+            ...(addCancel ? [[ctx.i18n.t(LocalePhrase.Button_Cancel)]] : []),
+          ]).resize()),
     };
   }
 

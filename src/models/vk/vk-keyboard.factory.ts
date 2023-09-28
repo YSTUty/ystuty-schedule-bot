@@ -32,7 +32,12 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getAuth(ctx: IContext, social = true, addSelectGroup = false) {
+  public getAuth(
+    ctx: IContext,
+    social = true,
+    addSelectGroup = false,
+    addCancel = false,
+  ) {
     const phrase = social
       ? LocalePhrase.Button_AuthLink_SocialConnect
       : LocalePhrase.Button_AuthLink;
@@ -51,6 +56,17 @@ export class VKKeyboardFactory {
                 label: ctx.i18n.t(LocalePhrase.Button_SelectGroup),
                 payload: { phrase: LocalePhrase.Button_SelectGroup },
                 color: Keyboard.POSITIVE_COLOR,
+              }),
+            ],
+          ]
+        : []),
+      ...(addCancel
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Cancel),
+                payload: { phrase: LocalePhrase.Button_Cancel },
+                color: Keyboard.SECONDARY_COLOR,
               }),
             ],
           ]

@@ -17,3 +17,4 @@ export * from './util/scheduler.util';
 export * from './util/ystuty.util';
 
 export * from './constants';
+export * from './exception';

@@ -5,8 +5,9 @@ import {
 } from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
 import * as Redlock from 'redlock';
-import { escapeHTMLCodeChars } from '@my-common';
-import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
+
+import * as xEnv from '@my-environment';
+import { UserException, escapeHTMLCodeChars } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -36,9 +37,14 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const isAdmin = SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
+    const isAdmin = xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
     let content = '';
     switch (true) {
+      case exception instanceof UserException:
+        content = ctx.callbackQuery
+          ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
+          : `💢 Error: <b>${escapeHTMLCodeChars(exception.message)}</b>`;
+        break;
       case exception.message === LocalePhrase.Common_NoAccess:
         content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
         break;

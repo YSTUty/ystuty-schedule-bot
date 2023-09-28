@@ -7,9 +7,11 @@ import {
 import { VkArgumentsHost, VkExecutionContext } from 'nestjs-vk';
 import { APIError, MessageEventContext } from 'vk-io';
 import * as Redlock from 'redlock';
+
+import * as xEnv from '@my-environment';
+import { UserException } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
-import { SOCIAL_VK_ADMIN_IDS } from '@my-environment';
 
 @Catch()
 export class VkExceptionFilter implements ExceptionFilter {
@@ -48,9 +50,12 @@ export class VkExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const isAdmin = SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId);
+    const isAdmin = xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId);
     let content = '';
     switch (true) {
+      case exception instanceof UserException:
+        content = `💢 Error: ${exception.message}`;
+        break;
       case exception.message === LocalePhrase.Common_NoAccess:
         content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
         break;

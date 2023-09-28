@@ -3,7 +3,7 @@ import { Scene, AddStep, Ctx } from 'nestjs-vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 import * as xEnv from '@my-environment';
-import { SocialType, VkExceptionFilter } from '@my-common';
+import { SocialType, UserException, VkExceptionFilter } from '@my-common';
 
 import { SocialConnectService } from '../../social-connect/social-connect.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
@@ -41,7 +41,7 @@ export class AuthScene {
     );
 
     if ('error' in result) {
-      throw new Error(result.error);
+      throw new UserException(result.error);
     }
 
     if (result.status === 'unauth') {

@@ -1,7 +1,7 @@
 import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
-import { SocialType } from '@my-common';
+import { SocialType, UserException } from '@my-common';
 
 import { SocialConnectService } from '../../social-connect/social-connect.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
@@ -54,7 +54,7 @@ export class AuthScene extends BaseScene {
     );
 
     if ('error' in result) {
-      throw new Error(result.error);
+      throw new UserException(result.error);
     }
 
     if (result.status === 'unauth') {

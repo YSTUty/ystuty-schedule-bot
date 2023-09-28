@@ -19,7 +19,7 @@ export class VKKeyboardFactory {
         }),
       ],
       [
-        ...(ctx.isChat && ctx.state.user
+        ...(ctx.isDM && ctx.state.user
           ? [
               Keyboard.textButton({
                 label: ctx.i18n.t(LocalePhrase.Button_Profile),

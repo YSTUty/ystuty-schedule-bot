@@ -214,7 +214,7 @@ export class MainMiddleware {
 
       let userSocial = await this.userService.findBySocialId(
         SocialType.Vkontakte,
-        ctx.peerId,
+        ctx.senderId || ctx.userId,
       );
       if (!userSocial) {
         if (ctx.is(['message'])) {

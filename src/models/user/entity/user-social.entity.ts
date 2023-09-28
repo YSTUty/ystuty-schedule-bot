@@ -14,7 +14,7 @@ import { SocialType } from '@my-common/constants';
 import { User } from './user.entity';
 
 @Entity()
-@Index(['social', 'socialId'])
+@Index(['social', 'socialId'], { unique: true })
 export class UserSocial {
   @Expose()
   @PrimaryGeneratedColumn()

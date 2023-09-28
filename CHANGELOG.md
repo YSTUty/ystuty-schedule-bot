@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.1](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.0...v0.3.1) (2023-09-28)
+
+
+### 🚀 Features
+
+* **common:** add exception for user message ([ae8d8f1](https://github.com/YSTUty/ystuty-schedule-bot/commit/ae8d8f14ff16df80b6d2086a5d8611f3bdf56ec7))
+* **user:** add bool filed `hasDM` to `user-social` ([66b614e](https://github.com/YSTUty/ystuty-schedule-bot/commit/66b614edcf06a5ad0c5f61855e072abae588823e))
+
+
+### 🧹 Chore
+
+* **docker:** add `postgres` link to `app_srv` ([03ac466](https://github.com/YSTUty/ystuty-schedule-bot/commit/03ac46651df95b84d52cfced5626ab86798446e0))
+* **social:** add cancel button in auth scene ([46c3bcd](https://github.com/YSTUty/ystuty-schedule-bot/commit/46c3bcd0d7825a57330fc95af90eb24b7e72c502))
+* **social:** auto leave from auth scene in chats ([35b320d](https://github.com/YSTUty/ystuty-schedule-bot/commit/35b320d348869e7f7d2d9ce245e5b63ffa338362))
+* **social:** remove `selectedGroupName` from user session ([583b659](https://github.com/YSTUty/ystuty-schedule-bot/commit/583b6598d051a8c2608b8bf37cce8238d6c29610))
+* **user:** add `unique` option for `user` entity ([82b26c1](https://github.com/YSTUty/ystuty-schedule-bot/commit/82b26c108bcbdab01d140a2768a642e201ee1df4))
+
+
+### 🐛 Bug Fixes
+
+* **docker:** change postgres version to `14-bullseye` ([a709da4](https://github.com/YSTUty/ystuty-schedule-bot/commit/a709da41bf804ee28d3aaa581dcdca21115ee991))
+* **social:** correct user id for vk user middleware ([d5ac9ce](https://github.com/YSTUty/ystuty-schedule-bot/commit/d5ac9ce17f7c95e216d2978410e294cf5654b735))
+* **social:** fix display cancel button on auth ([4bcbd53](https://github.com/YSTUty/ystuty-schedule-bot/commit/4bcbd53beaf1529af5b1a652ee6a4a6a15afa16c))
+* **social:** user profile button only in direct message ([e3528c9](https://github.com/YSTUty/ystuty-schedule-bot/commit/e3528c9e373e34fbc0d6d2577b55ad4247c2cf8b))
+
 ## [0.3.0](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.2.2...v0.3.0) (2023-09-14)
 
 

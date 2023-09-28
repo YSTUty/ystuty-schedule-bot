@@ -44,6 +44,10 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
 
         ctx.userSocial = userSocial;
         ctx.user = userSocial.user;
+
+        if (!userSocial.hasDM && ctx.chat.type === 'private') {
+          userSocial.hasDM = true;
+        }
       } finally {
         await lock.unlock();
       }

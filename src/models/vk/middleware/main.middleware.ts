@@ -248,6 +248,10 @@ export class MainMiddleware {
       ctx.state.userSocial = userSocial;
       ctx.state.user = userSocial.user;
 
+      if (!userSocial.hasDM && ctx.isDM) {
+        userSocial.hasDM = true;
+      }
+
       if (ctx.state.userSocial.isBlockedBot) {
         ctx.state.userSocial.isBlockedBot = false;
         await this.userService.saveUserSocial(ctx.state.userSocial);

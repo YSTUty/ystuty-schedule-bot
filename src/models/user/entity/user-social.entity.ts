@@ -51,6 +51,10 @@ export class UserSocial {
   @Column({ type: 'boolean', default: false })
   public isBlockedBot: boolean;
 
+  /** Has DM, otherwise received from chat */
+  @Column({ type: 'boolean', default: false })
+  public hasDM: boolean;
+
   @Expose()
   @ManyToOne(() => User, (user) => user.socials)
   @JoinColumn()

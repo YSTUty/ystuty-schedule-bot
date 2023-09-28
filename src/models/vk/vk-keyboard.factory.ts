@@ -36,7 +36,7 @@ export class VKKeyboardFactory {
     ctx: IContext,
     social = true,
     addSelectGroup = false,
-    addCancel = false,
+    addCancel = true,
   ) {
     const phrase = social
       ? LocalePhrase.Button_AuthLink_SocialConnect

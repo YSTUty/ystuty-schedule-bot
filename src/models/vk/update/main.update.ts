@@ -79,7 +79,7 @@ export class MainUpdate {
     if (!ctx.isChat && (!ctx.state.userSocial.groupName || !ctx.state.user)) {
       const keyboard = !ctx.state.user
         ? this.keyboardFactory
-            .getAuth(ctx, true, !ctx.state.userSocial.groupName)
+            .getAuth(ctx, true, !ctx.state.userSocial.groupName, false)
             .inline()
         : this.keyboardFactory.getSelectGroup(ctx).inline();
       const useInline = ctx.clientInfo.inline_keyboard;

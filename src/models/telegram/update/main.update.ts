@@ -111,7 +111,7 @@ export class MainUpdate {
             true,
             true,
             !ctx.userSocial.groupName,
-            true,
+            false,
           )
         : this.keyboardFactory.getSelectGroupInline(ctx);
       ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);

@@ -182,8 +182,8 @@ export class MainUpdate {
         const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
         ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
       }
-    } else if (status === 'left') {
-      // TODO: remove all setting ?
+    } else if (status === 'kicked' || status === 'left') {
+      ctx.userSocial.isBlockedBot = true;
     }
   }
 

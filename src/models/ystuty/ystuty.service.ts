@@ -106,11 +106,13 @@ export class YSTUtyService implements OnModuleInit {
     skipDays = 0,
     isWeek = false,
     weekNumber = WeekNumberType.Monday,
+    withTags = false,
   }: {
     groupName: string;
     skipDays?: number;
     isWeek?: boolean;
     weekNumber?: WeekNumberType;
+    withTags?: boolean;
   }) {
     this.metricsService.scheduleCounter.inc({ groupName });
 
@@ -125,6 +127,7 @@ export class YSTUtyService implements OnModuleInit {
         groupName,
         skipDays,
         isWeek,
+        withTags,
       });
       if (responseSchedule !== null || isWeek) {
         return [skipDays, responseSchedule];
@@ -151,11 +154,15 @@ export class YSTUtyService implements OnModuleInit {
     groupName,
     skipDays = 0,
     isWeek = false,
+    withTags = false,
   }: {
     groupName: string;
     skipDays?: number;
     isWeek?: boolean;
+    withTags?: boolean;
   }) {
+    // // ! for test
+    // const now = new Date(2024, 0, 12);
     const now = new Date();
     now.setDate(now.getDate() + skipDays);
 
@@ -192,7 +199,7 @@ export class YSTUtyService implements OnModuleInit {
         return null;
       }
 
-      return this.formateWeekDays(week, dayNumber, addHashTag);
+      return this.formateWeekDays(week, dayNumber, addHashTag, withTags);
     } catch (error) {
       console.log('[getFormatedSchedule] Error', error.message);
     } finally {
@@ -206,6 +213,7 @@ export class YSTUtyService implements OnModuleInit {
     week: OneWeek,
     dayNumber: WeekNumberType | null = null,
     addHashTag: boolean = false,
+    withTags = false,
   ) {
     const fullWeek = dayNumber === null;
 
@@ -234,17 +242,41 @@ export class YSTUtyService implements OnModuleInit {
         lessons,
       } = day;
 
+      const isDoneDay = day.info.dateStr
+        ? Date.now() > new Date(day.info.dateStr).getTime() &&
+          lessons.every(
+            (e) => !e.endAt || Date.now() > new Date(e.endAt).getTime(),
+          )
+        : false;
+
       let msg = '';
-      msg += `${scheduleUtil.short2Long2(
-        dayType,
-      )} Расписание на ${scheduleUtil.short2Long2(dayType, 2)} [${weekNumber}]`;
-      msg += ` (${dateStr})`;
-      msg += ` ${parity === 2 ? 'Ч' : 'Н'}\n`;
+      msg += `${scheduleUtil.short2Long2(dayType)} `;
+      msg += withTags
+        ? `<b>Расписание на <code>${scheduleUtil.short2Long2(
+            dayType,
+            2,
+          )}</code></b>`
+        : `Расписание на ${scheduleUtil.short2Long2(dayType, 2)}`;
+      if (weekNumber) msg += ` [${weekNumber}]`;
+      if (dateStr)
+        msg += withTags
+          ? isDoneDay
+            ? ` <b>(<s>${dateStr}</s>)</b>`
+            : ` <b>(${dateStr})</b>`
+          : ` (${dateStr})`;
+      if (isDoneDay) msg += ` ✅`;
+      msg += ` ${
+        (!parity && weekNumber % 2 === 0) || parity === 2 ? 'Ч' : 'Н'
+      }`;
+      msg += '\n';
 
       let lastNumber = 0;
       for (const index in lessons) {
         const lesson = lessons[index];
         const nextLesson = lessons[index + 1];
+
+        const isDone =
+          lesson.endAt && Date.now() > new Date(lesson.endAt).getTime();
 
         const typeName = getLessonTypeStrArr(lesson.type).join(', ');
 
@@ -258,9 +290,19 @@ export class YSTUtyService implements OnModuleInit {
 
         const auditory = !lesson.auditoryName
           ? ''
+          : withTags
+          ? ` {<code>${lesson.auditoryName}</code>}`
           : ` {${lesson.auditoryName}}`;
-        const typeStr = !typeName ? '' : ` [${typeName}]`;
-        const distantStr = !lesson.isDistant ? '' : ' (ONLINE)';
+        const typeStr = !typeName
+          ? ''
+          : withTags
+          ? ` <b>[${typeName}]</b>`
+          : ` [${typeName}]`;
+        const distantStr = !lesson.isDistant
+          ? ''
+          : withTags
+          ? ' <b>(ONLINE)</b>'
+          : ' (ONLINE)';
 
         if (lastNumber == lesson.number) {
           msg += `Другая П/Г: ${auditory}${distantStr} ${
@@ -271,18 +313,22 @@ export class YSTUtyService implements OnModuleInit {
               : ` (${lesson.teacherName.replace(/\s/i, '')})`
           }`;
         } else {
-          msg += `${scheduleUtil.getNumberEmoji(lesson.number)} ${
-            lesson.time
-          }.${auditory}${distantStr} ${lesson.lessonName}${typeStr}${
+          msg += `${scheduleUtil.getNumberEmoji(lesson.number)} ${((s) =>
+            isDone && withTags ? `<s>${s}</s>` : s)(
+            lesson.time || '**-**',
+          )}.${auditory}${distantStr} ${lesson.lessonName}${typeStr}${
             !lesson.teacherName
               ? ''
-              : ` (${lesson.teacherName.replace(/\s/i, '')})`
+              : withTags
+              ? ` (<i>${lesson.teacherName.replace(/\s/i, ' ')}</i>)`
+              : ` (${lesson.teacherName.replace(/\s/i, ' ')})`
           }`;
         }
 
         if (lesson.isDivision) {
           msg += ' П/Г';
         }
+        if (isDone) msg += ` ✅`;
         msg += '\n';
 
         if (lesson.duration > 2 && nextLesson?.number != lesson.number) {
@@ -294,19 +340,21 @@ export class YSTUtyService implements OnModuleInit {
               parseInt(xMinutes, 10) + (lesson.number === 5 ? 110 : 100)
             }`,
           )}. ↑...\n`;
+          // if (isDone) msg += ` ✅`;
         }
         lastNumber = lesson.number;
       }
 
       if (!lessons.length) {
-        msg += `✌ FREE TIME. Занятий нет\n`;
+        msg += withTags
+          ? `<b>✌ FREE TIME. <i>Занятий нет</i></b>\n`
+          : `✌ FREE TIME. Занятий нет\n`;
       }
 
       if (addHashTag) {
-        msg += `#${parity === 2 ? 'Ч' : 'Н'}${scheduleUtil.short2Long2(
-          dayType,
-          1,
-        )}\n`;
+        msg += `#${
+          (!parity && weekNumber % 2 === 0) || parity === 2 ? 'Ч' : 'Н'
+        }${scheduleUtil.short2Long2(dayType, 1)}\n`;
       }
 
       message += fullWeek ? `${msg}\n` : msg;

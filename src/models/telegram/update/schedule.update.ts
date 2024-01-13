@@ -67,6 +67,7 @@ export class ScheduleUpdate {
     let messageDay =
       (await this.ystutyService.getFormatedSchedule({
         groupName,
+        withTags: true,
       })) || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
 
     let messageTomorrow =
@@ -74,6 +75,7 @@ export class ScheduleUpdate {
         await this.ystutyService.findNext({
           skipDays: 1,
           groupName,
+          withTags: true,
         })
       )[1] || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
 
@@ -83,6 +85,7 @@ export class ScheduleUpdate {
           skipDays: 1,
           groupName,
           isWeek: true,
+          withTags: true,
         })
       )[1] || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
 
@@ -218,15 +221,18 @@ export class ScheduleUpdate {
       [days, message] = await this.ystutyService.findNext({
         skipDays,
         groupName,
+        withTags: true,
       });
     } else if (_skipDays !== null) {
       message = await this.ystutyService.getFormatedSchedule({
         skipDays,
         groupName,
+        withTags: true,
       });
     } else {
       [days, message] = await this.ystutyService.findNext({
         groupName,
+        withTags: true,
       });
     }
 
@@ -312,6 +318,7 @@ export class ScheduleUpdate {
       skipDays,
       groupName,
       isWeek: true,
+      withTags: true,
     });
 
     if (message) {

@@ -83,28 +83,24 @@ export function getTimez(startTime: string, durationMinutes = 90) {
 export function short2Long2(e: number, q: 0 | 1 | 2 = 0) {
   switch (e) {
     case 0:
-      return q === 0
-        ? '📕'
-        : q === 1
-        ? 'Понедельник'
-        : q === 2
-        ? 'Понедельник'
-        : null;
+      return q === 0 ? '📕' : q === 1 || q === 2 ? 'Понедельник' : null;
     case 1:
-      return q === 0 ? '📗' : q === 1 ? 'Вторник' : q === 2 ? 'Вторник' : null;
+      return q === 0 ? '📗' : q === 1 || q === 2 ? 'Вторник' : null;
     case 2:
       return q === 0 ? '📘' : q === 1 ? 'Среда' : q === 2 ? 'Среду' : null;
     case 3:
-      return q === 0 ? '📙' : q === 1 ? 'Четверг' : q === 2 ? 'Четверг' : null;
+      return q === 0 ? '📙' : q === 1 || q === 2 ? 'Четверг' : null;
     case 4:
       return q === 0 ? '📓' : q === 1 ? 'Пятница' : q === 2 ? 'Пятницу' : null;
     case 5:
       return q === 0 ? '📔' : q === 1 ? 'Суббота' : q === 2 ? 'Субботу' : null;
+    case 6:
+      return q === 0 ? '📕' : q === 1 || q === 2 ? 'Воскресенье' : null;
   }
 }
 
 export function getNumberEmoji(i: number) {
-  switch (i % 10 || 1) {
+  switch (i % 10) {
     case 0:
       return '0⃣';
     case 1:

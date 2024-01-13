@@ -160,7 +160,7 @@ export class YSTUtyService implements OnModuleInit {
     now.setDate(now.getDate() + skipDays);
 
     const weekNumber =
-      scheduleUtil.getWeekNumber(now) - scheduleUtil.YEAR_WEEKSOFF;
+      scheduleUtil.getWeekNumber(now) - scheduleUtil.getWeekOffsetByYear(now);
     const dayNumber: WeekNumberType = isWeek
       ? null
       : ((day) => (day > 0 ? day - 1 : 6))(now.getDay());

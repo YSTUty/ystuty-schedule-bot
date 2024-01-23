@@ -1,7 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import * as xEnv from '@my-environment';
 import { OneWeek, WeekNumberType } from '@my-interfaces';
 import { getLessonTypeStrArr, matchGroupName } from '@my-common';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
@@ -18,10 +17,7 @@ export class YSTUtyService implements OnModuleInit {
     private readonly httpService: HttpService,
     private readonly redisService: RedisService,
     private readonly metricsService: MetricsService,
-  ) {
-    httpService.axiosRef.defaults.baseURL = xEnv.YSTUTY_PARSER_URL;
-    httpService.axiosRef.defaults.timeout = 60e3;
-  }
+  ) {}
 
   private allGroupsList: string[] = [];
 

@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { OneWeek, WeekNumberType } from '@my-interfaces';
+import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 import { getLessonTypeStrArr, matchGroupName } from '@my-common';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
@@ -266,7 +266,7 @@ export class YSTUtyService implements OnModuleInit {
       }`;
       msg += '\n';
 
-      let lastNumber = 0;
+      let lastLesson: Lesson = null;
       for (const index in lessons) {
         const lesson = lessons[index];
         const nextLesson = lessons[index + 1];
@@ -277,8 +277,8 @@ export class YSTUtyService implements OnModuleInit {
         const typeName = getLessonTypeStrArr(lesson.type).join(', ');
 
         if (
-          lastNumber > 0 &&
-          lastNumber < 3 &&
+          lastLesson?.number > 0 &&
+          lastLesson?.number < 3 &&
           /*lastNumber !== 2 &&*/ lesson.number === 3
         ) {
           msg += `✌ ${scheduleUtil.getTimez('11:40', 40)}. FREE TIME\n`;
@@ -300,13 +300,18 @@ export class YSTUtyService implements OnModuleInit {
           ? ' <b>(ONLINE)</b>'
           : ' (ONLINE)';
 
-        if (lastNumber == lesson.number) {
+        if (
+          lastLesson?.number == lesson.number &&
+          !(lesson.type & LessonFlags.Exam)
+        ) {
           msg += `Другая П/Г: ${auditory}${distantStr} ${
             lesson.lessonName
           }${typeStr}${
             !lesson.teacherName
               ? ''
-              : ` (${lesson.teacherName.replace(/\s/i, '')})`
+              : withTags
+              ? ` (<i>${lesson.teacherName}</i>)`
+              : ` (${lesson.teacherName})`
           }`;
         } else {
           msg += `${scheduleUtil.getNumberEmoji(lesson.number)} ${((s) =>
@@ -316,8 +321,8 @@ export class YSTUtyService implements OnModuleInit {
             !lesson.teacherName
               ? ''
               : withTags
-              ? ` (<i>${lesson.teacherName.replace(/\s/i, ' ')}</i>)`
-              : ` (${lesson.teacherName.replace(/\s/i, ' ')})`
+              ? ` (<i>${lesson.teacherName}</i>)`
+              : ` (${lesson.teacherName})`
           }`;
         }
 
@@ -338,7 +343,7 @@ export class YSTUtyService implements OnModuleInit {
           )}. ↑...\n`;
           // if (isDone) msg += ` ✅`;
         }
-        lastNumber = lesson.number;
+        lastLesson = lesson;
       }
 
       if (!lessons.length) {

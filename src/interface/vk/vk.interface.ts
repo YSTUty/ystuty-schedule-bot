@@ -26,6 +26,7 @@ interface ISessionConversationState {
 
 type ContextState = {
   appeal: boolean;
+  isLocalePhrase?: boolean;
 
   userSocial: UserSocial;
   user?: User;

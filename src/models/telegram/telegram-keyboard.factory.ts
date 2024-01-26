@@ -3,11 +3,17 @@ import { Markup } from 'telegraf';
 import { Markup as MarkupType } from 'telegraf/typings/markup';
 import {
   InlineKeyboardMarkup,
+  InlineKeyboardButton,
   ReplyKeyboardMarkup,
   ReplyKeyboardRemove,
 } from 'telegraf/typings/core/types/typegram';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
+
+type Hideable<B> = B & { hide?: boolean };
+export type PaginationItemType =
+  | string
+  | { title: string; suffix?: string; payload: string };
 
 @Injectable()
 export class TelegramKeyboardFactory {
@@ -120,36 +126,95 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getPagination<T extends string>(
+  public getPagination<T extends PaginationItemType>(
     name: string,
     current: number,
     maxpage: number,
-  ): MarkupType<InlineKeyboardMarkup>;
-  public getPagination<T extends string>(
-    name: string,
-    current: number,
-    maxpage: number,
-    items: T[],
-    actionPrefix: string,
-  ): MarkupType<InlineKeyboardMarkup>;
-  public getPagination<T extends string>(
-    name: string,
-    current: number,
-    maxpage: number,
-    items?: T[],
-    actionPrefix?: string,
+    items?: (T | T[])[],
+    actionPrefix: string = '',
+    additionalButtons:
+      | Hideable<InlineKeyboardButton>[]
+      | Hideable<InlineKeyboardButton>[][] = [],
+    columnizerBtns: boolean | number = false,
+    sortByLength: boolean = true,
   ) {
-    const buttons1 = [];
+    const buttonsItems: Hideable<InlineKeyboardButton>[][] = [];
+    let columns = 1;
+
+    const maxLength = columnizerBtns === true ? 10 : columnizerBtns || 10;
+    columnizerBtns = columnizerBtns !== false;
+
     if (items && items.length > 0) {
-      for (const item of items) {
-        buttons1.push([
-          Markup.button.callback(item, `${actionPrefix}:${item}`),
-        ]);
+      if (columnizerBtns) {
+        if (sortByLength) {
+          items = items
+            .flat(2)
+            .sort(
+              (a, b) =>
+                (typeof a === 'string' ? a : a.title)?.length -
+                (typeof b === 'string' ? b : b.title)?.length,
+            ) as T[];
+        }
+
+        let longCnt = 0;
+        let maxLengths = items.flat(2).reduce((acc, e) => {
+          let len = (typeof e === 'string' ? e : e.title + (e.suffix || ''))
+            ?.length;
+          if (len >= maxLength) ++longCnt;
+          return Math.max(acc, len);
+        }, 0);
+        columns =
+          maxLengths < maxLength || longCnt / items.length < 0.5
+            ? 4
+            : longCnt / items.length < 0.7
+            ? 2
+            : 1;
+      }
+
+      let longBtnCounter = -1;
+      let rowBtns: Hideable<InlineKeyboardButton>[] = [];
+      for (let subitems of items) {
+        if (!Array.isArray(subitems)) {
+          subitems = [subitems];
+        }
+        for (let item of subitems) {
+          let title =
+            typeof item === 'string' ? item : item.title + (item.suffix || '');
+          let payload = typeof item === 'string' ? item : item.payload;
+          if (columnizerBtns) {
+            if (
+              title.length >= 16 ||
+              (title.length >= 9 &&
+                (longBtnCounter == -1 || ++longBtnCounter > 2))
+            ) {
+              buttonsItems.push(rowBtns);
+              rowBtns = [];
+              longBtnCounter = 0;
+            }
+          }
+          rowBtns.push(
+            Markup.button.callback(title, `${actionPrefix || ''}${payload}`),
+          );
+          if (columnizerBtns) {
+            if (rowBtns.length >= columns) {
+              buttonsItems.push(rowBtns);
+              rowBtns = [];
+            }
+          }
+        }
+        if (!columnizerBtns) {
+          buttonsItems.push(rowBtns);
+          rowBtns = [];
+        }
+      }
+
+      if (rowBtns.length > 0) {
+        buttonsItems.push(rowBtns);
       }
     }
 
-    const buttons2 = [];
-    buttons2.push(
+    const buttonsPager: Hideable<InlineKeyboardButton>[] = [];
+    buttonsPager.push(
       current > 1
         ? Markup.button.callback(`«1`, `pager:${name}:1`)
         : Markup.button.callback(`☺`, 'nope'),
@@ -171,9 +236,15 @@ export class TelegramKeyboardFactory {
         : Markup.button.callback(`☺`, 'nope:The end'),
     );
 
-    return Markup.inlineKeyboard(
-      buttons1.length > 0 ? [...buttons1, buttons2] : [buttons2],
-    );
+    return Markup.inlineKeyboard([
+      ...buttonsItems,
+      buttonsPager,
+      ...((<E>(arr: E[] | E[][]): arr is E[][] => Array.isArray(arr[0]))(
+        additionalButtons,
+      )
+        ? additionalButtons
+        : [additionalButtons]),
+    ]);
   }
 
   public getClear(inline?: true): Markup.Markup<InlineKeyboardMarkup>;

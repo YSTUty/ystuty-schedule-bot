@@ -33,6 +33,7 @@ type WizardSession = {
 
 type ContextState = {
   appeal: boolean;
+  isLocalePhrase?: boolean;
   [key: string]: any;
 };
 

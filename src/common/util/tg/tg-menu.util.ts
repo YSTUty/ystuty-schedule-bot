@@ -33,7 +33,11 @@ export const checkLocaleCondition =
           }
         }
 
-        return phrase === value;
+        const result = phrase === value;
+        if (result) {
+          ctx.state.isLocalePhrase = true;
+        }
+        return result;
       });
 
     return pass;

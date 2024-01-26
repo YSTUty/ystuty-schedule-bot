@@ -215,16 +215,20 @@ export class MainUpdate {
   @Command('glist')
   @Action(/pager:glist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
   async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
-    // ctx.replyWithHTML(`List: ${JSON.stringify(this.ystutyService.groupNames)}`);
-    let page = 1;
-    let count = 10;
+    let page: number = null;
+    let count: number = null;
 
     if (ctx.updateType === 'callback_query') {
-      page = Number(ctx.match.groups.page);
-      count = Number(ctx.match.groups.count);
-    } else if ('text' in ctx.message) {
-      [, page = 1, count = 10] = ctx.message.text.split(' ').map(Number);
+      if (ctx.match?.groups) {
+        page = Number(ctx.match.groups.page);
+        count = Number(ctx.match.groups.count);
+      }
+    } else if ('text' in ctx.message && !ctx.state.isLocalePhrase) {
+      [, page, count] = ctx.message.text.split(' ').map(Number);
     }
+
+    page = page || 1;
+    count = count || 26;
 
     const { items, currentPage, totalPages } =
       await this.ystutyService.groupsList(page, count);
@@ -234,13 +238,15 @@ export class MainUpdate {
       currentPage,
       totalPages,
       items,
-      'selectGroup',
+      'selectGroup:',
+      [],
+      true,
     );
 
     const content = xs`
-            <b>Groups list</b>
-            <pre>---☼ (${currentPage}/${totalPages}) ☼---</pre>
-        `;
+        <b>Groups list</b>
+        <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+    `;
 
     if (ctx.callbackQuery) {
       try {

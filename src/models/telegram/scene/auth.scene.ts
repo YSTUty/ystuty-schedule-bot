@@ -1,4 +1,4 @@
-import { Action, Ctx, Hears, Scene } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, Hears, Scene, SceneEnter } from '@xtcry/nestjs-telegraf';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 import { SocialType, UserException } from '@my-common';
@@ -18,6 +18,7 @@ export class AuthScene extends BaseScene {
     super();
   }
 
+  @SceneEnter()
   @Hears(['/auth', 'login', 'войти'])
   @TgHearsLocale([
     LocalePhrase.Button_AuthLink,
@@ -31,6 +32,8 @@ export class AuthScene extends BaseScene {
     const {
       scene: { state },
     } = ctx;
+
+    await ctx.tryAnswerCbQuery();
 
     if (!ctx.chat) {
       await ctx.scene.leave();

@@ -99,7 +99,7 @@ export class MainUpdate {
     }
 
     const keyboard = this.keyboardFactory.getStart(ctx);
-    ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
+    await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
 
     if (
       ctx.chat.type === 'private' &&
@@ -114,7 +114,7 @@ export class MainUpdate {
             false,
           )
         : this.keyboardFactory.getSelectGroupInline(ctx);
-      ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
+      await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
     }
   }
 
@@ -145,10 +145,11 @@ export class MainUpdate {
   ])
   async onAuth(@Ctx() ctx: ICbQOrMsg) {
     if (ctx.updateType === 'callback_query') {
-      await ctx.editMessageReplyMarkup(
-        this.keyboardFactory.getClear().reply_markup,
-      );
-      await ctx.tryAnswerCbQuery('Enter');
+      await ctx.editMessageText('Auth...');
+      // await ctx.editMessageReplyMarkup(
+      //   this.keyboardFactory.getClear().reply_markup,
+      // );
+      // await ctx.tryAnswerCbQuery('Enter');
     }
     await ctx.scene.enter(AUTH_SCENE);
   }
@@ -182,7 +183,9 @@ export class MainUpdate {
         const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
         ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
       }
-    } else if (status === 'kicked' || status === 'left') {
+    }
+    // ! Проверить логику - юзер заблокирвоа бта или вышел из общего чата с этим ботом?
+    else if (status === 'kicked' || status === 'left') {
       ctx.userSocial.isBlockedBot = true;
     }
   }

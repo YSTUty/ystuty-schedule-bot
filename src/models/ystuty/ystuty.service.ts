@@ -50,7 +50,12 @@ export class YSTUtyService implements OnModuleInit {
   }
 
   public getGroupByName(groupName?: string) {
-    const parse = (str: string) => str.toLowerCase().replace(/[\)\(]/g, '');
+    const parse = (str: string) =>
+      str
+        .trim()
+        .toLowerCase()
+        .replace(/[\)\(\s\-]/g, '');
+
     return (
       groupName && this.allGroupsList.find((e) => parse(e) === parse(groupName))
     );

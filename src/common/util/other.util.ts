@@ -21,3 +21,27 @@ export const escapeHTMLCodeChars = (text: string) =>
 
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+export const allowerHtmlTags = (
+  str: string,
+  allowed = '<a><b><i><u><s><strong><pre><code>',
+) => {
+  str = str.replace(/&nbsp;/g, ' ');
+  str = str.replace(/<\/?br>/g, '\n');
+  str = str.includes('<p>')
+    ? str
+        .split('</p>')
+        .slice(0, -1)
+        .map((e) => e.replace('<p>', ''))
+        .join('\n')
+    : str;
+
+  allowed = (
+    ((allowed || '') + '').toLowerCase().match(/<[a-z][a-z0-9]*>/g) || []
+  ).join('');
+  const tags = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi;
+  str = str.replace(tags, ($0, $1) =>
+    allowed.includes(`<${$1.toLowerCase()}>`) ? $0 : '',
+  );
+  return str;
+};

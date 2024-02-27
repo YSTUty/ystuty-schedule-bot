@@ -3,7 +3,11 @@ import { Action, Command, Ctx, Update, On } from '@xtcry/nestjs-telegraf';
 import * as tg from 'telegraf/typings/core/types/typegram';
 import type { Update as TgUpdate } from 'telegraf/types';
 
-import { patternGroupName, TelegrafExceptionFilter } from '@my-common';
+import {
+  allowerHtmlTags,
+  patternGroupName,
+  TelegrafExceptionFilter,
+} from '@my-common';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/telegram';
 import { TgHearsLocale } from '@my-common/decorator/tg';
@@ -44,7 +48,7 @@ export class ScheduleUpdate {
                 'CAACAgIAAxkBAAEEJypiLmxc-eE-xdTeukvAF29X_VcjXAAC-gADVp29Ckfe-pdxdHEBIwQ',
             },
           ],
-          { cache_time: 86400 },
+          { cache_time: 30, is_personal: true },
         );
         return;
       }
@@ -117,7 +121,7 @@ export class ScheduleUpdate {
       title: ctx.i18n.t(TelegramLocalePhrase.Page_Schedule_Title_ForToday, {
         groupName,
       }),
-      description: cropStr(messageDay),
+      description: cropStr(allowerHtmlTags(messageDay, '')),
       input_message_content: {
         message_text: `${messageDay}[${groupName}]`,
         parse_mode: 'HTML',
@@ -131,7 +135,7 @@ export class ScheduleUpdate {
       title: ctx.i18n.t(TelegramLocalePhrase.Page_Schedule_Title_ForTomorrow, {
         groupName,
       }),
-      description: cropStr(messageTomorrow),
+      description: cropStr(allowerHtmlTags(messageTomorrow, '')),
       input_message_content: {
         message_text: `${messageTomorrow}[${groupName}]`,
         parse_mode: 'HTML',
@@ -145,7 +149,7 @@ export class ScheduleUpdate {
       title: ctx.i18n.t(TelegramLocalePhrase.Page_Schedule_Title_ForWeek, {
         groupName,
       }),
-      description: cropStr(messageWeek),
+      description: cropStr(allowerHtmlTags(messageWeek, '')),
       input_message_content: {
         message_text: `${messageWeek}[${groupName}]`,
         parse_mode: 'HTML',

@@ -1,9 +1,11 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+
 import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 import { getLessonTypeStrArr, matchGroupName } from '@my-common';
-import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+import * as xEnv from '@my-environment';
 
 import { RedisService } from '../redis/redis.service';
 import { MetricsService } from '../metrics/metrics.service';
@@ -31,6 +33,37 @@ export class YSTUtyService implements OnModuleInit {
   }
 
   protected async loadAllGroups() {
+    if (xEnv.SCHEDULE_API_URL) {
+      try {
+        const { data } = await firstValueFrom(
+          this.httpService.get<{
+            name: string;
+            items: {
+              name: string;
+              groups: string[];
+            }[];
+          }>('/api/v1/schedule/actual_groups'),
+        );
+
+        if (!Array.isArray(data.items)) {
+          this.logger.warn('YSTU groups&institutes NOT loaded');
+          return null;
+        }
+
+        this.allGroupsList = data.items
+          .flatMap((e) => e.groups)
+          .filter(Boolean);
+        this.logger.log(
+          `YSTU groups&institutes loaded: (${data.items.length})`,
+        );
+        return true;
+      } catch (error) {
+        console.log('[loadAllGroups (SCHEDULE_API_URL)] Error', error.message);
+      }
+      return false;
+    }
+
+    // ! deprecated
     try {
       const { data } = await firstValueFrom(
         this.httpService.get('/api/ystu/schedule/groups?extramural=true'),
@@ -45,8 +78,8 @@ export class YSTUtyService implements OnModuleInit {
       return true;
     } catch (error) {
       console.log('[loadAllGroups] Error', error.message);
-      return false;
     }
+    return false;
   }
 
   public getGroupByName(groupName?: string) {
@@ -188,7 +221,11 @@ export class YSTUtyService implements OnModuleInit {
         this.httpService.get<{
           isCache: boolean;
           items: OneWeek[];
-        }>(`/api/ystu/schedule/group/${encodeURIComponent(groupName)}`),
+        }>(
+          `/api/${
+            xEnv.SCHEDULE_API_URL ? 'v1/' : 'ystu/'
+          }schedule/group/${encodeURIComponent(groupName)}`,
+        ),
       );
 
       if (!Array.isArray(items)) {
@@ -239,12 +276,13 @@ export class YSTUtyService implements OnModuleInit {
       }
 
       const {
-        info: { type: dayType, dateStr, parity, weekNumber },
+        info: { type: dayType, date: dayDateStr, weekNumber },
         lessons,
       } = day;
+      const dayDate = dayDateStr && new Date(dayDateStr);
 
-      const isDoneDay = day.info.dateStr
-        ? Date.now() > new Date(day.info.dateStr).getTime() &&
+      const isDoneDay = dayDate
+        ? Date.now() > dayDate.getTime() &&
           lessons.every(
             (e) => !e.endAt || Date.now() > new Date(e.endAt).getTime(),
           )
@@ -259,16 +297,14 @@ export class YSTUtyService implements OnModuleInit {
           )}</code></b>`
         : `Расписание на ${scheduleUtil.short2Long2(dayType, 2)}`;
       if (weekNumber) msg += ` [${weekNumber}]`;
-      if (dateStr)
+      if (dayDate)
         msg += withTags
           ? isDoneDay
-            ? ` <b>(<s>${dateStr}</s>)</b>`
-            : ` <b>(${dateStr})</b>`
-          : ` (${dateStr})`;
+            ? ` <b>(<s>${dayDate.toLocaleDateString()}</s>)</b>`
+            : ` <b>(${dayDate.toLocaleDateString()})</b>`
+          : ` (${dayDate.toLocaleDateString()})`;
       if (isDoneDay) msg += ` ✅`;
-      msg += ` ${
-        (!parity && weekNumber % 2 === 0) || parity === 2 ? 'Ч' : 'Н'
-      }`;
+      msg += ` ${weekNumber % 2 === 0 ? 'Ч' : 'Н'}`;
       msg += '\n';
 
       let lastLesson: Lesson = null;
@@ -339,14 +375,16 @@ export class YSTUtyService implements OnModuleInit {
 
         if (lesson.duration > 2 && nextLesson?.number != lesson.number) {
           const [xHours, xMinutes] = lesson.time.split('-')[0].split(':');
-          msg += `${scheduleUtil.getNumberEmoji(
-            lesson.number + 1,
-          )} ${scheduleUtil.getTimez(
-            `${xHours}:${
-              parseInt(xMinutes, 10) + (lesson.number === 5 ? 110 : 100)
-            }`,
-          )}. ↑...\n`;
-          // if (isDone) msg += ` ✅`;
+          msg += `${scheduleUtil.getNumberEmoji(lesson.number + 1)} ${((s) =>
+            isDone && withTags ? `<s>${s}</s>` : s)(
+            scheduleUtil.getTimez(
+              `${xHours}:${
+                parseInt(xMinutes, 10) + (lesson.number === 5 ? 110 : 100)
+              }`,
+            ),
+          )}. ↑...`;
+          if (isDone) msg += ` ✅`;
+          msg += `\n`;
         }
         lastLesson = lesson;
       }
@@ -358,9 +396,10 @@ export class YSTUtyService implements OnModuleInit {
       }
 
       if (addHashTag) {
-        msg += `#${
-          (!parity && weekNumber % 2 === 0) || parity === 2 ? 'Ч' : 'Н'
-        }${scheduleUtil.short2Long2(dayType, 1)}\n`;
+        msg += `#${weekNumber % 2 === 0 ? 'Ч' : 'Н'}${scheduleUtil.short2Long2(
+          dayType,
+          1,
+        )}\n`;
       }
 
       message += fullWeek ? `${msg}\n` : msg;

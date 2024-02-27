@@ -87,13 +87,9 @@ export interface OneDay {
 }
 
 export interface WeekDay {
-  name: string;
-  type?: WeekNumberType;
-  // date?: Date;
+  type: WeekNumberType;
   date: string;
-  dateStr?: string;
-  weekNumber?: number;
-  parity?: WeekParityType;
+  weekNumber: number;
 }
 
 export interface Lesson {
@@ -103,6 +99,7 @@ export interface Lesson {
   number: number;
   /**
    * Временной интервал пары
+   * @example '08:30-10:00'
    */
   time: string;
   /**
@@ -115,20 +112,14 @@ export interface Lesson {
   endAt?: string | Date;
   /**
    * Оригинальная строка с порядковым номером пары на дню со интервалом времени
+   *
+   * @example '1. 08:30-...4ч'
    */
   originalTimeTitle: string;
   /**
-   * Тип четности пары
+   * Тип четности пары на неделе
    */
   parity: WeekParityType;
-  /**
-   * Диапазон номеров недель с парой
-   */
-  range: number[];
-  /**
-   * Диапазон номеров недель с парой дистанционно
-   */
-  rangeDist: number[];
   /**
    * Пара дистанционно
    */
@@ -146,7 +137,7 @@ export interface Lesson {
    */
   isStream: boolean;
   /**
-   * Длительность пары в часах
+   * Длительность пары в академических часах
    */
   duration: number;
   /**
@@ -158,11 +149,21 @@ export interface Lesson {
    */
   isDivision: boolean;
   /**
+   * Сокращенная пара
+   */
+  isShort?: boolean;
+  /**
+   * Пара на лекционной неделе
+   */
+  isLecture?: boolean;
+  /**
    * Буква корпуса и номер аудитори
    */
   auditoryName?: string;
   /**
    * ФИО преподователя
+   *
+   * @example 'Иванов ИИ'
    */
   teacherName?: string;
   /**

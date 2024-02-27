@@ -19,8 +19,11 @@ export const INSTANCE_NAME: string =
 
 export const SERVER_PORT: number = +process.env.SERVER_PORT || 8080;
 
+/** @deprecated Use `SCHEDULE_API_URL` */
 export const YSTUTY_PARSER_URL: string =
-  process.env.YSTUTY_PARSER_URL || `http://ystuty_parser:8080`;
+  process.env.YSTUTY_PARSER_URL ?? `http://ystuty_parser:8080`;
+export const SCHEDULE_API_URL: string =
+  process.env.SCHEDULE_API_URL ?? `http://ystuty_s_schedule`;
 
 export const YSTUTY_WEB_VIEW_ADDRESS: string =
   process.env.YSTUTY_WEB_VIEW_ADDRESS || '';

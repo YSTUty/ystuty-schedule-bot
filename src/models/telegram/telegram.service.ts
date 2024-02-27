@@ -42,7 +42,19 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
         { command: 'day', description: 'Расписание на день' },
         { command: 'week', description: 'Расписание на неделю' },
       ]);
-      this.bot.launch().catch((err) => this.logger.error(err));
+      this.bot
+        .launch({
+          allowedUpdates: [
+            'message',
+            'message_reaction',
+            'message_reaction_count',
+            'inline_query',
+            'callback_query',
+            'chat_member',
+            'my_chat_member',
+          ],
+        })
+        .catch((err) => this.logger.error(err));
       this.logger.log('[Bot] Started');
       await this.notifyAdmin('🚀 BotServer is running');
     } catch (err) {
@@ -86,8 +98,10 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
       ctx.replyWithHTML(
         `Group name automation selected: <code>${groupName}</code>`,
         {
-          reply_to_message_id: ctx.message?.message_id,
-          allow_sending_without_reply: true,
+          reply_parameters: {
+            message_id: ctx.message?.message_id,
+            allow_sending_without_reply: true,
+          },
         },
       );
       return true;

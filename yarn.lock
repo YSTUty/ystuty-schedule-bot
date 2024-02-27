@@ -1233,10 +1233,10 @@
   resolved "https://registry.yarnpkg.com/@sqltools/formatter/-/formatter-1.2.5.tgz#3abc203c79b8c3e90fd6c156a0c62d5403520e12"
   integrity sha512-Uy0+khmZqUrUGm5dmMqVlnvufZRSK0FbYzVgp0UMstm+F5+W2/jnEEQyc9vo1ZR/E5ZI/B1WjjoTqBqwJL6Krw==
 
-"@telegraf/types@^6.8.1":
-  version "6.8.1"
-  resolved "https://registry.yarnpkg.com/@telegraf/types/-/types-6.8.1.tgz#c9c567e8ba4fb3c656494f3901a7dfb22cb7d676"
-  integrity sha512-JCRQuPPDCreYQaAeOwnqIlWrs8pJVvaNEUWBVNvdK3oJoTUKyBV+3TsPrIcnGqLeapptznuTk5s4udTlZPvGTA==
+"@telegraf/types@^7.1.0":
+  version "7.1.0"
+  resolved "https://registry.yarnpkg.com/@telegraf/types/-/types-7.1.0.tgz#d8bd9b2f5070b4de46971416e890338cd89fc23d"
+  integrity sha512-kGevOIbpMcIlCDeorKGpwZmdH7kHbqlk/Yj6dEpJMKEQw5lk0KVQY0OLXaCswy8GqlIVLd5625OB+rAntP9xVw==
 
 "@tsconfig/node10@^1.0.7":
   version "1.0.8"
@@ -1760,10 +1760,10 @@
     "@webassemblyjs/ast" "1.11.6"
     "@xtuc/long" "4.2.2"
 
-"@xtcry/nestjs-telegraf@^2.5.0":
-  version "2.5.0"
-  resolved "https://registry.yarnpkg.com/@xtcry/nestjs-telegraf/-/nestjs-telegraf-2.5.0.tgz#bf145cbfad156aa3358cfa0916fc970cbcf0fd10"
-  integrity sha512-n9bB5nUbK9ssxBuJq5FR9JQMj4T/GLLAIKiN+lHRJax00cNZjKVvXullBoeggvTZPBziMi7WvB0cghKuIS5VHg==
+"@xtcry/nestjs-telegraf@^2.7.0":
+  version "2.7.0"
+  resolved "https://registry.yarnpkg.com/@xtcry/nestjs-telegraf/-/nestjs-telegraf-2.7.0.tgz#87837ddc3b786b5245f5c3bf2d00be22e48bd08d"
+  integrity sha512-RkWUU+ptcZKW+uczZome6wyv7fCUSB8NgrRcUk7QzxVOKB7tlfCmKL2bh5sKjVaTvQG9ALTBhHc7ZGFLw80uxw==
   dependencies:
     lodash "^4.17.21"
 
@@ -5199,7 +5199,7 @@ node-fetch@^2.6.1:
   dependencies:
     whatwg-url "^5.0.0"
 
-node-fetch@^2.6.8:
+node-fetch@^2.7.0:
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.7.0.tgz#d0f0fa6e3e2dc1d27efcd8ad99d550bda94d187d"
   integrity sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==
@@ -6540,16 +6540,16 @@ telegraf-session-redis@^5.1.0:
     debug "^4.1.1"
     redis "^2.6.0-1"
 
-telegraf@^4.13.1:
-  version "4.13.1"
-  resolved "https://registry.yarnpkg.com/telegraf/-/telegraf-4.13.1.tgz#ad0b6df452aa133bf6561b4a182bdedb558046b6"
-  integrity sha512-WXITwqE3ivqDqjHFxj94xaQhHddldBZdE2g/hRJXyCMTkwZYw69q9I7La7nsDpsHLn5ADSQlGv0KAbwFkFpmlA==
+telegraf@^4.16.0:
+  version "4.16.2"
+  resolved "https://registry.yarnpkg.com/telegraf/-/telegraf-4.16.2.tgz#06ad04fa26c6de6c385f6826cec12477c56ff69c"
+  integrity sha512-d+/XMTBMW8DfQFhYkpyU2f58HMIPygkzClEE03c0LPoEKPGlY9da+9pOVSO7jq9Ar8RRT4OrfwW38sgF/o/x0w==
   dependencies:
-    "@telegraf/types" "^6.8.1"
+    "@telegraf/types" "^7.1.0"
     abort-controller "^3.0.0"
     debug "^4.3.4"
     mri "^1.2.0"
-    node-fetch "^2.6.8"
+    node-fetch "^2.7.0"
     p-timeout "^4.1.0"
     safe-compare "^1.1.4"
     sandwich-stream "^2.0.2"

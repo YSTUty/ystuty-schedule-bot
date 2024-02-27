@@ -1,12 +1,13 @@
-import { Context, Scenes } from 'telegraf';
+import { Context, NarrowedContext, Scenes } from 'telegraf';
+import type { Update } from 'telegraf/types';
 import type {
   SceneSessionData,
   WizardContext,
   WizardContextWizard,
   WizardSessionData,
 } from 'telegraf/typings/scenes';
-import type { Update } from 'telegraf/types';
-import { Deunionize } from 'telegraf/typings/deunionize';
+import type * as tt from 'telegraf/typings/telegram-types';
+import { Deunionize } from 'telegraf/typings/core/helpers/deunionize';
 import { I18nContext } from '@esindger/telegraf-i18n';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 
@@ -63,6 +64,10 @@ export type IContext<
   T = {},
   U extends Deunionize<Update> = Update,
 > = CombinedContext & Context<U> & T;
+
+export type INarrowedContext<T = {}> = NarrowedContext<never, tt.MountMap['text']> &
+  CombinedContext &
+  T;
 
 export interface CommandContextExtn {
   /**

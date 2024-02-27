@@ -10,7 +10,6 @@ import {
   Next,
 } from '@xtcry/nestjs-telegraf';
 import { TelegramError } from 'telegraf';
-import * as tg from 'telegraf/typings/core/types/typegram';
 import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
@@ -19,18 +18,19 @@ import {
   TelegramAdminGuard,
   xs,
 } from '@my-common';
-import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
+import { TgHearsLocale } from '@my-common/decorator/tg';
+
+import { LocalePhrase } from '@my-interfaces';
 import {
   IContext,
   IMessageContext,
   ICallbackQueryContext,
   ICbQOrMsg,
 } from '@my-interfaces/telegram';
-import { TgHearsLocale } from '@my-common/decorator/tg';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
-import { TelegramService } from '../telegram.service';
 
+import { TelegramService } from '../telegram.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
 
@@ -47,8 +47,15 @@ export class MainUpdate {
 
   @Command('admin')
   @UseGuards(new TelegramAdminGuard(true))
-  onAdmin(@Ctx() ctx: IMessageContext) {
-    ctx.reply('YOUARE ADMIN');
+  async onAdmin(@Ctx() ctx: IMessageContext) {
+    await ctx.reply('YOUARE ADMIN');
+    await ctx.react('👾');
+  }
+
+  @On('message_reaction')
+  @UseGuards(new TelegramAdminGuard(true))
+  async onMessageReaction(@Ctx() ctx: IMessageContext) {
+    ctx.reply(`Reaction received: ${JSON.stringify(ctx.reactions.toArray())}`);
   }
 
   @Command('broke')

@@ -1,4 +1,4 @@
-import { Inject, Injectable, forwardRef } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IncomingMessage } from 'http';
@@ -24,7 +24,7 @@ import { User } from './entity/user.entity';
 import { UserSocial } from './entity/user-social.entity';
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -39,6 +39,25 @@ export class UserService {
     private readonly tgKeyboardFactory: TelegramKeyboardFactory,
     private readonly vkKeyboardFactory: VKKeyboardFactory,
   ) {}
+
+  public async onModuleInit() {
+    try {
+      const countUsers = await this.userRepository.count();
+      this.metricsService.userCounter.remove();
+      this.metricsService.userCounter.set(countUsers);
+
+      this.metricsService.userSocialCounter.remove('social');
+      for (const social of Object.values(SocialType)) {
+        const countSocial = await this.userSocialRepository.count({
+          social,
+        });
+        this.metricsService.userSocialCounter.set({ social }, countSocial);
+      }
+    } catch (err) {
+      console.log('[onModuleInit] Error loading metrics');
+      console.error(err);
+    }
+  }
 
   public async getUser(userId: number, lock = false) {
     return await this.userRepository.findOne(userId, {

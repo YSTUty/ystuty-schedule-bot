@@ -77,6 +77,8 @@ export const SOCIAL_TELEGRAM_ADMIN_IDS: number[] =
 export const PROMETHEUS_ENABLED: boolean = process.env.PROMETHEUS_ENABLED
   ? process.env.PROMETHEUS_ENABLED === 'true'
   : true;
+export const PROMETHEUS_PUSHGATEWAY_URL: string =
+  process.env.PROMETHEUS_PUSHGATEWAY_URL || '';
 
 // * oAuth
 export const OAUTH_URL = process.env.OAUTH_URL || 'http://ystuty_oauth';

@@ -1,17 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   CounterMetric,
   HistogramMetric,
   PromService,
 } from '@khaledez/nestjs-prom';
-import { linearBuckets } from 'prom-client';
+import {
+  Gauge,
+  linearBuckets,
+  PrometheusContentType,
+  Pushgateway,
+} from 'prom-client';
+
+import * as xEnv from '@my-environment';
 
 @Injectable()
 export class MetricsService {
-  public readonly prefix = 'ystuty_';
+  private readonly logger = new Logger(MetricsService.name);
 
-  public readonly userCounter: CounterMetric;
-  public readonly scheduleCounter: CounterMetric;
+  public readonly prefix = 'ystuty_';
+  public readonly gateway: Pushgateway<PrometheusContentType>;
+
+  public readonly userCounter: Gauge;
+  public readonly userSocialCounter: Gauge;
+  public readonly scheduleCounter: Gauge;
 
   public readonly telegramRequestCounter: CounterMetric;
   public readonly telegramRequestDurationHistogram: HistogramMetric;
@@ -19,16 +31,23 @@ export class MetricsService {
   public readonly vkRequestCounter: CounterMetric;
   public readonly vkRequestDurationHistogram: HistogramMetric;
 
-  // public readonly anyGauge: GaugeMetric;
-
   constructor(public readonly promService: PromService) {
-    this.userCounter = this.promService.getCounter({
-      name: `${this.prefix}user_total`,
+    this.gateway = xEnv.PROMETHEUS_PUSHGATEWAY_URL
+      ? new Pushgateway(xEnv.PROMETHEUS_PUSHGATEWAY_URL)
+      : null;
+
+    this.userCounter = this.promService.getGauge({
+      name: `${this.prefix}user_count`,
       help: 'User counter',
       labelNames: [],
     });
-    this.scheduleCounter = this.promService.getCounter({
-      name: `${this.prefix}schedule_total`,
+    this.userSocialCounter = this.promService.getGauge({
+      name: `${this.prefix}user_social_count`,
+      help: 'User socials counter',
+      labelNames: ['social'],
+    });
+    this.scheduleCounter = this.promService.getGauge({
+      name: `${this.prefix}schedule_count`,
       help: 'Schedule request counter',
       labelNames: ['groupName'],
     });
@@ -56,11 +75,20 @@ export class MetricsService {
       labelNames: ['updateType', 'status'],
       buckets: linearBuckets(0, 0.05, 10),
     });
+  }
 
-    // this.anyGauge = this.promService.getGauge({
-    //     name: `${this.prefix}any_gg`,
-    //     help: 'Measuring any gg',
-    //     labelNames: ['currency'],
-    // });
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  protected pushMetricsToGateway() {
+    if (!this.gateway) {
+      return;
+    }
+
+    const jobName = 'schedule_bot_metrics';
+    this.gateway
+      .pushAdd({ jobName })
+      .then((response) => {
+        // console.log('Metrics pushed to the Pushgateway', response.body);
+      })
+      .catch((err) => this.logger.log('[pushMetricsToGateway] Error', err));
   }
 }

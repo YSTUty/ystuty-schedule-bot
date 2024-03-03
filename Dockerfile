@@ -5,7 +5,7 @@ FROM endeveit/docker-jq AS prePackage
 
 COPY package.json /tmp
 
-RUN jq '{ dependencies, devDependencies, peerDependencies, license, scripts: (.scripts | { postinstall }) }' < /tmp/package.json > /tmp/prepare-package.json
+RUN jq '{ dependencies, devDependencies, peerDependencies, resolutions, license, scripts: (.scripts | { postinstall }) }' < /tmp/package.json > /tmp/prepare-package.json
 # Keep `postinstall` script
 
 ##

@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnModuleInit, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { IncomingMessage } from 'http';
 
 import * as xEnv from '@my-environment';
@@ -42,7 +42,9 @@ export class UserService implements OnModuleInit {
 
   public async onModuleInit() {
     try {
-      const countUsers = await this.userRepository.count();
+      const countUsers = await this.userRepository.count({
+        isBanned: Not(true),
+      });
       this.metricsService.userCounter.remove();
       this.metricsService.userCounter.set(countUsers);
 
@@ -50,6 +52,7 @@ export class UserService implements OnModuleInit {
       for (const social of Object.values(SocialType)) {
         const countSocial = await this.userSocialRepository.count({
           social,
+          isBlockedBot: Not(true),
         });
         this.metricsService.userSocialCounter.set({ social }, countSocial);
       }

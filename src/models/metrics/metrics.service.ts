@@ -79,16 +79,16 @@ export class MetricsService {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   protected pushMetricsToGateway() {
-    if (!this.gateway) {
+    if (!this.gateway || !xEnv.PROMETHEUS_ENABLED) {
       return;
     }
 
     const jobName = 'schedule_bot_metrics';
     this.gateway
-      .pushAdd({ jobName })
+      .pushAdd({ jobName, groupings: { app: xEnv.INSTANCE_NAME } })
       .then((response) => {
         // console.log('Metrics pushed to the Pushgateway', response.body);
       })
-      .catch((err) => this.logger.log('[pushMetricsToGateway] Error', err));
+      .catch((err) => this.logger.error('[pushMetricsToGateway] Error', err));
   }
 }

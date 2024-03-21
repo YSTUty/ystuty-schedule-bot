@@ -125,6 +125,7 @@ export class UserService implements OnModuleInit {
   ) {
     profile.social = provider;
     profile.user = user;
+    this.metricsService.userSocialCounter.inc({ social: provider });
     const userSocial = new UserSocial(
       await this.userSocialRepository.save(profile),
     );

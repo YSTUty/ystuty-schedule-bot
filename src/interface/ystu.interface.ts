@@ -1,36 +1,4 @@
 /**
- * Данные об институте
- */
-export interface IInstituteData {
-  /**
-   * Название института
-   */
-  name: string;
-  /**
-   * Массив групп
-   */
-  groups: IGroupData[];
-}
-
-/**
- * Данные о группе
- */
-export interface IGroupData {
-  /**
-   * Название группы
-   */
-  name: string;
-  /**
-   * Ссылка на расписание группы
-   */
-  link: string;
-  /**
-   * Ссылка на расписание лекционной недели группы
-   */
-  linkLecture?: string;
-}
-
-/**
  * Тип четности недели для пары
  */
 export enum WeekParityType {
@@ -94,6 +62,10 @@ export interface WeekDay {
 
 export interface Lesson {
   /**
+   * Названия групп
+   */
+  groups?: string[];
+  /**
    * Порядковый номер пары на дню
    */
   number: number;
@@ -101,13 +73,17 @@ export interface Lesson {
    * Временной интервал пары
    * @example '08:30-10:00'
    */
+  timeRange: string;
+  /** @deprecated Use `timeRange` for new api */
   time: string;
   /**
    * Timestamp начала пары
+   * @example '2024-06-04T09:20:00.000Z'
    */
   startAt?: string | Date;
   /**
    * Timestamp конца пары
+   * @example '2024-06-04T12:30:00.000Z'
    */
   endAt?: string | Date;
   /**
@@ -161,11 +137,23 @@ export interface Lesson {
    */
   auditoryName?: string;
   /**
+   * Буква корпуса и номер дополнительной аудитори
+   */
+  additionalAuditoryName?: string;
+  /**
    * ФИО преподователя
    *
    * @example 'Иванов ИИ'
    */
   teacherName?: string;
+  teacherId?: number;
+  /**
+   * ФИО второго преподователя
+   *
+   * @example 'Иванов ИИ'
+   */
+  additionalTeacherName?: string;
+  additionalTeacherId?: number;
   /**
    * Дополнительная информация
    */

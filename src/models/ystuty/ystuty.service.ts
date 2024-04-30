@@ -312,11 +312,14 @@ export class YSTUtyService implements OnModuleInit {
           msg += `✌ ${scheduleUtil.getTimez('11:40', 40)}. FREE TIME\n`;
         }
 
-        const auditory = !lesson.auditoryName
+        let auditoryName = [lesson.auditoryName, lesson.additionalAuditoryName]
+          .filter(Boolean)
+          .join('; ');
+        const auditory = !auditoryName
           ? ''
           : withTags
-          ? ` {<code>${lesson.auditoryName}</code>}`
-          : ` {${lesson.auditoryName}}`;
+          ? ` {<code>${auditoryName}</code>}`
+          : ` {${auditoryName}}`;
         const typeStr = !typeName
           ? ''
           : withTags
@@ -328,30 +331,27 @@ export class YSTUtyService implements OnModuleInit {
           ? ' <b>(ONLINE)</b>'
           : ' (ONLINE)';
 
+        let teacherName = [lesson.teacherName, lesson.additionalTeacherId]
+          .filter(Boolean)
+          .join('; ');
+        let teacherStr = !teacherName
+          ? ''
+          : withTags
+          ? ` (<i>${teacherName}</i>)`
+          : ` (${teacherName})`;
+
         if (
           lastLesson?.number == lesson.number &&
           !(lesson.type & LessonFlags.Exam)
         ) {
-          msg += `Другая П/Г: ${auditory}${distantStr} ${
-            lesson.lessonName
-          }${typeStr}${
-            !lesson.teacherName
-              ? ''
-              : withTags
-              ? ` (<i>${lesson.teacherName}</i>)`
-              : ` (${lesson.teacherName})`
-          }`;
+          msg += `Другая П/Г: ${auditory}${distantStr} ${lesson.lessonName}${typeStr}${teacherStr}`;
         } else {
           msg += `${scheduleUtil.getNumberEmoji(lesson.number)} ${((s) =>
             isDone && withTags ? `<s>${s}</s>` : s)(
-            lesson.time || '**-**',
-          )}.${auditory}${distantStr} ${lesson.lessonName}${typeStr}${
-            !lesson.teacherName
-              ? ''
-              : withTags
-              ? ` (<i>${lesson.teacherName}</i>)`
-              : ` (${lesson.teacherName})`
-          }`;
+            lesson.timeRange || lesson.time || '**-**',
+          )}.${auditory}${distantStr} ${
+            lesson.lessonName
+          }${typeStr}${teacherStr}`;
         }
 
         if (lesson.isDivision) {
@@ -361,7 +361,9 @@ export class YSTUtyService implements OnModuleInit {
         msg += '\n';
 
         if (lesson.duration > 2 && nextLesson?.number != lesson.number) {
-          const [xHours, xMinutes] = lesson.time.split('-')[0].split(':');
+          const [xHours, xMinutes] = (lesson.timeRange || lesson.time)
+            .split('-')[0]
+            .split(':');
           msg += `${scheduleUtil.getNumberEmoji(lesson.number + 1)} ${((s) =>
             isDone && withTags ? `<s>${s}</s>` : s)(
             scheduleUtil.getTimez(

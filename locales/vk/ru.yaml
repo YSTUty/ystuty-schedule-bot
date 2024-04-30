@@ -82,7 +82,7 @@ page:
 
   schedule:
     nearest_schedule: |
-      Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
+      ⚠️ Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
       ${content}
     not_found_today: На этот день нету расписания
 

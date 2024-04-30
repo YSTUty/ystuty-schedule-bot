@@ -295,15 +295,17 @@ export class MainUpdate {
       return;
     }
 
+    // TODO: update it
     const keyboard = this.keyboardFactory.getICalendarInline(
       ctx,
-      `https://parser.ystuty.ru/api/calendar/group/${groupName}.ical`,
+      `https://ical.ystuty.ru/group/${groupName}.ical`,
       `Calendar: ${groupName}`,
     );
     ctx.replyWithHTML(
-      `Calendar import link:\n` +
-        `<code>https://parser.ystuty.ru/api/calendar/group/${groupName}.ical</code>\n` +
-        `<a href="https://parser.ystuty.ru/api/calendar/group/${groupName}.ical">Try me</a>\n\n`,
+      `Ссылка для импорта расписания в сервис календаря:\n` +
+        `<code>https://ical.ystuty.ru/group/${groupName}.ical</code>\n` +
+        `<a href="https://ical.ystuty.ru/group/${groupName}.ical">Try me</a>\n\n` +
+        `<a href="https://ics.ystuty.ru/#${groupName}">Пеерйти на сайт импорта</a>`,
       keyboard,
     );
   }

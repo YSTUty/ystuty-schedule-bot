@@ -12,6 +12,11 @@ import { YSTUtyService } from './ystuty.service';
     HttpModule.register({
       baseURL: xEnv.SCHEDULE_API_URL || xEnv.YSTUTY_PARSER_URL,
       timeout: 60e3,
+      headers: {
+        ...(xEnv.SCHEDULE_API_TOKEN && {
+          Authorization: `Bearer ${xEnv.SCHEDULE_API_TOKEN}`,
+        }),
+      },
     }),
   ],
   providers: [YSTUtyService],

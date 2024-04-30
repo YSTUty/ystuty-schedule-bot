@@ -24,6 +24,8 @@ export const YSTUTY_PARSER_URL: string =
   process.env.YSTUTY_PARSER_URL ?? `http://ystuty_parser:8080`;
 export const SCHEDULE_API_URL: string =
   process.env.SCHEDULE_API_URL ?? `http://ystuty_s_schedule`;
+export const SCHEDULE_API_TOKEN: string =
+  process.env.SCHEDULE_API_TOKEN ?? null;
 
 export const YSTUTY_WEB_VIEW_ADDRESS: string =
   process.env.YSTUTY_WEB_VIEW_ADDRESS || '';

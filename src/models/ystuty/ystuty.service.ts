@@ -42,7 +42,7 @@ export class YSTUtyService implements OnModuleInit {
               name: string;
               groups: string[];
             }[];
-          }>('/api/v1/schedule/actual_groups'),
+          }>('/v1/schedule/actual_groups'),
         );
 
         if (!Array.isArray(data.items)) {
@@ -222,8 +222,8 @@ export class YSTUtyService implements OnModuleInit {
           isCache: boolean;
           items: OneWeek[];
         }>(
-          `/api/${
-            xEnv.SCHEDULE_API_URL ? 'v1/' : 'ystu/'
+          `/${
+            xEnv.SCHEDULE_API_URL ? 'v1/' : 'api/ystu/'
           }schedule/group/${encodeURIComponent(groupName)}`,
         ),
       );

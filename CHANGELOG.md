@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.2](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.1...v0.3.2) (2024-04-30)
+
+
+### 🐛 Bug Fixes
+
+* **auth:** add scene enter decorator ([cda10e5](https://github.com/YSTUty/ystuty-schedule-bot/commit/cda10e51a6dc99683d5b0810c8dd5be5b7fee7d9))
+* **social:** fix no chat context in middleware ([3450cc8](https://github.com/YSTUty/ystuty-schedule-bot/commit/3450cc815d5409141ebac0ddd492192d9bcc1ce0))
+* **ystuty:** fix calc offser for week ([5acc1d8](https://github.com/YSTUty/ystuty-schedule-bot/commit/5acc1d846fc263349a40688540f5e6c3397fd01e))
+
+
+### 🌟 Feature Improvements
+
+* extend regular expressions to search group ([44b001f](https://github.com/YSTUty/ystuty-schedule-bot/commit/44b001f3a7710ecd386769406c043517f8e78e86))
+* **keyboard:** update keyboard pagination ([ed539c2](https://github.com/YSTUty/ystuty-schedule-bot/commit/ed539c23312eeb1817ec42ba0d4d4cc975e91e07))
+
+
+### 🚀 Features
+
+* **prometheus:** update `prom-client` and add `Pushgateway` ([2871804](https://github.com/YSTUty/ystuty-schedule-bot/commit/287180458851fea004886ba67ee493c6972e128d))
+* **telegram:** add tags for formatting schedule message ([aada641](https://github.com/YSTUty/ystuty-schedule-bot/commit/aada6416ac332d6c9ad26e5d386090359e5027f5))
+* **ystuty:** add api authorization by  `SCHEDULE_API_TOKEN` ([fecfa0c](https://github.com/YSTUty/ystuty-schedule-bot/commit/fecfa0c54ae5e934aac4e4cb078eb147ea33d21c))
+* **ystuty:** add caching schedule ([6ec38cf](https://github.com/YSTUty/ystuty-schedule-bot/commit/6ec38cfda5d18b844bbdc307d0668f488add4da4))
+* **ystuty:** add new schedule api support ([1b948e0](https://github.com/YSTUty/ystuty-schedule-bot/commit/1b948e0642e3d424acb40171b12a1d23d00c77d5))
+* **ystuty:** update types for support new schedule api ([428ac91](https://github.com/YSTUty/ystuty-schedule-bot/commit/428ac91af7cce199ae04a7a45c072fe8e3b89779))
+
+
+### 🧹 Chore
+
+* **deps:** update `telegraf` version to `4.16` ([136326a](https://github.com/YSTUty/ystuty-schedule-bot/commit/136326a58ce56515f794d7beda140d9e76b74027))
+* **docker:** add save `resolutions` for `package.json` ([6866f30](https://github.com/YSTUty/ystuty-schedule-bot/commit/6866f3021f676e2450b799fce8b6a123bb6accf1))
+* **locale:** update for `schedule` ([9aa42c8](https://github.com/YSTUty/ystuty-schedule-bot/commit/9aa42c83cd58357a5eef17916f40581b1a4b33bb))
+* **metrics:** `inc` on new user social ([a3d2f7e](https://github.com/YSTUty/ystuty-schedule-bot/commit/a3d2f7eed15780ca8aca4091a788451550ad15bb))
+* **metrics:** add `groupings` for push gateway ([bd115de](https://github.com/YSTUty/ystuty-schedule-bot/commit/bd115de589066266bfe4caf6e0e3cf1af5c4d827))
+* **metrics:** count only active users ([e286087](https://github.com/YSTUty/ystuty-schedule-bot/commit/e286087aef1c7cd69d53d7f8a699e54d3c4e86f9))
+* **schedule:** remove html tags for answer inline query ([2cd61ab](https://github.com/YSTUty/ystuty-schedule-bot/commit/2cd61ab8823b9e75f12ccf18e679c2f3cd29d30d))
+* **telegram:** mark user status on chat leave ([a322629](https://github.com/YSTUty/ystuty-schedule-bot/commit/a322629c9fcbf0e65c1e9bf1f622e64572794e90))
+* update ical link ([cf039db](https://github.com/YSTUty/ystuty-schedule-bot/commit/cf039db35edcc0d40ae7792cdda787ba4c1c0a69))
+* **ystu:** add more lesson types ([89ff9d7](https://github.com/YSTUty/ystuty-schedule-bot/commit/89ff9d7611d4088b373049892650740d0cfba700))
+* **ystuty:** fix schedule api links ([000b5c7](https://github.com/YSTUty/ystuty-schedule-bot/commit/000b5c7fac3ffc9a75ce4e49b409c70f259b6a77))
+* **ystuty:** move axios defaults to http module register ([a4fad1f](https://github.com/YSTUty/ystuty-schedule-bot/commit/a4fad1f965ef4574865410210e6c8478c7796bb3))
+* **ystuty:** update `formateWeekDays` ([1f1390f](https://github.com/YSTUty/ystuty-schedule-bot/commit/1f1390f14450c9a5e77de6fa28ccb59cf6173d6e))
+
 ### [0.3.1](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.0...v0.3.1) (2023-09-28)
 
 

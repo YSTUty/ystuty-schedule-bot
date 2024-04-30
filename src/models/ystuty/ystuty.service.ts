@@ -14,6 +14,7 @@ import * as scheduleUtil from './util/schedule.util';
 @Injectable()
 export class YSTUtyService implements OnModuleInit {
   private readonly logger = new Logger(YSTUtyService.name);
+  protected allowCaching = true;
 
   constructor(
     private readonly httpService: HttpService,
@@ -156,7 +157,6 @@ export class YSTUtyService implements OnModuleInit {
       isWeek?: boolean,
       next?: boolean,
     ): Promise<[number, string | false]> => {
-      // ! TODO: add cache schedule
       const responseSchedule = await this.getFormatedSchedule({
         groupName,
         skipDays,
@@ -208,25 +208,12 @@ export class YSTUtyService implements OnModuleInit {
 
     const addHashTag = isWeek;
 
-    // TODO: add caching or RPC
-
     const lock = await this.redisService.redlock.lock(
       `ystuty:schedule:group:${groupName.toLowerCase()}`,
-      10e3,
+      5e3,
     );
     try {
-      const {
-        data: { items },
-      } = await firstValueFrom(
-        this.httpService.get<{
-          isCache: boolean;
-          items: OneWeek[];
-        }>(
-          `/${
-            xEnv.SCHEDULE_API_URL ? 'v1/' : 'api/ystu/'
-          }schedule/group/${encodeURIComponent(groupName)}`,
-        ),
-      );
+      const { items } = await this.getScheduleByGroup(groupName);
 
       if (!Array.isArray(items)) {
         return null;
@@ -409,5 +396,48 @@ export class YSTUtyService implements OnModuleInit {
     }
 
     return message;
+  }
+
+  public async getScheduleByGroup(groupName: string) {
+    const cacheKey = `schedule:byGroup:${String(groupName).toLowerCase()}`;
+    if (this.allowCaching) {
+      try {
+        const cachedData = await this.redisService.redis.get(cacheKey);
+        if (cachedData) {
+          const items = JSON.parse(cachedData) as OneWeek[];
+          return { isCache: true, items };
+        }
+      } catch (err) {
+        this.logger.error(err);
+      }
+    }
+
+    const {
+      data: { items, isCache },
+    } = await firstValueFrom(
+      this.httpService.get<{
+        isCache: boolean;
+        items: OneWeek[];
+      }>(
+        `/${
+          xEnv.SCHEDULE_API_URL ? 'v1/' : 'api/ystu/'
+        }schedule/group/${encodeURIComponent(groupName)}`,
+      ),
+    );
+
+    if (items.length === 0) {
+      return null;
+    }
+
+    if (this.allowCaching) {
+      await this.redisService.redis.set(
+        cacheKey,
+        JSON.stringify(items),
+        'EX',
+        60 * 5,
+      );
+    }
+
+    return { isCache, items };
   }
 }

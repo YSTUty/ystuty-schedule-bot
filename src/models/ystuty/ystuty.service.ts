@@ -431,6 +431,15 @@ export class YSTUtyService implements OnModuleInit {
       return null;
     }
 
+    const firstAugustDate = new Date(new Date().getFullYear(), 7, 1);
+    if (new Date() > firstAugustDate) {
+      for (const item of items) {
+        item.days = item.days.filter(
+          (e) => new Date(e.info.date) >= firstAugustDate,
+        );
+      }
+    }
+
     if (this.allowCaching) {
       await this.redisService.redis.set(
         cacheKey,

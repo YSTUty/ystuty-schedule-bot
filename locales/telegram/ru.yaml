@@ -75,7 +75,7 @@ page:
 
   profile:
     info: |
-      🗝 Ваш лоигн: <i>${user.login}</i>
+      🗝 Ваш логин: <i>${user.login}</i>
       Полное имя: <i>${user.fullname}</i>
       Группа: <code>${user.groupName}</code>
 

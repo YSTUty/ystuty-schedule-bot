@@ -76,7 +76,7 @@ page:
 
   profile:
     info: |
-      🗝 Ваш лоигн: ${user.login}
+      🗝 Ваш логин: ${user.login}
       Полное имя: ${user.fullname}
       Группа: ${user.groupName}
 

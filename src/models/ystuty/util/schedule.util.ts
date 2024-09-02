@@ -16,8 +16,13 @@ export const getWeekOffsetByYear = (currentDate: Date = new Date()) => {
   const currentYear = currentDate.getFullYear();
   const currentWeek = getWeekNumber(currentDate);
 
-  // TODO?: надо ли учитывать (подкрутить день/два), если выходит выходной день?
   const firstSeptemberDate = new Date(currentYear, 8, 1);
+  // // TODO?: надо ли учитывать (подкрутить день/два), если выходит выходной день?
+  // * Учитываем, если 1 сентября выпало на воскресенье
+  // ? а если на Субботу?..
+  if (firstSeptemberDate.getDay() === 0) {
+    firstSeptemberDate.setDate(firstSeptemberDate.getDate() + 1);
+  }
   const firstSeptemberWeek = getWeekNumber(firstSeptemberDate);
 
   // console.log('Weeker', {

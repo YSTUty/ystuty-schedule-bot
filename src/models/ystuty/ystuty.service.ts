@@ -287,9 +287,9 @@ export class YSTUtyService implements OnModuleInit {
       if (dayDate)
         msg += withTags
           ? isDoneDay
-            ? ` <b>(<s>${dayDate.toLocaleDateString()}</s>)</b>`
-            : ` <b>(${dayDate.toLocaleDateString()})</b>`
-          : ` (${dayDate.toLocaleDateString()})`;
+            ? ` <b>(<s>${dayDate.toLocaleDateString('ru-RU')}</s>)</b>`
+            : ` <b>(${dayDate.toLocaleDateString('ru-RU')})</b>`
+          : ` (${dayDate.toLocaleDateString('ru-RU')})`;
       if (isDoneDay) msg += ` ✅`;
       msg += ` ${weekNumber % 2 === 0 ? 'Ч' : 'Н'}`;
       msg += '\n';

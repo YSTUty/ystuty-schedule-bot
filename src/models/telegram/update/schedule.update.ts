@@ -38,7 +38,7 @@ export class ScheduleUpdate {
 
     if (!groupName) {
       if (ctx.userSocial?.groupName) {
-        ctx.answerInlineQuery(
+        await ctx.answerInlineQuery(
           [
             {
               id: 'schedule:404',
@@ -57,7 +57,7 @@ export class ScheduleUpdate {
         /\./g,
         '--',
       );
-      ctx.answerInlineQuery([], {
+      await ctx.answerInlineQuery([], {
         // is_personal: true,
         cache_time: 10,
         button: {
@@ -157,7 +157,7 @@ export class ScheduleUpdate {
       reply_markup,
     });
 
-    ctx.answerInlineQuery(results, {
+    await ctx.answerInlineQuery(results, {
       is_personal: true,
       cache_time: 60,
     });
@@ -203,19 +203,19 @@ export class ScheduleUpdate {
 
     if (!groupName) {
       if (selectedGroupName) {
-        ctx.replyWithHTML(
+        await ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,
           }),
         );
         return;
       }
-      ctx.scene.enter(SELECT_GROUP_SCENE);
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
       return;
     }
 
     if (!ctx.callbackQuery) {
-      ctx.sendChatAction('typing');
+      await ctx.sendChatAction('typing');
     }
 
     let message: string | false;
@@ -261,9 +261,9 @@ export class ScheduleUpdate {
           parse_mode: 'HTML',
         });
       } catch {}
-      ctx.answerCbQuery();
+      await ctx.answerCbQuery();
     } else {
-      ctx.replyWithHTML(content, keyboard);
+      await ctx.replyWithHTML(content, keyboard);
     }
   }
 
@@ -303,19 +303,19 @@ export class ScheduleUpdate {
 
     if (!groupName) {
       if (selectedGroupName) {
-        ctx.replyWithHTML(
+        await ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,
           }),
         );
         return;
       }
-      ctx.scene.enter(SELECT_GROUP_SCENE);
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
       return;
     }
 
     if (!ctx.callbackQuery) {
-      ctx.sendChatAction('typing');
+      await ctx.sendChatAction('typing');
     }
 
     let [days, message] = await this.ystutyService.findNext({
@@ -350,9 +350,9 @@ export class ScheduleUpdate {
           parse_mode: 'HTML',
         });
       } catch {}
-      ctx.answerCbQuery();
+      await ctx.answerCbQuery();
     } else {
-      ctx.replyWithHTML(content, keyboard);
+      await ctx.replyWithHTML(content, keyboard);
     }
   }
 }

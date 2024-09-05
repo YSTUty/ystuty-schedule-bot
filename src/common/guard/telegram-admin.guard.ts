@@ -20,12 +20,12 @@ export class TelegramAdminGuard implements CanActivate {
     const ctx = eCtx.getContext<IContext>();
 
     if (
-      !SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id)
-      && ctx.user?.role !== UserRole.ADMIN
+      !SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id) &&
+      ctx.user?.role !== UserRole.ADMIN
     ) {
       if (this.input) {
         if (typeof this.input === 'string') {
-          ctx.replyWithHTML(this.input);
+          ctx.replyWithHTML(this.input).catch();
         } else if (this.input === true) {
           throw new TelegrafException(LocalePhrase.Common_NoAccess);
         }

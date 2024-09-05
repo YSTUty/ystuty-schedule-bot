@@ -25,13 +25,13 @@ export class AuthScene {
     }
 
     if (!this.socialConnectService.isAvailable) {
-      ctx.send('Not work');
+      await ctx.send('Not work');
       await ctx.scene.leave({ canceled: true });
       return;
     }
 
     if (ctx.state.user) {
-      ctx.send('Already auth');
+      await ctx.send('Already auth');
       await ctx.scene.leave({ canceled: true });
       return;
     }
@@ -49,7 +49,7 @@ export class AuthScene {
       const link = `https://vk.me/${result.botName}?ref=${result.payload}&ref_source=${xEnv.SOCIAL_VK_GROUP_ID}`;
       ctx.session.socialConnectLink = link;
       const keyboard = this.keyboardFactory.getAuth(ctx).inline();
-      ctx.send(
+      await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_SocialConnect_NeedConnect, {
           botName: result.botName,
         }),
@@ -65,6 +65,6 @@ export class AuthScene {
         ? LocalePhrase.Page_SocialConnect_AlreadySent
         : LocalePhrase.Page_SocialConnect_Other;
 
-    ctx.send(ctx.i18n.t(message, { botName: result.botName }));
+    await ctx.send(ctx.i18n.t(message, { botName: result.botName }));
   }
 }

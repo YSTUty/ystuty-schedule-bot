@@ -17,21 +17,21 @@ export class SelectGroupScene extends BaseScene {
     super();
   }
 
-  onСancel(ctx: IContext) {
+  async onСancel(ctx: IContext) {
     const msg = ctx.i18n.t(LocalePhrase.Common_Canceled);
     const keyboard = this.keyboardFactory.getStart(ctx);
     if (ctx.updateType === 'callback_query') {
-      ctx.tryAnswerCbQuery(msg);
-      ctx.deleteMessage();
+      await ctx.tryAnswerCbQuery(msg);
+      await ctx.deleteMessage();
     } else {
-      ctx.replyWithHTML(msg, keyboard);
+      await ctx.replyWithHTML(msg, keyboard);
     }
   }
 
   @WizardStep(1)
   @Hears(/.+/)
   @Action(/.+/)
-  step1(@Ctx() ctx: IStepContext) {
+  async step1(@Ctx() ctx: IStepContext) {
     const {
       scene: { state },
       userSocial,
@@ -62,13 +62,13 @@ export class SelectGroupScene extends BaseScene {
       );
       if (ctx.callbackQuery) {
         const keyboard = this.keyboardFactory.getCancelInline(ctx);
-        ctx.editMessageText(content, {
+        await ctx.editMessageText(content, {
           ...keyboard,
           parse_mode: 'HTML',
         });
       } else {
         const keyboard = this.keyboardFactory.getCancel(ctx);
-        ctx.replyWithHTML(content, keyboard);
+        await ctx.replyWithHTML(content, keyboard);
       }
       return;
     }
@@ -85,11 +85,11 @@ export class SelectGroupScene extends BaseScene {
       }
 
       const keyboard = this.keyboardFactory.getStart(ctx);
-      ctx.replyWithHTML(
+      await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_Reset),
         keyboard,
       );
-      ctx.scene.leave();
+      await ctx.scene.leave();
       return;
     }
 
@@ -103,18 +103,18 @@ export class SelectGroupScene extends BaseScene {
       }
 
       const keyboard = this.keyboardFactory.getStart(ctx);
-      ctx.replyWithHTML(
+      await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
           selectedGroupName,
         }),
         keyboard,
       );
-      ctx.scene.leave();
+      await ctx.scene.leave();
       return;
     }
 
     const keyboard = this.keyboardFactory.getCancel(ctx);
-    ctx.replyWithHTML(
+    await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
       keyboard,
     );

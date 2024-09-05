@@ -196,7 +196,7 @@ export class MainMiddleware {
 
       if (checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx)) {
         const keyboard = this.keyboardFactory.getClose(ctx);
-        ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
+        await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
           keyboard,
         });
         return ctx.scene.leave({ canceled: true });

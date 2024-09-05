@@ -37,8 +37,8 @@ export class MainUpdate {
 
   @Hears('/admin')
   @UseGuards(new VkAdminGuard(true))
-  onAdmin(@Ctx() ctx: IMessageContext) {
-    ctx.send('YOUARE ADMIN');
+  async onAdmin(@Ctx() ctx: IMessageContext) {
+    await ctx.send('YOUARE ADMIN');
   }
 
   @Hears('/broke')
@@ -74,7 +74,7 @@ export class MainUpdate {
     const keyboard = this.keyboardFactory
       .getStart(ctx)
       .inline(this.keyboardFactory.needInline(ctx));
-    ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
 
     if (!ctx.isChat && (!ctx.state.userSocial.groupName || !ctx.state.user)) {
       const keyboard = !ctx.state.user
@@ -83,7 +83,7 @@ export class MainUpdate {
             .inline()
         : this.keyboardFactory.getSelectGroup(ctx).inline();
       const useInline = ctx.clientInfo.inline_keyboard;
-      ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
         keyboard,
       });
     }
@@ -112,13 +112,13 @@ export class MainUpdate {
   //   LocalePhrase.Button_AuthLink,
   //   LocalePhrase.Button_AuthLink_SocialConnect,
   // ])
-  onAuth(@Ctx() ctx: IMessageContext) {
+  async onAuth(@Ctx() ctx: IMessageContext) {
     // await ctx.send(ctx.i18n.t(LocalePhrase.Page_Auth_Intro));
-    ctx.scene.enter(AUTH_SCENE);
+    await ctx.scene.enter(AUTH_SCENE);
   }
 
   @VkHearsLocale(LocalePhrase.RegExp_Help)
-  hearHelp(@Ctx() ctx: IMessageContext) {
+  async hearHelp(@Ctx() ctx: IMessageContext) {
     if (ctx.isChat && !ctx.state.appeal) {
       return;
     }
@@ -126,7 +126,7 @@ export class MainUpdate {
     const keyboard = this.keyboardFactory
       .getStart(ctx)
       .inline(this.keyboardFactory.needInline(ctx));
-    ctx.send(ctx.i18n.t(LocalePhrase.Page_Help), { keyboard });
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Help), { keyboard });
   }
 
   @On('chat_invite_user')
@@ -146,7 +146,7 @@ export class MainUpdate {
     if (!ctx.sessionConversation.selectedGroupName) {
       const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
       const useInline = ctx.clientInfo.inline_keyboard;
-      ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
         keyboard,
       });
     }
@@ -154,7 +154,7 @@ export class MainUpdate {
 
   @On('chat_title_update')
   async onChatTitleUpdate(@Ctx() ctx: IMessageContext) {
-    this.vkService.parseChatTitle(ctx, ctx.eventText);
+    await this.vkService.parseChatTitle(ctx, ctx.eventText);
   }
 
   @On('message_event')
@@ -189,13 +189,13 @@ export class MainUpdate {
     }
 
     // return next();
-    ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
+    await ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
   }
 
   @Hears('/glist')
   // @UseGuards(new VkAdminGuard(true))
-  onGroupsList(@Ctx() ctx: IMessageContext) {
-    ctx.send(`List: ${this.ystutyService.groupNames.join(', ')}`);
+  async onGroupsList(@Ctx() ctx: IMessageContext) {
+    await ctx.send(`List: ${this.ystutyService.groupNames.join(', ')}`);
   }
 
   @VkHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
@@ -227,7 +227,7 @@ export class MainUpdate {
       }
     }
 
-    ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+    await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
   }
 
   @Hears(/it(.?)s boom( ?(?<state>false))?$/i)
@@ -248,12 +248,12 @@ export class MainUpdate {
     }
 
     if (!isHide) {
-      ctx.send('Live', { sticker_id: 14144 }); // Relax
+      await ctx.send('Live', { sticker_id: 14144 }); // Relax
       return;
     }
 
     const keyboard = this.keyboardFactory.getClose(ctx);
-    ctx.send('Boom', {
+    await ctx.send('Boom', {
       sticker_id: 5574, // Boom
       keyboard,
     });

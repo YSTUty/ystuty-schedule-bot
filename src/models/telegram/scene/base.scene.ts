@@ -25,24 +25,24 @@ export class BaseScene {
   @Action('cancel')
   @Action(LocalePhrase.Button_Cancel)
   @TgHearsLocale(LocalePhrase.Button_Cancel)
-  __onСancel(@Ctx() ctx: IContext, @Next() next: Function) {
+  async __onСancel(@Ctx() ctx: IContext, @Next() next: Function) {
     if (!this.isCancelable) {
       next?.();
       return;
     }
 
-    this.onСancel(ctx, next);
+    await this.onСancel(ctx, next);
     // ctx.scene.leave();
-    this.leaveScene(ctx);
+    await this.leaveScene(ctx);
   }
 
-  onСancel(ctx: IContext, next?: Function) {
+  async onСancel(ctx: IContext, next?: Function) {
     const msg = ctx.i18n.t(LocalePhrase.Common_Canceled);
     if (ctx.updateType === 'callback_query') {
-      ctx.tryAnswerCbQuery(msg);
-      ctx.deleteMessage();
+      await ctx.tryAnswerCbQuery(msg);
+      await ctx.deleteMessage();
     } else {
-      ctx.replyWithHTML(msg);
+      await ctx.replyWithHTML(msg);
     }
   }
 }

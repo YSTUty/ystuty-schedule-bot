@@ -14,7 +14,7 @@ export class SelectGroupScene {
   ) {}
 
   @AddStep()
-  step1(@Ctx() ctx: IStepContext<{ groupName: string }>) {
+  async step1(@Ctx() ctx: IStepContext<{ groupName: string }>) {
     const {
       isChat,
       scene: { state },
@@ -29,7 +29,7 @@ export class SelectGroupScene {
       const keyboard = this.keyboardFactory
         .getCancel(ctx)
         .inline(this.keyboardFactory.needInline(ctx));
-      ctx.send(
+      await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
           randomGroupName:
             ctx.state.user?.groupName || this.ystutyService.randomGroupName,
@@ -57,7 +57,7 @@ export class SelectGroupScene {
       const keyboard = this.keyboardFactory
         .getStart(ctx)
         .inline(this.keyboardFactory.needInline(ctx));
-      ctx.send(ctx.i18n.t(LocalePhrase.Page_SelectGroup_Reset), {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_SelectGroup_Reset), {
         keyboard,
       });
       return ctx.scene.leave();
@@ -74,7 +74,7 @@ export class SelectGroupScene {
       const keyboard = this.keyboardFactory
         .getStart(ctx)
         .inline(this.keyboardFactory.needInline(ctx));
-      ctx.send(
+      await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
           selectedGroupName,
         }),

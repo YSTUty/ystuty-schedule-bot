@@ -62,12 +62,12 @@ export class VkService {
     }
   }
 
-  public parseChatTitle(ctx: IMessageContext, str: string) {
+  public async parseChatTitle(ctx: IMessageContext, str: string) {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
       ctx.sessionConversation.selectedGroupName = groupName;
       this.logger.log(`Group name automation selected: "${groupName}"`);
-      ctx.send(`Учебная группа выбрана автоматически: ${groupName}`);
+      await ctx.send(`Учебная группа выбрана автоматически: ${groupName}`);
       return true;
     } else {
       this.logger.log(`Group name not found from "${str}"`);

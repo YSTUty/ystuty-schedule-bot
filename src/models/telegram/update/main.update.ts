@@ -57,7 +57,9 @@ export class MainUpdate {
   @On('message_reaction')
   @UseGuards(new TelegramAdminGuard(true))
   async onMessageReaction(@Ctx() ctx: IMessageContext) {
-    ctx.reply(`Reaction received: ${JSON.stringify(ctx.reactions.toArray())}`);
+    await ctx.reply(
+      `Reaction received: ${JSON.stringify(ctx.reactions.toArray())}`,
+    );
   }
 
   @Command('broke')
@@ -66,9 +68,9 @@ export class MainUpdate {
   }
 
   @Action(/nope(:(?<text>.*))?/)
-  onNopeAction(@Ctx() ctx: ICallbackQueryContext) {
+  async onNopeAction(@Ctx() ctx: ICallbackQueryContext) {
     const text = ctx.match.groups.text;
-    ctx.tryAnswerCbQuery(text);
+    await ctx.tryAnswerCbQuery(text);
   }
 
   @TgHearsLocale(LocalePhrase.Button_Cancel)
@@ -132,7 +134,7 @@ export class MainUpdate {
   @Command('profile')
   async onProfile(@Ctx() ctx: ICbQOrMsg) {
     const { user = null } = ctx;
-    ctx.tryAnswerCbQuery();
+    await ctx.tryAnswerCbQuery();
     if (!user) {
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
       return ctx.scene.enter(AUTH_SCENE);
@@ -146,7 +148,7 @@ export class MainUpdate {
   @Command('update_profile')
   async onUpdateProfile(@Ctx() ctx: ICbQOrMsg) {
     const { user = null } = ctx;
-    ctx.tryAnswerCbQuery();
+    await ctx.tryAnswerCbQuery();
     if (!user) {
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
       return ctx.scene.enter(AUTH_SCENE);
@@ -221,13 +223,13 @@ export class MainUpdate {
   }
 
   @TgHearsLocale(LocalePhrase.RegExp_Help)
-  hearHelp(@Ctx() ctx: IMessageContext) {
+  async hearHelp(@Ctx() ctx: IMessageContext) {
     if (ctx.chat.type !== 'private' && !ctx.state.appeal) {
       return;
     }
 
     const keyboard = this.keyboardFactory.getStart(ctx);
-    ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Help), keyboard);
+    await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Help), keyboard);
   }
 
   @On('my_chat_member')
@@ -244,10 +246,13 @@ export class MainUpdate {
     if (status === 'member') {
       const keyboard = this.keyboardFactory.getStart(ctx);
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
-      this.telegramService.parseChatTitle(ctx, title);
+      await this.telegramService.parseChatTitle(ctx, title);
       if (!ctx.sessionConversation.selectedGroupName) {
         const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
-        ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
+        await ctx.replyWithHTML(
+          ctx.i18n.t(LocalePhrase.Page_InitBot),
+          keyboard,
+        );
       }
     }
     // ! Проверить логику - юзер заблокирвоа бта или вышел из общего чата с этим ботом?
@@ -257,9 +262,12 @@ export class MainUpdate {
   }
 
   @On('new_chat_title')
-  onNewChatTitle(@Ctx() ctx: IMessageContext) {
+  async onNewChatTitle(@Ctx() ctx: IMessageContext) {
     if ('new_chat_title' in ctx.message) {
-      this.telegramService.parseChatTitle(ctx, ctx.message.new_chat_title);
+      await this.telegramService.parseChatTitle(
+        ctx,
+        ctx.message.new_chat_title,
+      );
     }
   }
 
@@ -321,9 +329,9 @@ export class MainUpdate {
           parse_mode: 'HTML',
         });
       } catch {}
-      ctx.tryAnswerCbQuery();
+      await ctx.tryAnswerCbQuery();
     } else {
-      ctx.replyWithHTML(content, keyboard);
+      await ctx.replyWithHTML(content, keyboard);
     }
   }
 
@@ -343,14 +351,14 @@ export class MainUpdate {
 
     if (!groupName) {
       if (selectedGroupName) {
-        ctx.replyWithHTML(
+        await ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,
           }),
         );
         return;
       }
-      ctx.scene.enter(SELECT_GROUP_SCENE);
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
       return;
     }
 
@@ -360,7 +368,7 @@ export class MainUpdate {
       `https://ical.ystuty.ru/group/${groupName}.ical`,
       `Calendar: ${groupName}`,
     );
-    ctx.replyWithHTML(
+    await ctx.replyWithHTML(
       `Ссылка для импорта расписания в сервис календаря:\n` +
         `<code>https://ical.ystuty.ru/group/${groupName}.ical</code>\n` +
         `<a href="https://ical.ystuty.ru/group/${groupName}.ical">Try me</a>\n\n` +
@@ -371,8 +379,8 @@ export class MainUpdate {
 
   @Action(LocalePhrase.Button_SelectGroup)
   async onSelectGroup(@Ctx() ctx: ICallbackQueryContext) {
-    ctx.scene.enter(SELECT_GROUP_SCENE);
-    ctx.answerCbQuery();
+    await ctx.scene.enter(SELECT_GROUP_SCENE);
+    await ctx.answerCbQuery();
   }
 
   @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
@@ -384,7 +392,7 @@ export class MainUpdate {
 
     if (chat.type !== 'private') {
       if (!withTrigger && !state.appeal) {
-        ctx.tryAnswerCbQuery();
+        await ctx.tryAnswerCbQuery();
         return;
       }
 
@@ -413,7 +421,7 @@ export class MainUpdate {
     await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
     if (ctx.callbackQuery) {
       await ctx.tryAnswerCbQuery();
-      ctx.deleteMessage();
+      await ctx.deleteMessage();
     }
   }
 }

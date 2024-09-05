@@ -90,12 +90,12 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  public parseChatTitle(ctx: IContext, str: string) {
+  public async parseChatTitle(ctx: IContext, str: string) {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
       ctx.sessionConversation.selectedGroupName = groupName;
       this.logger.log(`Group name automation selected: "${groupName}"`);
-      ctx.replyWithHTML(
+      await ctx.replyWithHTML(
         `Учебная группа выбрана автоматически: <code>${groupName}</code>`,
         {
           ...(ctx.message?.message_id && {

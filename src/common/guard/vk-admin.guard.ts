@@ -29,7 +29,7 @@ export class VkAdminGuard implements CanActivate {
               text: this.input,
             });
           } else {
-            ctx.reply && ctx.reply(this.input);
+            ctx.reply && ctx.reply(this.input).catch();
           }
         } else if (this.input === true) {
           throw new VkException(LocalePhrase.Common_NoAccess);

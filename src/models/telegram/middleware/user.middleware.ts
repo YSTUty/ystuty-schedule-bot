@@ -58,7 +58,8 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
       }
 
       if (ctx.user?.isBanned) {
-        return ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Common_Banned));
+        await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Common_Banned));
+        return;
       }
 
       try {

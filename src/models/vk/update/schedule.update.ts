@@ -43,18 +43,18 @@ export class ScheduleUpdate {
 
     if (!groupName) {
       if (selectedGroupName) {
-        ctx.send(
+        await ctx.send(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,
           }),
         );
         return;
       }
-      ctx.scene.enter(SELECT_GROUP_SCENE);
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
       return;
     }
 
-    ctx.setActivity();
+    await ctx.setActivity();
 
     let message: string | false;
     let days: number;
@@ -89,7 +89,7 @@ export class ScheduleUpdate {
     const keyboard = this.keyboardFactory
       .getSchedule(ctx, groupName)
       .inline(true);
-    ctx.send(`${message}\n[${groupName}]`, { keyboard });
+    await ctx.send(`${message}\n[${groupName}]`, { keyboard });
   }
 
   @VkHearsLocale([
@@ -114,18 +114,18 @@ export class ScheduleUpdate {
 
     if (!groupName) {
       if (selectedGroupName) {
-        ctx.send(
+        await ctx.send(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
             groupName: groupNameFromMath,
           }),
         );
         return;
       }
-      ctx.scene.enter(SELECT_GROUP_SCENE);
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
       return;
     }
 
-    ctx.setActivity();
+    await ctx.setActivity();
 
     let [days, message] = await this.ystutyService.findNext({
       skipDays,
@@ -151,6 +151,6 @@ export class ScheduleUpdate {
     const keyboard = this.keyboardFactory
       .getSchedule(ctx, groupName)
       .inline(true);
-    ctx.send(`${message}\n[${groupName}]`, { keyboard });
+    await ctx.send(`${message}\n[${groupName}]`, { keyboard });
   }
 }

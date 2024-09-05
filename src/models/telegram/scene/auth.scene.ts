@@ -48,13 +48,13 @@ export class AuthScene extends BaseScene {
     }
 
     if (!this.socialConnectService.isAvailable) {
-      ctx.replyWithHTML('Not work');
+      await ctx.replyWithHTML('Not work');
       await ctx.scene.leave();
       return;
     }
 
     if (ctx.user) {
-      ctx.replyWithHTML('Already auth');
+      await ctx.replyWithHTML('Already auth');
       await ctx.scene.leave();
       return;
     }
@@ -78,7 +78,7 @@ export class AuthScene extends BaseScene {
         true,
         link,
       );
-      ctx.replyWithHTML(
+      await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_SocialConnect_NeedConnect, {
           botName: result.botName,
         }),
@@ -94,6 +94,6 @@ export class AuthScene extends BaseScene {
         ? LocalePhrase.Page_SocialConnect_AlreadySent
         : LocalePhrase.Page_SocialConnect_Other;
 
-    ctx.replyWithHTML(ctx.i18n.t(message, { botName: result.botName }));
+    await ctx.replyWithHTML(ctx.i18n.t(message, { botName: result.botName }));
   }
 }

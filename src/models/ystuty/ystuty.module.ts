@@ -10,7 +10,7 @@ import { YSTUtyService } from './ystuty.service';
   imports: [
     ScheduleModule.forRoot(),
     HttpModule.register({
-      baseURL: xEnv.SCHEDULE_API_URL || xEnv.YSTUTY_PARSER_URL,
+      baseURL: xEnv.SCHEDULE_API_URL,
       timeout: 60e3,
       headers: {
         ...(xEnv.SCHEDULE_API_TOKEN && {

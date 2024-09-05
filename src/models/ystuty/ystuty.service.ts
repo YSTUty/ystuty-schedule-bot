@@ -24,8 +24,9 @@ export class YSTUtyService implements OnModuleInit {
 
   private allGroupsList: string[] = [];
 
-  onModuleInit() {
-    this.onLoadAllGroups();
+  async onModuleInit() {
+    this.logger.debug('Start load all groups');
+    await this.loadAllGroups();
   }
 
   @Cron(CronExpression.EVERY_10_MINUTES)
@@ -34,52 +35,33 @@ export class YSTUtyService implements OnModuleInit {
   }
 
   protected async loadAllGroups() {
-    if (xEnv.SCHEDULE_API_URL) {
-      try {
-        const { data } = await firstValueFrom(
-          this.httpService.get<{
-            name: string;
-            items: {
-              name: string;
-              groups: string[];
-            }[];
-          }>('/v1/schedule/actual_groups'),
-        );
-
-        if (!Array.isArray(data.items)) {
-          this.logger.warn('YSTU groups&institutes NOT loaded');
-          return null;
-        }
-
-        this.allGroupsList = data.items
-          .flatMap((e) => e.groups)
-          .filter(Boolean);
-        this.logger.log(
-          `YSTU groups&institutes loaded: (${data.items.length})`,
-        );
-        return true;
-      } catch (error) {
-        console.log('[loadAllGroups (SCHEDULE_API_URL)] Error', error.message);
-      }
-      return false;
-    }
-
-    // ! deprecated
     try {
       const { data } = await firstValueFrom(
-        this.httpService.get('/api/ystu/schedule/groups?extramural=true'),
+        this.httpService.get<{
+          name: string;
+          items: {
+            name: string;
+            groups: string[];
+          }[];
+        }>('/v1/schedule/actual_groups'),
       );
+
       if (!Array.isArray(data.items)) {
-        this.logger.warn('YSTU groups NOT loaded');
+        this.logger.warn('YSTU groups&institutes NOT loaded');
         return null;
       }
 
-      this.allGroupsList = data.items;
-      this.logger.log(`YSTU groups loaded: (${data.items.length})`);
+      this.allGroupsList = data.items.flatMap((e) => e.groups).filter(Boolean);
+      this.logger.log(
+        `YSTU groups&institutes loaded: (${
+          data.items.length
+        }/${data.items.reduce((a, b) => a + b.groups.length, 0)})`,
+      );
       return true;
     } catch (error) {
-      console.log('[loadAllGroups] Error', error.message);
+      console.log('[loadAllGroups (SCHEDULE_API_URL)] Error', error.message);
     }
+
     return false;
   }
 
@@ -420,11 +402,7 @@ export class YSTUtyService implements OnModuleInit {
       this.httpService.get<{
         isCache: boolean;
         items: OneWeek[];
-      }>(
-        `/${
-          xEnv.SCHEDULE_API_URL ? 'v1/' : 'api/ystu/'
-        }schedule/group/${encodeURIComponent(groupName)}`,
-      ),
+      }>(`/v1/schedule/group/${encodeURIComponent(groupName)}`),
     );
 
     if (items.length === 0) {

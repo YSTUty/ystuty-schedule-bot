@@ -67,7 +67,7 @@ export class VkService {
     if (groupName) {
       ctx.sessionConversation.selectedGroupName = groupName;
       this.logger.log(`Group name automation selected: "${groupName}"`);
-      ctx.send(`Group name automation selected: ${groupName}`);
+      ctx.send(`Учебная группа выбрана автоматически: ${groupName}`);
       return true;
     } else {
       this.logger.log(`Group name not found from "${str}"`);

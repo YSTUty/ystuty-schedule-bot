@@ -96,7 +96,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
       ctx.sessionConversation.selectedGroupName = groupName;
       this.logger.log(`Group name automation selected: "${groupName}"`);
       ctx.replyWithHTML(
-        `Group name automation selected: <code>${groupName}</code>`,
+        `Учебная группа выбрана автоматически: <code>${groupName}</code>`,
         {
           ...(ctx.message?.message_id && {
             reply_parameters: {

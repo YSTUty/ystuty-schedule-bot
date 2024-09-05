@@ -98,10 +98,12 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
       ctx.replyWithHTML(
         `Group name automation selected: <code>${groupName}</code>`,
         {
-          reply_parameters: {
-            message_id: ctx.message?.message_id,
-            allow_sending_without_reply: true,
-          },
+          ...(ctx.message?.message_id && {
+            reply_parameters: {
+              message_id: ctx.message.message_id,
+              allow_sending_without_reply: true,
+            },
+          }),
         },
       );
       return true;

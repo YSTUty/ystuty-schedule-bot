@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.3](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.2...v0.3.3) (2024-09-06)
+
+
+### 🐛 Bug Fixes
+
+* **schedule:** fix calc week ([a0c5e90](https://github.com/YSTUty/ystuty-schedule-bot/commit/a0c5e9098c4e078ac38965559b5c8ac4720d5492))
+* **telegram:** check of empty `reply_parameters.message_id` ([cea54ca](https://github.com/YSTUty/ystuty-schedule-bot/commit/cea54ca317877ff5f540b19d7fb96eeee942ee87))
+
+
+### 🧹 Chore
+
+* add locale to `toLocaleDateString` ([9f58f58](https://github.com/YSTUty/ystuty-schedule-bot/commit/9f58f587bf4f2263e0bd72361e6fd0bd7dcd2eea))
+* add more `await` for messenger api execution (safe catcher) ([2b06d7c](https://github.com/YSTUty/ystuty-schedule-bot/commit/2b06d7c1c85fe8b399d2fef67f80dfc11f70cefd))
+* **common:** telegram exception reply target message ([45c25c4](https://github.com/YSTUty/ystuty-schedule-bot/commit/45c25c4fbf42249cc87b9c2b658c61b507451187))
+* **loacle:** fix typos ([bb86fdf](https://github.com/YSTUty/ystuty-schedule-bot/commit/bb86fdfe6c6d87abe5d24e64ab3797e49da72270))
+* remove deprecated `YSTUTY_PARSER_URL` ([a931f7d](https://github.com/YSTUty/ystuty-schedule-bot/commit/a931f7d81ad39126a1a4ff74125ff5f6f81f54c2))
+* remove old semester schedule ([1ce2d31](https://github.com/YSTUty/ystuty-schedule-bot/commit/1ce2d31067c71fcb343bbca4324c633f6c323b7a))
+* **telegram:** add test `update_profile` command ([e13a5e7](https://github.com/YSTUty/ystuty-schedule-bot/commit/e13a5e7742e37295b5537981ec638d1cd58cbbda))
+* translate info msg to ru in `parseChatTitle` ([5a564fa](https://github.com/YSTUty/ystuty-schedule-bot/commit/5a564facc39b5e17b34f9c1eccaa164140de8ca6))
+* **tsconfig:** up target to `es2018` ([e5adc5d](https://github.com/YSTUty/ystuty-schedule-bot/commit/e5adc5d26ea726af905b9daa05fe3cb28cd805b2))
+
+
+### 🚀 Features
+
+* **teacher:** add simple features for teacher schedule (telegram only) ([a8be191](https://github.com/YSTUty/ystuty-schedule-bot/commit/a8be1912830bea5b4970927a49dbf90cf2a18c60))
+
 ### [0.3.2](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.1...v0.3.2) (2024-04-30)
 
 

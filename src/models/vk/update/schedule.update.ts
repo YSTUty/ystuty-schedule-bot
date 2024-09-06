@@ -67,7 +67,8 @@ export class ScheduleUpdate {
     } else if (_skipDays !== null) {
       message = await this.ystutyService.getFormatedSchedule({
         skipDays,
-        groupName,
+        targetId: groupName,
+        targetType: 'group',
       });
     } else {
       [days, message] = await this.ystutyService.findNext({

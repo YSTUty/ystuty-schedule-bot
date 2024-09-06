@@ -1,3 +1,4 @@
+export const patternTeacherId = '(?<teacherId>[0-9]{2,6})';
 export const patternGroupName =
   '(?<groupName>[А-я]{2,6}(-|\\s)[0-9А-я()]{2,8}(\\s[0-9А-я()]{1,5})?)';
 export const patternGroupName0 =

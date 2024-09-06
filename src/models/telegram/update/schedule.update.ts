@@ -6,6 +6,7 @@ import type { Update as TgUpdate } from 'telegraf/types';
 import {
   allowerHtmlTags,
   patternGroupName,
+  patternTeacherId,
   TelegrafExceptionFilter,
 } from '@my-common';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
@@ -70,7 +71,8 @@ export class ScheduleUpdate {
 
     let messageDay =
       (await this.ystutyService.getFormatedSchedule({
-        groupName,
+        targetId: groupName,
+        targetType: 'group',
         withTags: true,
       })) || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
 
@@ -165,6 +167,7 @@ export class ScheduleUpdate {
 
   @Command('tt')
   @Command('day')
+  @Command('tday')
   @TgHearsLocale([
     LocalePhrase.RegExp_Schedule_For_OneDay,
     LocalePhrase.Button_Schedule_Schedule,
@@ -184,35 +187,63 @@ export class ScheduleUpdate {
         ),
     ),
   )
+  @Action(
+    [
+      LocalePhrase.Button_Schedule_Schedule,
+      LocalePhrase.Button_Schedule_ForToday,
+      LocalePhrase.Button_Schedule_ForTomorrow,
+    ].map(
+      (e) =>
+        new RegExp(
+          `(?<phrase>${e.replace('.', '\\.')}):?${patternTeacherId}?`,
+          'i',
+        ),
+    ),
+  )
   async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
-    const selectedGroupName =
-      ctx.chat.type === 'private'
-        ? ctx.userSocial.groupName
-        : ctx.sessionConversation.selectedGroupName;
+    const teacherIdFromMath = ctx.match?.groups?.teacherId;
+    const selectedTeacherId =
+      teacherIdFromMath ||
+      (ctx.message && 'text' in ctx.message && ctx.message.text === '/tday')
+        ? ctx.session.teacherId
+        : null;
 
-    const groupNameFromMath = ctx.match?.groups?.groupName;
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath || selectedGroupName,
-    );
+    let targetId: string | number = Number(selectedTeacherId);
+    let targetType: 'group' | 'teacher' = 'teacher';
+
+    if (!selectedTeacherId) {
+      const selectedGroupName =
+        ctx.chat.type === 'private'
+          ? ctx.userSocial.groupName
+          : ctx.sessionConversation.selectedGroupName;
+
+      const groupNameFromMath = ctx.match?.groups?.groupName;
+      const groupName = this.ystutyService.getGroupByName(
+        groupNameFromMath || selectedGroupName,
+      );
+
+      if (!groupName) {
+        if (selectedGroupName) {
+          await ctx.replyWithHTML(
+            ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+              groupName: groupNameFromMath,
+            }),
+          );
+          return;
+        }
+        await ctx.scene.enter(SELECT_GROUP_SCENE);
+        return;
+      }
+
+      targetId = groupName;
+      targetType = 'group';
+    }
 
     const _skipDays = ctx.match?.groups?.skipDays ?? null;
     let skipDays = Number(_skipDays) || 0;
     const isTomorrow =
       !!ctx.match?.groups?.tomorrow ||
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
-
-    if (!groupName) {
-      if (selectedGroupName) {
-        await ctx.replyWithHTML(
-          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-            groupName: groupNameFromMath,
-          }),
-        );
-        return;
-      }
-      await ctx.scene.enter(SELECT_GROUP_SCENE);
-      return;
-    }
 
     if (!ctx.callbackQuery) {
       await ctx.sendChatAction('typing');
@@ -224,18 +255,21 @@ export class ScheduleUpdate {
       skipDays = 1;
       [days, message] = await this.ystutyService.findNext({
         skipDays,
-        groupName,
+        targetId,
+        targetType,
         withTags: true,
       });
     } else if (_skipDays !== null) {
       message = await this.ystutyService.getFormatedSchedule({
         skipDays,
-        groupName,
+        targetId,
+        targetType,
         withTags: true,
       });
     } else {
       [days, message] = await this.ystutyService.findNext({
-        groupName,
+        targetId,
+        targetType,
         withTags: true,
       });
     }
@@ -251,8 +285,16 @@ export class ScheduleUpdate {
       message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
     }
 
-    const keyboard = this.keyboardFactory.getScheduleInline(ctx, groupName);
-    const content = `${message}[${groupName}]`;
+    const targetName =
+      targetType === 'group'
+        ? targetId
+        : this.ystutyService.getTeacherName(+targetId);
+
+    const keyboard = this.keyboardFactory.getScheduleInline(
+      ctx,
+      String(targetId),
+    );
+    const content = `${message}[${targetName}]`;
 
     if (ctx.callbackQuery) {
       try {
@@ -268,6 +310,7 @@ export class ScheduleUpdate {
   }
 
   @Command('week')
+  @Command('tweek')
   @TgHearsLocale([
     LocalePhrase.RegExp_Schedule_For_Week,
     LocalePhrase.Button_Schedule_ForWeek,
@@ -285,42 +328,70 @@ export class ScheduleUpdate {
         ),
     ),
   )
+  @Action(
+    [
+      LocalePhrase.Button_Schedule_ForWeek,
+      LocalePhrase.Button_Schedule_ForNextWeek,
+    ].map(
+      (e) =>
+        new RegExp(
+          `(?<phrase>${e.replace('.', '\\.')}):?${patternTeacherId}?`,
+          'i',
+        ),
+    ),
+  )
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
-    const selectedGroupName =
-      ctx.chat.type === 'private'
-        ? ctx.userSocial.groupName
-        : ctx.sessionConversation.selectedGroupName;
+    const teacherIdFromMath = ctx.match?.groups?.teacherId;
+    const selectedTeacherId =
+      teacherIdFromMath ||
+      (ctx.message && 'text' in ctx.message && ctx.message.text === '/tweek')
+        ? ctx.session.teacherId
+        : null;
 
-    const groupNameFromMath = ctx.match?.groups?.groupName;
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath || selectedGroupName,
-    );
+    let targetId: string | number = Number(selectedTeacherId);
+    let targetType: 'group' | 'teacher' = 'teacher';
+
+    if (!selectedTeacherId) {
+      const selectedGroupName =
+        ctx.chat.type === 'private'
+          ? ctx.userSocial.groupName
+          : ctx.sessionConversation.selectedGroupName;
+
+      const groupNameFromMath = ctx.match?.groups?.groupName;
+      const groupName = this.ystutyService.getGroupByName(
+        groupNameFromMath || selectedGroupName,
+      );
+
+      if (!groupName) {
+        if (selectedGroupName) {
+          await ctx.replyWithHTML(
+            ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+              groupName: groupNameFromMath,
+            }),
+          );
+          return;
+        }
+        await ctx.scene.enter(SELECT_GROUP_SCENE);
+        return;
+      }
+
+      targetId = groupName;
+      targetType = 'group';
+    }
 
     const isNextWeek =
       !!ctx.match?.groups?.next ||
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
     let skipDays = isNextWeek ? 7 + 1 : 1;
 
-    if (!groupName) {
-      if (selectedGroupName) {
-        await ctx.replyWithHTML(
-          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-            groupName: groupNameFromMath,
-          }),
-        );
-        return;
-      }
-      await ctx.scene.enter(SELECT_GROUP_SCENE);
-      return;
-    }
-
     if (!ctx.callbackQuery) {
       await ctx.sendChatAction('typing');
     }
 
     let [days, message] = await this.ystutyService.findNext({
+      targetId,
+      targetType,
       skipDays,
-      groupName,
       isWeek: true,
       withTags: true,
     });
@@ -340,8 +411,16 @@ export class ScheduleUpdate {
       message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
     }
 
-    const keyboard = this.keyboardFactory.getScheduleInline(ctx, groupName);
-    const content = `${message}[${groupName}]`;
+    const targetName =
+      targetType === 'group'
+        ? targetId
+        : this.ystutyService.getTeacherName(+targetId);
+
+    const keyboard = this.keyboardFactory.getScheduleInline(
+      ctx,
+      String(targetId),
+    );
+    const content = `${message}[${targetName}]`;
 
     if (ctx.callbackQuery) {
       try {

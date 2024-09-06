@@ -49,7 +49,7 @@ export class MetricsService {
     this.scheduleCounter = this.promService.getGauge({
       name: `${this.prefix}schedule_count`,
       help: 'Schedule request counter',
-      labelNames: ['groupName'],
+      labelNames: ['groupName', 'teacherId'],
     });
 
     this.telegramRequestCounter = this.promService.getCounter({

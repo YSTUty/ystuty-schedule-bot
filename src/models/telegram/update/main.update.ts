@@ -318,7 +318,59 @@ export class MainUpdate {
     );
 
     const content = xs`
-        <b>Groups list</b>
+        <b>Список групп</b>
+        <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+    `;
+
+    if (ctx.callbackQuery) {
+      try {
+        await ctx.editMessageText(content, {
+          ...keyboard,
+          parse_mode: 'HTML',
+        });
+      } catch {}
+      await ctx.tryAnswerCbQuery();
+    } else {
+      await ctx.replyWithHTML(content, keyboard);
+    }
+  }
+
+  @Command('tlist')
+  @Action(/pager:tlist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
+  async onTeachersList(@Ctx() ctx: ICbQOrMsg) {
+    let page: number = null;
+    let count: number = null;
+
+    if (ctx.updateType === 'callback_query') {
+      if (ctx.match?.groups) {
+        page = Number(ctx.match.groups.page);
+        count = Number(ctx.match.groups.count);
+      }
+    } else if ('text' in ctx.message && !ctx.state.isLocalePhrase) {
+      [, page, count] = ctx.message.text.split(' ').map(Number);
+    }
+
+    page = page || 1;
+    count = count || 20;
+
+    const { items, currentPage, totalPages } =
+      await this.ystutyService.teachersList(page, count);
+
+    const keyboard = this.keyboardFactory.getPagination(
+      `tlist-${count}`,
+      currentPage,
+      totalPages,
+      items.map((e) => ({
+        title: e.name,
+        payload: String(e.id),
+      })),
+      'selectTeacher:',
+      [],
+      true,
+    );
+
+    const content = xs`
+        <b>Список преподавателей</b>
         <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
     `;
 
@@ -419,6 +471,36 @@ export class MainUpdate {
     }
 
     await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
+    if (ctx.callbackQuery) {
+      await ctx.tryAnswerCbQuery();
+      await ctx.deleteMessage();
+    }
+  }
+
+  // @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
+  @Action(/selectTeacher:(?<teacherId>(.*))/i)
+  async hearSelectTeacher(@Ctx() ctx: ICbQOrMsg) {
+    const { chat } = ctx;
+    const teacherId = Number(ctx.match?.groups?.teacherId);
+
+    if (chat.type !== 'private') {
+      await ctx.tryAnswerCbQuery('Nope');
+      return;
+    }
+
+    // await ctx.scene.enter(SELECT_GROUP_SCENE, { teacherId });
+
+    const teacherName = this.ystutyService.getTeacherName(teacherId);
+    if (!teacherName) {
+      await ctx.replyWithHTML(
+        `Преподаватель с ID <code>${teacherId}</code> не найден.`,
+      );
+      return;
+    }
+    // ctx.userSocial.teacherId = teacherId;
+    ctx.session.teacherId = teacherId;
+    await ctx.replyWithHTML(`Выбран преподаватель: <b>${teacherName}</b>`);
+
     if (ctx.callbackQuery) {
       await ctx.tryAnswerCbQuery();
       await ctx.deleteMessage();

@@ -22,16 +22,24 @@ export class YSTUtyService implements OnModuleInit {
     private readonly metricsService: MetricsService,
   ) {}
 
-  private allGroupsList: string[] = [];
+  private allGroupsList: {
+    name: string;
+    groups: string[];
+  }[] = [];
+  private allTeachersList: {
+    id: number;
+    name: string;
+  }[] = [];
 
   async onModuleInit() {
-    this.logger.debug('Start load all groups');
-    await this.loadAllGroups();
+    this.logger.debug('Start load all groups & teachers');
+    await Promise.all([this.loadAllGroups(), this.loadAllTeachers()]);
   }
 
   @Cron(CronExpression.EVERY_10_MINUTES)
-  protected onLoadAllGroups() {
+  protected onLoadData() {
     this.loadAllGroups().then();
+    this.loadAllTeachers().then();
   }
 
   protected async loadAllGroups() {
@@ -51,7 +59,7 @@ export class YSTUtyService implements OnModuleInit {
         return null;
       }
 
-      this.allGroupsList = data.items.flatMap((e) => e.groups).filter(Boolean);
+      this.allGroupsList = data.items.filter(Boolean);
       this.logger.log(
         `YSTU groups&institutes loaded: (${
           data.items.length
@@ -59,7 +67,34 @@ export class YSTUtyService implements OnModuleInit {
       );
       return true;
     } catch (error) {
-      console.log('[loadAllGroups (SCHEDULE_API_URL)] Error', error.message);
+      console.log('[loadAllGroups] Error', error.message);
+    }
+
+    return false;
+  }
+
+  protected async loadAllTeachers() {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get<{
+          isCache: boolean;
+          items: {
+            id: number;
+            name: string;
+          }[];
+        }>('/v1/schedule/actual_teachers'),
+      );
+
+      if (!Array.isArray(data.items)) {
+        this.logger.warn('YSTU teachers NOT loaded');
+        return null;
+      }
+
+      this.allTeachersList = data.items.filter(Boolean);
+      this.logger.log(`YSTU teachers loaded: (${data.items.length})`);
+      return true;
+    } catch (error) {
+      console.log('[loadAllTeachers] Error', error.message);
     }
 
     return false;
@@ -72,9 +107,7 @@ export class YSTUtyService implements OnModuleInit {
         .toLowerCase()
         .replace(/[\)\(\s\-]/g, '');
 
-    return (
-      groupName && this.allGroupsList.find((e) => parse(e) === parse(groupName))
-    );
+    return groupName && this.groupNames.find((e) => parse(e) === parse(groupName));
   }
 
   public parseGroupName(str: string) {
@@ -94,15 +127,12 @@ export class YSTUtyService implements OnModuleInit {
   }
 
   public get randomGroupName() {
-    return (
-      this.allGroupsList[
-        Math.floor(Math.random() * this.allGroupsList.length)
-      ] || '-'
-    );
+    const names = this.groupNames;
+    return names[Math.floor(Math.random() * names.length)] || '-';
   }
 
   public get groupNames() {
-    return [...this.allGroupsList];
+    return this.allGroupsList.flatMap((e) => e.groups);
   }
 
   public async groupsList(page = 1, count = 20) {
@@ -118,20 +148,59 @@ export class YSTUtyService implements OnModuleInit {
     };
   }
 
+  public get teacherNames() {
+    return this.allTeachersList.map((e) => e.name);
+  }
+
+  public getTeacherName(id: number) {
+    return this.allTeachersList.find((e) => e.id === id)?.name;
+  }
+
+  public async teachersList(page = 1, count = 20) {
+    const teachers = this.allTeachersList;
+    const totalCount = teachers.length;
+    const totalPageCount = page * count;
+    const items = teachers.slice(totalPageCount - count, totalPageCount);
+
+    return {
+      items,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / count),
+    };
+  }
+
   public async findNext({
-    groupName,
     skipDays = 0,
     isWeek = false,
     weekNumber = WeekNumberType.Monday,
     withTags = false,
-  }: {
-    groupName: string;
+    ...targetRest
+  }: (
+    | { groupName: string }
+    | { teacherId: number }
+    | { targetId: string | number; targetType: 'group' | 'teacher' }
+  ) & {
     skipDays?: number;
     isWeek?: boolean;
     weekNumber?: WeekNumberType;
     withTags?: boolean;
   }) {
-    this.metricsService.scheduleCounter.inc({ groupName });
+    const targetId =
+      'targetId' in targetRest
+        ? targetRest.targetId
+        : 'groupName' in targetRest
+        ? targetRest.groupName
+        : targetRest.teacherId;
+    const targetType =
+      'targetType' in targetRest
+        ? targetRest.targetType
+        : 'groupName' in targetRest
+        ? 'group'
+        : 'teacher';
+
+    this.metricsService.scheduleCounter.inc({
+      [targetType === 'group' ? 'groupName' : 'teacherId']: targetId,
+    });
 
     const findDeep = async (
       skipDays?: number,
@@ -140,7 +209,8 @@ export class YSTUtyService implements OnModuleInit {
       next?: boolean,
     ): Promise<[number, string | false]> => {
       const responseSchedule = await this.getFormatedSchedule({
-        groupName,
+        targetType,
+        targetId,
         skipDays,
         isWeek,
         withTags,
@@ -167,12 +237,14 @@ export class YSTUtyService implements OnModuleInit {
   }
 
   public async getFormatedSchedule({
-    groupName,
     skipDays = 0,
     isWeek = false,
     withTags = false,
+    targetId,
+    targetType,
   }: {
-    groupName: string;
+    targetId: string | number;
+    targetType: 'group' | 'teacher';
     skipDays?: number;
     isWeek?: boolean;
     withTags?: boolean;
@@ -191,11 +263,11 @@ export class YSTUtyService implements OnModuleInit {
     const addHashTag = isWeek;
 
     const lock = await this.redisService.redlock.lock(
-      `ystuty:schedule:group:${groupName.toLowerCase()}`,
+      `ystuty:schedule:${targetType}:${String(targetId).toLowerCase()}`,
       5e3,
     );
     try {
-      const { items } = await this.getScheduleByGroup(groupName);
+      const { items } = await this.getSchedule(targetId, targetType);
 
       if (!Array.isArray(items)) {
         return null;
@@ -206,7 +278,13 @@ export class YSTUtyService implements OnModuleInit {
         return null;
       }
 
-      return this.formateWeekDays(week, dayNumber, addHashTag, withTags);
+      return this.formateWeekDays(
+        week,
+        dayNumber,
+        addHashTag,
+        withTags,
+        targetType,
+      );
     } catch (error) {
       console.log('[getFormatedSchedule] Error', error.message);
     } finally {
@@ -221,6 +299,7 @@ export class YSTUtyService implements OnModuleInit {
     dayNumber: WeekNumberType | null = null,
     addHashTag: boolean = false,
     withTags = false,
+    targetType: 'group' | 'teacher',
   ) {
     const fullWeek = dayNumber === null;
 
@@ -313,27 +392,32 @@ export class YSTUtyService implements OnModuleInit {
           ? ' <b>(ONLINE)</b>'
           : ' (ONLINE)';
 
-        let teacherName = [lesson.teacherName, lesson.additionalTeacherId]
+        let targetStr = (
+          targetType === 'group'
+            ? [lesson.teacherName, lesson.additionalTeacherId]
+            : lesson.groups || ['-']
+        )
           .filter(Boolean)
           .join('; ');
-        let teacherStr = !teacherName
+
+        let targetsStrFmt = !targetStr
           ? ''
           : withTags
-          ? ` (<i>${teacherName}</i>)`
-          : ` (${teacherName})`;
+          ? ` (<i>${targetStr}</i>)`
+          : ` (${targetStr})`;
 
         if (
           lastLesson?.number == lesson.number &&
           !(lesson.type & LessonFlags.Exam)
         ) {
-          msg += `Другая П/Г: ${auditory}${distantStr} ${lesson.lessonName}${typeStr}${teacherStr}`;
+          msg += `Другая П/Г: ${auditory}${distantStr} ${lesson.lessonName}${typeStr}${targetsStrFmt}`;
         } else {
           msg += `${scheduleUtil.getNumberEmoji(lesson.number)} ${((s) =>
             isDone && withTags ? `<s>${s}</s>` : s)(
             lesson.timeRange || lesson.time || '**-**',
           )}.${auditory}${distantStr} ${
             lesson.lessonName
-          }${typeStr}${teacherStr}`;
+          }${typeStr}${targetsStrFmt}`;
         }
 
         if (lesson.isDivision) {
@@ -382,8 +466,11 @@ export class YSTUtyService implements OnModuleInit {
     return message;
   }
 
-  public async getScheduleByGroup(groupName: string) {
-    const cacheKey = `schedule:byGroup:${String(groupName).toLowerCase()}`;
+  public async getSchedule(
+    targetId: string | number,
+    targetType: 'group' | 'teacher',
+  ) {
+    const cacheKey = `schedule:${targetType}:${String(targetId).toLowerCase()}`;
     if (this.allowCaching) {
       try {
         const cachedData = await this.redisService.redis.get(cacheKey);
@@ -402,7 +489,7 @@ export class YSTUtyService implements OnModuleInit {
       this.httpService.get<{
         isCache: boolean;
         items: OneWeek[];
-      }>(`/v1/schedule/group/${encodeURIComponent(groupName)}`),
+      }>(`/v1/schedule/${targetType}/${encodeURIComponent(targetId)}`),
     );
 
     if (items.length === 0) {
@@ -414,6 +501,15 @@ export class YSTUtyService implements OnModuleInit {
       for (const item of items) {
         item.days = item.days.filter(
           (e) => new Date(e.info.date) >= firstAugustDate,
+        );
+      }
+    }
+    // TODO: need check
+    const firstFebruaryDate = new Date(new Date().getFullYear(), 1, 1);
+    if (new Date() > firstFebruaryDate) {
+      for (const item of items) {
+        item.days = item.days.filter(
+          (e) => new Date(e.info.date) >= firstFebruaryDate,
         );
       }
     }

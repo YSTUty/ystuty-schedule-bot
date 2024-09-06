@@ -86,7 +86,14 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       if (ctx.callbackQuery) {
         await ctx.answerCbQuery(content, { show_alert: isAdmin });
       } else {
-        await ctx.replyWithHTML(content);
+        await ctx.replyWithHTML(content, {
+          ...(ctx.message?.message_id && {
+            reply_parameters: {
+              message_id: ctx.message.message_id,
+              allow_sending_without_reply: true,
+            },
+          }),
+        });
       }
     } catch {}
   }

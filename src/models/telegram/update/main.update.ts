@@ -240,18 +240,25 @@ export class MainUpdate {
     } = ctx.myChatMember;
     if (chat.type === 'private') return;
 
-    this.logger.log(`New bot status: "${status}"`);
+    const { title, type } = chat;
+    this.logger.log(`New chat bot status: "${status}" in "${title}" ${type}`);
 
-    const { title } = chat;
-    if (status === 'member') {
+    if (ctx.conversation) {
+      ctx.conversation.invitedByUserSocialId = ctx.userSocial.id;
+      ctx.conversation.chatStatus = status;
+      ctx.conversation.title = title;
+      ctx.conversation.chatType = type;
+    }
+
+    if (
+      status === 'creator' ||
+      status === 'administrator' ||
+      status === 'member' ||
+      status === 'restricted'
+    ) {
       const keyboard = this.keyboardFactory.getStart(ctx);
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
       await this.telegramService.parseChatTitle(ctx, title);
-
-      if (ctx.conversation) {
-        ctx.conversation.invitedByUserSocialId = ctx.userSocial.id;
-        ctx.conversation.title = title;
-      }
 
       if (!ctx.sessionConversation.selectedGroupName) {
         const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);

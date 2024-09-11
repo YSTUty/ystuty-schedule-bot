@@ -58,6 +58,14 @@ export class Conversation {
   public invitedByUserSocialId: number;
 
   @Expose()
+  @Column({ type: 'character varying', length: 64, nullable: true })
+  public chatStatus: string;
+
+  @Expose()
+  @Column({ type: 'character varying', length: 64, nullable: true })
+  public chatType: string;
+
+  @Expose()
   @ManyToMany(() => UserSocial, (userSocial) => userSocial.conversations)
   @JoinTable({
     name: 'user_to_conversation',

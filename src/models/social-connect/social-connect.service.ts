@@ -70,18 +70,26 @@ export class SocialConnectService {
           client_secret: xEnv.OAUTH_CLIENT_SECRET,
         }),
       );
-      console.log({ data });
+      console.log('[requestAuth]', { data });
       return data;
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        const data = err.response.data as {
-          error: { code: number; message: string; error: string };
-        };
-        if ('error' in data && data.error.code === 404) {
-          return { error: 'client not found' };
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data) {
+          const data = err.response.data as {
+            error: { code: number; message: string; error: string };
+          };
+          this.logger.debug('[requestAuth] error', data);
+          if ('error' in data && data.error.code === 404) {
+            return { error: 'client not found' };
+          }
         }
+        this.logger.error('[requestAuth] Axios error', {
+          code: err.code,
+          message: err.message,
+        });
+      } else {
+        this.logger.error(err);
       }
-      console.log(err);
     }
 
     return { error: 'see log' };

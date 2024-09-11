@@ -247,6 +247,12 @@ export class MainUpdate {
       const keyboard = this.keyboardFactory.getStart(ctx);
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
       await this.telegramService.parseChatTitle(ctx, title);
+
+      if (ctx.conversation) {
+        ctx.conversation.invitedByUserSocialId = ctx.userSocial.id;
+        ctx.conversation.title = title;
+      }
+
       if (!ctx.sessionConversation.selectedGroupName) {
         const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
         await ctx.replyWithHTML(
@@ -258,6 +264,9 @@ export class MainUpdate {
     // ! Проверить логику - юзер заблокирвоа бта или вышел из общего чата с этим ботом?
     else if (status === 'kicked' || status === 'left') {
       ctx.userSocial.isBlockedBot = true;
+      if (ctx.conversation) {
+        ctx.conversation.isLeaved = true;
+      }
     }
   }
 

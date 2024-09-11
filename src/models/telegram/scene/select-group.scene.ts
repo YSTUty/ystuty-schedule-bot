@@ -97,6 +97,9 @@ export class SelectGroupScene extends BaseScene {
     if (selectedGroupName) {
       if (isChat) {
         ctx.sessionConversation.selectedGroupName = selectedGroupName;
+        if (ctx.conversation) {
+          ctx.conversation.groupName = selectedGroupName;
+        }
       } else {
         userSocial.groupName = selectedGroupName;
         // await this.userService.saveUserSocial(ctx.userSocial);

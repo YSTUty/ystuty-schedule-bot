@@ -7,6 +7,7 @@ import { IContext } from '@my-interfaces/telegram';
 
 import { UserService } from '../../user/user.service';
 import { RedisService } from '../../redis/redis.service';
+import { SocialService } from '../../social/social.service';
 
 @Injectable()
 export class UserMiddleware implements MiddlewareObj<IContext> {
@@ -14,6 +15,7 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     private readonly redisService: RedisService,
+    private readonly socialService: SocialService,
   ) {}
 
   middleware() {
@@ -66,6 +68,42 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
         return;
       }
 
+      if (
+        ctx.chat?.type &&
+        (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')
+      ) {
+        try {
+          let conversation = await this.socialService.findConversationById(
+            SocialType.Telegram,
+            ctx.chat.id,
+          );
+          if (!conversation) {
+            conversation = await this.socialService.createConversation(
+              SocialType.Telegram,
+              {
+                conversationId: ctx.chat.id,
+                title: ctx.chat.title,
+              },
+              ctx.userSocial,
+            );
+          }
+
+          // Link user to conversation
+          this.socialService
+            .iAmInConversation(ctx.userSocial, conversation.id)
+            .catch((err) =>
+              console.error(
+                '[TG][socialService=>iAmInConversation] Error: ',
+                err,
+              ),
+            );
+
+          ctx.conversation = conversation;
+        } catch (err) {
+          console.error('[TG][socialService] Error: ', err);
+        }
+      }
+
       try {
         await next();
       } finally {
@@ -75,6 +113,9 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
             delete ctx.userSocial.user;
           }
           await this.userService.saveUserSocial(ctx.userSocial);
+        }
+        if (ctx.conversation) {
+          await this.socialService.saveConversation(ctx.conversation);
         }
       }
     };

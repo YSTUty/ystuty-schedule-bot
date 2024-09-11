@@ -138,9 +138,12 @@ export class MainUpdate {
     this.logger.log(
       `Bot is invited by '${ctx.senderId}' to a new conversation: '${ctx.peerId}'`,
     );
+    if (ctx.state.conversation && ctx.state.userSocial) {
+      ctx.state.conversation.invitedByUserSocialId = ctx.state.userSocial.id;
+    }
 
     const keyboard = this.keyboardFactory.getStart(ctx);
-    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
 
     // this.vkService.parseChatTitle(ctx, title);
     if (!ctx.sessionConversation.selectedGroupName) {
@@ -154,6 +157,9 @@ export class MainUpdate {
 
   @On('chat_title_update')
   async onChatTitleUpdate(@Ctx() ctx: IMessageContext) {
+    if (ctx.state.conversation && ctx.eventText) {
+      ctx.state.conversation.title = ctx.eventText;
+    }
     await this.vkService.parseChatTitle(ctx, ctx.eventText);
   }
 

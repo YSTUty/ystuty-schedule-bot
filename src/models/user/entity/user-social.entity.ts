@@ -4,6 +4,7 @@ import {
   Entity,
   Index,
   JoinColumn,
+  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -11,7 +12,9 @@ import {
 import { Expose, plainToClass } from 'class-transformer';
 
 import { SocialType } from '@my-common/constants';
+
 import { User } from './user.entity';
+import { Conversation } from '../../social/entity/conversation.entity';
 
 @Entity()
 @Index(['social', 'socialId'], { unique: true })
@@ -71,6 +74,9 @@ export class UserSocial {
   @Expose()
   @Column({ nullable: true })
   public userId: number;
+
+  @ManyToMany(() => Conversation, (conversation) => conversation.users)
+  public conversations: Conversation[];
 
   @Expose()
   @CreateDateColumn()

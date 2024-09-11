@@ -10,6 +10,7 @@ import { ISessionContext } from '@vk-io/session';
 
 import { UserSocial } from '../../models/user/entity/user-social.entity';
 import { User } from '../../models/user/entity/user.entity';
+import { Conversation } from '../../models/social/entity/conversation.entity';
 
 export interface ISessionState {
   __language_code?: string;
@@ -19,7 +20,8 @@ export interface ISessionState {
 }
 
 interface ISessionConversationState {
-  // // TODO: remove it. Use `conversation.groupName`
+  // TODO: remove it. Use `conversation.groupName`
+  /** @deprecated Use `conversation.groupName` */
   selectedGroupName?: string;
   hideStaticKeyboard?: boolean;
 }
@@ -30,6 +32,7 @@ type ContextState = {
 
   userSocial: UserSocial;
   user?: User;
+  conversation?: Conversation;
 
   foundGroupName?: string;
   rejectRefGroupName?: boolean;

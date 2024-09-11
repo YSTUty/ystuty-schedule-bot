@@ -67,6 +67,9 @@ export class SelectGroupScene {
     if (selectedGroupName) {
       if (isChat) {
         ctx.sessionConversation.selectedGroupName = selectedGroupName;
+        if (ctx.state.conversation) {
+          ctx.state.conversation.groupName = selectedGroupName;
+        }
       } else {
         ctx.state.userSocial.groupName = selectedGroupName;
       }

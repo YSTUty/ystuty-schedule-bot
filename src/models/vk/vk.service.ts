@@ -66,6 +66,9 @@ export class VkService {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
       ctx.sessionConversation.selectedGroupName = groupName;
+      if (ctx.state.conversation) {
+        ctx.state.conversation.groupName = groupName;
+      }
       this.logger.log(`Group name automation selected: "${groupName}"`);
       await ctx.send(`Учебная группа выбрана автоматически: ${groupName}`);
       return true;

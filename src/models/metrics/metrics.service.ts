@@ -23,6 +23,7 @@ export class MetricsService {
 
   public readonly userCounter: Gauge;
   public readonly userSocialCounter: Gauge;
+  public readonly conversationCounter: Gauge;
   public readonly scheduleCounter: Gauge;
 
   public readonly telegramRequestCounter: CounterMetric;
@@ -44,6 +45,11 @@ export class MetricsService {
     this.userSocialCounter = this.promService.getGauge({
       name: `${this.prefix}user_social_count`,
       help: 'User socials counter',
+      labelNames: ['social'],
+    });
+    this.conversationCounter = this.promService.getGauge({
+      name: `${this.prefix}conversation_count`,
+      help: 'Social conversations counter',
       labelNames: ['social'],
     });
     this.scheduleCounter = this.promService.getGauge({

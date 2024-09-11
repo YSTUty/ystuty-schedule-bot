@@ -7,6 +7,7 @@ import {
 import { InjectBot } from '@xtcry/nestjs-telegraf';
 import { Telegraf } from 'telegraf';
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
+
 import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -94,6 +95,9 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
       ctx.sessionConversation.selectedGroupName = groupName;
+      if (ctx.conversation) {
+        ctx.conversation.groupName = groupName;
+      }
       this.logger.log(`Group name automation selected: "${groupName}"`);
       await ctx.replyWithHTML(
         `Учебная группа выбрана автоматически: <code>${groupName}</code>`,

@@ -13,6 +13,7 @@ import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 
 import { UserSocial } from '../../models/user/entity/user-social.entity';
 import { User } from '../../models/user/entity/user.entity';
+import { Conversation } from '../../models/social/entity/conversation.entity';
 
 interface ISessionState {
   __language_code?: string;
@@ -22,7 +23,8 @@ interface ISessionState {
 }
 
 interface ISessionConversationState {
-  // // TODO: remove it. Use `conversation.groupName`
+  // TODO: remove it. Use `conversation.groupName`
+  /** @deprecated Use `conversation.groupName` */
   selectedGroupName?: string;
 }
 
@@ -48,6 +50,7 @@ type CombinedContext = {
 
   userSocial: UserSocial;
   user?: User;
+  conversation?: Conversation;
 
   state: ContextState;
 
@@ -67,7 +70,10 @@ export type IContext<
   U extends Deunionize<Update> = Update,
 > = CombinedContext & Context<U> & T;
 
-export type INarrowedContext<T = {}> = NarrowedContext<never, tt.MountMap['text']> &
+export type INarrowedContext<T = {}> = NarrowedContext<
+  never,
+  tt.MountMap['text']
+> &
   CombinedContext &
   T;
 

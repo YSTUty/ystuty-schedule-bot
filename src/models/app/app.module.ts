@@ -15,6 +15,7 @@ import { VkModule } from '../vk/vk.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { UserModule } from '../user/user.module';
 import { SocialConnectModule } from '../social-connect/social-connect.module';
+import { SocialModule } from '../social/social.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { SocialConnectModule } from '../social-connect/social-connect.module';
       }),
     }),
     SocialConnectModule,
+    SocialModule,
     MetricsModule.forRoot(),
     YSTUtyModule,
     RedisModule,

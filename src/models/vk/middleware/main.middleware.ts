@@ -22,6 +22,7 @@ import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { UserService } from '../../user/user.service';
+import { SocialService } from '../../social/social.service';
 
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
@@ -47,6 +48,7 @@ export class MainMiddleware {
     private readonly metricsService: MetricsService,
     private readonly ystutyService: YSTUtyService,
     private readonly userService: UserService,
+    private readonly socialService: SocialService,
   ) {
     this.redisStorage = new RedisStorage({
       redis: this.redisService.redis,
@@ -273,6 +275,38 @@ export class MainMiddleware {
         return;
       }
 
+      if (ctx.isChat) {
+        try {
+          let conversation = await this.socialService.findConversationById(
+            SocialType.Vkontakte,
+            ctx.chatId,
+          );
+          if (!conversation) {
+            conversation = await this.socialService.createConversation(
+              SocialType.Vkontakte,
+              { conversationId: ctx.chatId },
+              ctx.state.userSocial,
+            );
+          }
+
+          if (ctx.state.userSocial) {
+            // Link user to conversation
+            this.socialService
+              .iAmInConversation(ctx.state.userSocial, conversation.id)
+              .catch((err) =>
+                console.error(
+                  '[VK][socialService=>iAmInConversation] Error: ',
+                  err,
+                ),
+              );
+          }
+
+          ctx.state.conversation = conversation;
+        } catch (err) {
+          console.error('[VK][socialService] Error: ', err);
+        }
+      }
+
       try {
         await next();
       } finally {
@@ -282,6 +316,9 @@ export class MainMiddleware {
             delete ctx.state.userSocial.user;
           }
           await this.userService.saveUserSocial(ctx.state.userSocial);
+        }
+        if (ctx.state.conversation) {
+          await this.socialService.saveConversation(ctx.state.conversation);
         }
       }
     };

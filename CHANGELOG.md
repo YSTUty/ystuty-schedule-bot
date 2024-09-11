@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.4](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.3...v0.3.4) (2024-09-11)
+
+
+### 🐛 Bug Fixes
+
+* **user:** remove length from `avatarUrl` user social entity ([ee04a85](https://github.com/YSTUty/ystuty-schedule-bot/commit/ee04a8570d460c911eec7aa76f5dd12266c5b5f1))
+* **util:** improve regexp pattern for group name ([a7ef7cb](https://github.com/YSTUty/ystuty-schedule-bot/commit/a7ef7cb751450127d56d9b790227ea93303e3430))
+
+
+### 🧹 Chore
+
+* **social-connect:** format axios error log ([051e511](https://github.com/YSTUty/ystuty-schedule-bot/commit/051e511ccd9a51e99c9f17476d1e27e75ffc052b))
+* **social:** save user `displayname` on `createUserSocial` ([21545f2](https://github.com/YSTUty/ystuty-schedule-bot/commit/21545f2dca3b5f8815ec314a8e97d772c02e56b2))
+* **util:** add catching of compile `tg` phrase error ([65d3bb3](https://github.com/YSTUty/ystuty-schedule-bot/commit/65d3bb35e12ca679a015196ec7ee39629c478386))
+* **vk:** add check `cancel` condition for exit from scene ([09ff0a1](https://github.com/YSTUty/ystuty-schedule-bot/commit/09ff0a1a26d17fd1654a226ec9828aaabbb5f8b0))
+
 ### [0.3.3](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.2...v0.3.3) (2024-09-06)
 
 

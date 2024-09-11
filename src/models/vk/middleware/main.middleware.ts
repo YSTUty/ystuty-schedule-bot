@@ -250,6 +250,7 @@ export class MainMiddleware {
                 `${userInfo.first_name || ''} ${userInfo.last_name || ''}`
                   .trim()
                   .slice(0, 64) || null,
+              hasDM: ctx.isDM,
             },
           );
         }

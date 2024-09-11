@@ -41,6 +41,7 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
                   .trim()
                   .slice(0, 64) || null,
               // avatarUrl: ctx.from.,
+              hasDM: ctx.chat?.type === 'private',
             },
           );
         }

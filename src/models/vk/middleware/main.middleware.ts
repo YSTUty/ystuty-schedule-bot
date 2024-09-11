@@ -198,7 +198,10 @@ export class MainMiddleware {
         return next();
       }
 
-      if (checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx)) {
+      if (
+        checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx) ||
+        ['cancel', '/cancel', '/exit'].includes(ctx.text.toLowerCase())
+      ) {
         const keyboard = this.keyboardFactory.getClose(ctx);
         await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
           keyboard,

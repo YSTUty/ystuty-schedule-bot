@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.5](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.4...v0.3.5) (2024-09-11)
+
+
+### 🧹 Chore
+
+* **social:** fix no resave unchanged values ([b104d9f](https://github.com/YSTUty/ystuty-schedule-bot/commit/b104d9f135de62d17be7c6a8719bb01c8a222625))
+* **social:** not inc users with not has `DM` ([5de443e](https://github.com/YSTUty/ystuty-schedule-bot/commit/5de443e44db5c1887299de6f7b1c57e2bd5ee645))
+* **user-social:** transform `socialId` to bigint ([a219789](https://github.com/YSTUty/ystuty-schedule-bot/commit/a2197894d0c91e79f303a53ecec6cc09616d31b8))
+* **util:** improve regexp pattern for group name ([2344966](https://github.com/YSTUty/ystuty-schedule-bot/commit/234496664a9dcd57461dfb2c237bf51bc422843a))
+* **vk:** update test display list groups & teachers ([04c2ef1](https://github.com/YSTUty/ystuty-schedule-bot/commit/04c2ef1615417e9794b984ba3edc60be9814ccef))
+
+
+### 🐛 Bug Fixes
+
+* **vk:** fix typos in state name ([9c2ce1f](https://github.com/YSTUty/ystuty-schedule-bot/commit/9c2ce1f5271277b5a6eddae83268da2335b2249d))
+
+
+### 🚀 Features
+
+* **social:** add entity for social `conversation` ([a7f7550](https://github.com/YSTUty/ystuty-schedule-bot/commit/a7f7550eb18e4336f69c56092f1f5bfd9e178bad))
+
 ### [0.3.4](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.3...v0.3.4) (2024-09-11)
 
 

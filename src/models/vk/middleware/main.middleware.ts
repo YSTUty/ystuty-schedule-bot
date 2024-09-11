@@ -277,6 +277,10 @@ export class MainMiddleware {
         await next();
       } finally {
         if (ctx.state.userSocial) {
+          // * Фикс вызова перезаписи при пстом юезре
+          if (ctx.userSocial.user === null) {
+            delete ctx.userSocial.user;
+          }
           await this.userService.saveUserSocial(ctx.state.userSocial);
         }
       }

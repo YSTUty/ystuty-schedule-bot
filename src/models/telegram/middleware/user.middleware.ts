@@ -70,6 +70,10 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
         await next();
       } finally {
         if (ctx.userSocial) {
+          // * Фикс вызова перезаписи при пстом юезре
+          if (ctx.userSocial.user === null) {
+            delete ctx.userSocial.user;
+          }
           await this.userService.saveUserSocial(ctx.userSocial);
         }
       }

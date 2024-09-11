@@ -41,7 +41,7 @@ export class UserSocial {
   public profileUrl?: string;
 
   @Expose()
-  @Column({ type: 'character varying', length: 255, nullable: true })
+  @Column({ type: 'character varying', nullable: true })
   public avatarUrl?: string;
 
   @Expose()

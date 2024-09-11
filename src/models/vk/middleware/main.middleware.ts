@@ -149,8 +149,12 @@ export class MainMiddleware {
 
       try {
         await next();
-      } catch (error) {
-        this.logger.error('Error:', error);
+      } catch (err: unknown) {
+        this.logger.error('Error (featureMiddleware):', err);
+        try {
+          await ctx.reply(ctx.i18n.t(LocalePhrase.Common_Error));
+        } catch {}
+        throw err;
       }
     };
   }
@@ -225,9 +229,9 @@ export class MainMiddleware {
             {
               id: number;
               domain: string;
-              first_name: string;
-              last_name: string;
-              photo_200: string;
+              first_name?: string;
+              last_name?: string;
+              photo_200?: string;
               can_access_closed: boolean;
               is_closed: boolean;
             },
@@ -239,8 +243,11 @@ export class MainMiddleware {
               username: userInfo.domain,
               socialId: userInfo.id,
               avatarUrl: userInfo.photo_200,
+              displayname:
+                `${userInfo.first_name || ''} ${userInfo.last_name || ''}`
+                  .trim()
+                  .slice(0, 64) || null,
             },
-            // { fullname: `${userInfo.first_name} ${userInfo.last_name}`.trim() },
           );
         }
       }

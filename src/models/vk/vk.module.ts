@@ -52,11 +52,7 @@ export class VkModule {
           }),
         }),
       ],
-      providers: [        VkService,
-        VKKeyboardFactory,
-        ...providers,
-
-      ],
+      providers: [VkService, VKKeyboardFactory, ...providers],
       exports: [...middlewares, VKKeyboardFactory, VkService],
     };
   }

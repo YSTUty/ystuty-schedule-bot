@@ -29,6 +29,14 @@ regexp:
     for_one_day: /^(расписание|.тт)((?<tomorrow> на завтра)|( через (?<skipDays>[0-9]{1,3})))?( ${patternGroupName})?$/i
     for_week: /^(((расписание|.тт) на(?<next> (след(ующую)?))? неделю)|\.рбн)( ${patternGroupName})?$/i
 
+error:
+  select_group:
+    only_admin_or_owner: |
+      <b>Ошибка:</b> Только админ или пригласивший может выбрать группу
+  bot:
+    conversation_not_admin: |
+      <b>Ошибка:</b> Бот не имеет прав администратора в этой беседе
+
 page:
   start: |
     Привет! Это бот для расписания ЯГТУ

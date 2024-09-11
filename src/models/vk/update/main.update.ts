@@ -229,21 +229,28 @@ export class MainUpdate {
         return;
       }
 
-      try {
-        const { items } = await this.vk.api.messages.getConversationMembers({
-          peer_id: peerId,
-        });
-        if (!items.find((e) => e.member_id === senderId).is_admin) {
-          return ctx.i18n.t(LocalePhrase.Common_NoAccess);
-        }
-      } catch (error) {
-        if (error instanceof APIError) {
-          if (error.code === 917) {
-            return ctx.i18n.t(LocalePhrase.Common_NoAccess);
+      if (
+        !state.conversation?.invitedByUserSocialId ||
+        state.conversation.invitedByUserSocialId !== state.userSocial.id
+      ) {
+        try {
+          const { items } = await this.vk.api.messages.getConversationMembers({
+            peer_id: peerId,
+          });
+          console.log(items);
+
+          if (!items.find((e) => e.member_id === senderId).is_admin) {
+            return ctx.i18n.t(LocalePhrase.Error_SelectGroup_OnlyAdminOrOwner);
           }
-          // return ctx.i18n.t(LocalePhrase.Common_Error);
+        } catch (error) {
+          if (error instanceof APIError) {
+            if (error.code === 917) {
+              return ctx.i18n.t(LocalePhrase.Error_Bot_NotAdmin);
+            }
+            // return ctx.i18n.t(LocalePhrase.Common_Error);
+          }
+          throw error;
         }
-        throw error;
       }
     }
 

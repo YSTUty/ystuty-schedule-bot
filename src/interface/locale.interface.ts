@@ -29,6 +29,10 @@ export enum LocalePhrase {
   RegExp_Schedule_For_OneDay = 'regexp.schedule.for_one_day',
   RegExp_Schedule_For_Week = 'regexp.schedule.for_week',
 
+  // Errors
+  Error_SelectGroup_OnlyAdminOrOwner = 'error.select_group.only_admin_or_owner',
+  Error_Bot_NotAdmin = 'error.bot.conversation_not_admin',
+
   // Pages
   Page_Start = 'page.start',
   Page_InitBot = 'page.init_bot',

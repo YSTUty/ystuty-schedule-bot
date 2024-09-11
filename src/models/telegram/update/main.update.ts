@@ -447,7 +447,7 @@ export class MainUpdate {
   @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
   @Action(/selectGroup:(?<groupName>(.*))/i)
   async hearSelectGroup(@Ctx() ctx: ICbQOrMsg) {
-    const { from, chat, state } = ctx;
+    const { from, chat, state, conversation, userSocial } = ctx;
     const groupName = ctx.match?.groups?.groupName;
     const withTrigger = !!ctx.match?.groups?.trigger;
 
@@ -457,25 +457,30 @@ export class MainUpdate {
         return;
       }
 
-      try {
-        const members = await ctx.telegram.getChatAdministrators(chat.id);
-
-        if (
-          !['administrator', 'creator'].includes(
-            members.find((e) => e.user.id === from.id)?.status,
-          )
-        ) {
-          return ctx.i18n.t(LocalePhrase.Common_NoAccess);
+      if (
+        !conversation?.invitedByUserSocialId ||
+        conversation.invitedByUserSocialId !== userSocial.id
+      ) {
+        try {
+          const members = await ctx.telegram.getChatAdministrators(chat.id);
+          if (
+            !['administrator', 'creator'].includes(
+              members.find((e) => e.user.id === from.id)?.status,
+            )
+          ) {
+            return ctx.i18n.t(LocalePhrase.Error_SelectGroup_OnlyAdminOrOwner);
+          }
+        } catch (err) {
+          if (err instanceof TelegramError) {
+            // if (error.code === 917) {
+            //     return ctx.i18n.t(LocalePhrase.Common_NoAccess);
+            // }
+            console.error(err);
+            // return ctx.i18n.t(LocalePhrase.Error_Bot_NotAdmin);
+            return ctx.i18n.t(LocalePhrase.Common_Error);
+          }
+          throw err;
         }
-      } catch (err) {
-        if (err instanceof TelegramError) {
-          // if (error.code === 917) {
-          //     return ctx.i18n.t(LocalePhrase.Common_NoAccess);
-          // }
-          console.error(err);
-          return ctx.i18n.t(LocalePhrase.Common_Error);
-        }
-        throw err;
       }
     }
 

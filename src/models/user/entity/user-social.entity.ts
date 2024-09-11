@@ -25,7 +25,15 @@ export class UserSocial {
   public social: SocialType;
 
   @Expose()
-  @Column({ type: 'bigint' })
+  @Column({
+    type: 'bigint',
+    transformer: [
+      {
+        to: (entityValue: bigint) => entityValue,
+        from: (databaseValue: string): bigint => BigInt(databaseValue),
+      },
+    ],
+  })
   public socialId: number;
 
   @Expose()

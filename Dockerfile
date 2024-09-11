@@ -9,9 +9,9 @@ RUN jq '{ dependencies, devDependencies, peerDependencies, resolutions, license,
 # Keep `postinstall` script
 
 ##
-# [container] deps
+# [container] Package deps
 ##
-FROM node:16-alpine AS deps
+FROM node:18-alpine AS deps
 
 WORKDIR /deps
 
@@ -24,9 +24,9 @@ RUN yarn install --pure-lockfile; \
     yarn cache clean
 
 ##
-# [container] Production
+# [container] Base
 ##
-FROM node:16-alpine AS base
+FROM node:18-alpine AS base
 
 WORKDIR /home/node/app
 

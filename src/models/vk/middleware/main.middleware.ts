@@ -227,20 +227,10 @@ export class MainMiddleware {
       );
       if (!userSocial) {
         if (ctx.is(['message'])) {
-          const [userInfo] = (await ctx.api.users.get({
+          const [userInfo] = await ctx.api.users.get({
             user_ids: [ctx.senderId.toString()],
             fields: ['domain', 'photo_200'],
-          })) as [
-            {
-              id: number;
-              domain: string;
-              first_name?: string;
-              last_name?: string;
-              photo_200?: string;
-              can_access_closed: boolean;
-              is_closed: boolean;
-            },
-          ];
+          });
 
           userSocial = await this.userService.createUserSocial(
             SocialType.Vkontakte,

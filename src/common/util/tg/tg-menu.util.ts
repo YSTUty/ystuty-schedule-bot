@@ -17,9 +17,23 @@ export const checkLocaleCondition =
 
     let pass: RegExpExecArray = null;
 
+    const wrapPhrase = (phrase: LocalePhrase) => {
+      try {
+        return ctx.i18n.t(phrase, templateData);
+      } catch (err) {
+        console.log('Fail compile phrase:', phrase, templateData);
+        console.error(err);
+        return null;
+      }
+    };
+
     phrases
-      .map((e) => [e, ctx.i18n.t(e, templateData)] as const)
+      .map((e) => [e, wrapPhrase(e)] as const)
       .some(([key, phrase]) => {
+        if (phrase === null) {
+          return false;
+        }
+
         // By keyboard button
         if (value === phrase) {
           pass = value.match(phrase) as RegExpExecArray;

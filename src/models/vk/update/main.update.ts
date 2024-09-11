@@ -195,7 +195,21 @@ export class MainUpdate {
   @Hears('/glist')
   // @UseGuards(new VkAdminGuard(true))
   async onGroupsList(@Ctx() ctx: IMessageContext) {
-    await ctx.send(`List: ${this.ystutyService.groupNames.join(', ')}`);
+    await ctx.send(
+      `List groups (50 max): ${this.ystutyService.groupNames
+        .slice(0, 50)
+        .join(', ')}`,
+    );
+  }
+
+  @Hears('/tlist')
+  // @UseGuards(new VkAdminGuard(true))
+  async onTeachersList(@Ctx() ctx: IMessageContext) {
+    await ctx.send(
+      `List teachers (50 max): ${this.ystutyService.teacherNames
+        .slice(0, 50)
+        .join(', ')}`,
+    );
   }
 
   @VkHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)

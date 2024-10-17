@@ -18,3 +18,5 @@ export * from './util/ystuty.util';
 
 export * from './constants';
 export * from './exception';
+
+export * from './fixs';

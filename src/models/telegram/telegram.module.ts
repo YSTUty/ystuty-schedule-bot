@@ -12,6 +12,7 @@ import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { UserMiddleware } from './middleware/user.middleware';
 
 import { MainUpdate } from './update/main.update';
+import { AdminUpdate } from './update/admin.update';
 import { ScheduleUpdate } from './update/schedule.update';
 import { AuthScene } from './scene/auth.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
@@ -20,6 +21,7 @@ const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
 const providers = [
   ...middlewares,
   // updates
+  AdminUpdate,
   MainUpdate,
   ScheduleUpdate,
   AuthScene,

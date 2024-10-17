@@ -73,6 +73,25 @@ export class MainUpdate {
     await ctx.tryAnswerCbQuery(text);
   }
 
+  @Action(/sendmsg:callback/)
+  async onCallbackFromAdminSendMsg(@Ctx() ctx: ICallbackQueryContext) {
+    await ctx.editMessageReplyMarkup(
+      this.keyboardFactory.getClear().reply_markup,
+    );
+    await ctx.tryAnswerCbQuery('✅');
+    await this.telegramService.notifyAdmin(
+      `<b>[User clicked]</b> chat: [${ctx.chat.id}]; from: [${
+        ctx.from.id
+      }];  (${ctx.from.first_name} ${ctx.from.last_name}); @${
+        ctx.from.username || '-'
+      };\nMSG:\n<code>${
+        'text' in ctx.callbackQuery.message
+          ? ctx.callbackQuery.message.text.slice(0, 500)
+          : JSON.stringify(ctx.callbackQuery.message)
+      }</code>`,
+    );
+  }
+
   @TgHearsLocale(LocalePhrase.Button_Cancel)
   @TgHearsLocale(LocalePhrase.RegExp_Start)
   @Start()

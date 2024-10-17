@@ -247,6 +247,31 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  public getActioner<T extends PaginationItemType>(
+    ctx: IContext,
+    items?: (T | T[])[],
+    actionPrefix = 'action:',
+  ) {
+    const buttonsItems: Hideable<InlineKeyboardButton>[][] = [];
+    if (items && items.length > 0) {
+      for (let subitems of items) {
+        if (!Array.isArray(subitems)) {
+          subitems = [subitems];
+        }
+        const rowBtns: Hideable<InlineKeyboardButton>[] = [];
+        for (let item of subitems) {
+          let title = typeof item === 'string' ? item : item.title;
+          let payload = typeof item === 'string' ? item : item.payload;
+          rowBtns.push(
+            Markup.button.callback(title, `${actionPrefix || ''}${payload}`),
+          );
+        }
+        buttonsItems.push(rowBtns);
+      }
+    }
+    return Markup.inlineKeyboard(buttonsItems);
+  }
+
   public getClear(inline?: true): Markup.Markup<InlineKeyboardMarkup>;
   public getClear(inline: false): Markup.Markup<ReplyKeyboardRemove>;
   public getClear(inline = true) {

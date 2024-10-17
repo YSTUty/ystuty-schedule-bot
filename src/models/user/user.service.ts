@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnModuleInit, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { IncomingMessage } from 'http';
 
 import * as xEnv from '@my-environment';
@@ -158,6 +158,15 @@ export class UserService implements OnModuleInit {
     );
 
     return userSocial;
+  }
+
+  public async findBySocialIds(social: SocialType, socialIds: number[]) {
+    const userSocials = await this.userSocialRepository.find({
+      where: { socialId: In(socialIds), social },
+      relations: ['user'],
+    });
+
+    return userSocials;
   }
 
   public async auth(

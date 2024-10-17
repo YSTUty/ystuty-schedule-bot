@@ -39,7 +39,7 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
               username: ctx.from.username,
               socialId: telegramId,
               displayname:
-                `${ctx.from.first_name} ${ctx.from.last_name}`
+                `${ctx.from.first_name} ${ctx.from.last_name || ''}`
                   .trim()
                   .slice(0, 64) || null,
               // avatarUrl: ctx.from.,

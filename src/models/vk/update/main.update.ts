@@ -11,7 +11,7 @@ import {
 import { VK, APIError } from 'vk-io';
 import { NextMiddleware } from 'middleware-io';
 
-import { VkAdminGuard, VkExceptionFilter, xs } from '@my-common';
+import { VkAdminGuard, VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 import { VkHearsLocale } from '@my-common/decorator/vk';
@@ -95,7 +95,7 @@ export class MainUpdate {
   @VkHearsLocale(LocalePhrase.Button_Profile)
   async onProfile(@Ctx() ctx: IMessageContext) {
     const { user = null } = ctx.state;
-    if (!user) {
+    if (!user /* || user.isRewoked */) {
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
       await ctx.scene.enter(AUTH_SCENE);
       return;
@@ -122,6 +122,27 @@ export class MainUpdate {
 
     const keyboard = this.keyboardFactory.getStart(ctx);
     await ctx.send('Done', { keyboard });
+  }
+
+  @Hears('/update_profile')
+  async onUpdateProfile(@Ctx() ctx: IMessageContext) {
+    const { user = null, userSocial } = ctx.state;
+    if (!user || user.isRewoked) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
+      await ctx.scene.enter(AUTH_SCENE);
+      return;
+    }
+
+    const res = await this.userService.updateUserData(userSocial);
+    if (!res) {
+      ctx.send('Error');
+      return;
+    }
+    if (typeof res === 'string') {
+      await ctx.send(`Fail: ${res}`);
+      return;
+    }
+    await ctx.send('Updated');
   }
 
   @Hears(['/auth', 'login', 'войти'])

@@ -30,7 +30,7 @@ export class AuthScene {
       return;
     }
 
-    if (ctx.state.user) {
+    if (ctx.state.user && !ctx.state.user.isRewoked) {
       await ctx.send('Already auth');
       await ctx.scene.leave({ canceled: true });
       return;

@@ -43,6 +43,10 @@ export class User {
 
   @Expose()
   @Column({ type: 'boolean', default: false })
+  public isRewoked: boolean;
+
+  @Expose()
+  @Column({ type: 'boolean', default: false })
   public isBanned: boolean;
 
   @Expose()

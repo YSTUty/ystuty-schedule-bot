@@ -53,7 +53,7 @@ export class AuthScene extends BaseScene {
       return;
     }
 
-    if (ctx.user) {
+    if (ctx.user && !ctx.user.isRewoked) {
       await ctx.replyWithHTML('Already auth');
       await ctx.scene.leave();
       return;
@@ -91,8 +91,8 @@ export class AuthScene extends BaseScene {
       result.status === 'auth'
         ? LocalePhrase.Page_SocialConnect_WaitConfirm
         : result.status === 'process'
-        ? LocalePhrase.Page_SocialConnect_AlreadySent
-        : LocalePhrase.Page_SocialConnect_Other;
+          ? LocalePhrase.Page_SocialConnect_AlreadySent
+          : LocalePhrase.Page_SocialConnect_Other;
 
     await ctx.replyWithHTML(ctx.i18n.t(message, { botName: result.botName }));
   }

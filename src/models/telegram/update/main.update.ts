@@ -12,9 +12,7 @@ import {
 import { TelegramError } from 'telegraf';
 import type { Update as TgUpdate } from 'telegraf/types';
 
-import * as xEnv from '@my-environment';
 import {
-  oAuth,
   patternGroupName,
   TelegrafExceptionFilter,
   TelegramAdminGuard,
@@ -137,7 +135,7 @@ export class MainUpdate {
   async onProfile(@Ctx() ctx: ICbQOrMsg) {
     const { user = null } = ctx;
     await ctx.tryAnswerCbQuery();
-    if (!user) {
+    if (!user /* || user.isRewoked */) {
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
       return ctx.scene.enter(AUTH_SCENE);
     }
@@ -165,58 +163,26 @@ export class MainUpdate {
 
   @Command('update_profile')
   async onUpdateProfile(@Ctx() ctx: ICbQOrMsg) {
-    const { user = null } = ctx;
+    const { user = null, userSocial } = ctx;
     await ctx.tryAnswerCbQuery();
-    if (!user) {
+    if (!user || user.isRewoked) {
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Auth_NeedAuth));
       return ctx.scene.enter(AUTH_SCENE);
     }
 
-    const oauthData = await new Promise<{
-      err: { statusCode: number; data?: any };
-      result?: string | Buffer;
-    }>((resolve) =>
-      oAuth.getProtectedResource(
-        xEnv.OAUTH_URL + '/check',
-        user.accessToken,
-        (err, result) => resolve({ err, result }),
-      ),
-    );
-
-    console.log('oauthData', oauthData);
-
-    if (oauthData.err?.statusCode === 403) {
-      return 'Wrong token';
+    const res = await this.userService.updateUserData(userSocial);
+    if (!res) {
+      ctx.replyWithHTML('Error');
+      return;
+    }
+    if (typeof res === 'string') {
+      await ctx.replyWithHTML(`<b>Fail:</b> ${res}`);
+      return;
     }
 
-    if (!oauthData.result) {
-      return 'No data';
-    }
-
-    let userData: {
-      auth: number;
-      userId: number;
-      user: {
-        id: number;
-        firstName: string;
-        lastName: string;
-        patronymic: string;
-        fullName: string;
-        initials: string;
-        avatarUrl: string;
-        birthday: string;
-        login: string;
-        groupName?: string;
-      };
-    };
-    try {
-      userData = JSON.parse(oauthData.result as string).auth_info;
-    } catch {
-      return false;
-    }
-
-    await ctx.replyWithHTML(`
-      <code>${JSON.stringify(userData, null, 2)}</code>
+    await ctx.replyWithHTML(xs`
+      Updated:
+      <code>${JSON.stringify(res, null, 2)}</code>
     `);
   }
 

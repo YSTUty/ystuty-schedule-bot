@@ -4,7 +4,7 @@ import { Not, Repository } from 'typeorm';
 import { IncomingMessage } from 'http';
 
 import * as xEnv from '@my-environment';
-import { LocalePhrase } from '@my-interfaces';
+import { IOAuthCheck_auth_info, LocalePhrase } from '@my-interfaces';
 import { ISessionState as VkISessionState } from '@my-interfaces/vk';
 import { oAuth } from '@my-common';
 import { SocialType } from '@my-common/constants';
@@ -13,6 +13,7 @@ import { i18n as i18nVk } from '@my-common/util/vk';
 
 import { RedisService } from '../redis/redis.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { SocialConnectService } from '../social-connect/social-connect.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { TelegramKeyboardFactory } from '../telegram/telegram-keyboard.factory';
 import * as telegramConstants from '../telegram/telegram.constants';
@@ -31,6 +32,7 @@ export class UserService implements OnModuleInit {
     @InjectRepository(UserSocial)
     private readonly userSocialRepository: Repository<UserSocial>,
 
+    private readonly socialConnectService: SocialConnectService,
     private readonly redisService: RedisService,
     private readonly metricsService: MetricsService,
     private readonly telegramService: TelegramService,
@@ -119,10 +121,17 @@ export class UserService implements OnModuleInit {
   }
 
   public async unlinkUser(userSocial: UserSocial) {
-    return await this.userSocialRepository.update(userSocial.id, {
+    await this.socialConnectService.unAuth(
+      userSocial.social,
+      userSocial.socialId,
+    );
+
+    await this.userSocialRepository.update(userSocial.id, {
       user: null,
       userId: null,
     });
+
+    // await this.userRepository.delete(userSocial.user.id);
   }
 
   public async createUserSocial(
@@ -167,9 +176,8 @@ export class UserService implements OnModuleInit {
         ? this.telegramService
         : this.vkService;
 
-    const [session, close] = await (socialType === SocialType.Telegram
-      ? this.telegramService
-      : this.vkService
+    const [session, close] = await (
+      socialType === SocialType.Telegram ? this.telegramService : this.vkService
     ).emulateSession(socialId);
 
     if (auth) {
@@ -245,7 +253,7 @@ export class UserService implements OnModuleInit {
   ) {
     const userSocial = await this.findBySocialId(socialType, socialId);
 
-    if (!userSocial || userSocial.userId) {
+    if (!userSocial /* || userSocial.userId */) {
       console.log('Fail: userSocial');
       return false;
     }
@@ -293,22 +301,7 @@ export class UserService implements OnModuleInit {
       return null;
     }
 
-    let userData: {
-      auth: number;
-      userId: number;
-      user: {
-        id: number;
-        firstName: string;
-        lastName: string;
-        patronymic: string;
-        fullName: string;
-        initials: string;
-        avatarUrl: string;
-        birthday: string;
-        login: string;
-        groupName?: string;
-      };
-    };
+    let userData: IOAuthCheck_auth_info;
     try {
       userData = JSON.parse(oauthData.result as string).auth_info;
     } catch {
@@ -316,6 +309,10 @@ export class UserService implements OnModuleInit {
     }
 
     const user = await this.save({
+      // Create or update
+      id: userSocial.userId || null,
+      isRewoked: false,
+
       externalId: userData.user.id,
       fullname: userData.user.fullName,
       login: userData.user.login,
@@ -330,5 +327,70 @@ export class UserService implements OnModuleInit {
     // }
     await this.saveUserSocial(userSocial);
     return userSocial;
+  }
+
+  async updateUserData(userSocial: UserSocial, update = true) {
+    const { user } = userSocial;
+
+    if (!user) {
+      return 'No user';
+    }
+
+    const oauthData = await new Promise<{
+      err: { statusCode: number; data?: any };
+      result?: string | Buffer;
+    }>((resolve) =>
+      oAuth.getProtectedResource(
+        xEnv.OAUTH_URL + '/check',
+        user.accessToken,
+        (err, result) => resolve({ err, result }),
+      ),
+    );
+
+    console.log(
+      `[update_profile] oauthData [${userSocial.social}:${userSocial.socialId}]`,
+      oauthData,
+    );
+
+    if (
+      update &&
+      oauthData.err?.statusCode &&
+      [403, 401].includes(oauthData.err?.statusCode)
+    ) {
+      user.isRewoked = true;
+      await this.save(user);
+    }
+
+    if (oauthData.err?.statusCode === 403) {
+      return 'Wrong token';
+    }
+
+    if (oauthData.err?.statusCode === 401) {
+      return 'Token expired';
+    }
+
+    if (!oauthData.result) {
+      return 'No data';
+    }
+
+    let userData: IOAuthCheck_auth_info;
+    try {
+      userData = JSON.parse(oauthData.result as string).auth_info;
+    } catch {
+      return false;
+    }
+
+    if (update) {
+      user.isRewoked = false;
+
+      user.externalId = userData.user.id;
+      user.fullname = userData.user.fullName;
+      user.login = userData.user.login;
+      user.groupName = userData.user.groupName;
+
+      await this.save(user);
+    }
+
+    return userData;
   }
 }

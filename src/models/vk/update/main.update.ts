@@ -17,8 +17,9 @@ import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 import { VkHearsLocale } from '@my-common/decorator/vk';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
-
+import { UserService } from '../../user/user.service';
 import { VkService } from '../vk.service';
+
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -32,6 +33,7 @@ export class MainUpdate {
     private readonly vk: VK,
     private readonly vkService: VkService,
     private readonly ystutyService: YSTUtyService,
+    private readonly userService: UserService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
 
@@ -105,6 +107,21 @@ export class MainUpdate {
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Profile_Info, { user }), {
       keyboard,
     });
+  }
+
+  @Hears('/unauth')
+  async onUnAuth(@Ctx() ctx: IMessageContext) {
+    const { user = null, userSocial } = ctx.state;
+    if (!user /*  || user.isRewoked */) {
+      await ctx.send('No account');
+      return;
+    }
+
+    ctx.state.noUpdateUserSocial = true;
+    await this.userService.unlinkUser(userSocial);
+
+    const keyboard = this.keyboardFactory.getStart(ctx);
+    await ctx.send('Done', { keyboard });
   }
 
   @Hears(['/auth', 'login', 'войти'])

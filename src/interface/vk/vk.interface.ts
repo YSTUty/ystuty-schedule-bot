@@ -30,6 +30,7 @@ type ContextState = {
   appeal: boolean;
   isLocalePhrase?: boolean;
 
+  noUpdateUserSocial?: boolean;
   userSocial: UserSocial;
   user?: User;
   conversation?: Conversation;

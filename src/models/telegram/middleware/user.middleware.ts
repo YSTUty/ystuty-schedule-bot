@@ -107,8 +107,8 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
       try {
         await next();
       } finally {
-        if (ctx.userSocial) {
-          // * Фикс вызова перезаписи при пстом юезре
+        if (ctx.userSocial && !ctx.noUpdateUserSocial) {
+          // * Фикс вызова перезаписи при пустом юезре
           if (ctx.userSocial.user === null) {
             delete ctx.userSocial.user;
           }

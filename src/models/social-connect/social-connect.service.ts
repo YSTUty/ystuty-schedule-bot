@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 import axios from 'axios';
@@ -19,6 +19,7 @@ export class SocialConnectService {
 
   constructor(
     private readonly httpService: HttpService,
+    @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
   ) {}
 
@@ -93,6 +94,47 @@ export class SocialConnectService {
     }
 
     return { error: 'see log' };
+  }
+
+  public async unAuth(socialType: SocialType, socialId: number) {
+    const check = this.makeRate(socialType, socialId);
+    if (!check) {
+      return { error: 'rate limit' };
+    }
+
+    try {
+      // * Создане запроса на разрешение авторизаци в этом сервисе
+      const { data } = await rxjs.firstValueFrom(
+        this.httpService.post<boolean>(`connect/unauth/${socialType}`, {
+          social_id: socialId,
+          client_id: xEnv.OAUTH_CLIENT_ID,
+          client_secret: xEnv.OAUTH_CLIENT_SECRET,
+          // silent: true,
+        }),
+      );
+      console.log('[unAuth]', { socialId, socialType, data });
+      return data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data) {
+          const data = err.response.data as {
+            error: { code: number; message: string; error: string };
+          };
+          this.logger.debug('[unAuth] error', data);
+          if ('error' in data && data.error.code === 404) {
+            return { error: 'client not found' };
+          }
+        }
+        this.logger.error('[unAuth] Axios error', {
+          code: err.code,
+          message: err.message,
+        });
+      } else {
+        this.logger.error(err);
+      }
+    }
+
+    return false;
   }
 
   @Cron(CronExpression.EVERY_10_SECONDS)

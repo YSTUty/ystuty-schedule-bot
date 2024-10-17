@@ -118,6 +118,13 @@ export class UserService implements OnModuleInit {
     return await this.userSocialRepository.save(userSocial);
   }
 
+  public async unlinkUser(userSocial: UserSocial) {
+    return await this.userSocialRepository.update(userSocial.id, {
+      user: null,
+      userId: null,
+    });
+  }
+
   public async createUserSocial(
     provider: SocialType,
     profile: Partial<UserSocial>,

@@ -31,8 +31,9 @@ import {
 } from '@my-interfaces/telegram';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
-
+import { UserService } from '../../user/user.service';
 import { TelegramService } from '../telegram.service';
+
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
 
@@ -44,6 +45,7 @@ export class MainUpdate {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
     private readonly ystutyService: YSTUtyService,
+    private readonly userService: UserService,
     private readonly telegramService: TelegramService,
   ) {}
 
@@ -143,6 +145,22 @@ export class MainUpdate {
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Profile_Info, { user }),
     );
+  }
+
+  @Command('unauth')
+  async onUnAuth(@Ctx() ctx: ICbQOrMsg) {
+    const { user = null } = ctx;
+    await ctx.tryAnswerCbQuery();
+    if (!user /*  || user.isRewoked */) {
+      await ctx.replyWithHTML('No account');
+      return;
+    }
+
+    ctx.noUpdateUserSocial = true;
+    await this.userService.unlinkUser(ctx.userSocial);
+
+    const keyboard = this.keyboardFactory.getStart(ctx);
+    await ctx.replyWithHTML('Done', keyboard);
   }
 
   @Command('update_profile')

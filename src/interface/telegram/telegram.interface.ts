@@ -48,6 +48,7 @@ type CombinedContext = {
 
   match?: RegExpExecArray;
 
+  noUpdateUserSocial?: boolean;
   userSocial: UserSocial;
   user?: User;
   conversation?: Conversation;

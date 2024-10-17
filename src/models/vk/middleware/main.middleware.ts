@@ -300,8 +300,8 @@ export class MainMiddleware {
       try {
         await next();
       } finally {
-        if (ctx.state.userSocial) {
-          // * Фикс вызова перезаписи при пстом юезре
+        if (ctx.state.userSocial && !ctx.state.noUpdateUserSocial) {
+          // * Фикс вызова перезаписи при пустом юезре
           if (ctx.state.userSocial.user === null) {
             delete ctx.state.userSocial.user;
           }

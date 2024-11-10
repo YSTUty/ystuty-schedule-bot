@@ -70,6 +70,9 @@ export class ScheduleUpdate {
         targetId: groupName,
         targetType: 'group',
       });
+      if (message === false) {
+        message = ctx.i18n.t(LocalePhrase.Common_Error);
+      }
     } else {
       [days, message] = await this.ystutyService.findNext({
         groupName,

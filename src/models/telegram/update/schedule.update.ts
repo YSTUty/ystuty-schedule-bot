@@ -69,12 +69,18 @@ export class ScheduleUpdate {
       return;
     }
 
-    let messageDay =
-      (await this.ystutyService.getFormatedSchedule({
-        targetId: groupName,
-        targetType: 'group',
-        withTags: true,
-      })) || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+    let messageDay = await this.ystutyService.getFormatedSchedule({
+      targetId: groupName,
+      targetType: 'group',
+      withTags: true,
+    });
+    if (!messageDay) {
+      if (messageDay === false) {
+        messageDay = `${ctx.i18n.t(LocalePhrase.Common_Error)}\n`;
+      } else {
+        messageDay = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+      }
+    }
 
     let messageTomorrow =
       (
@@ -266,6 +272,9 @@ export class ScheduleUpdate {
         targetType,
         withTags: true,
       });
+      if (message === false) {
+        message = `${ctx.i18n.t(LocalePhrase.Common_Error)}\n`;
+      }
     } else {
       [days, message] = await this.ystutyService.findNext({
         targetId,

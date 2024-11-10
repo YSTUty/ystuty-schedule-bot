@@ -22,6 +22,11 @@ export enum LocalePhrase {
   Button_Schedule_ForWeek = 'button.schedule.for_week',
   Button_Schedule_ForNextWeek = 'button.schedule.for_next_week',
 
+  Button_Groups_ListInstAndGroups = 'button.groups.list_inst_and_groups',
+  Button_Groups_ListGroups = 'button.groups.list_groups',
+  Button_Groups_ListInstitutes = 'button.groups.list_institutes',
+  Button_Groups_ChangeInstitute = 'button.groups.change_institute',
+
   // RegExps
   RegExp_Start = 'regexp.start',
   RegExp_Help = 'regexp.help',

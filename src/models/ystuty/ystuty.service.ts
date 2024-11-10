@@ -4,8 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
 import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
-import { getLessonTypeStrArr, matchGroupName } from '@my-common';
-import * as xEnv from '@my-environment';
+import { getLessonTypeStrArr, matchGroupName, md5 } from '@my-common';
 
 import { RedisService } from '../redis/redis.service';
 import { MetricsService } from '../metrics/metrics.service';
@@ -55,13 +54,13 @@ export class YSTUtyService implements OnModuleInit {
       );
 
       if (!Array.isArray(data.items)) {
-        this.logger.warn('YSTU groups&institutes NOT loaded');
+        this.logger.warn('YSTU institutes&groups NOT loaded');
         return null;
       }
 
       this.allGroupsList = data.items.filter(Boolean);
       this.logger.log(
-        `YSTU groups&institutes loaded: (${
+        `YSTU institutes&groups loaded: (${
           data.items.length
         }/${data.items.reduce((a, b) => a + b.groups.length, 0)})`,
       );
@@ -107,7 +106,9 @@ export class YSTUtyService implements OnModuleInit {
         .toLowerCase()
         .replace(/[\)\(\s\-]/g, '');
 
-    return groupName && this.groupNames.find((e) => parse(e) === parse(groupName));
+    return (
+      groupName && this.groupNames.find((e) => parse(e) === parse(groupName))
+    );
   }
 
   public parseGroupName(str: string) {
@@ -135,11 +136,35 @@ export class YSTUtyService implements OnModuleInit {
     return this.allGroupsList.flatMap((e) => e.groups);
   }
 
-  public async groupsList(page = 1, count = 20) {
-    const { groupNames } = this;
+  public instituteNameByMD5(nameMD5: string) {
+    const name = this.allGroupsList.find((e) => md5(e.name) === nameMD5)?.name;
+    return name;
+  }
+
+  public groupsList(page = 1, count = 20, instituteNameMD5?: string) {
+    // const { groupNames } = this;
+    const groupNames = this.allGroupsList
+      .filter((e) => !instituteNameMD5 || md5(e.name) === instituteNameMD5)
+      .flatMap((e) => e.groups);
+
     const totalCount = groupNames.length;
     const totalPageCount = page * count;
     const items = groupNames.slice(totalPageCount - count, totalPageCount);
+
+    return {
+      items,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / count),
+    };
+  }
+
+  public groupsInstitutesList(page = 1, count = 20) {
+    const { allGroupsList } = this;
+    const totalCount = allGroupsList.length;
+    const totalPageCount = page * count;
+    const items = allGroupsList
+      .slice(totalPageCount - count, totalPageCount)
+      .map((e) => e.name);
 
     return {
       items,
@@ -189,14 +214,14 @@ export class YSTUtyService implements OnModuleInit {
       'targetId' in targetRest
         ? targetRest.targetId
         : 'groupName' in targetRest
-        ? targetRest.groupName
-        : targetRest.teacherId;
+          ? targetRest.groupName
+          : targetRest.teacherId;
     const targetType =
       'targetType' in targetRest
         ? targetRest.targetType
         : 'groupName' in targetRest
-        ? 'group'
-        : 'teacher';
+          ? 'group'
+          : 'teacher';
 
     this.metricsService.scheduleCounter.inc({
       [targetType === 'group' ? 'groupName' : 'teacherId']: targetId,
@@ -379,18 +404,18 @@ export class YSTUtyService implements OnModuleInit {
         const auditory = !auditoryName
           ? ''
           : withTags
-          ? ` {<code>${auditoryName}</code>}`
-          : ` {${auditoryName}}`;
+            ? ` {<code>${auditoryName}</code>}`
+            : ` {${auditoryName}}`;
         const typeStr = !typeName
           ? ''
           : withTags
-          ? ` <b>[${typeName}]</b>`
-          : ` [${typeName}]`;
+            ? ` <b>[${typeName}]</b>`
+            : ` [${typeName}]`;
         const distantStr = !lesson.isDistant
           ? ''
           : withTags
-          ? ' <b>(ONLINE)</b>'
-          : ' (ONLINE)';
+            ? ' <b>(ONLINE)</b>'
+            : ' (ONLINE)';
 
         let targetStr = (
           targetType === 'group'
@@ -403,8 +428,8 @@ export class YSTUtyService implements OnModuleInit {
         let targetsStrFmt = !targetStr
           ? ''
           : withTags
-          ? ` (<i>${targetStr}</i>)`
-          : ` (${targetStr})`;
+            ? ` (<i>${targetStr}</i>)`
+            : ` (${targetStr})`;
 
         if (
           lastLesson?.number == lesson.number &&

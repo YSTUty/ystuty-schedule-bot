@@ -9,10 +9,11 @@ import {
   Hears,
   Next,
 } from '@xtcry/nestjs-telegraf';
-import { TelegramError } from 'telegraf';
+import { TelegramError, Markup } from 'telegraf';
 import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
+  md5,
   patternGroupName,
   TelegrafExceptionFilter,
   TelegramAdminGuard,
@@ -305,9 +306,11 @@ export class MainUpdate {
     this.logger.debug('OnChosenInlineResult', ctx.chosenInlineResult);
   }
 
-  @Command('glist')
-  @Action(/pager:glist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
-  async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
+  @TgHearsLocale(LocalePhrase.Button_Groups_ListInstAndGroups)
+  @Command('groups')
+  @Command('institutes')
+  @Action(/pager:inst-list(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i)
+  async onInstitutesList(@Ctx() ctx: ICbQOrMsg) {
     let page: number = null;
     let count: number = null;
 
@@ -324,20 +327,91 @@ export class MainUpdate {
     count = count || 26;
 
     const { items, currentPage, totalPages } =
-      await this.ystutyService.groupsList(page, count);
+      this.ystutyService.groupsInstitutesList(page, count);
 
     const keyboard = this.keyboardFactory.getPagination(
-      `glist-${count}`,
+      `inst-list-${count}`,
       currentPage,
       totalPages,
-      items,
-      'selectGroup:',
+      items.map((e) => ({
+        title: e,
+        payload: md5(e),
+      })),
+      'pager:glist:',
       [],
       true,
     );
 
     const content = xs`
-        <b>Список групп</b>
+        <b>Список институтов</b>
+        <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+    `;
+
+    if (ctx.callbackQuery) {
+      try {
+        await ctx.editMessageText(content, {
+          ...keyboard,
+          parse_mode: 'HTML',
+        });
+      } catch {}
+      await ctx.tryAnswerCbQuery();
+    } else {
+      await ctx.replyWithHTML(content, keyboard);
+    }
+  }
+
+  @Command('glist')
+  @Action(
+    /pager:glist(:(?<instituteNameMD5>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
+  )
+  async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
+    let page: number = null;
+    let count: number = null;
+    let instituteNameMD5: string = null;
+
+    if (ctx.updateType === 'callback_query') {
+      if (ctx.match?.groups) {
+        instituteNameMD5 = ctx.match.groups.instituteNameMD5;
+        page = Number(ctx.match.groups.page);
+        count = Number(ctx.match.groups.count);
+      }
+    } else if ('text' in ctx.message && !ctx.state.isLocalePhrase) {
+      [, page, count] = ctx.message.text.split(' ').map(Number);
+    }
+
+    page = page || 1;
+    count = count || 26;
+
+    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
+      page,
+      count,
+      instituteNameMD5,
+    );
+
+    const keyboard = this.keyboardFactory.getPagination(
+      `glist${instituteNameMD5 ? `:${instituteNameMD5}` : ''}-${count}`,
+      currentPage,
+      totalPages,
+      items,
+      'selectGroup:',
+      [
+        ...(instituteNameMD5
+          ? [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
+                'pager:inst-list',
+              ),
+            ]
+          : []),
+      ],
+      true,
+    );
+
+    const instituteName = instituteNameMD5
+      ? this.ystutyService.instituteNameByMD5(instituteNameMD5)
+      : null;
+    const content = xs`
+        <b>Список групп${instituteName ? ` <i>(${instituteName})</i>` : ''}</b>
         <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
     `;
 

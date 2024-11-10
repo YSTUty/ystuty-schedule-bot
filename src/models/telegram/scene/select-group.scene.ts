@@ -1,4 +1,6 @@
 import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
+import { Markup } from 'telegraf';
+
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IStepContext } from '@my-interfaces/telegram';
 
@@ -7,12 +9,15 @@ import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
 import { BaseScene } from './base.scene';
+import { MainUpdate } from '../update/main.update';
 
 @Wizard(SELECT_GROUP_SCENE)
 export class SelectGroupScene extends BaseScene {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
-    private readonly ystutyService: YSTUtyService, // private readonly userService: UserService,
+    private readonly ystutyService: YSTUtyService,
+    // private readonly userService: UserService,
+    private readonly mainUpdate: MainUpdate,
   ) {
     super();
   }
@@ -42,6 +47,22 @@ export class SelectGroupScene extends BaseScene {
     //     return;
     // }
 
+    // Bad feature for skip button actions
+    if (
+      (ctx?.message &&
+        'text' in ctx.message &&
+        ctx.message.text ===
+          ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups)) ||
+      (ctx?.callbackQuery &&
+        'data' in ctx.callbackQuery &&
+        ctx.callbackQuery.data === 'pager:inst-list')
+    ) {
+      await ctx.scene.leave();
+      // next();
+      this.mainUpdate.onInstitutesList(ctx);
+      return;
+    }
+
     const isChat = ctx.chat.type !== 'private';
 
     const firstTime = state.firstTime !== false;
@@ -61,13 +82,31 @@ export class SelectGroupScene extends BaseScene {
         },
       );
       if (ctx.callbackQuery) {
-        const keyboard = this.keyboardFactory.getCancelInline(ctx);
+        // const keyboard = this.keyboardFactory.getCancelInline(ctx);
+        const keyboard = Markup.inlineKeyboard([
+          [
+            Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
+              'pager:inst-list',
+            ),
+          ],
+          [
+            Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_Cancel),
+              LocalePhrase.Button_Cancel,
+            ),
+          ],
+        ]);
         await ctx.editMessageText(content, {
           ...keyboard,
           parse_mode: 'HTML',
         });
       } else {
-        const keyboard = this.keyboardFactory.getCancel(ctx);
+        // const keyboard = this.keyboardFactory.getCancel(ctx);
+        const keyboard = Markup.keyboard([
+          [ctx.i18n.t(LocalePhrase.Button_Cancel)],
+          [ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups)],
+        ]).resize();
         await ctx.replyWithHTML(content, keyboard);
       }
       return;
@@ -116,7 +155,11 @@ export class SelectGroupScene extends BaseScene {
       return;
     }
 
-    const keyboard = this.keyboardFactory.getCancel(ctx);
+    // const keyboard = this.keyboardFactory.getCancel(ctx);
+    const keyboard = Markup.keyboard([
+      [ctx.i18n.t(LocalePhrase.Button_Cancel)],
+      [ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups)],
+    ]).resize();
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
       keyboard,

@@ -15,7 +15,15 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
   public middleware() {
     return async (ctx: IContext, next: (...args: any[]) => Promise<any>) => {
-      if (ctx.from.is_bot) return;
+      // TODO: remove after test
+      if (!ctx.from) {
+        console.log(
+          'Empty ctx.from from ctx',
+          { updateType: ctx.updateType },
+          ctx.update,
+        );
+      }
+      if (ctx.from?.is_bot) return;
 
       ctx.tryAnswerCbQuery = (...args) =>
         ctx.updateType === 'callback_query' && ctx.answerCbQuery?.(...args);

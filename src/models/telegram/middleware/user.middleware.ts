@@ -68,10 +68,7 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
         return;
       }
 
-      if (
-        ctx.chat?.type &&
-        (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')
-      ) {
+      if (ctx.chat?.type && ctx.chat.type !== 'private') {
         try {
           let conversation = await this.socialService.findConversationById(
             SocialType.Telegram,

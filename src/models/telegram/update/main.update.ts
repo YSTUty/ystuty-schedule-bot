@@ -240,19 +240,34 @@ export class MainUpdate {
   async onMyChatMember(@Ctx() ctx: IContext<{}, TgUpdate.MyChatMemberUpdate>) {
     const {
       chat,
-      new_chat_member: { status },
+      new_chat_member: { status, user },
     } = ctx.myChatMember;
-    if (chat.type === 'private') return;
+
+    // * Skip check other user|bot
+    if (user.id !== ctx.botInfo.id) {
+      return;
+    }
+
+    if (chat.type === 'private') {
+      // User blocked/unblocked this bot
+      ctx.userSocial.isBlockedBot =
+        status === 'kicked' /* || status === 'left' */;
+      return;
+    }
 
     const { title, type } = chat;
     this.logger.log(`New chat bot status: "${status}" in "${title}" ${type}`);
 
-    if (ctx.conversation) {
-      ctx.conversation.invitedByUserSocialId = ctx.userSocial.id;
-      ctx.conversation.chatStatus = status;
-      ctx.conversation.title = title;
-      ctx.conversation.chatType = type;
+    if (!ctx.conversation) {
+      this.logger.error(`Empty conversation in ctx`);
+      return;
     }
+
+    ctx.conversation.invitedByUserSocialId = ctx.userSocial.id;
+    ctx.conversation.chatStatus = status;
+    ctx.conversation.title = title;
+    ctx.conversation.chatType = type;
+    ctx.conversation.isLeaved = status === 'kicked' || status === 'left';
 
     if (
       status === 'creator' ||
@@ -260,23 +275,27 @@ export class MainUpdate {
       status === 'member' ||
       status === 'restricted'
     ) {
-      const keyboard = this.keyboardFactory.getStart(ctx);
-      await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
-      await this.telegramService.parseChatTitle(ctx, title);
+      if (chat.type !== 'channel') {
+        const keyboard = this.keyboardFactory.getStart(ctx);
+        await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
+      }
 
-      if (!ctx.sessionConversation.selectedGroupName) {
+      await this.telegramService.parseChatTitle(
+        ctx,
+        title,
+        chat.type !== 'channel',
+      );
+
+      if (
+        chat.type !== 'channel' &&
+        !ctx.sessionConversation.selectedGroupName &&
+        !ctx.conversation.groupName
+      ) {
         const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
         await ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_InitBot),
           keyboard,
         );
-      }
-    }
-    // ! Проверить логику - юзер заблокирвоа бта или вышел из общего чата с этим ботом?
-    else if (status === 'kicked' || status === 'left') {
-      ctx.userSocial.isBlockedBot = true;
-      if (ctx.conversation) {
-        ctx.conversation.isLeaved = true;
       }
     }
   }

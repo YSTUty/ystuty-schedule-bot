@@ -15,15 +15,36 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
   public middleware() {
     return async (ctx: IContext, next: (...args: any[]) => Promise<any>) => {
-      // TODO: remove after test
-      if (!ctx.from) {
-        console.log(
-          'Empty ctx.from from ctx',
-          { updateType: ctx.updateType },
-          ctx.update,
-        );
+      // console.log('[ctx update]', { updateType: ctx.updateType }, ctx.update);
+
+      if (
+        !ctx.from ||
+        (ctx.from.is_bot &&
+          // Allow this bot for get updates of invite to channel
+          ctx.from.username.toLowerCase() !== 'Channel_Bot'.toLowerCase())
+      ) {
+        if (
+          ctx.updateType === 'message_reaction' ||
+          ctx.updateType === 'message_reaction_count'
+        ) {
+          console.log('[MessageReactions]', {
+            chat: JSON.stringify(ctx.chat),
+            reactions: (
+              ctx.update['message_reaction'] ||
+              ctx.update['message_reaction_count']
+            )?.reactions,
+          });
+        }
+        // TODO: remove after test
+        else if (!ctx.from) {
+          console.log(
+            'Empty ctx.from from ctx',
+            { updateType: ctx.updateType },
+            ctx.update,
+          );
+        }
+        return;
       }
-      if (ctx.from?.is_bot) return;
 
       ctx.tryAnswerCbQuery = (...args) =>
         ctx.updateType === 'callback_query' && ctx.answerCbQuery?.(...args);

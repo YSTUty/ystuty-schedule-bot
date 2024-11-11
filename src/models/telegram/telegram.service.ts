@@ -91,7 +91,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  public async parseChatTitle(ctx: IContext, str: string) {
+  public async parseChatTitle(ctx: IContext, str: string, allowMessage = true) {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
       ctx.sessionConversation.selectedGroupName = groupName;
@@ -99,17 +99,19 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
         ctx.conversation.groupName = groupName;
       }
       this.logger.log(`Group name automation selected: "${groupName}"`);
-      await ctx.replyWithHTML(
-        `Учебная группа выбрана автоматически: <code>${groupName}</code>`,
-        {
-          ...(ctx.message?.message_id && {
-            reply_parameters: {
-              message_id: ctx.message.message_id,
-              allow_sending_without_reply: true,
-            },
-          }),
-        },
-      );
+      if (allowMessage) {
+        await ctx.replyWithHTML(
+          `Учебная группа выбрана автоматически: <code>${groupName}</code>`,
+          {
+            ...(ctx.message?.message_id && {
+              reply_parameters: {
+                message_id: ctx.message.message_id,
+                allow_sending_without_reply: true,
+              },
+            }),
+          },
+        );
+      }
       return true;
     } else {
       this.logger.log(`Group name not found from "${str}"`);

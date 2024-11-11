@@ -134,6 +134,15 @@ export class MainMiddleware {
       if (ctx.isOutbox) {
         return;
       }
+
+      if (!ctx.peerId) {
+        console.log(
+          '[VK] Empty ctx.peerId from ctx',
+          { type: ctx.type },
+          ctx.toJSON(),
+        );
+      }
+
       if (ctx.is(['message'])) {
         // ...
       } else {

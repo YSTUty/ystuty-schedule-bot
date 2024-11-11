@@ -157,10 +157,14 @@ export class SocialConnectService {
             refreshToken: string;
             status: 'confirm' | 'cancel';
           }[];
-        }>(`connect/check`, {
-          client_id: xEnv.OAUTH_CLIENT_ID,
-          client_secret: xEnv.OAUTH_CLIENT_SECRET,
-        }),
+        }>(
+          `connect/check`,
+          {
+            client_id: xEnv.OAUTH_CLIENT_ID,
+            client_secret: xEnv.OAUTH_CLIENT_SECRET,
+          },
+          { timeout: 15e3 },
+        ),
       );
 
       if (!data.result || data.result.length === 0) {

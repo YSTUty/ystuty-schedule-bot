@@ -3,18 +3,18 @@
 <p align="center">
   <img src="https://img.shields.io/github/package-json/v/YSTUty/ystuty-schedule-bot?style=flat-square" alt="GitHub package.json version"/>
   <img src="https://img.shields.io/github/last-commit/YSTUty/ystuty-schedule-bot?style=flat-square" alt="GitHub last commit"/>
-  <!-- <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=telegram&label=Used by&suffix= user&query=ip&url=http://ip.jsontest.com" alt="GitHub last commit"/> -->
-  <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=Доступно&suffix= групп&query=$.groups&url=https://parser.ystuty.ru/api/ystu/schedule/count?extramural=true" alt="Number of available groups"/>
-  <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=Доступно&suffix= преподавателей&query=$.teachers&url=https://parser.ystuty.ru/api/ystu/schedule/count" alt="Number of available teachers"/>
   <br/>
   <a href="https://vk.com/ss_ystu"><img src="https://img.shields.io/badge/Bot-Use now-9cf?style=flat-square&logo=vk" alt="vk.com/ss_ystu"/></a>
   <a href="https://t.me/ss_ystu_bot"><img src="https://img.shields.io/badge/Bot-Use now-229ED9?style=flat-square&logo=telegram" alt="t.me/ss_ystu_bot"/></a>
+  <br/>
+  <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=%D0%94%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%BD%D0%BE%20%D0%B3%D1%80%D1%83%D0%BF%D0%BF&suffix=%20%F0%9F%8E%93&query=$.groups&url=https://gg-api.ystuty.ru/s/schedule/v1/schedule/count" alt="Number of available groups"/>
+  <img src="https://img.shields.io/badge/dynamic/json?color=ced&style=flat-square&logo=GraphQL&label=%D0%94%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%BD%D0%BE%20%D0%BF%D1%80%D0%B5%D0%BF%D0%BE%D0%B4%D0%B0%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B5%D0%B9&suffix=%20%F0%9F%91%A8%E2%80%8D%F0%9F%8F%AB&query=$.teachers&url=https://gg-api.ystuty.ru/s/schedule/v1/schedule/count" alt="Number of available teachers"/>
+  <br/>
   <a href="https://view.ystuty.ru" target="_blank"><img src="https://img.shields.io/badge/Viwe%20schedule-YSTUty-9cf?style=flat-square&logo=Internet%20Explorer" alt="view.ystuty.ru"/></a>
 </p>
 
 # [YSTUty] Schedule bot
-> Решение в виде бота для мессенджера Telegram и VK, использующее данные из сервиса [YSTUty-Parser](https://github.com/YSTUty/ystuty-parser)
-
+> Решение в виде бота для мессенджера Telegram и VK, использующее данные из сервиса [[YSTUty.Service] Schedule API](https://github.com/YSTUty/ystuty-service-schedule)
 
 <hr/>
 

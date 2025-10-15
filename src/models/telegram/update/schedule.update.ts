@@ -414,7 +414,7 @@ export class ScheduleUpdate {
       }
 
       message = `Расписание на ${
-        isNextWeek ? 'следющую ' : ''
+        isNextWeek ? 'следующую ' : ''
       }неделю:\n${message}`;
     } else {
       message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;

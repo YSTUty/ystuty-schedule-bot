@@ -38,7 +38,7 @@ type ContextState = {
   foundGroupName?: string;
   rejectRefGroupName?: boolean;
 
-  [key: string]: any;
+  // [key: string]: any;
 };
 
 type CombinedContext = {

@@ -46,8 +46,14 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         return;
       }
 
-      ctx.tryAnswerCbQuery = (...args) =>
-        ctx.updateType === 'callback_query' && ctx.answerCbQuery?.(...args);
+      if (ctx.updateType === 'channel_post' || ctx.from!.is_bot) {
+        return;
+      }
+
+      ctx.tryAnswerCbQuery = async (...args) =>
+        (ctx.updateType === 'callback_query' &&
+          (await ctx.answerCbQuery?.(...args))) ||
+        null;
 
       this.checkInGroupAppeal(ctx);
 

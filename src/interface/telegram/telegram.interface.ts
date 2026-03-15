@@ -7,13 +7,22 @@ import type {
   WizardSessionData,
 } from 'telegraf/typings/scenes';
 import type * as tt from 'telegraf/typings/telegram-types';
+import type ApiClient from 'telegraf/typings/core/network/client';
 import { Deunionize } from 'telegraf/typings/core/helpers/deunionize';
+import type Telegram from 'telegraf/typings/telegram';
 import { I18nContext } from '@esindger/telegraf-i18n';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 
 import { UserSocial } from '../../models/user/entity/user-social.entity';
 import { User } from '../../models/user/entity/user.entity';
 import { Conversation } from '../../models/social/entity/conversation.entity';
+
+export type NextFn = (...args: any[]) => Promise<any>;
+export type AnyObj = Record<string, unknown>;
+export type Tail<T> = T extends [unknown, ...infer U] ? U : never;
+type Shorthand<FName extends Exclude<keyof Telegram, keyof ApiClient>> = Tail<
+  Parameters<Telegram[FName]>
+>;
 
 interface ISessionState {
   __language_code?: string;
@@ -39,7 +48,7 @@ type WizardSession = {
 type ContextState = {
   appeal: boolean;
   isLocalePhrase?: boolean;
-  [key: string]: any;
+  // [key: string]: any;
 };
 
 type CombinedContext = {
@@ -63,7 +72,9 @@ type CombinedContext = {
   i18n: I18nContext<
     Record<LocalePhrase | TelegramLocalePhrase, Record<string, unknown> | never>
   >;
-  tryAnswerCbQuery: Context['answerCbQuery'];
+  tryAnswerCbQuery: (
+    ...args: Shorthand<'answerCbQuery'>
+  ) => Promise<true | null>;
 };
 
 export type IContext<

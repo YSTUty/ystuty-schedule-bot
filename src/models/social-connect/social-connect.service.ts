@@ -54,16 +54,9 @@ export class SocialConnectService {
       const { data } = await rxjs.firstValueFrom(
         this.httpService.post<
           (
-            | {
-                status: 'auth';
-              }
-            | {
-                status: 'unauth';
-                payload: string;
-              }
-            | {
-                status: 'process';
-              }
+            | { status: 'auth' }
+            | { status: 'unauth'; payload: string }
+            | { status: 'process' }
           ) & { botName: string }
         >(`connect/auth/${socialType}`, {
           social_id: socialId,

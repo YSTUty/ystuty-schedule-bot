@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+import axios from 'axios';
 
 import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 import { getLessonTypeStrArr, matchGroupName, md5 } from '@my-common';
@@ -439,7 +440,7 @@ export class YSTUtyService implements OnModuleInit {
         } else {
           msg += `${scheduleUtil.getNumberEmoji(lesson.number)} ${((s) =>
             isDone && withTags ? `<s>${s}</s>` : s)(
-            lesson.timeRange || lesson.time || '**-**',
+            lesson.timeRange || lesson.time || (withTags ? '<b>—</b>' : '—'),
           )}.${auditory}${distantStr} ${
             lesson.lessonName
           }${typeStr}${targetsStrFmt}`;

@@ -14,11 +14,30 @@ const templateData = { patternGroupName, patternGroupName0, patternTeacherId };
 export const checkLocaleCondition =
   (phrases: LocalePhrase[]) =>
   (value: string = undefined, ctx: IMessageContext) => {
+    if (!value || !ctx.i18n) return null;
+
+    // let pass: RegExpExecArray = null;
+
+    const wrapPhrase = (phrase: LocalePhrase) => {
+      try {
+        return ctx.i18n.t(phrase, templateData);
+      } catch (err) {
+        console.log('Fail compile phrase:', phrase, templateData);
+        console.error(err);
+        return null;
+      }
+    };
+
     const passed = phrases
-      .map((e) => [e, ctx.i18n.t(e, templateData)])
+      .map((e) => [e, wrapPhrase(e)] as const)
       .some(([key, phrase]) => {
+        if (phrase === null) {
+          return false;
+        }
+
         // By keyboard button
-        if (ctx.state?.phrase === phrase) {
+        if (value /* ctx.state?.phrase */ === phrase) {
+          // pass = value.match(phrase) as RegExpExecArray;
           return true;
         }
 

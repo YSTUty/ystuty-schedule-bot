@@ -33,6 +33,17 @@ async function bootstrap() {
   }
 }
 
+const logger = new Logger('GlobalErrorHandler');
+process.on('uncaughtException', (error: Error, origin: string) => {
+  logger.error(`Uncaught Exception: ${error.message}`, error.stack);
+});
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  logger.error(
+    `Unhandled Rejection at: ${promise}, reason: ${reason?.message || reason}`,
+    reason?.stack,
+  );
+});
+
 bootstrap().catch((e) => {
   Logger.warn(`❌  Error starting server, ${e}`, 'Bootstrap');
   throw e;

@@ -1,9 +1,22 @@
 import { Injectable } from '@nestjs/common';
+
+import { TelegramError } from 'telegraf';
 import { MiddlewareObj } from 'telegraf/typings/middleware';
+import * as tg from 'telegraf/typings/core/types/typegram';
+import * as tt from 'telegraf/typings/telegram-types';
+import Context from 'telegraf/typings/context';
+import { FmtString } from 'telegraf/typings/format';
 
 import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
 import { IContext } from '@my-interfaces/telegram';
 import { i18n } from '@my-common/util/tg';
+import {
+  allowerHtmlTags,
+  findSmartStreamPositions,
+  normalizePartialHtml,
+  normalizePartialMarkdown,
+  normalizePartialMarkdownV2,
+} from '@my-common/util/text.util';
 
 @Injectable()
 export class MainMiddleware implements MiddlewareObj<IContext> {
@@ -54,6 +67,142 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         (ctx.updateType === 'callback_query' &&
           (await ctx.answerCbQuery?.(...args))) ||
         null;
+
+      ctx.sendMessage = async (
+        text: string | FmtString,
+        extra?: tt.ExtraReplyMessage,
+      ) => {
+        ctx.assert(ctx.chat, 'sendMessage');
+        const result = await ctx.telegram.sendMessage(ctx.chat!.id, text, {
+          message_thread_id: getThreadId(ctx),
+          ...extra,
+        });
+
+        // if (result.message_id) {
+        //   ctx.session.lastMessage = {
+        //     id: result.message_id,
+        //     time: result.date,
+        //   };
+        // }
+        return result;
+      };
+
+      ctx.sendMessageDraft = async (
+        draft_id: number,
+        text: string | FmtString,
+        extra?,
+      ): Promise<boolean> => {
+        ctx.assert(ctx.chat, 'sendMessage');
+        // return ctx.telegram.sendMessageDraft(
+        //   { chat_id: ctx.chat!.id, draft_id, text, ...extra },
+        //   signal,
+        // );
+        return ctx.telegram.callApi('sendMessageDraft' as any, {
+          chat_id: ctx.chat!.id,
+          draft_id,
+          text,
+          ...extra,
+        });
+      };
+
+      ctx.sendStreamingMessage = async (text, options) => {
+        const parse_mode = options?.parse_mode;
+        const delay = Math.max(220, options?.chunkDelay ?? 550);
+        const gap = Math.max(20, options?.gap ?? 120);
+        const htmlAware = options?.htmlAwareSplit ?? parse_mode === 'HTML';
+        const draftId =
+          (Date.now() % 1_000e9) + Math.floor(Math.random() * 1e3);
+
+        const streamSource =
+          parse_mode === 'HTML' ? text : allowerHtmlTags(text, '');
+        const positions = findSmartStreamPositions(streamSource, gap, {
+          htmlAware,
+          minGap: Math.floor(gap * 0.6),
+        });
+        // console.log('positions', positions);
+        // console.log(
+        //   'parts',
+        //   positions.map((pos) =>
+        //     normalizePartialHtml(streamSource.slice(0, pos)),
+        //   ),
+        // );
+
+        if (!positions.length) {
+          return ctx.sendMessage(text, {
+            parse_mode,
+            ...(options?.replyToMessageId && {
+              reply_parameters: {
+                message_id: options.replyToMessageId,
+                allow_sending_without_reply: true,
+              },
+            }),
+          });
+        }
+
+        // Stream drafts as plain text
+        for (const pos of positions) {
+          const rawPartial = streamSource.slice(0, pos);
+          const partial =
+            parse_mode === 'HTML'
+              ? normalizePartialHtml(rawPartial)
+              : parse_mode === 'MarkdownV2'
+                ? normalizePartialMarkdownV2(rawPartial)
+                : parse_mode === 'Markdown'
+                  ? normalizePartialMarkdown(rawPartial)
+                  : rawPartial;
+
+          let ok = false;
+          try {
+            await ctx.sendMessageDraft(draftId, partial, { parse_mode });
+            ok = true;
+          } catch (err) {
+            if (err instanceof TelegramError) {
+              console.log('[Error on sendMessageDraft]', err.response);
+            }
+            if (err instanceof TelegramError && err.code === 429) {
+              const retryAfter: number = err.parameters?.retry_after ?? 5;
+              await new Promise((r) => setTimeout(r, retryAfter * 1e3));
+              try {
+                await ctx.sendMessageDraft(draftId, partial, { parse_mode });
+                ok = true;
+              } catch {}
+            }
+          }
+          // console.log(
+          //   ` → Send at pos ${String(pos).padStart(4, '0')} `,
+          //   new Date().toISOString(),
+          // );
+
+          if (!ok) {
+            console.log(
+              `Draft streaming failed at pos ${pos}, falling back to sendMessage`,
+            );
+            return ctx.sendMessage(text, {
+              parse_mode,
+              ...(options?.replyToMessageId && {
+                reply_parameters: {
+                  message_id: options.replyToMessageId,
+                  allow_sending_without_reply: true,
+                },
+              }),
+            });
+          }
+
+          await new Promise((r) => setTimeout(r, delay));
+        }
+
+        // console.log(`Done streaming`);
+        // Final sendMessage persists the full text with formatting (replaces ephemeral draft)
+        return ctx.sendMessage(text, {
+          parse_mode,
+          ...(options?.replyToMessageId && {
+            reply_parameters: {
+              message_id: options.replyToMessageId,
+              allow_sending_without_reply: true,
+            },
+          }),
+        });
+      };
 
       this.checkInGroupAppeal(ctx);
 
@@ -151,4 +300,44 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
       }
     };
   }
+}
+
+const getThreadId = <U extends tg.Update>(ctx: Context<U>) => {
+  const msg = ctx.msg;
+  return msg?.isAccessible()
+    ? msg.is_topic_message
+      ? msg.message_thread_id
+      : undefined
+    : undefined;
+};
+
+/**
+ * Find natural breakpoints in text for progressive streaming via sendMessageDraft.
+ * Returns character positions where the text can be sliced (text.slice(0, pos)).
+ * Breakpoints are at line breaks and sentence endings, with minimum gap to avoid flicker.
+ */
+function findStreamPositions(text: string, minGap = 30): number[] {
+  const positions: number[] = [];
+  let lastPos = 0;
+
+  for (let i = 0; i < text.length - 1; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+    const isLineBreak = ch === '\n';
+    const isSentenceEnd =
+      (ch === '.' ||
+        ch === '!' ||
+        ch === '?' ||
+        ch === '。' ||
+        ch === '！' ||
+        ch === '？') &&
+      (next === ' ' || next === '\n');
+
+    if ((isLineBreak || isSentenceEnd) && i + 1 - lastPos >= minGap) {
+      positions.push(i + 1);
+      lastPos = i + 1;
+    }
+  }
+
+  return positions;
 }

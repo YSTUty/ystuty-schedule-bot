@@ -1,5 +1,5 @@
 import { Context, NarrowedContext, Scenes } from 'telegraf';
-import type { Update } from 'telegraf/types';
+import type { ParseMode, Update } from 'telegraf/types';
 import type {
   SceneSessionData,
   WizardContext,
@@ -75,6 +75,46 @@ type CombinedContext = {
   tryAnswerCbQuery: (
     ...args: Shorthand<'answerCbQuery'>
   ) => Promise<true | null>;
+  assert<T extends string | number | object>(
+    value: T | undefined,
+    method: string,
+  ): asserts value is T;
+
+  /**
+   * Use this method to stream a partial message to a user while the message is being generated. Returns True on success.
+   *
+   * ~~@param chat_id Unique identifier for the target private chat~~
+   * @param draft_id Unique identifier of the message draft; must be non-zero. Changes of drafts with the same identifier are animated
+   * @param text Text of the message to be sent, 1-4096 characters after entities parsing
+   * ~~@param other Optional remaining parameters, confer the official reference below~~
+   * ~~@param signal Optional `AbortSignal` to cancel the request~~
+   *
+   * **Official reference:** https://core.telegram.org/bots/api#sendmessagedraft
+   */
+  sendMessageDraft(
+    // chat_id: number,
+    draft_id: number,
+    text: string,
+    extra?: {
+      /** Mode for parsing entities in the message text. See formatting options for more details. */
+      parse_mode?: ParseMode;
+      /** Unique identifier for the target message thread */
+      message_thread_id?: number;
+      /** A JSON-serialized list of special entities that appear in message text, which can be specified instead of parse_mode */
+      entities?: any[];
+    },
+  ): Promise<boolean>;
+
+  sendStreamingMessage(
+    text: string,
+    extra?: {
+      parse_mode?: ParseMode;
+      chunkDelay?: number;
+      gap?: number;
+      htmlAwareSplit?: boolean;
+      replyToMessageId?: number;
+    },
+  ): Promise<any>;
 };
 
 export type IContext<

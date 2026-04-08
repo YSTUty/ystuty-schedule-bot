@@ -440,6 +440,14 @@ export class ScheduleUpdate {
       } catch {}
       await ctx.answerCbQuery();
     } else {
+      // Use stream message for example
+      if (Math.random() > 0.5) {
+        await ctx.sendStreamingMessage(content, {
+          parse_mode: 'HTML',
+          // chunkDelay: 80,
+        });
+        return;
+      }
       await ctx.replyWithHTML(content, keyboard);
     }
   }

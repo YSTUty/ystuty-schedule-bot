@@ -32,10 +32,6 @@ const providers = [
 @Module({})
 export class TelegramModule {
   static register() {
-    if (!xEnv.SOCIAL_TELEGRAM_BOT_TOKEN) {
-      return { module: TelegramModule };
-    }
-
     return {
       module: TelegramModule,
       imports: [
@@ -47,7 +43,7 @@ export class TelegramModule {
           ) => ({
             token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
             launchOptions: false,
-
+            options: { telegram: { apiRoot: xEnv.SOCIAL_TELEGRAM_API_ROOT } },
             middlewares: [
               mainMiddleware.middlewareForkAll,
               mainMiddleware,

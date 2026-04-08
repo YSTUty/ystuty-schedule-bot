@@ -82,7 +82,7 @@ export class SocialConnectService {
           message: err.message,
         });
       } else {
-        this.logger.error(err);
+        this.logger.error('[requestAuth]', err);
       }
     }
 
@@ -123,7 +123,7 @@ export class SocialConnectService {
           message: err.message,
         });
       } else {
-        this.logger.error(err);
+        this.logger.error('[unAuth]', err);
       }
     }
 
@@ -164,7 +164,7 @@ export class SocialConnectService {
         return;
       }
 
-      // console.log('checkAuth', data);
+      // console.log('[checkAuth]', data);
       const { result } = data;
       for (const item of result) {
         try {
@@ -180,20 +180,27 @@ export class SocialConnectService {
             `Auth [${item.socialType}](${item.socialId}): ${result}`,
           );
         } catch (err) {
-          this.logger.error(err);
+          this.logger.error('[checkAuth] auth error', err);
         }
       }
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        const data = err.response.data as {
-          error: { code: number; message: string; error: string };
-        };
-        if (typeof data === 'object' && 'error' in data) {
-          this.logger.error(data.error);
-          return;
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data) {
+          const data = err.response.data as {
+            error: { code: number; message: string; error: string };
+          };
+          if (typeof data === 'object' && 'error' in data) {
+            this.logger.debug('[checkAuth] error', data);
+            return;
+          }
         }
+        this.logger.error('[checkAuth] Axios error', {
+          code: err.code,
+          message: err.message,
+        });
+      } else {
+        this.logger.error('[checkAuth]', err);
       }
-      this.logger.error(err);
     } finally {
       this.checkAuthProcess = 0;
     }

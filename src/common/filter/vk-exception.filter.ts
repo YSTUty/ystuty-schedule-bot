@@ -53,6 +53,10 @@ export class VkExceptionFilter implements ExceptionFilter {
     const isAdmin = xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId);
     let content = '';
     switch (true) {
+      case isAdmin:
+        content = `💢 Error: ${exception.message}`;
+        break;
+
       case exception instanceof UserException:
         content = `💢 Error: ${exception.message}`;
         break;
@@ -61,10 +65,6 @@ export class VkExceptionFilter implements ExceptionFilter {
         break;
       case exception instanceof Redlock.LockError:
         content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
-        break;
-
-      case isAdmin:
-        content = `💢 Error: ${exception.message}`;
         break;
 
       default:

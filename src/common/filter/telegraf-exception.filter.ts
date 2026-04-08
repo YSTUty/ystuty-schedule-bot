@@ -40,6 +40,16 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
     const isAdmin = xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
     let content = '';
     switch (true) {
+      case isAdmin:
+        content = ctx.callbackQuery
+          ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
+          : `💢 Error: <b>${escapeHTMLCodeChars(
+              exception.message,
+            )}</b>\n<code>${escapeHTMLCodeChars(
+              exception.stack.split('\n').slice(0, 5).join('\n'),
+            )}</code>`;
+        break;
+
       case exception instanceof UserException:
         content = ctx.callbackQuery
           ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
@@ -50,16 +60,6 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
         break;
       case exception instanceof Redlock.LockError:
         content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
-        break;
-
-      case isAdmin:
-        content = ctx.callbackQuery
-          ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
-          : `💢 Error: <b>${escapeHTMLCodeChars(
-              exception.message,
-            )}</b>\n<code>${escapeHTMLCodeChars(
-              exception.stack.split('\n').slice(0, 5).join('\n'),
-            )}</code>`;
         break;
 
       default:

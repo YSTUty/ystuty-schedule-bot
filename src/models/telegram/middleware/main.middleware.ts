@@ -236,7 +236,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
     if (
       'reply_to_message' in message &&
-      message.reply_to_message.from?.id === ctx.botInfo.id
+      message.reply_to_message?.from?.id === ctx.botInfo.id
     ) {
       ctx.state.appeal = true;
     }
@@ -250,7 +250,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
     );
 
     if (triggerRegexp.test(message.text)) {
-      const triggerMsg = message.text.match(triggerRegexp);
+      const triggerMsg = message.text.match(triggerRegexp)!;
       // message.text = message.text.slice(triggerMsg[0].length);
       message.text = message.text.slice(0, -triggerMsg[1].length);
       ctx.state.appeal = true;
@@ -278,6 +278,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
     }
   }
 
+  // ?? зачем этот метод, если можно юзать `import { i18n } from '@my-common/util/tg';`
   public get i18nMiddleware() {
     return async (ctx: IContext, next: Function) => {
       const session: IContext['session'] =

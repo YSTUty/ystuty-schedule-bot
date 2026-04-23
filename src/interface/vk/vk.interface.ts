@@ -1,16 +1,19 @@
-import { IStepContext as IVKStepContext, SceneContext } from '@vk-io/scenes';
-import { ISessionContext } from '@vk-io/session';
-import {
+import type {
+  IContext as IVKSceneContext,
+  IStepContext as IVKStepContext,
+} from '@vk-io/scenes';
+import type { ISessionContext } from '@vk-io/session';
+import type {
   API,
   Context as VKContext,
   MessageContext as VKMessageContext,
   MessageEventContext as VKMessageEventContext,
 } from 'vk-io';
-import { I18nContext } from 'vk-io-i18n';
+import type { I18nContext } from 'vk-io-i18n';
 
-import { Conversation } from '../../models/social/entity/conversation.entity';
-import { UserSocial } from '../../models/user/entity/user-social.entity';
-import { User } from '../../models/user/entity/user.entity';
+import type { Conversation } from '../../models/social/entity/conversation.entity';
+import type { UserSocial } from '../../models/user/entity/user-social.entity';
+import type { User } from '../../models/user/entity/user.entity';
 
 export interface ISessionState {
   __language_code?: string;
@@ -32,11 +35,11 @@ type ContextState = {
 
   noUpdateUserSocial?: boolean;
   userSocial: UserSocial;
-  user?: User;
-  conversation?: Conversation;
+  user?: User | null;
+  conversation?: Conversation | null;
 
-  foundGroupName?: string;
   rejectRefGroupName?: boolean;
+  foundGroupName?: string;
 
   // [key: string]: any;
 };
@@ -45,9 +48,9 @@ type CombinedContext = {
   readonly i18n: I18nContext;
   readonly api: API;
 } & {
-  scene: SceneContext<Record<string, any>>;
   session: ISessionContext & ISessionState;
   sessionConversation: ISessionContext & ISessionConversationState;
+  scene: IVKSceneContext['scene'];
 } & {};
 
 export type IContext<T = {}> = VKContext<{}, ContextState> &
@@ -55,6 +58,6 @@ export type IContext<T = {}> = VKContext<{}, ContextState> &
   T;
 export type IMessageContext = VKMessageContext<ContextState> & CombinedContext;
 export type IMessageEventContext = VKMessageEventContext<ContextState> &
-  CombinedContext;
+  CombinedContext & { $match: RegExpMatchArray };
 export type IStepContext<S extends Record<string, unknown> = any> =
   IVKStepContext<S> & (IMessageContext | IMessageEventContext);

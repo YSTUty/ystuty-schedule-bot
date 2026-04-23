@@ -1,22 +1,22 @@
-import type * as tt from 'telegraf/typings/telegram-types';
-import { I18nContext } from '@esindger/telegraf-i18n';
-import { Context, NarrowedContext, Scenes } from 'telegraf';
-import type { ParseMode, Update } from 'telegraf/types';
-import { Deunionize } from 'telegraf/typings/core/helpers/deunionize';
+import type * as tg from 'telegraf/typings/core/types/typegram';
+import type { I18nContext } from '@esindger/telegraf-i18n';
+import type { Context, Scenes } from 'telegraf';
+import type { Deunionize } from 'telegraf/typings/core/helpers/deunionize';
 import type ApiClient from 'telegraf/typings/core/network/client';
 import type {
   SceneSessionData,
+  SceneSession as TgSceneSession,
   WizardContext,
   WizardContextWizard,
   WizardSessionData,
 } from 'telegraf/typings/scenes';
 import type Telegram from 'telegraf/typings/telegram';
 
-import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
+import type { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 
-import { Conversation } from '../../models/social/entity/conversation.entity';
-import { UserSocial } from '../../models/user/entity/user-social.entity';
-import { User } from '../../models/user/entity/user.entity';
+import type { Conversation } from '../../models/social/entity/conversation.entity';
+import type { UserSocial } from '../../models/user/entity/user-social.entity';
+import type { User } from '../../models/user/entity/user.entity';
 
 export type NextFn = (...args: any[]) => Promise<any>;
 export type AnyObj = Record<string, unknown>;
@@ -25,14 +25,14 @@ type Shorthand<FName extends Exclude<keyof Telegram, keyof ApiClient>> = Tail<
   Parameters<Telegram[FName]>
 >;
 
-interface ISessionState {
+export interface ISessionState extends Partial<TgSceneSession> {
   __language_code?: string;
   __scenes?: { current?: string; state?: any; cursor?: number };
 
   teacherId?: number;
 }
 
-interface ISessionConversationState {
+interface ISessionConversationState extends Partial<TgSceneSession> {
   // TODO: remove it. Use `conversation.groupName`
   /** @deprecated Use `conversation.groupName` */
   selectedGroupName?: string;
@@ -49,7 +49,8 @@ type WizardSession = {
 type ContextState = {
   appeal: boolean;
   isLocalePhrase?: boolean;
-  // [key: string]: any;
+  // TODO: move `user`, `userSocial` to here
+  // user?: User | null;
 };
 
 type CombinedContext = {
@@ -60,7 +61,7 @@ type CombinedContext = {
 
   noUpdateUserSocial?: boolean;
   userSocial: UserSocial;
-  user?: User;
+  user?: User | null;
   conversation?: Conversation;
 
   state: ContextState;
@@ -71,11 +72,12 @@ type CombinedContext = {
   > & { state: any };
 
   i18n: I18nContext<
-    Record<LocalePhrase | TelegramLocalePhrase, Record<string, unknown> | never>
+    Record<LocalePhrase | TelegramLocalePhrase, AnyObj | never>
   >;
   tryAnswerCbQuery: (
     ...args: Shorthand<'answerCbQuery'>
   ) => Promise<true | null>;
+
   assert<T extends string | number | object>(
     value: T | undefined,
     method: string,
@@ -98,7 +100,7 @@ type CombinedContext = {
     text: string,
     extra?: {
       /** Mode for parsing entities in the message text. See formatting options for more details. */
-      parse_mode?: ParseMode;
+      parse_mode?: tg.ParseMode;
       /** Unique identifier for the target message thread */
       message_thread_id?: number;
       /** A JSON-serialized list of special entities that appear in message text, which can be specified instead of parse_mode */
@@ -109,7 +111,7 @@ type CombinedContext = {
   sendStreamingMessage(
     text: string,
     extra?: {
-      parse_mode?: ParseMode;
+      parse_mode?: tg.ParseMode;
       chunkDelay?: number;
       gap?: number;
       htmlAwareSplit?: boolean;
@@ -120,55 +122,13 @@ type CombinedContext = {
 
 export type IContext<
   T = {},
-  U extends Deunionize<Update> = Update,
-> = CombinedContext & Context<U> & T;
+  U extends Deunionize<tg.Update> = tg.Update,
+> = CombinedContext & OmitT<Context<U>, 'state'> & T;
 
-export type INarrowedContext<T = {}> = NarrowedContext<
-  never,
-  tt.MountMap['text']
-> &
-  CombinedContext &
-  T;
-
-export interface CommandContextExtn {
-  /**
-   * Matched command. This will always be the actual command, excluding preceeding slash and `@botname`
-   *
-   * Examples:
-   * ```
-   * /command abc -> command
-   * /command@xyzbot abc -> command
-   * ```
-   */
-  command: string;
-  /**
-   * The unparsed payload part of the command
-   *
-   * Examples:
-   * ```
-   * /command abc def -> "abc def"
-   * /command "token1 token2" -> "\"token1 token2\""
-   * ```
-   */
-  payload: string;
-  /**
-   * Command args parsed into an array.
-   *
-   * Examples:
-   * ```
-   * /command token1 token2 -> [ "token1", "token2" ]
-   * /command "token1 token2" -> [ "token1 token2" ]
-   * /command token1 "token2 token3" -> [ "token1" "token2 token3" ]
-   * ```
-   * @unstable Parser implementation might vary until considered stable
-   * */
-  args: string[];
-}
-export type IMessageContext<T = {}> = IContext<T, Update.MessageUpdate> &
-  CommandContextExtn;
+export type IMessageContext<T = {}> = IContext<T, tg.Update.MessageUpdate>;
 export type ICallbackQueryContext<T = {}> = IContext<
   T,
-  Update.CallbackQueryUpdate
+  tg.Update.CallbackQueryUpdate
 >;
 export type ICbQOrMsg = IMessageContext | ICallbackQueryContext;
 

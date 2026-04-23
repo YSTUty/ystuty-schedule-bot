@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import * as nestVk from 'nestjs-vk';
+import * as nestjsVk from 'nestjs-vk';
 
 import * as xEnv from '@my-environment';
 
@@ -11,10 +11,11 @@ import { ScheduleUpdate } from './update/schedule.update';
 import { VKKeyboardFactory } from './vk-keyboard.factory';
 import { VkService } from './vk.service';
 
+const baseProviders = [VkService, VKKeyboardFactory];
 const middlewares = [MainMiddleware];
 const providers = [
   ...middlewares,
-  // updates
+  // Приоритет применения слушателей
   MainUpdate,
   ScheduleUpdate,
   AuthScene,
@@ -25,35 +26,31 @@ const providers = [
 @Module({})
 export class VkModule {
   static register() {
-    if (!xEnv.SOCIAL_VK_GROUP_TOKEN) {
-      return { module: VkModule };
-    }
-
     return {
       module: VkModule,
       imports: [
-        nestVk.VkModule.forManagers({
+        nestjsVk.VkModule.forManagers({
           useSessionManager: false,
           useSceneManager: false,
           useHearManager: false,
         }),
-        nestVk.VkModule.forRootAsync({
-          inject: [MainMiddleware],
+        nestjsVk.VkModule.forRootAsync({
+          inject: [...middlewares],
           useFactory: async (mainMiddleware: MainMiddleware) => ({
             token: xEnv.SOCIAL_VK_GROUP_TOKEN,
             options: {
-              pollingGroupId: xEnv.SOCIAL_VK_GROUP_ID,
+              pollingGroupId: xEnv.SOCIAL_VK_GROUP_ID!,
               apiMode: 'sequential',
             },
-            // launchOptions: false,
+            launchOptions: false,
             // notReplyMessage: true,
             middlewaresBefore: [mainMiddleware.middlewaresBefore],
             middlewaresAfter: [mainMiddleware.middlewaresAfter],
           }),
         }),
       ],
-      providers: [VkService, VKKeyboardFactory, ...providers],
-      exports: [...middlewares, VKKeyboardFactory, VkService],
+      providers: [...baseProviders, ...providers],
+      exports: [...baseProviders, ...middlewares],
     };
   }
 }

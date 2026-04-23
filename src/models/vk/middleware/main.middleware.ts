@@ -4,7 +4,7 @@ import { VK_HEAR_MANAGER, VK_SCENE_MANAGER } from 'nestjs-vk';
 import { HearManager } from '@vk-io/hear';
 import { SceneManager } from '@vk-io/scenes';
 import { SessionManager } from '@vk-io/session';
-import { MiddlewareReturn, NextMiddleware } from 'middleware-io';
+import { Middleware, MiddlewareReturn, NextMiddleware } from 'middleware-io';
 import {
   Composer,
   Context,
@@ -14,7 +14,7 @@ import {
 } from 'vk-io';
 import { RedisStorage } from 'vk-io-redis-storage';
 
-import { SocialType } from '@my-common';
+import { SocialType } from '@my-common/constants';
 import { checkLocaleCondition, i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
@@ -68,7 +68,7 @@ export class MainMiddleware {
     });
   }
 
-  get middlewaresBefore() {
+  get middlewaresBefore(): Middleware<Context> {
     const composer = Composer.builder<Context>();
 
     composer.use(this.featureMiddleware);
@@ -85,7 +85,7 @@ export class MainMiddleware {
     return composer.compose();
   }
 
-  get middlewaresAfter() {
+  get middlewaresAfter(): Middleware<Context> {
     const composer = Composer.builder<Context>();
 
     composer.use(this.sceneInterceptMiddleware());
@@ -179,9 +179,10 @@ export class MainMiddleware {
 
   private cleanSession(ctx: IContext) {
     const { session } = ctx;
+    if (!session) return;
 
     // i18n
-    if (session?.__language_code === 'ru') {
+    if (session['__language_code'] === 'ru') {
       delete session['__language_code'];
     }
   }

@@ -19,15 +19,17 @@ export class VkAdminGuard implements CanActivate {
 
     if (
       !SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId || ctx.peerId) &&
-      ctx.user?.role !== UserRole.ADMIN
+      ctx.state.user?.role !== UserRole.ADMIN
     ) {
       if (this.input) {
         if (typeof this.input === 'string') {
           if (ctx.eventPayload && ctx.answer) {
-            ctx.answer({
-              type: 'show_snackbar',
-              text: this.input,
-            });
+            ctx
+              .answer({
+                type: 'show_snackbar',
+                text: this.input,
+              })
+              .catch();
           } else {
             ctx.reply && ctx.reply(this.input).catch();
           }

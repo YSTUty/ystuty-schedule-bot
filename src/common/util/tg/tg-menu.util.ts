@@ -4,7 +4,7 @@ import {
   patternTeacherId,
 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
-import { INarrowedContext } from '@my-interfaces/telegram';
+import { IContext } from '@my-interfaces/telegram';
 
 const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
 
@@ -12,10 +12,10 @@ const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
 const templateData = { patternGroupName, patternGroupName0, patternTeacherId };
 
 export const checkLocaleCondition =
-  (phrases: LocalePhrase[]) => (value: string, ctx: INarrowedContext) => {
+  (phrases: LocalePhrase[]) => (value: string, ctx: IContext) => {
     if (!value || !ctx.i18n) return null;
 
-    let pass: RegExpExecArray = null;
+    let pass: RegExpExecArray | null = null;
 
     const wrapPhrase = (phrase: LocalePhrase) => {
       try {

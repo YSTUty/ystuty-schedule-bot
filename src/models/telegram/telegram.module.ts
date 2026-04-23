@@ -16,6 +16,7 @@ import { AdminUpdate } from './update/admin.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
 
+const baseProviders = [TelegramService, TelegramKeyboardFactory];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
 const providers = [
   ...middlewares,
@@ -35,6 +36,7 @@ export class TelegramModule {
       module: TelegramModule,
       imports: [
         TelegrafModule.forRootAsync({
+          inject: [...middlewares],
           useFactory: async (
             mainMiddleware: MainMiddleware,
             metricsMiddleware: MetricsMiddleware,
@@ -83,11 +85,10 @@ export class TelegramModule {
               mainMiddleware.middlewareCleaner(true),
             ],
           }),
-          inject: [...middlewares],
         }),
       ],
-      providers: [TelegramService, TelegramKeyboardFactory, ...providers],
-      exports: [TelegramService, TelegramKeyboardFactory, ...middlewares],
+      providers: [...baseProviders, ...providers],
+      exports: [...baseProviders, ...middlewares],
     };
   }
 }

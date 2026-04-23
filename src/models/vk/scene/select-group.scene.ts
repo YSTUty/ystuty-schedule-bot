@@ -1,5 +1,7 @@
+import { UseFilters } from '@nestjs/common';
 import { AddStep, Ctx, Scene, SceneLeave } from 'nestjs-vk';
 
+import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 
@@ -8,6 +10,7 @@ import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
 @Scene(SELECT_GROUP_SCENE)
+@UseFilters(VkExceptionFilter)
 export class SelectGroupScene {
   constructor(
     private readonly ystutyService: YSTUtyService,

@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
     "module": "commonjs",
+// "esModuleInterop": true,
+    "isolatedModules": true,
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "es2018",
+"useDefineForClassFields": false,
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",

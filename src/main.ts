@@ -1,7 +1,8 @@
-import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 
 import * as xEnv from '@my-environment';
+
 import { HttpExceptionFilter } from '@my-common';
 
 import { AppModule } from './models/app/app.module';

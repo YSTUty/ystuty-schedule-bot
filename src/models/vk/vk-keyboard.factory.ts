@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+
 import { Keyboard } from 'vk-io';
+
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 

@@ -1,27 +1,27 @@
 import { Logger, UseFilters, UseGuards } from '@nestjs/common';
 import {
-  InjectVkApi,
-  Update,
   Ctx,
   HearFallback,
   Hears,
-  On,
+  InjectVkApi,
   Next,
+  On,
+  Update,
 } from 'nestjs-vk';
-import { VK, APIError } from 'vk-io';
+
 import { NextMiddleware } from 'middleware-io';
+import { APIError, VK } from 'vk-io';
 
 import { VkAdminGuard, VkExceptionFilter } from '@my-common';
+import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
-import { VkHearsLocale } from '@my-common/decorator/vk';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { UserService } from '../../user/user.service';
-import { VkService } from '../vk.service';
-
+import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../vk.constants';
+import { VkService } from '../vk.service';
 
 @Update()
 @UseFilters(VkExceptionFilter)

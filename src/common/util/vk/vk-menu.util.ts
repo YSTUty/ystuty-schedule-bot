@@ -1,9 +1,9 @@
-import { LocalePhrase } from '@my-interfaces';
 import {
   patternGroupName,
   patternGroupName0,
   patternTeacherId,
 } from '@my-common';
+import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext } from '@my-interfaces/vk';
 
 const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;

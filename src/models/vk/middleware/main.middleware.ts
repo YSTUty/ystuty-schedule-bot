@@ -1,29 +1,29 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { VK_HEAR_MANAGER, VK_SCENE_MANAGER } from 'nestjs-vk';
-import {
-  MessageContext,
-  Context,
-  Composer,
-  IMessageContextSendOptions,
-  getRandomId,
-} from 'vk-io';
+
 import { HearManager } from '@vk-io/hear';
-import { SessionManager } from '@vk-io/session';
 import { SceneManager } from '@vk-io/scenes';
+import { SessionManager } from '@vk-io/session';
+import { MiddlewareReturn, NextMiddleware } from 'middleware-io';
+import {
+  Composer,
+  Context,
+  getRandomId,
+  IMessageContextSendOptions,
+  MessageContext,
+} from 'vk-io';
 import { RedisStorage } from 'vk-io-redis-storage';
-import { NextMiddleware, MiddlewareReturn } from 'middleware-io';
 
 import { SocialType } from '@my-common';
+import { checkLocaleCondition, i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
-import { checkLocaleCondition, i18n } from '@my-common/util/vk';
 
 import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
-import { YSTUtyService } from '../../ystuty/ystuty.service';
-import { UserService } from '../../user/user.service';
 import { SocialService } from '../../social/social.service';
-
+import { UserService } from '../../user/user.service';
+import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -210,8 +210,9 @@ export class MainMiddleware {
       }
 
       if (
-        checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx) ||
-        ['cancel', '/cancel', '/exit'].includes(ctx.text.toLowerCase())
+        ctx.text &&
+        (checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx) ||
+          ['cancel', '/cancel', '/exit'].includes(ctx.text.toLowerCase()))
       ) {
         const keyboard = this.keyboardFactory.getClose(ctx);
         await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {

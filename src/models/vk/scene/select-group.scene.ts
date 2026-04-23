@@ -1,4 +1,5 @@
-import { Scene, AddStep, Ctx, SceneLeave } from 'nestjs-vk';
+import { AddStep, Ctx, Scene, SceneLeave } from 'nestjs-vk';
+
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 

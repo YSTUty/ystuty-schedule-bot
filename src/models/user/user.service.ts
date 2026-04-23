@@ -1,28 +1,30 @@
-import { Inject, Injectable, OnModuleInit, forwardRef } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
+
 import { IncomingMessage } from 'http';
 
 import * as xEnv from '@my-environment';
-import { IOAuthCheck_auth_info, LocalePhrase } from '@my-interfaces';
-import { ISessionState as VkISessionState } from '@my-interfaces/vk';
+
 import { oAuth } from '@my-common';
 import { SocialType } from '@my-common/constants';
 import { i18n as i18nTg } from '@my-common/util/tg';
 import { i18n as i18nVk } from '@my-common/util/vk';
+import { IOAuthCheck_auth_info, LocalePhrase } from '@my-interfaces';
+import { ISessionState as VkISessionState } from '@my-interfaces/vk';
 
-import { RedisService } from '../redis/redis.service';
-import { MetricsService } from '../metrics/metrics.service';
-import { SocialConnectService } from '../social-connect/social-connect.service';
-import { TelegramService } from '../telegram/telegram.service';
-import { TelegramKeyboardFactory } from '../telegram/telegram-keyboard.factory';
 import * as telegramConstants from '../telegram/telegram.constants';
-import { VkService } from '../vk/vk.service';
-import { VKKeyboardFactory } from '../vk/vk-keyboard.factory';
 import * as vkConstants from '../vk/vk.constants';
+import { MetricsService } from '../metrics/metrics.service';
+import { RedisService } from '../redis/redis.service';
+import { SocialConnectService } from '../social-connect/social-connect.service';
+import { TelegramKeyboardFactory } from '../telegram/telegram-keyboard.factory';
+import { TelegramService } from '../telegram/telegram.service';
+import { VKKeyboardFactory } from '../vk/vk-keyboard.factory';
+import { VkService } from '../vk/vk.service';
 
-import { User } from './entity/user.entity';
 import { UserSocial } from './entity/user-social.entity';
+import { User } from './entity/user.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {

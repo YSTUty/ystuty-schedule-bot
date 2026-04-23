@@ -11,8 +11,8 @@ import {
   IMessageContext,
 } from '@my-interfaces/telegram';
 
-import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { UserService } from '../../user/user.service';
+import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 
 @Update()
 @UseGuards(new TelegramAdminGuard(true))

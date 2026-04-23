@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
+
 import { Markup } from 'telegraf';
-import { Markup as MarkupType } from 'telegraf/typings/markup';
 import {
-  InlineKeyboardMarkup,
   InlineKeyboardButton,
+  InlineKeyboardMarkup,
   ReplyKeyboardMarkup,
   ReplyKeyboardRemove,
 } from 'telegraf/typings/core/types/typegram';
+import { Markup as MarkupType } from 'telegraf/typings/markup';
+
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -167,8 +169,8 @@ export class TelegramKeyboardFactory {
           maxLengths < maxLength || longCnt / items.length < 0.5
             ? 4
             : longCnt / items.length < 0.7
-            ? 2
-            : 1;
+              ? 2
+              : 1;
       }
 
       let longBtnCounter = -1;

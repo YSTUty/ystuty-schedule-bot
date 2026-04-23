@@ -1,3 +1,4 @@
+import { Expose, plainToClass } from 'class-transformer';
 import {
   Column,
   CreateDateColumn,
@@ -9,12 +10,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Expose, plainToClass } from 'class-transformer';
 
 import { SocialType } from '@my-common/constants';
 
-import { User } from './user.entity';
 import { Conversation } from '../../social/entity/conversation.entity';
+
+import { User } from './user.entity';
 
 @Entity()
 @Index(['social', 'socialId'], { unique: true })

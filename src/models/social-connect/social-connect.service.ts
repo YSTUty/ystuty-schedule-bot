@@ -1,10 +1,12 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
-import axios from 'axios';
+
 import * as rxjs from 'rxjs';
+import axios from 'axios';
 
 import * as xEnv from '@my-environment';
+
 import { SocialType } from '@my-common';
 
 import { UserService } from '../user/user.service';
@@ -139,6 +141,11 @@ export class SocialConnectService {
       return;
     }
     this.checkAuthProcess = Date.now();
+
+    // TODO: переделать на LongPoll?
+    // TODO: делать запросы чуть реже, если сейчас не ждем никаких проверок.
+    // ? Можно в сервисе в переменной хранить инфу - При первом запуске сделали проверку, и если результатов не было, то сбавляем интервал опросов.
+    // ? Как только появился запрос от нашего севриса, то начинаем опрашивать чаще (и в переменную пометить, что сейчас ожидается +n ответов). После получения ответов делать -n.
 
     try {
       const { data } = await rxjs.firstValueFrom(

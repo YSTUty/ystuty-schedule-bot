@@ -1,15 +1,15 @@
 import { Global, Module } from '@nestjs/common';
-import * as xEnv from '@my-environment';
 import * as nestVk from 'nestjs-vk';
 
-import { VKKeyboardFactory } from './vk-keyboard.factory';
-import { VkService } from './vk.service';
+import * as xEnv from '@my-environment';
 
 import { MainMiddleware } from './middleware/main.middleware';
+import { AuthScene } from './scene/auth.scene';
+import { SelectGroupScene } from './scene/select-group.scene';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
-import { SelectGroupScene } from './scene/select-group.scene';
-import { AuthScene } from './scene/auth.scene';
+import { VKKeyboardFactory } from './vk-keyboard.factory';
+import { VkService } from './vk.service';
 
 const middlewares = [MainMiddleware];
 const providers = [

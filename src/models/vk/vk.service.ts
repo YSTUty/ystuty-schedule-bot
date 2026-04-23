@@ -1,13 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectVkApi } from 'nestjs-vk';
-import { VK, getRandomId } from 'vk-io';
+
+import { getRandomId, VK } from 'vk-io';
 import { MessagesSendParams } from 'vk-io/lib/api/schemas/params';
 
 import * as xEnv from '@my-environment';
+
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
-import { YSTUtyService } from '../ystuty/ystuty.service';
 import { RedisService } from '../redis/redis.service';
+import { YSTUtyService } from '../ystuty/ystuty.service';
 
 @Injectable()
 export class VkService {

@@ -1,13 +1,14 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import {
-  TelegrafExecutionContext,
   TelegrafException,
+  TelegrafExecutionContext,
 } from '@xtcry/nestjs-telegraf';
 
 import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
+
+import { UserRole } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
-import { UserRole } from '@my-common';
 
 @Injectable()
 export class TelegramAdminGuard implements CanActivate {

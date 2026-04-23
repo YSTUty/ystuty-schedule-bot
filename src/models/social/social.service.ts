@@ -1,12 +1,13 @@
-import { SocialType } from '@my-common';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { SocialType } from '@my-common';
+
 import { MetricsService } from '../metrics/metrics.service';
 import { TelegramService } from '../telegram/telegram.service';
-
 import { UserSocial } from '../user/entity/user-social.entity';
+
 import { Conversation } from './entity/conversation.entity';
 import { UserToConversation } from './entity/userToConversation.entity';
 

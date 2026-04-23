@@ -2,9 +2,9 @@ import { UseFilters } from '@nestjs/common';
 import { Action, Command, Ctx, Next } from '@xtcry/nestjs-telegraf';
 
 import { TelegrafExceptionFilter } from '@my-common';
+import { TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IStepContext } from '@my-interfaces/telegram';
-import { TgHearsLocale } from '@my-common/decorator/tg';
 
 @UseFilters(TelegrafExceptionFilter)
 export class BaseScene {

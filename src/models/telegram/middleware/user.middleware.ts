@@ -1,13 +1,14 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
+
 import { MiddlewareObj } from 'telegraf/typings/middleware';
 
 import { SocialType } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
-import { UserService } from '../../user/user.service';
 import { RedisService } from '../../redis/redis.service';
 import { SocialService } from '../../social/social.service';
+import { UserService } from '../../user/user.service';
 
 @Injectable()
 export class UserMiddleware implements MiddlewareObj<IContext> {

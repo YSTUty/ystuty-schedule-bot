@@ -1,13 +1,12 @@
 import { UseFilters } from '@nestjs/common';
-import { Update, Ctx } from 'nestjs-vk';
+import { Ctx, Update } from 'nestjs-vk';
 
 import { VkExceptionFilter } from '@my-common';
+import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext } from '@my-interfaces/vk';
-import { VkHearsLocale } from '@my-common/decorator/vk';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
-
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 

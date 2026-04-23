@@ -1,3 +1,5 @@
+import { IStepContext as IVKStepContext, SceneContext } from '@vk-io/scenes';
+import { ISessionContext } from '@vk-io/session';
 import {
   API,
   Context as VKContext,
@@ -5,12 +7,10 @@ import {
   MessageEventContext as VKMessageEventContext,
 } from 'vk-io';
 import { I18nContext } from 'vk-io-i18n';
-import { IStepContext as IVKStepContext, SceneContext } from '@vk-io/scenes';
-import { ISessionContext } from '@vk-io/session';
 
+import { Conversation } from '../../models/social/entity/conversation.entity';
 import { UserSocial } from '../../models/user/entity/user-social.entity';
 import { User } from '../../models/user/entity/user.entity';
-import { Conversation } from '../../models/social/entity/conversation.entity';
 
 export interface ISessionState {
   __language_code?: string;

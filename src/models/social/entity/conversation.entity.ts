@@ -1,3 +1,4 @@
+import { Expose, plainToClass } from 'class-transformer';
 import {
   Column,
   CreateDateColumn,
@@ -10,8 +11,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Expose, plainToClass } from 'class-transformer';
+
 import { UserSocial } from 'src/models/user/entity/user-social.entity';
+
 import { SocialType } from '@my-common';
 
 @Entity()

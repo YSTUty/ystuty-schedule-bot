@@ -3,11 +3,13 @@ import {
   TelegrafArgumentsHost,
   TelegrafExecutionContext,
 } from '@xtcry/nestjs-telegraf';
-import { TelegramError } from 'telegraf';
+
 import * as Redlock from 'redlock';
+import { TelegramError } from 'telegraf';
 
 import * as xEnv from '@my-environment';
-import { UserException, escapeHTMLCodeChars } from '@my-common';
+
+import { escapeHTMLCodeChars, UserException } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 

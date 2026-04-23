@@ -2,9 +2,10 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { VkException, VkExecutionContext } from 'nestjs-vk';
 
 import { SOCIAL_VK_ADMIN_IDS } from '@my-environment';
+
+import { UserRole } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
-import { UserRole } from '@my-common';
 
 @Injectable()
 export class VkAdminGuard implements CanActivate {
@@ -17,9 +18,8 @@ export class VkAdminGuard implements CanActivate {
     const ctx = eCtx.getContext<IContext>();
 
     if (
-      !SOCIAL_VK_ADMIN_IDS.includes(
-        ctx.senderId || ctx.peerId,
-      ) && ctx.user?.role !== UserRole.ADMIN
+      !SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId || ctx.peerId) &&
+      ctx.user?.role !== UserRole.ADMIN
     ) {
       if (this.input) {
         if (typeof this.input === 'string') {

@@ -5,10 +5,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { VkArgumentsHost, VkExecutionContext } from 'nestjs-vk';
-import { APIError, MessageEventContext } from 'vk-io';
+
 import * as Redlock from 'redlock';
+import { APIError, MessageEventContext } from 'vk-io';
 
 import * as xEnv from '@my-environment';
+
 import { UserException } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';

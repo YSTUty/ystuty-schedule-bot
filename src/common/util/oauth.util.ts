@@ -1,4 +1,5 @@
 import { OAuth2 } from 'oauth';
+
 import * as xEnv from '@my-environment';
 
 export const oAuth = new OAuth2(

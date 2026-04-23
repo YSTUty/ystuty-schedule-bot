@@ -1,7 +1,8 @@
-import { Entity, PrimaryColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Expose, plainToClass } from 'class-transformer';
+import { Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
 import { UserSocial } from '../../user/entity/user-social.entity';
+
 import { Conversation } from './conversation.entity';
 
 @Entity({ name: 'user_to_conversation' })

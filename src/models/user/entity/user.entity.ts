@@ -7,7 +7,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { UserRole } from '@my-common';
+
 import { UserSocial } from './user-social.entity';
 
 @Entity()

@@ -1,14 +1,16 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+import { HttpService } from '@nestjs/axios';
+
 import axios from 'axios';
+import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
-import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 import { getLessonTypeStrArr, matchGroupName, md5 } from '@my-common';
+import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 
-import { RedisService } from '../redis/redis.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { RedisService } from '../redis/redis.service';
+
 import * as scheduleUtil from './util/schedule.util';
 
 @Injectable()
@@ -95,6 +97,29 @@ export class YSTUtyService implements OnModuleInit {
       return true;
     } catch (error) {
       console.log('[loadAllTeachers] Error', error.message);
+
+      if (axios.isAxiosError(error)) {
+        this.logger.error(error);
+        if (error.response?.status === 429) {
+          if (error.response.headers['retry-after']) {
+            // const _headers = {
+            //   'retry-after': '20',
+            //   'x-ratelimit-limit': '5',
+            //   'x-ratelimit-remaining': '0',
+            //   'x-ratelimit-reset': '18',
+            // };
+          }
+          // ...
+        } else {
+          console.error('Axios error details:');
+          console.error('Message:', error.message);
+          console.error('Status:', error.response?.status);
+          console.error('Headers:', error.response?.headers);
+          console.error('Data:', error.response?.data);
+        }
+      } else {
+        console.error('Non-axios error:', error);
+      }
     }
 
     return false;

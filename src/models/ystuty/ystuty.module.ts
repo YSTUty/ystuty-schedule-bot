@@ -1,6 +1,7 @@
-import { HttpModule } from '@nestjs/axios';
 import { Global, Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { HttpModule } from '@nestjs/axios';
+
 import * as xEnv from '@my-environment';
 
 import { YSTUtyService } from './ystuty.service';

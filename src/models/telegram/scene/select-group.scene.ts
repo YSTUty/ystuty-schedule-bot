@@ -1,4 +1,5 @@
 import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
+
 import { Markup } from 'telegraf';
 
 import { LocalePhrase } from '@my-interfaces';
@@ -8,8 +9,9 @@ import { YSTUtyService } from '../../ystuty/ystuty.service';
 // import { UserService } from '../../user/user.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
-import { BaseScene } from './base.scene';
 import { MainUpdate } from '../update/main.update';
+
+import { BaseScene } from './base.scene';
 
 @Wizard(SELECT_GROUP_SCENE)
 export class SelectGroupScene extends BaseScene {

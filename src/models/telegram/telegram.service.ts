@@ -1,18 +1,20 @@
 import {
   Injectable,
   Logger,
-  OnModuleInit,
   OnApplicationShutdown,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectBot } from '@xtcry/nestjs-telegraf';
+
 import { Telegraf } from 'telegraf';
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 
 import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
+
 import { IContext } from '@my-interfaces/telegram';
 
-import { YSTUtyService } from '../ystuty/ystuty.service';
 import { RedisService } from '../redis/redis.service';
+import { YSTUtyService } from '../ystuty/ystuty.service';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnApplicationShutdown {

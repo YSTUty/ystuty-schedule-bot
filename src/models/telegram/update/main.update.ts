@@ -3,13 +3,14 @@ import {
   Action,
   Command,
   Ctx,
-  Update,
-  On,
-  Start,
   Hears,
   Next,
+  On,
+  Start,
+  Update,
 } from '@xtcry/nestjs-telegraf';
-import { TelegramError, Markup } from 'telegraf';
+
+import { Markup, TelegramError } from 'telegraf';
 import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
@@ -20,21 +21,19 @@ import {
   xs,
 } from '@my-common';
 import { TgHearsLocale } from '@my-common/decorator/tg';
-
 import { LocalePhrase } from '@my-interfaces';
 import {
-  IContext,
-  IMessageContext,
   ICallbackQueryContext,
   ICbQOrMsg,
+  IContext,
+  IMessageContext,
 } from '@my-interfaces/telegram';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { UserService } from '../../user/user.service';
-import { TelegramService } from '../telegram.service';
-
+import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
+import { TelegramService } from '../telegram.service';
 
 @Update()
 @UseFilters(TelegrafExceptionFilter)

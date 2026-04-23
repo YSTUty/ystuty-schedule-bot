@@ -42,6 +42,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^4.0.0",
     "@nestjs/typeorm": "^10.0.0",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@vk-io/hear": "^1.1.1",
     "@vk-io/scenes": "^1.2.1",
     "@vk-io/session": "^2.2.1",

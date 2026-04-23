@@ -1,17 +1,18 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { VkException, VkExecutionContext } from 'nestjs-vk';
 import {
   TelegrafException,
   TelegrafExecutionContext,
 } from '@xtcry/nestjs-telegraf';
-import { VkException, VkExecutionContext } from 'nestjs-vk';
 
 import * as xEnv from '@my-environment';
+
 import { UserRole } from '@my-common';
 import { ALLOWED_ROLES_KEY, IS_ANY_ROLES } from '@my-common/decorator';
 import { LocalePhrase } from '@my-interfaces';

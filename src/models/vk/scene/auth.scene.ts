@@ -1,9 +1,11 @@
 import { UseFilters } from '@nestjs/common';
-import { Scene, AddStep, Ctx } from 'nestjs-vk';
+import { AddStep, Ctx, Scene } from 'nestjs-vk';
+
+import * as xEnv from '@my-environment';
+
+import { SocialType, UserException, VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
-import * as xEnv from '@my-environment';
-import { SocialType, UserException, VkExceptionFilter } from '@my-common';
 
 import { SocialConnectService } from '../../social-connect/social-connect.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
@@ -62,8 +64,8 @@ export class AuthScene {
       result.status === 'auth'
         ? LocalePhrase.Page_SocialConnect_WaitConfirm
         : result.status === 'process'
-        ? LocalePhrase.Page_SocialConnect_AlreadySent
-        : LocalePhrase.Page_SocialConnect_Other;
+          ? LocalePhrase.Page_SocialConnect_AlreadySent
+          : LocalePhrase.Page_SocialConnect_Other;
 
     await ctx.send(ctx.i18n.t(message, { botName: result.botName }));
   }

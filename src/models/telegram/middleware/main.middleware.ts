@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 
-import { TelegramError } from 'telegraf';
-import { MiddlewareObj } from 'telegraf/typings/middleware';
 import * as tg from 'telegraf/typings/core/types/typegram';
 import * as tt from 'telegraf/typings/telegram-types';
+import { TelegramError } from 'telegraf';
 import Context from 'telegraf/typings/context';
 import { FmtString } from 'telegraf/typings/format';
+import { MiddlewareObj } from 'telegraf/typings/middleware';
 
 import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
-import { IContext } from '@my-interfaces/telegram';
-import { i18n } from '@my-common/util/tg';
+
 import {
   allowerHtmlTags,
   findSmartStreamPositions,
@@ -17,6 +16,8 @@ import {
   normalizePartialMarkdown,
   normalizePartialMarkdownV2,
 } from '@my-common/util/text.util';
+import { i18n } from '@my-common/util/tg';
+import { IContext } from '@my-interfaces/telegram';
 
 @Injectable()
 export class MainMiddleware implements MiddlewareObj<IContext> {

@@ -1,5 +1,6 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, Update, On } from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, On, Update } from '@xtcry/nestjs-telegraf';
+
 import * as tg from 'telegraf/typings/core/types/typegram';
 import type { Update as TgUpdate } from 'telegraf/types';
 
@@ -9,12 +10,11 @@ import {
   patternTeacherId,
   TelegrafExceptionFilter,
 } from '@my-common';
+import { TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/telegram';
-import { TgHearsLocale } from '@my-common/decorator/tg';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
-
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
 

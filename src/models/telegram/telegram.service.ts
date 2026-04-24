@@ -9,7 +9,7 @@ import { InjectBot } from '@xtcry/nestjs-telegraf';
 import { Telegraf } from 'telegraf';
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 
-import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
+import * as xEnv from '@my-environment';
 
 import { IContext } from '@my-interfaces/telegram';
 
@@ -26,7 +26,12 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     private readonly ystutyService: YSTUtyService,
   ) {}
 
+  public get isActive(): boolean {
+    return !!xEnv.SOCIAL_TELEGRAM_BOT_TOKEN;
+  }
+
   async onModuleInit() {
+    if (!this.isActive) return;
     this.launch().catch((e) => this.logger.error(e));
   }
 
@@ -74,16 +79,21 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     text: string,
     extra: ExtraReplyMessage = {},
   ) {
+    if (!this.isActive) return false;
     try {
       return await this.bot.telegram.sendMessage(chatId, text, {
         parse_mode: 'HTML',
         ...extra,
       });
-    } catch (err) {}
+    } catch (err) {
+      this.logger.error(err);
+      return false;
+    }
   }
 
   public async notifyAdmin(message: string, extra: ExtraReplyMessage = {}) {
-    const adminIds = SOCIAL_TELEGRAM_ADMIN_IDS;
+    if (!this.isActive) return false;
+    const adminIds = xEnv.SOCIAL_TELEGRAM_ADMIN_IDS;
     // TODO: FIX BIG SPAM
     for (const uid of adminIds) {
       await this.sendMessage(uid, message, {
@@ -124,39 +134,40 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   public async emulateSession(
     socialId: number,
   ): Promise<[IContext['session'] | null, () => Promise<void>]> {
+    if (!this.isActive) return [null, async () => void 0];
     const lock = await this.redisService.redlock.lock(
       `emulateSession:telegram:${socialId}`,
       10e3,
     );
 
-    const sessionJson = await this.redisService.redis.get(
-      `tg:session:${socialId}:${socialId}`,
-    );
-    if (!sessionJson) {
-      return [null, async () => void 0];
-    }
-
-    let session: IContext['session'] = {};
     try {
-      session = JSON.parse(sessionJson);
-    } catch {}
-
-    const close = async () => {
-      try {
-        if (Object.keys(session).length > 0) {
-          await this.redisService.redis.set(
-            `tg:session:${socialId}:${socialId}`,
-            JSON.stringify(session),
-          );
-        } else {
-          await this.redisService.redis.del(
-            `tg:session:${socialId}:${socialId}`,
-          );
-        }
-      } finally {
+      const key = `tg:session:${socialId}:${socialId}`;
+      const sessionJson = await this.redisService.redis.get(key);
+      if (!sessionJson) {
         await lock.unlock();
+        return [null, async () => void 0];
       }
-    };
-    return [session, close];
+
+      let session: IContext['session'] = {};
+      try {
+        session = JSON.parse(sessionJson);
+      } catch {}
+
+      const close = async () => {
+        try {
+          if (Object.keys(session).length > 0) {
+            await this.redisService.redis.set(key, JSON.stringify(session));
+          } else {
+            await this.redisService.redis.del(key);
+          }
+        } finally {
+          await lock.unlock();
+        }
+      };
+      return [session, close];
+    } catch (err) {
+      await lock.unlock();
+      throw err;
+    }
   }
 }

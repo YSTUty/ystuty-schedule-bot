@@ -76,6 +76,16 @@ export class UserService {
     }
   }
 
+  private getMessengerService(socialType: SocialType) {
+    if (socialType === SocialType.Telegram) {
+      return this.telegramService;
+    }
+    if (socialType === SocialType.Vkontakte) {
+      return this.vkService;
+    }
+    return null;
+  }
+
   public async getUser(userId: number, lock = false) {
     return await this.userRepository.findOne(userId, {
       ...(lock && { lock: { mode: 'pessimistic_write' } }),
@@ -200,14 +210,12 @@ export class UserService {
       socialType === SocialType.Telegram ? i18nTg : i18nVk
     ).createContext('ru', {});
 
-    const socialService =
-      socialType === SocialType.Telegram
-        ? this.telegramService
-        : this.vkService;
+    const socialService = this.getMessengerService(socialType);
+    if (!socialService?.isActive) {
+      return false;
+    }
 
-    const [session, close] = await (
-      socialType === SocialType.Telegram ? this.telegramService : this.vkService
-    ).emulateSession(socialId);
+    const [session, close] = await socialService.emulateSession(socialId);
 
     if (auth) {
       const userSocial = await this.authUserSocial(socialType, socialId, auth);

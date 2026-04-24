@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import * as tg from 'telegraf/typings/core/types/typegram';
 import * as tt from 'telegraf/typings/telegram-types';
@@ -21,9 +21,23 @@ import { IContext } from '@my-interfaces/telegram';
 
 @Injectable()
 export class MainMiddleware implements MiddlewareObj<IContext> {
+  private readonly logger = new Logger(MainMiddleware.name);
+
   public get middlewareForkAll() {
     return async (ctx: IContext, next: (...args: any[]) => Promise<any>) => {
-      next();
+      // Нам важно не блокировать обработку других апдейтов одним долгим запросом,
+      // поэтому цепочка запускается в фоне. Ошибки detached-ветки нужно поглощать
+      // локально, иначе они могут дойти до unhandled rejection и уронить процесс.
+      void Promise.resolve()
+        .then(() => next())
+        .catch((err: unknown) => {
+          if (err instanceof Error) {
+            this.logger.error('[middlewareForkAll] Error', err.stack);
+            return;
+          }
+
+          this.logger.error(`[middlewareForkAll] Error: ${String(err)}`);
+        });
     };
   }
 
@@ -42,21 +56,23 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
           ctx.updateType === 'message_reaction' ||
           ctx.updateType === 'message_reaction_count'
         ) {
-          console.log('[MessageReactions]', {
-            chat: JSON.stringify(ctx.chat),
-            reactions: (
-              ctx.update['message_reaction'] ||
-              ctx.update['message_reaction_count']
-            )?.reactions,
-          });
+          this.logger.debug('[MessageReactions]');
+          this.logger.debug(
+            JSON.stringify({
+              chat: ctx.chat,
+              reactions: (
+                ctx.update['message_reaction'] ||
+                ctx.update['message_reaction_count']
+              )?.reactions,
+            }),
+          );
         }
         // TODO: remove after test
         else if (!ctx.from) {
-          console.log(
-            'Empty ctx.from from ctx',
-            { updateType: ctx.updateType },
-            ctx.update,
+          this.logger.warn(
+            `Empty ctx.from from ctx on updateType(${ctx.updateType})`,
           );
+          this.logger.debug(JSON.stringify(ctx.update));
         }
         return;
       }
@@ -159,7 +175,8 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
             ok = true;
           } catch (err) {
             if (err instanceof TelegramError) {
-              console.log('[Error on sendMessageDraft]', err.response);
+              this.logger.warn('[sendMessageDraft] TelegramError');
+              this.logger.debug(JSON.stringify(err.response));
             }
             if (err instanceof TelegramError && err.code === 429) {
               const retryAfter: number = err.parameters?.retry_after ?? 5;
@@ -176,7 +193,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
           // );
 
           if (!ok) {
-            console.log(
+            this.logger.warn(
               `Draft streaming failed at pos ${pos}, falling back to sendMessage`,
             );
             return ctx.sendMessage(text, {
@@ -211,7 +228,11 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
       try {
         await next?.();
       } catch (err: unknown) {
-        console.log('[MainMiddleware] Error', err);
+        if (err instanceof Error) {
+          this.logger.error('[middleware] Error', err.stack);
+        } else {
+          this.logger.error(`[middleware] Error: ${String(err)}`);
+        }
         throw err;
       }
     };

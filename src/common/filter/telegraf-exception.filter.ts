@@ -14,6 +14,20 @@ import { escapeHTMLCodeChars, UserException } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
+export const isTelegramUserUnavailableError = (exception: TelegramError) =>
+  exception.description.includes('bot was blocked by the user') ||
+  exception.description.includes('user is deactivated') ||
+  exception.description.includes('chat not found');
+
+export const isTelegramConversationUnavailableError = (
+  exception: TelegramError,
+) =>
+  exception.description.includes('bot was kicked from the group chat') ||
+  exception.description.includes('bot is not a member of the supergroup chat');
+
+export const isTelegramRateLimitError = (exception: TelegramError) =>
+  exception.code === 429 || exception.description.includes('Too Many Requests');
+
 @Catch()
 export class TelegrafExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(TelegrafExceptionFilter.name);
@@ -82,17 +96,47 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof TelegramError) {
-      if (
-        exception.description.includes('bot was blocked by the user') ||
-        exception.description.includes('user is deactivated') ||
-        exception.description.includes('chat not found')
-      ) {
+      if (isTelegramUserUnavailableError(exception)) {
         try {
           ctx.userSocial.isBlockedBot = true;
           // ctx.session.isBlockedBot = true;
         } catch (err) {
-          console.error(err);
+          if (err instanceof Error) {
+            this.logger.error(
+              '[UserUnavailable] Failed to mark userSocial as blocked',
+              err.stack,
+            );
+          } else {
+            this.logger.error(
+              `[UserUnavailable] Failed to mark userSocial as blocked: ${String(err)}`,
+            );
+          }
         }
+        return;
+      }
+
+      if (isTelegramConversationUnavailableError(exception)) {
+        try {
+          if (ctx.conversation) {
+            ctx.conversation.isLeaved = true;
+            ctx.conversation.chatStatus = 'kicked';
+          }
+        } catch (err) {
+          if (err instanceof Error) {
+            this.logger.error(
+              '[ConversationUnavailable] Failed to mark conversation as leaved',
+              err.stack,
+            );
+          } else {
+            this.logger.error(
+              `[ConversationUnavailable] Failed to mark conversation as leaved: ${String(err)}`,
+            );
+          }
+        }
+        return;
+      }
+
+      if (isTelegramRateLimitError(exception)) {
         return;
       }
     }

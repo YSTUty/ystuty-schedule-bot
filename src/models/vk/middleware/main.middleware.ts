@@ -136,11 +136,10 @@ export class MainMiddleware {
       }
 
       if (!ctx.peerId) {
-        console.log(
-          '[VK] Empty ctx.peerId from ctx',
-          { type: ctx.type },
-          ctx.toJSON(),
-        );
+        this.logger.warn(`[VK] Empty ctx.peerId from ctx type(${ctx.type})`);
+        this.logger.debug(JSON.stringify(ctx.toJSON()));
+        // ! Прерываем выполнение, если нет peerId, так как это может привести к ошибкам при сохранении сессии и другим проблемам.
+        return;
       }
 
       if (ctx.is(['message'])) {
@@ -299,17 +298,28 @@ export class MainMiddleware {
             // Link user to conversation
             this.socialService
               .iAmInConversation(ctx.state.userSocial, conversation.id)
-              .catch((err) =>
-                console.error(
-                  '[VK][socialService=>iAmInConversation] Error: ',
-                  err,
-                ),
-              );
+              .catch((err) => {
+                if (err instanceof Error) {
+                  this.logger.error(
+                    '[VK][socialService=>iAmInConversation] Error',
+                    err.stack,
+                  );
+                  return;
+                }
+
+                this.logger.error(
+                  `[VK][socialService=>iAmInConversation] Error: ${String(err)}`,
+                );
+              });
           }
 
           ctx.state.conversation = conversation;
         } catch (err) {
-          console.error('[VK][socialService] Error: ', err);
+          if (err instanceof Error) {
+            this.logger.error('[VK][socialService] Error', err.stack);
+          } else {
+            this.logger.error(`[VK][socialService] Error: ${String(err)}`);
+          }
         }
       }
 

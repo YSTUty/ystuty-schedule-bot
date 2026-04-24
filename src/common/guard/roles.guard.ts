@@ -5,8 +5,9 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { VkException, VkExecutionContext } from 'nestjs-vk';
+import { VkException, VkExecutionContext, VkontextType } from 'nestjs-vk';
 import {
+  TelegrafContextType,
   TelegrafException,
   TelegrafExecutionContext,
 } from '@xtcry/nestjs-telegraf';
@@ -14,9 +15,22 @@ import {
 import * as xEnv from '@my-environment';
 
 import { UserRole } from '@my-common';
-import { ALLOWED_ROLES_KEY, IS_ANY_ROLES } from '@my-common/decorator';
+import {
+  ALLOWED_ROLES_KEY,
+  ALLOWED_ROLES_SILENT_KEY,
+  IS_ANY_ROLES,
+} from '@my-common/decorator';
+import {
+  TelegrafChatType,
+  TG_ALLOWED_CHAT_TYPES_KEY,
+} from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
-import { IContext } from '@my-interfaces/vk';
+import { IContext as TgIContext } from '@my-interfaces/telegram';
+import { IContext as VkIContext } from '@my-interfaces/vk';
+
+function toArr<T>(arr: T | T[]): T[] {
+  return Array.isArray(arr) ? arr : [arr];
+}
 
 /**
  * Must be used in conjunction with the `@AllowedRoles` decorator
@@ -28,22 +42,48 @@ export class RolesGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<any> {
     const handler = context.getHandler();
     const controller = context.getClass();
-    const isAnyRoles = this.reflector.getAllAndOverride<boolean>(IS_ANY_ROLES, [
-      handler,
-      controller,
-    ]);
+
+    const targets = [handler, controller];
+    const isAnyRoles = this.reflector.getAllAndOverride<boolean>(
+      IS_ANY_ROLES,
+      targets,
+    );
     const allowedRoles = this.reflector.getAllAndMerge<UserRole[]>(
       ALLOWED_ROLES_KEY,
-      [handler, controller],
+      targets,
     );
+    const allowedRolesSilent = toArr(
+      this.reflector.getAllAndMerge<boolean[]>(
+        ALLOWED_ROLES_SILENT_KEY,
+        targets,
+      ),
+    );
+
+    if (context.getType<TelegrafContextType>() === 'telegraf') {
+      const eCtx = TelegrafExecutionContext.create(context);
+      const ctx = eCtx.getContext<TgIContext>();
+
+      const allowedChatTypes = this.reflector.getAllAndMerge<
+        TelegrafChatType[]
+      >(TG_ALLOWED_CHAT_TYPES_KEY, [handler, controller]);
+
+      if (
+        ctx.chat?.type &&
+        allowedChatTypes.length > 0 &&
+        !allowedChatTypes.includes(ctx.chat.type) &&
+        !allowedChatTypes.includes('any')
+      ) {
+        throw new TelegrafException('SKIP');
+      }
+    }
 
     if (!allowedRoles.length || isAnyRoles) {
       return true;
     }
 
-    if (context.getType<string>() === 'vk-io') {
+    if (context.getType<VkontextType>() === 'vk-io') {
       const eCtx = VkExecutionContext.create(context);
-      const ctx = eCtx.getContext<IContext>();
+      const ctx = eCtx.getContext<VkIContext>();
       if (
         // !xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.from?.id) &&
         !ctx.state.user ||
@@ -52,13 +92,17 @@ export class RolesGuard implements CanActivate {
         throw new VkException(LocalePhrase.Common_NoAccess);
       }
       return true;
-    } else if (context.getType<string>() === 'telegraf') {
+    } else if (context.getType<TelegrafContextType>() === 'telegraf') {
       const eCtx = TelegrafExecutionContext.create(context);
-      const ctx = eCtx.getContext<IContext>();
+      const ctx = eCtx.getContext<TgIContext>();
       if (
-        !xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from?.id) &&
-        !allowedRoles.includes(ctx.user?.role)
+        !ctx.from ||
+        (!xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id) &&
+          (!ctx.user || !allowedRoles.includes(ctx.user.role)))
       ) {
+        if (allowedRolesSilent.some((e) => e === true)) {
+          throw new TelegrafException('SKIP_FULL');
+        }
         throw new TelegrafException(LocalePhrase.Common_NoAccess);
       }
       return true;

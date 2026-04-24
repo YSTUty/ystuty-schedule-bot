@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { VkArgumentsHost, VkExecutionContext } from 'nestjs-vk';
+import { VkArgumentsHost, VkException, VkExecutionContext } from 'nestjs-vk';
 
 import * as Redlock from 'redlock';
 import { APIError, MessageEventContext } from 'vk-io';
@@ -28,6 +28,7 @@ export class VkExceptionFilter implements ExceptionFilter {
     const ctx = vkHost.getContext<
       IContext<MessageEventContext> | IMessageContext
     >();
+    const next = vkHost.getNext();
 
     if (
       exception.message !== LocalePhrase.Common_NoAccess &&
@@ -40,6 +41,14 @@ export class VkExceptionFilter implements ExceptionFilter {
         `OnUpdateType(${ctx?.type}): ${exception?.message || exception}`,
         exception.stack,
       );
+    }
+
+    if (
+      exception instanceof VkException &&
+      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
+    ) {
+      await next?.();
+      return;
     }
 
     if (

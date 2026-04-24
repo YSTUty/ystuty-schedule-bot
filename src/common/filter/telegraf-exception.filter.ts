@@ -1,6 +1,7 @@
 import { Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import {
   TelegrafArgumentsHost,
+  TelegrafException,
   TelegrafExecutionContext,
 } from '@xtcry/nestjs-telegraf';
 
@@ -24,6 +25,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
 
     const telegrafHost = TelegrafArgumentsHost.create(host);
     const ctx = telegrafHost.getContext<IContext>();
+    const next = telegrafHost.getNext();
 
     if (
       exception.message !== LocalePhrase.Common_NoAccess &&
@@ -39,18 +41,27 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    if (
+      exception instanceof TelegrafException &&
+      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
+    ) {
+      await next?.();
+      return;
+    }
+
     const isAdmin =
       ctx.from && xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
     let content = '';
     switch (true) {
       case isAdmin:
-        content = ctx.callbackQuery
-          ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
-          : `💢 Error: <b>${escapeHTMLCodeChars(
-              exception.message,
-            )}</b>\n<code>${escapeHTMLCodeChars(
-              exception.stack.split('\n').slice(0, 5).join('\n'),
-            )}</code>`;
+        content =
+          ctx.callbackQuery || !exception.stack
+            ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
+            : `💢 Error: <b>${escapeHTMLCodeChars(
+                exception.message,
+              )}</b>\n<code>${escapeHTMLCodeChars(
+                exception.stack.split('\n').slice(0, 5).join('\n'),
+              )}</code>`;
         break;
 
       case exception instanceof UserException:
@@ -78,6 +89,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       ) {
         try {
           ctx.userSocial.isBlockedBot = true;
+          // ctx.session.isBlockedBot = true;
         } catch (err) {
           console.error(err);
         }

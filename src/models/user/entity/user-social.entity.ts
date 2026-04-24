@@ -34,7 +34,9 @@ export class UserSocial {
     transformer: [
       {
         to: (entityValue: bigint) => entityValue,
+        // TODO!: fix(db): replace BigInt transformers with numeric casting
         from: (databaseValue: string): bigint => BigInt(databaseValue),
+        // from: (databaseValue: string) => Number(databaseValue),
       },
     ],
   })
@@ -42,23 +44,23 @@ export class UserSocial {
 
   @Expose()
   @Column({ type: 'character varying', length: 32, nullable: true })
-  public username?: string;
+  public username: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 64, nullable: true })
-  public displayname?: string;
+  public displayname: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 120, nullable: true })
-  public profileUrl?: string;
+  public profileUrl: string | null;
 
   @Expose()
   @Column({ type: 'character varying', nullable: true })
-  public avatarUrl?: string;
+  public avatarUrl: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 16, nullable: true })
-  public groupName?: string;
+  public groupName?: string | null;
 
   @Column({ type: 'boolean', default: false })
   public isBlockedBot: boolean;
@@ -70,11 +72,11 @@ export class UserSocial {
   @Expose()
   @ManyToOne(() => User, (user) => user.socials)
   @JoinColumn()
-  public user?: User;
+  public user?: User | null;
 
   @Expose()
   @Column({ nullable: true })
-  public userId: number;
+  public userId: number | null;
 
   @ManyToMany(() => Conversation, (conversation) => conversation.users)
   public conversations: Conversation[];

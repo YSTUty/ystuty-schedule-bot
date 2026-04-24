@@ -259,6 +259,11 @@ export class MainMiddleware {
         }
       }
 
+      if (!userSocial) {
+        await ctx.send(ctx.i18n.t(LocalePhrase.Common_Error));
+        return;
+      }
+
       ctx.state.userSocial = userSocial;
       ctx.state.user = userSocial.user;
 
@@ -328,7 +333,7 @@ export class MainMiddleware {
   private middlewareRefValue() {
     return async (ctx: IMessageContext, next: NextMiddleware) => {
       const msgPayload = ctx.referralValue?.split('_');
-      if (msgPayload?.length > 1) {
+      if (msgPayload && msgPayload.length > 1) {
         if (msgPayload[0] === 'g') {
           const groupNameTest = msgPayload.slice(1).join('_');
 

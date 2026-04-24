@@ -12,9 +12,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import { UserSocial } from 'src/models/user/entity/user-social.entity';
+import { SocialType } from '@my-common/constants';
 
-import { SocialType } from '@my-common';
+import { UserSocial } from '../../user/entity/user-social.entity';
 
 @Entity()
 @Index(['social', 'conversationId'], { unique: true })

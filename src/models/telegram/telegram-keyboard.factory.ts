@@ -23,7 +23,7 @@ export class TelegramKeyboardFactory {
     return Markup.keyboard([
       [ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)],
       [
-        ...(ctx.chat.type === 'private' && ctx.user
+        ...(ctx.chat?.type === 'private' && ctx.user
           ? [ctx.i18n.t(LocalePhrase.Button_Profile)]
           : []),
       ],
@@ -159,8 +159,8 @@ export class TelegramKeyboardFactory {
         }
 
         let longCnt = 0;
-        let maxLengths = items.flat(2).reduce((acc, e) => {
-          let len = (typeof e === 'string' ? e : e.title + (e.suffix || ''))
+        const maxLengths = items.flat(2).reduce((acc, e) => {
+          const len = (typeof e === 'string' ? e : e.title + (e.suffix || ''))
             ?.length;
           if (len >= maxLength) ++longCnt;
           return Math.max(acc, len);
@@ -179,10 +179,10 @@ export class TelegramKeyboardFactory {
         if (!Array.isArray(subitems)) {
           subitems = [subitems];
         }
-        for (let item of subitems) {
-          let title =
+        for (const item of subitems) {
+          const title =
             typeof item === 'string' ? item : item.title + (item.suffix || '');
-          let payload = typeof item === 'string' ? item : item.payload;
+          const payload = typeof item === 'string' ? item : item.payload;
           if (columnizerBtns) {
             if (
               title.length >= 16 ||
@@ -261,9 +261,9 @@ export class TelegramKeyboardFactory {
           subitems = [subitems];
         }
         const rowBtns: Hideable<InlineKeyboardButton>[] = [];
-        for (let item of subitems) {
-          let title = typeof item === 'string' ? item : item.title;
-          let payload = typeof item === 'string' ? item : item.payload;
+        for (const item of subitems) {
+          const title = typeof item === 'string' ? item : item.title;
+          const payload = typeof item === 'string' ? item : item.payload;
           rowBtns.push(
             Markup.button.callback(title, `${actionPrefix || ''}${payload}`),
           );

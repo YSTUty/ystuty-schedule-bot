@@ -15,7 +15,7 @@ export class AppService {
   }
 
   async checkVersion() {
-    const curVer = process.env.npm_package_version;
+    const curVer = process.env.npm_package_version!;
     const lastVer =
       (await this.redisService.redis.get('app:last-version')) || '0.0.0';
 

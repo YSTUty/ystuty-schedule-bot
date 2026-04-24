@@ -125,7 +125,7 @@ export class YSTUtyService implements OnModuleInit {
     return false;
   }
 
-  public getGroupByName(groupName?: string) {
+  public getGroupByName(groupName?: string | null) {
     const parse = (str: string) =>
       str
         .trim()
@@ -167,7 +167,11 @@ export class YSTUtyService implements OnModuleInit {
     return name;
   }
 
-  public groupsList(page = 1, count = 20, instituteNameMD5?: string) {
+  public groupsList(
+    page = 1,
+    count = 20,
+    instituteNameMD5: string | null = null,
+  ) {
     // const { groupNames } = this;
     const groupNames = this.allGroupsList
       .filter((e) => !instituteNameMD5 || md5(e.name) === instituteNameMD5)
@@ -254,11 +258,11 @@ export class YSTUtyService implements OnModuleInit {
     });
 
     const findDeep = async (
-      skipDays?: number,
-      weekNumber?: WeekNumberType,
+      skipDays: number,
+      weekNumber: WeekNumberType,
       isWeek?: boolean,
       next?: boolean,
-    ): Promise<[number, string | false]> => {
+    ): Promise<[number, string | false | null]> => {
       const responseSchedule = await this.getFormatedSchedule({
         targetType,
         targetId,
@@ -307,7 +311,7 @@ export class YSTUtyService implements OnModuleInit {
 
     const weekNumber =
       scheduleUtil.getWeekNumber(now) - scheduleUtil.getWeekOffsetByYear(now);
-    const dayNumber: WeekNumberType = isWeek
+    const dayNumber: WeekNumberType | null = isWeek
       ? null
       : ((day) => (day > 0 ? day - 1 : 6))(now.getDay());
 
@@ -318,7 +322,11 @@ export class YSTUtyService implements OnModuleInit {
       5e3,
     );
     try {
-      const { items } = await this.getSchedule(targetId, targetType);
+      const response = await this.getSchedule(targetId, targetType);
+      if (!response) {
+        return null;
+      }
+      const { items } = response;
 
       if (!Array.isArray(items)) {
         return null;
@@ -360,7 +368,7 @@ export class YSTUtyService implements OnModuleInit {
       return null;
     }
 
-    let message: string = null;
+    let message: string | null = null;
     for (let dayIndex = startDay; dayIndex < 7; ++dayIndex) {
       const day = week.days.find((e) => e.info.type === dayIndex);
       if (!day) {
@@ -406,7 +414,7 @@ export class YSTUtyService implements OnModuleInit {
       msg += ` ${weekNumber % 2 === 0 ? 'Ч' : 'Н'}`;
       msg += '\n';
 
-      let lastLesson: Lesson = null;
+      let lastLesson: Lesson | null = null;
       for (const index in lessons) {
         const lesson = lessons[index];
         const nextLesson = lessons[index + 1];
@@ -417,8 +425,9 @@ export class YSTUtyService implements OnModuleInit {
         const typeName = getLessonTypeStrArr(lesson.type).join(', ');
 
         if (
-          lastLesson?.number > 0 &&
-          lastLesson?.number < 3 &&
+          lastLesson &&
+          lastLesson.number > 0 &&
+          lastLesson.number < 3 &&
           /*lastNumber !== 2 &&*/ lesson.number === 3
         ) {
           msg += `✌ ${scheduleUtil.getTimez('11:40', 40)}. FREE TIME\n`;

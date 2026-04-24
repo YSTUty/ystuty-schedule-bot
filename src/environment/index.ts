@@ -17,11 +17,11 @@ export const NODE_ENV: EnvType =
 export const INSTANCE_NAME: string =
   process.env.INSTANCE_NAME || 'ystuty-schedule-bot';
 
-export const SERVER_PORT: number = +process.env.SERVER_PORT || 8080;
+export const SERVER_PORT: number = +process.env.SERVER_PORT! || 8080;
 
 export const SCHEDULE_API_URL: string =
   process.env.SCHEDULE_API_URL ?? `http://ystuty_s_schedule`;
-export const SCHEDULE_API_TOKEN: string =
+export const SCHEDULE_API_TOKEN: string | null =
   process.env.SCHEDULE_API_TOKEN ?? null;
 
 export const YSTUTY_WEB_VIEW_ADDRESS: string =
@@ -32,7 +32,7 @@ export const TYPEORM_CONFIG = {
   logging: process.env.POSTGRES_LOGGING === 'true',
   synchronize: false,
   host: process.env.POSTGRES_HOST || 'postgres',
-  port: +process.env.POSTGRES_PORT || 5432,
+  port: +process.env.POSTGRES_PORT! || 5432,
   username: process.env.POSTGRES_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD,
   database: process.env.POSTGRES_DATABASE || 'ystuty-schedule-bot',
@@ -43,18 +43,18 @@ TYPEORM_CONFIG.synchronize = process.env.POSTGRES_SYNCHRONIZE
 
 // * Redis
 export const REDIS_HOST: string = process.env.REDIS_HOST || 'redis';
-export const REDIS_PORT: number = +process.env.REDIS_PORT || 6379;
-export const REDIS_USER: string = process.env.REDIS_USER;
-export const REDIS_PASSWORD: string = process.env.REDIS_PASSWORD;
-export const REDIS_DATABASE: number = +process.env.REDIS_DATABASE || 0;
+export const REDIS_PORT: number = +process.env.REDIS_PORT! || 6379;
+export const REDIS_USER: string | undefined = process.env.REDIS_USER;
+export const REDIS_PASSWORD: string | undefined = process.env.REDIS_PASSWORD;
+export const REDIS_DATABASE: number = +process.env.REDIS_DATABASE! || 0;
 export const REDIS_PREFIX: string =
   process.env.REDIS_PREFIX ?? 'ystuty.schedule.bot:';
 
 // * Socials
 
 // VKontakte
-export const SOCIAL_VK_GROUP_ID: number =
-  +process.env.SOCIAL_VK_GROUP_ID || null;
+export const SOCIAL_VK_GROUP_ID: number | null =
+  +process.env.SOCIAL_VK_GROUP_ID! || null;
 export const SOCIAL_VK_GROUP_TOKEN: string =
   process.env.SOCIAL_VK_GROUP_TOKEN || '';
 export const SOCIAL_VK_ADMIN_IDS: number[] =

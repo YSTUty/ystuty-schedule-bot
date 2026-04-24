@@ -125,7 +125,42 @@ export type IContext<
   U extends Deunionize<tg.Update> = tg.Update,
 > = CombinedContext & OmitT<Context<U>, 'state'> & T;
 
-export type IMessageContext<T = {}> = IContext<T, tg.Update.MessageUpdate>;
+export interface CommandContextExtn {
+  /**
+   * Matched command. This will always be the actual command, excluding preceeding slash and `@botname`
+   *
+   * Examples:
+   * ```
+   * /command abc -> command
+   * /command@xyzbot abc -> command
+   * ```
+   */
+  command: string;
+  /**
+   * The unparsed payload part of the command
+   *
+   * Examples:
+   * ```
+   * /command abc def -> "abc def"
+   * /command "token1 token2" -> "\"token1 token2\""
+   * ```
+   */
+  payload: string;
+  /**
+   * Command args parsed into an array.
+   *
+   * Examples:
+   * ```
+   * /command token1 token2 -> [ "token1", "token2" ]
+   * /command "token1 token2" -> [ "token1 token2" ]
+   * /command token1 "token2 token3" -> [ "token1" "token2 token3" ]
+   * ```
+   * @unstable Parser implementation might vary until considered stable
+   * */
+  args: string[];
+}
+export type IMessageContext<T = {}> = IContext<T, tg.Update.MessageUpdate> &
+  CommandContextExtn;
 export type ICallbackQueryContext<T = {}> = IContext<
   T,
   tg.Update.CallbackQueryUpdate

@@ -47,7 +47,7 @@ export class AdminUpdate {
       return 'Max 15 social ids';
     }
 
-    if (!('reply_to_message' in message)) {
+    if (!('reply_to_message' in message) || !message.reply_to_message) {
       return 'Need reply message';
     }
 
@@ -106,8 +106,8 @@ export class AdminUpdate {
 
   @Action(/sendmsg:remove:(?<chatId>[0-9]+):(?<message_id>[0-9]+)/)
   async onNopeAction(@Ctx() ctx: ICallbackQueryContext) {
-    const chatId = Number(ctx.match.groups.chatId);
-    const messageId = Number(ctx.match.groups.message_id);
+    const chatId = Number(ctx.match!.groups!.chatId);
+    const messageId = Number(ctx.match!.groups!.message_id);
     if (!chatId || !messageId) {
       await ctx.tryAnswerCbQuery('Wrong payload');
       return;

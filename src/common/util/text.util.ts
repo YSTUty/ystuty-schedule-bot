@@ -5,13 +5,17 @@ export const xs = (
   strings: TemplateStringsArray,
   ...expressions: any[]
 ): string => {
-  const indent: RegExp = !strings[0].startsWith('\n')
+  const indent: RegExp | null = !strings[0].startsWith('\n')
     ? null
-    : new RegExp(`\n {${strings[0].match(/\n+( *)/)[1].length}}`, 'g');
+    : new RegExp(`\n {${strings[0].match(/\n+( *)/)![1].length}}`, 'g');
+
+  const replaceIndent = (str: string) =>
+    indent ? str.replace(indent, '\n') : str;
+
   return expressions
     .reduce(
-      (acc, expr, i) => `${acc}${expr}${strings[i + 1].replace(indent, '\n')}`,
-      strings[0].replace(indent, '\n'),
+      (acc, expr, i) => `${acc}${expr}${replaceIndent(strings[i + 1])}`,
+      replaceIndent(strings[0]),
     )
     .replace(/^\n|\n$/g, '');
 };
@@ -463,8 +467,6 @@ export type StreamToken = {
   isTag: boolean;
   text: string;
 };
-
-const VOID_TAGS = new Set(['br']);
 
 export const parseAllowedTags = (
   allowed = '<a><b><i><u><s><strong><pre><code>',

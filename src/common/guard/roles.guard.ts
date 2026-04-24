@@ -46,7 +46,8 @@ export class RolesGuard implements CanActivate {
       const ctx = eCtx.getContext<IContext>();
       if (
         // !xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.from?.id) &&
-        !allowedRoles.includes(ctx.user?.role)
+        !ctx.state.user ||
+        !allowedRoles.includes(ctx.state.user.role)
       ) {
         throw new VkException(LocalePhrase.Common_NoAccess);
       }

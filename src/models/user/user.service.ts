@@ -1,4 +1,10 @@
-import { forwardRef, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
 
@@ -11,9 +17,10 @@ import { SocialType } from '@my-common/constants';
 import { i18n as i18nTg } from '@my-common/util/tg';
 import { i18n as i18nVk } from '@my-common/util/vk';
 import { IOAuthCheck_auth_info, LocalePhrase } from '@my-interfaces';
+import { ISessionState as TgISessionState } from '@my-interfaces/telegram';
 import { ISessionState as VkISessionState } from '@my-interfaces/vk';
 
-import * as telegramConstants from '../telegram/telegram.constants';
+import * as tgConstants from '../telegram/telegram.constants';
 import * as vkConstants from '../vk/vk.constants';
 import { MetricsService } from '../metrics/metrics.service';
 import { RedisService } from '../redis/redis.service';
@@ -27,13 +34,16 @@ import { UserSocial } from './entity/user-social.entity';
 import { User } from './entity/user.entity';
 
 @Injectable()
-export class UserService implements OnModuleInit {
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserSocial)
     private readonly userSocialRepository: Repository<UserSocial>,
 
+    @Inject(forwardRef(() => SocialConnectService))
     private readonly socialConnectService: SocialConnectService,
     private readonly redisService: RedisService,
     private readonly metricsService: MetricsService,
@@ -92,7 +102,7 @@ export class UserService implements OnModuleInit {
       }
       return await this.userRepository.save(new User(user));
     } finally {
-      useLock && (await lock.unlock());
+      lock && (await lock.unlock());
     }
   }
 
@@ -114,7 +124,7 @@ export class UserService implements OnModuleInit {
       }
       return curUser;
     } finally {
-      useLock && (await lock.unlock());
+      lock && (await lock.unlock());
     }
   }
 
@@ -171,6 +181,14 @@ export class UserService implements OnModuleInit {
     return userSocials;
   }
 
+  public async findSocials(user: User) {
+    const userSocials = await this.userSocialRepository.find({
+      where: { user },
+    });
+
+    return userSocials;
+  }
+
   public async auth(
     socialType: SocialType,
     socialId: number,
@@ -203,21 +221,26 @@ export class UserService implements OnModuleInit {
         return false;
       }
 
+      const linkedUser = userSocial.user;
+      if (!linkedUser) {
+        return false;
+      }
+
       await socialService.sendMessage(
         socialId,
         i18n.t(LocalePhrase.Page_Auth_Done, {
-          user: userSocial.user,
+          user: linkedUser,
         }),
       );
 
       if (
-        userSocial.user.groupName &&
-        userSocial.user.groupName !== userSocial.groupName
+        linkedUser.groupName &&
+        linkedUser.groupName !== userSocial.groupName
       ) {
         if (socialType === SocialType.Telegram) {
           const keyboard = this.tgKeyboardFactory.getSelectGroupInline(
             { i18n } as any,
-            userSocial.user.groupName,
+            linkedUser.groupName,
           );
           await socialService.sendMessage(
             socialId,
@@ -226,7 +249,7 @@ export class UserService implements OnModuleInit {
           );
         } else if (socialType === SocialType.Vkontakte) {
           const keyboard = this.vkKeyboardFactory
-            .getSelectGroup({ i18n } as any, userSocial.user.groupName)
+            .getSelectGroup({ i18n } as any, linkedUser.groupName)
             .inline();
           await this.vkService.sendMessage(socialId, '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴', {
             keyboard,
@@ -240,20 +263,25 @@ export class UserService implements OnModuleInit {
       );
     }
 
-    if (socialType === SocialType.Telegram) {
-      if (session.__scenes?.current === telegramConstants.AUTH_SCENE) {
-        delete session.__scenes;
+    // * Force exit from auth scene
+    try {
+      if (socialType === SocialType.Telegram) {
+        const sess = session as TgISessionState;
+        if (sess.__scenes?.current === tgConstants.AUTH_SCENE) {
+          delete sess.__scenes;
+        }
+      } else if (socialType === SocialType.Vkontakte) {
+        const sess = session as VkISessionState;
+        if (sess?.__scene?.current === vkConstants.AUTH_SCENE) {
+          delete sess.__scene;
+        }
       }
-    } else if (socialType === SocialType.Vkontakte) {
-      if (
-        (session as VkISessionState)?.__scene?.current ===
-        vkConstants.AUTH_SCENE
-      ) {
-        delete (session as VkISessionState).__scene;
-      }
-    }
 
-    await close();
+      await close();
+    } catch (err) {
+      this.logger.debug(`Error on [auth] emulate session`);
+      console.error(err);
+    }
     return true;
   }
 
@@ -264,8 +292,10 @@ export class UserService implements OnModuleInit {
   ) {
     const userSocial = await this.findBySocialId(socialType, socialId);
 
-    if (!userSocial /* || userSocial.userId */) {
-      console.log('Fail: userSocial');
+    if (!userSocial || userSocial.userId) {
+      console.log(
+        `Fail: userSocial (social ${!userSocial ? 'empty' : 'exists'})`,
+      );
       return false;
     }
 
@@ -277,13 +307,14 @@ export class UserService implements OnModuleInit {
         result: any;
       }>((resolve) =>
         oAuth.getOAuthAccessToken(
-          auth.code,
+          auth.code!,
           { grant_type: 'authorization_code' },
           (err, access_token, refresh_token, result) => {
             resolve({ err, access_token, refresh_token, result });
           },
         ),
       );
+
       auth.access_token = oAuthResult.access_token;
       auth.refresh_token = oAuthResult.refresh_token;
     }
@@ -299,7 +330,7 @@ export class UserService implements OnModuleInit {
     }>((resolve) =>
       oAuth.getProtectedResource(
         xEnv.OAUTH_URL + '/check',
-        auth.access_token,
+        auth.access_token!,
         (err, result, response) => resolve({ err, result, response }),
       ),
     );
@@ -321,7 +352,7 @@ export class UserService implements OnModuleInit {
 
     const user = await this.save({
       // Create or update
-      id: userSocial.userId || null,
+      id: userSocial.userId || undefined,
       isRewoked: false,
 
       externalId: userData.user.id,
@@ -397,7 +428,7 @@ export class UserService implements OnModuleInit {
       user.externalId = userData.user.id;
       user.fullname = userData.user.fullName;
       user.login = userData.user.login;
-      user.groupName = userData.user.groupName;
+      user.groupName = userData.user.groupName || null;
 
       await this.save(user);
     }

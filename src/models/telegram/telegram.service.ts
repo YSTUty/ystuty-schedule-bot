@@ -123,7 +123,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
 
   public async emulateSession(
     socialId: number,
-  ): Promise<[IContext['session'], () => Promise<void>]> {
+  ): Promise<[IContext['session'] | null, () => Promise<void>]> {
     const lock = await this.redisService.redlock.lock(
       `emulateSession:telegram:${socialId}`,
       10e3,

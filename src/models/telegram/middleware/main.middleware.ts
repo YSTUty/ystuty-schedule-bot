@@ -35,6 +35,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         !ctx.from ||
         (ctx.from.is_bot &&
           // Allow this bot for get updates of invite to channel
+          ctx.from.username &&
           ctx.from.username.toLowerCase() !== 'Channel_Bot'.toLowerCase())
       ) {
         if (

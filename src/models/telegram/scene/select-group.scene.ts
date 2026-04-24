@@ -65,7 +65,7 @@ export class SelectGroupScene extends BaseScene {
       return;
     }
 
-    const isChat = ctx.chat.type !== 'private';
+    const isChat = ctx.chat && ctx.chat.type !== 'private';
 
     const firstTime = state.firstTime !== false;
     state.firstTime = false;

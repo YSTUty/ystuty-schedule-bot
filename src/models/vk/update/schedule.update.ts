@@ -55,8 +55,8 @@ export class ScheduleUpdate {
 
     await ctx.setActivity();
 
-    let message: string | false;
-    let days: number;
+    let message: string | false | null;
+    let days: number = 0;
     if (isTomorrow) {
       skipDays = 1;
       [days, message] = await this.ystutyService.findNext({

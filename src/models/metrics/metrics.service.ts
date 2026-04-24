@@ -20,7 +20,7 @@ export class MetricsService {
   private readonly logger = new Logger(MetricsService.name);
 
   public readonly prefix = 'ystuty_';
-  public readonly gateway: Pushgateway<PrometheusContentType>;
+  public readonly gateway: Pushgateway<PrometheusContentType> | null;
 
   public readonly userCounter: Gauge;
   public readonly userSocialCounter: Gauge;

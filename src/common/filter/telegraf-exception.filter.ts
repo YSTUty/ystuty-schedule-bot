@@ -39,7 +39,8 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const isAdmin = xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
+    const isAdmin =
+      ctx.from && xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
     let content = '';
     switch (true) {
       case isAdmin:

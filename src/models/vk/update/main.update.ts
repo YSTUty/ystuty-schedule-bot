@@ -103,7 +103,7 @@ export class MainUpdate {
 
     const keyboard = user.groupName
       ? this.keyboardFactory.getSelectGroup(ctx, user.groupName).inline()
-      : null;
+      : undefined;
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Profile_Info, { user }), {
       keyboard,
     });
@@ -169,7 +169,7 @@ export class MainUpdate {
 
   @On('chat_invite_user')
   async onChatInviteUser(@Ctx() ctx: IMessageContext) {
-    if (ctx.eventMemberId !== -ctx.$groupId) {
+    if (ctx.eventMemberId !== -ctx.$groupId!) {
       return;
     }
 
@@ -195,7 +195,10 @@ export class MainUpdate {
 
   @On('chat_title_update')
   async onChatTitleUpdate(@Ctx() ctx: IMessageContext) {
-    if (ctx.state.conversation && ctx.eventText) {
+    if (!ctx.eventText) {
+      return;
+    }
+    if (ctx.state.conversation) {
       ctx.state.conversation.title = ctx.eventText;
     }
     await this.vkService.parseChatTitle(ctx, ctx.eventText);
@@ -276,8 +279,8 @@ export class MainUpdate {
             peer_id: peerId,
           });
           console.log(items);
-
-          if (!items.find((e) => e.member_id === senderId).is_admin) {
+          const member = items.find((e) => e.member_id === senderId);
+          if (!member || !member.is_admin) {
             return ctx.i18n.t(LocalePhrase.Error_SelectGroup_OnlyAdminOrOwner);
           }
         } catch (error) {
@@ -304,7 +307,8 @@ export class MainUpdate {
         const { items } = await this.vk.api.messages.getConversationMembers({
           peer_id: ctx.peerId,
         });
-        if (!items.find((e) => e.member_id === ctx.senderId).is_admin) {
+        const member = items.find((e) => e.member_id === ctx.senderId);
+        if (!member || !member.is_admin) {
           return ctx.i18n.t(LocalePhrase.Common_NoAccess);
         }
       } catch {}

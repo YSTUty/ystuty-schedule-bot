@@ -42,9 +42,9 @@ export class MetricsModule implements NestModule {
         // prefix: 'ystuty_',
       };
 
-      moduleForRoot.imports.push(PromModule.forRoot(promOptions));
+      moduleForRoot.imports!.push(PromModule.forRoot(promOptions));
 
-      moduleForRoot.providers.push({
+      moduleForRoot.providers!.push({
         provide: DEFAULT_PROM_OPTIONS,
         useValue: promOptions,
       });

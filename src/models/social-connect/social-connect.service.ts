@@ -7,7 +7,7 @@ import axios from 'axios';
 
 import * as xEnv from '@my-environment';
 
-import { SocialType } from '@my-common';
+import { SocialType } from '@my-common/constants';
 
 import { UserService } from '../user/user.service';
 

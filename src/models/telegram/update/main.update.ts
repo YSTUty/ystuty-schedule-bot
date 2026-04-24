@@ -69,7 +69,7 @@ export class MainUpdate {
 
   @Action(/nope(:(?<text>.*))?/)
   async onNopeAction(@Ctx() ctx: ICallbackQueryContext) {
-    const text = ctx.match.groups.text;
+    const text = ctx.match!.groups!.text;
     await ctx.tryAnswerCbQuery(text);
   }
 
@@ -80,12 +80,12 @@ export class MainUpdate {
     );
     await ctx.tryAnswerCbQuery('✅');
     await this.telegramService.notifyAdmin(
-      `<b>[User clicked]</b> chat: [${ctx.chat.id}]; from: [${
+      `<b>[User clicked]</b> chat: [${ctx.chat!.id}]; from: [${
         ctx.from.id
       }];  (${ctx.from.first_name} ${ctx.from.last_name}); @${
         ctx.from.username || '-'
       };\nMSG:\n<code>${
-        'text' in ctx.callbackQuery.message
+        'text' in ctx.callbackQuery.message!
           ? ctx.callbackQuery.message.text.slice(0, 500)
           : JSON.stringify(ctx.callbackQuery.message)
       }</code>`,
@@ -329,8 +329,8 @@ export class MainUpdate {
   @Command('institutes')
   @Action(/pager:inst-list(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i)
   async onInstitutesList(@Ctx() ctx: ICbQOrMsg) {
-    let page: number = null;
-    let count: number = null;
+    let page: number | null = null;
+    let count: number | null = null;
 
     if (ctx.updateType === 'callback_query') {
       if (ctx.match?.groups) {
@@ -383,9 +383,9 @@ export class MainUpdate {
     /pager:glist(:(?<instituteNameMD5>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
   )
   async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
-    let page: number = null;
-    let count: number = null;
-    let instituteNameMD5: string = null;
+    let page: number | null = null;
+    let count: number | null = null;
+    let instituteNameMD5: string | null = null;
 
     if (ctx.updateType === 'callback_query') {
       if (ctx.match?.groups) {
@@ -449,8 +449,8 @@ export class MainUpdate {
   @Command('tlist')
   @Action(/pager:tlist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
   async onTeachersList(@Ctx() ctx: ICbQOrMsg) {
-    let page: number = null;
-    let count: number = null;
+    let page: number | null = null;
+    let count: number | null = null;
 
     if (ctx.updateType === 'callback_query') {
       if (ctx.match?.groups) {
@@ -553,7 +553,7 @@ export class MainUpdate {
     const groupName = ctx.match?.groups?.groupName;
     const withTrigger = !!ctx.match?.groups?.trigger;
 
-    if (chat.type !== 'private') {
+    if (!chat || chat.type !== 'private') {
       if (!withTrigger && !state.appeal) {
         await ctx.tryAnswerCbQuery();
         return;
@@ -564,12 +564,9 @@ export class MainUpdate {
         conversation.invitedByUserSocialId !== userSocial.id
       ) {
         try {
-          const members = await ctx.telegram.getChatAdministrators(chat.id);
-          if (
-            !['administrator', 'creator'].includes(
-              members.find((e) => e.user.id === from.id)?.status,
-            )
-          ) {
+          const members = await ctx.telegram.getChatAdministrators(chat!.id);
+          const status = members.find((e) => e.user.id === from.id)?.status;
+          if (status && !['administrator', 'creator'].includes(status)) {
             return ctx.i18n.t(LocalePhrase.Error_SelectGroup_OnlyAdminOrOwner);
           }
         } catch (err) {
@@ -599,7 +596,7 @@ export class MainUpdate {
     const { chat } = ctx;
     const teacherId = Number(ctx.match?.groups?.teacherId);
 
-    if (chat.type !== 'private') {
+    if (!chat || chat.type !== 'private') {
       await ctx.tryAnswerCbQuery('Nope');
       return;
     }

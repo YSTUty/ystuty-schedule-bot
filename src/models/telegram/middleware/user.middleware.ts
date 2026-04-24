@@ -22,10 +22,12 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
   middleware() {
     return async (ctx: IContext, next: (...args: any[]) => Promise<any>) => {
       ctx.session ??= {};
+      // ??
+      if (!ctx.from) return;
 
       const telegramId = ctx.from.id;
       const lock = await this.redisService.redlock.lock(
-        `middleware.user.${ctx.from.id}`,
+        `middleware.user.${telegramId}`,
         30e3,
       );
       try {

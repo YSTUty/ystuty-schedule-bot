@@ -42,7 +42,7 @@
     "@nestjs/core": "^11.1.19",
     "@nestjs/platform-express": "^11.1.19",
     "@nestjs/schedule": "^6.1.3",
-    "@nestjs/typeorm": "^11.0.1",
+    "@nestjs/typeorm": "11.0.0",
     "@vk-io/hear": "^1.1.1",
     "@vk-io/scenes": "^1.2.1",
     "@vk-io/session": "^2.2.1",

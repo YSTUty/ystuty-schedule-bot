@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import { Keyboard } from 'vk-io';
 
+import * as xEnv from '@my-environment';
+
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 
@@ -12,6 +14,10 @@ export class VKKeyboardFactory {
   }
 
   public getStart(ctx: IContext) {
+    const isAdmin =
+      xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId || ctx.peerId) ||
+      ctx.state.user?.role === 'admin';
+
     return Keyboard.keyboard([
       [
         Keyboard.textButton({
@@ -27,6 +33,18 @@ export class VKKeyboardFactory {
                 label: ctx.i18n.t(LocalePhrase.Button_Profile),
                 payload: { phrase: LocalePhrase.Button_Profile },
                 color: Keyboard.SECONDARY_COLOR,
+              }),
+            ]
+          : []),
+      ],
+      // TODO(broadcast): replace hardcoded admin label with i18n phrase.
+      [
+        ...(isAdmin
+          ? [
+              Keyboard.textButton({
+                label: 'Рассылки',
+                payload: { command: 'broadcast' },
+                color: Keyboard.PRIMARY_COLOR,
               }),
             ]
           : []),

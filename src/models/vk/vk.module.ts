@@ -4,6 +4,7 @@ import * as nestjsVk from 'nestjs-vk';
 import * as xEnv from '@my-environment';
 
 import { MainMiddleware } from './middleware/main.middleware';
+import { VkBroadcasterModule } from './model/broadcaster/vk-broadcaster.module';
 import { AuthScene } from './scene/auth.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
 import { MainUpdate } from './update/main.update';
@@ -29,6 +30,7 @@ export class VkModule {
     return {
       module: VkModule,
       imports: [
+        VkBroadcasterModule,
         nestjsVk.VkModule.forManagers({
           useSessionManager: false,
           useSceneManager: false,

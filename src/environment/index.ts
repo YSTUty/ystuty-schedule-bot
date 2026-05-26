@@ -50,6 +50,9 @@ export const REDIS_DATABASE: number = +process.env.REDIS_DATABASE! || 0;
 export const REDIS_PREFIX: string =
   process.env.REDIS_PREFIX ?? 'ystuty.schedule.bot:';
 
+export const BROADCAST_HISTORY_LIMIT: string | undefined =
+  process.env.BROADCAST_HISTORY_LIMIT;
+
 // * Socials
 
 // VKontakte

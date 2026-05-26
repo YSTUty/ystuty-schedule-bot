@@ -9,6 +9,8 @@ import {
 } from 'telegraf/typings/core/types/typegram';
 import { Markup as MarkupType } from 'telegraf/typings/markup';
 
+import * as xEnv from '@my-environment';
+
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -20,6 +22,11 @@ export type PaginationItemType =
 @Injectable()
 export class TelegramKeyboardFactory {
   public getStart(ctx: IContext) {
+    const isAdmin =
+      !!ctx.from &&
+      (xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id) ||
+        ctx.user?.role === 'admin');
+
     return Markup.keyboard([
       [ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)],
       [
@@ -27,6 +34,8 @@ export class TelegramKeyboardFactory {
           ? [ctx.i18n.t(LocalePhrase.Button_Profile)]
           : []),
       ],
+      // TODO(broadcast): replace hardcoded admin label with i18n phrase.
+      ...(isAdmin ? [['Рассылки']] : []),
     ]).resize();
   }
 

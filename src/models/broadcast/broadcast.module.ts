@@ -4,8 +4,14 @@ import { BullModule } from '@nestjs/bull';
 
 import { UserSocial } from '../user/entity/user-social.entity';
 
-import { BROADCAST_QUEUE_NAME } from './broadcast.constants';
-import { BroadcastProcessor } from './broadcast.processor';
+import {
+  BROADCAST_TELEGRAM_QUEUE_NAME,
+  BROADCAST_VK_QUEUE_NAME,
+} from './broadcast.constants';
+import {
+  TelegramBroadcastProcessor,
+  VkBroadcastProcessor,
+} from './broadcast.processor';
 import { BroadcastService } from './broadcast.service';
 import { BroadcastCampaign } from './entity/broadcast-campaign.entity';
 import { BroadcastDelivery } from './entity/broadcast-delivery.entity';
@@ -15,7 +21,10 @@ import { BroadcastTransportRegistry } from './transport/broadcast-transport.regi
 @Global()
 @Module({
   imports: [
-    BullModule.registerQueue({ name: BROADCAST_QUEUE_NAME }),
+    BullModule.registerQueue(
+      { name: BROADCAST_TELEGRAM_QUEUE_NAME },
+      { name: BROADCAST_VK_QUEUE_NAME },
+    ),
     TypeOrmModule.forFeature([
       BroadcastCampaign,
       BroadcastDelivery,
@@ -24,7 +33,8 @@ import { BroadcastTransportRegistry } from './transport/broadcast-transport.regi
   ],
   providers: [
     BroadcastService,
-    BroadcastProcessor,
+    TelegramBroadcastProcessor,
+    VkBroadcastProcessor,
     BroadcastAudienceFilterService,
     BroadcastTransportRegistry,
   ],

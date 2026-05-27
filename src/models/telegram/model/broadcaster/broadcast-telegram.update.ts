@@ -2,6 +2,7 @@ import { UseFilters, UseGuards } from '@nestjs/common';
 import { Action, Command, Ctx, Hears, Update } from '@xtcry/nestjs-telegraf';
 
 import { TelegrafExceptionFilter, TelegramAdminGuard } from '@my-common';
+import { SocialType } from '@my-common/constants';
 import {
   ICallbackQueryContext,
   IMessageContext,
@@ -33,7 +34,9 @@ export class BroadcastTelegramUpdate {
 
   @Command('broadcast_status')
   async onBroadcastStatus(@Ctx() ctx: IMessageContext) {
-    const status = await this.broadcastService.getQueueStatus();
+    const status = await this.broadcastService.getQueueStatus(
+      SocialType.Telegram,
+    );
     await ctx.replyWithHTML(
       this.renderQueueStatus(status),
       status.hasPending
@@ -44,7 +47,7 @@ export class BroadcastTelegramUpdate {
 
   @Command('broadcast_terminate')
   async onBroadcastTerminate(@Ctx() ctx: IMessageContext) {
-    await this.broadcastService.terminateActiveCampaigns();
+    await this.broadcastService.terminateActiveCampaigns(SocialType.Telegram);
     await ctx.replyWithHTML('Active broadcast queue terminated.');
   }
 
@@ -53,19 +56,21 @@ export class BroadcastTelegramUpdate {
     const action = ctx.match!.groups!.action;
 
     if (action === 'pause') {
-      await this.broadcastService.pauseQueue();
+      await this.broadcastService.pauseQueue(SocialType.Telegram);
       await ctx.tryAnswerCbQuery('Рассылка приостановлена');
     }
     if (action === 'resume') {
-      await this.broadcastService.resumeQueue();
+      await this.broadcastService.resumeQueue(SocialType.Telegram);
       await ctx.tryAnswerCbQuery('Рассылка продолжена');
     }
     if (action === 'terminate') {
-      await this.broadcastService.terminateActiveCampaigns();
+      await this.broadcastService.terminateActiveCampaigns(SocialType.Telegram);
       await ctx.tryAnswerCbQuery('Рассылка остановлена');
     }
 
-    const status = await this.broadcastService.getQueueStatus();
+    const status = await this.broadcastService.getQueueStatus(
+      SocialType.Telegram,
+    );
     await ctx.editMessageText(this.renderQueueStatus(status), {
       parse_mode: 'HTML',
       ...(!status.hasPending || action === 'terminate'

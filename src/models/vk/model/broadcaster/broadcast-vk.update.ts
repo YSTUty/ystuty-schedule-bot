@@ -4,6 +4,7 @@ import { Ctx, Hears, Next, On, Update } from 'nestjs-vk';
 import { NextMiddleware } from 'middleware-io';
 
 import { VkAdminGuard, VkExceptionFilter } from '@my-common';
+import { SocialType } from '@my-common/constants';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { VK_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants';
@@ -32,7 +33,9 @@ export class BroadcastVkUpdate {
 
   @Hears('/broadcast_status')
   async onBroadcastStatus(@Ctx() ctx: IMessageContext) {
-    const status = await this.broadcastService.getQueueStatus();
+    const status = await this.broadcastService.getQueueStatus(
+      SocialType.Vkontakte,
+    );
     await ctx.send(this.renderQueueStatus(status), {
       ...(status.hasPending && {
         keyboard: this.keyboardFactory
@@ -44,7 +47,7 @@ export class BroadcastVkUpdate {
 
   @Hears('/broadcast_terminate')
   async onBroadcastTerminate(@Ctx() ctx: IMessageContext) {
-    await this.broadcastService.terminateActiveCampaigns();
+    await this.broadcastService.terminateActiveCampaigns(SocialType.Vkontakte);
     await ctx.send('Active broadcast queue terminated.');
   }
 
@@ -62,18 +65,20 @@ export class BroadcastVkUpdate {
     if (!action || action === 'create') return next();
 
     if (action === 'pause') {
-      await this.broadcastService.pauseQueue();
+      await this.broadcastService.pauseQueue(SocialType.Vkontakte);
       await ctx.answer({
         type: 'show_snackbar',
         text: 'Рассылка приостановлена',
       });
     }
     if (action === 'resume') {
-      await this.broadcastService.resumeQueue();
+      await this.broadcastService.resumeQueue(SocialType.Vkontakte);
       await ctx.answer({ type: 'show_snackbar', text: 'Рассылка продолжена' });
     }
     if (action === 'terminate') {
-      await this.broadcastService.terminateActiveCampaigns();
+      await this.broadcastService.terminateActiveCampaigns(
+        SocialType.Vkontakte,
+      );
       await ctx.answer({ type: 'show_snackbar', text: 'Рассылка остановлена' });
     }
   }

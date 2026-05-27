@@ -12,14 +12,16 @@ import { Job } from 'bull';
 
 import { UserSocial } from '../user/entity/user-social.entity';
 
-import { BROADCAST_QUEUE_NAME } from './broadcast.constants';
+import {
+  BROADCAST_TELEGRAM_QUEUE_NAME,
+  BROADCAST_VK_QUEUE_NAME,
+} from './broadcast.constants';
 import { BroadcastService } from './broadcast.service';
 import { BroadcastJobData } from './broadcast.types';
 import { BroadcastTransportRegistry } from './transport/broadcast-transport.registry';
 
-@Processor(BROADCAST_QUEUE_NAME)
-export class BroadcastProcessor {
-  private readonly logger = new Logger(BroadcastProcessor.name);
+export class BroadcastProcessorBase {
+  private readonly logger = new Logger(BroadcastProcessorBase.name);
 
   constructor(
     private readonly broadcastService: BroadcastService,
@@ -28,7 +30,6 @@ export class BroadcastProcessor {
     private readonly userSocialRepository: Repository<UserSocial>,
   ) {}
 
-  @Process({ name: 'send', concurrency: 1 })
   async handleSend(job: Job<BroadcastJobData>) {
     const campaign = await this.broadcastService.getCampaign(
       job.data.campaignId,
@@ -157,5 +158,21 @@ export class BroadcastProcessor {
     if (updated) {
       await this.broadcastService.markProgressUpdated(campaign, doneCount);
     }
+  }
+}
+
+@Processor(BROADCAST_TELEGRAM_QUEUE_NAME)
+export class TelegramBroadcastProcessor extends BroadcastProcessorBase {
+  @Process({ name: 'send', concurrency: 1 })
+  async handleTelegramSend(job: Job<BroadcastJobData>) {
+    return await this.handleSend(job);
+  }
+}
+
+@Processor(BROADCAST_VK_QUEUE_NAME)
+export class VkBroadcastProcessor extends BroadcastProcessorBase {
+  @Process({ name: 'send', concurrency: 1 })
+  async handleVkSend(job: Job<BroadcastJobData>) {
+    return await this.handleSend(job);
   }
 }

@@ -9,7 +9,8 @@ import { SocialType } from '@my-common/constants';
 
 import { getBroadcastHistoryLimit } from './broadcast.config';
 import {
-  BROADCAST_QUEUE_NAME,
+  BROADCAST_TELEGRAM_QUEUE_NAME,
+  BROADCAST_VK_QUEUE_NAME,
   DEFAULT_BROADCAST_JOB_DELAY_MS,
   DEFAULT_BROADCAST_PROGRESS_INTERVAL_MS,
   DEFAULT_BROADCAST_PROGRESS_STEP,
@@ -35,16 +36,18 @@ export class BroadcastService {
     private readonly campaignRepository: Repository<BroadcastCampaign>,
     @InjectRepository(BroadcastDelivery)
     private readonly deliveryRepository: Repository<BroadcastDelivery>,
-    @InjectQueue(BROADCAST_QUEUE_NAME)
-    private readonly broadcastQueue: Queue<BroadcastJobData>,
+    @InjectQueue(BROADCAST_TELEGRAM_QUEUE_NAME)
+    private readonly telegramBroadcastQueue: Queue<BroadcastJobData>,
+    @InjectQueue(BROADCAST_VK_QUEUE_NAME)
+    private readonly vkBroadcastQueue: Queue<BroadcastJobData>,
     private readonly audienceFilterService: BroadcastAudienceFilterService,
   ) {}
 
   public async assertCanStartCampaign(social: SocialType) {
     const [activeCount, waitingCount, delayedCount] = await Promise.all([
-      this.broadcastQueue.getActiveCount(),
-      this.broadcastQueue.getWaitingCount(),
-      this.broadcastQueue.getDelayedCount(),
+      this.getQueue(social).getActiveCount(),
+      this.getQueue(social).getWaitingCount(),
+      this.getQueue(social).getDelayedCount(),
     ]);
     if (activeCount + waitingCount + delayedCount > 0) {
       throw new Error('Another broadcast is already running');
@@ -126,10 +129,11 @@ export class BroadcastService {
       return campaign;
     }
 
-    await this.broadcastQueue.pause();
+    const queue = this.getQueue(params.social);
+    await queue.pause();
 
     for (const delivery of deliveries) {
-      await this.broadcastQueue.add(
+      await queue.add(
         'send',
         {
           campaignId: campaign.id,
@@ -251,45 +255,61 @@ export class BroadcastService {
     await this.updateCampaignSourceMessage(campaign.id, campaign.sourceMessage);
   }
 
-  public async terminateActiveCampaigns() {
-    await this.broadcastQueue.pause();
+  public async terminateActiveCampaigns(social: SocialType) {
+    const queue = this.getQueue(social);
+    await queue.pause();
     await Promise.all([
-      this.broadcastQueue.empty(),
-      this.broadcastQueue.clean(0, 'delayed'),
-      this.broadcastQueue.clean(0, 'wait'),
-      this.broadcastQueue.clean(0, 'active'),
+      queue.empty(),
+      queue.clean(0, 'delayed'),
+      queue.clean(0, 'wait'),
+      queue.clean(0, 'active'),
     ]);
     await this.campaignRepository.update(
-      { status: BroadcastCampaignStatus.Queued },
+      { social, status: BroadcastCampaignStatus.Queued },
       { status: BroadcastCampaignStatus.Terminated },
     );
     await this.campaignRepository.update(
-      { status: BroadcastCampaignStatus.Running },
+      { social, status: BroadcastCampaignStatus.Running },
       { status: BroadcastCampaignStatus.Terminated },
     );
-    await this.broadcastQueue.resume();
+    await queue.resume();
   }
 
-  public async pauseQueue() {
-    await this.broadcastQueue.pause();
+  public async pauseQueue(social: SocialType) {
+    await this.getQueue(social).pause();
   }
 
-  public async resumeQueue() {
-    await this.broadcastQueue.resume();
+  public async resumeQueue(social: SocialType) {
+    await this.getQueue(social).resume();
   }
 
-  public async getQueueStatus() {
+  public async getQueueStatus(social: SocialType) {
+    const queue = this.getQueue(social);
     const [active, waiting, delayed, failed, completed, paused] =
       await Promise.all([
-        this.broadcastQueue.getActiveCount(),
-        this.broadcastQueue.getWaitingCount(),
-        this.broadcastQueue.getDelayedCount(),
-        this.broadcastQueue.getFailedCount(),
-        this.broadcastQueue.getCompletedCount(),
-        this.broadcastQueue.isPaused(),
+        queue.getActiveCount(),
+        queue.getWaitingCount(),
+        queue.getDelayedCount(),
+        queue.getFailedCount(),
+        queue.getCompletedCount(),
+        queue.isPaused(),
       ]);
 
-    return { active, waiting, delayed, failed, completed, paused };
+    return {
+      active,
+      waiting,
+      delayed,
+      failed,
+      completed,
+      paused,
+      hasPending: active + waiting + delayed > 0,
+    };
+  }
+
+  private getQueue(social: SocialType): Queue<BroadcastJobData> {
+    return social === SocialType.Telegram
+      ? this.telegramBroadcastQueue
+      : this.vkBroadcastQueue;
   }
 
   private async pruneHistory() {

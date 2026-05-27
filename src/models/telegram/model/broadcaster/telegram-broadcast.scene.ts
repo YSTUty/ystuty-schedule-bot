@@ -1,4 +1,5 @@
 import {
+  Action,
   Command,
   Ctx,
   Hears,
@@ -25,7 +26,10 @@ type TelegramBroadcastState = {
   filter: BroadcastAudienceFilter;
   sourceMessage?: BroadcastSourceMessage;
   recipientsCount?: number;
+  mode: BroadcastMessageMode.Copy | BroadcastMessageMode.Forward;
 };
+
+type IStepCtx = IStepContext<TelegramBroadcastState>;
 
 @Wizard(TELEGRAM_BROADCAST_SCENE)
 export class TelegramBroadcastScene extends BaseScene {
@@ -37,12 +41,13 @@ export class TelegramBroadcastScene extends BaseScene {
   }
 
   @WizardStep(1)
-  async onEnter(@Ctx() ctx: IStepContext) {
-    const state = ctx.scene.state as TelegramBroadcastState;
+  async onEnter(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
     state.filter = {
       hasDM: true,
       isBlockedBot: false,
     };
+    state.mode = BroadcastMessageMode.Copy;
 
     const count = await this.broadcastService.countRecipients(
       SocialType.Telegram,
@@ -59,7 +64,7 @@ export class TelegramBroadcastScene extends BaseScene {
 
   @WizardStep(2)
   @Command('next')
-  async onNext(@Ctx() ctx: IStepContext) {
+  async onNext(@Ctx() ctx: IStepCtx) {
     await ctx.replyWithHTML(
       'Отправь сообщение-образец для рассылки. Оно будет разослано через copyMessage.',
       Markup.keyboard([['/cancel']]).resize(),
@@ -69,15 +74,15 @@ export class TelegramBroadcastScene extends BaseScene {
 
   @WizardStep(2)
   @Hears(/.+/)
-  async onStep2Hint(@Ctx() ctx: IStepContext) {
+  async onStep2Hint(@Ctx() ctx: IStepCtx) {
     await ctx.replyWithHTML('Настройки готовы. Для продолжения отправь /next.');
   }
 
   @WizardStep(3)
-  async onMessage(@Ctx() ctx: IStepContext) {
+  async onMessage(@Ctx() ctx: IStepCtx) {
     if (!ctx.message || !('message_id' in ctx.message) || !ctx.chat) return;
 
-    const state = ctx.scene.state as TelegramBroadcastState;
+    const state = ctx.scene.state;
     state.sourceMessage = {
       chatId: ctx.chat.id,
       messageId: ctx.message.message_id,
@@ -93,28 +98,35 @@ export class TelegramBroadcastScene extends BaseScene {
       [
         '<b>Рассылка готова к запуску</b>',
         `Получателей: <code>${count}</code>`,
+        `Режим: <code>${state.mode}</code>`,
         '',
         'Команды:',
         '/send - запустить рассылку',
         '/back - заменить сообщение',
         '/cancel - отменить',
       ].join('\n'),
-      { reply_parameters: { message_id: ctx.message.message_id } },
+      {
+        reply_parameters: { message_id: ctx.message.message_id },
+        ...this.getConfirmKeyboard(state),
+      },
     );
     ctx.wizard.next();
   }
 
   @WizardStep(4)
   @Command('back')
-  async onBack(@Ctx() ctx: IStepContext) {
+  async onBack(@Ctx() ctx: IStepCtx) {
     ctx.wizard.selectStep(2);
     await ctx.replyWithHTML('Отправь новое сообщение-образец.');
   }
 
   @WizardStep(4)
   @Command('send')
-  async onSend(@Ctx() ctx: IStepContext) {
-    const state = ctx.scene.state as TelegramBroadcastState;
+  @Action('broadcast:wizard:send')
+  async onSend(@Ctx() ctx: IStepCtx) {
+    await ctx.tryAnswerCbQuery();
+
+    const state = ctx.scene.state;
     if (!state.sourceMessage) {
       ctx.wizard.selectStep(2);
       await ctx.replyWithHTML('Сначала отправь сообщение-образец.');
@@ -123,21 +135,60 @@ export class TelegramBroadcastScene extends BaseScene {
 
     const campaign = await this.broadcastService.createAndQueueCampaign({
       social: SocialType.Telegram,
-      mode: BroadcastMessageMode.Copy,
+      mode: state.mode,
       sourceMessage: state.sourceMessage,
       audienceFilter: state.filter,
       createdBySocialId: ctx.from?.id,
     });
 
-    await ctx.replyWithHTML(
+    if (ctx.callbackQuery?.message) {
+      await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
+    }
+
+    const queuedMessage = await ctx.replyWithHTML(
       `Рассылка #${campaign.id} поставлена в очередь. Получателей: <code>${campaign.totalCount}</code>`,
-      this.keyboardFactory.getStart(ctx),
+      this.keyboardFactory.getBroadcastQueueControls(true),
     );
+    await this.broadcastService.updateCampaignSourceMessage(campaign.id, {
+      ...campaign.sourceMessage,
+      reportMessage: {
+        chatId: queuedMessage.chat.id,
+        messageId: queuedMessage.message_id,
+      },
+    });
     await this.leaveScene(ctx);
   }
 
   @WizardStep(4)
-  async onStep4Fallback(@Ctx() ctx: IStepContext) {
+  @Action(/broadcast:wizard:mode:(?<mode>copy|forward)/)
+  async onModeToggle(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.mode =
+      ctx.match!.groups!.mode === BroadcastMessageMode.Forward
+        ? BroadcastMessageMode.Forward
+        : BroadcastMessageMode.Copy;
+
+    await ctx.tryAnswerCbQuery(`Режим: ${state.mode}`);
+    await ctx.editMessageText(
+      [
+        '<b>Рассылка готова к запуску</b>',
+        `Получателей: <code>${state.recipientsCount ?? 0}</code>`,
+        `Режим: <code>${state.mode}</code>`,
+        '',
+        'Команды:',
+        '/send - запустить рассылку',
+        '/back - заменить сообщение',
+        '/cancel - отменить',
+      ].join('\n'),
+      {
+        parse_mode: 'HTML',
+        ...this.getConfirmKeyboard(state),
+      },
+    );
+  }
+
+  @WizardStep(4)
+  async onStep4Fallback(@Ctx() ctx: IStepCtx) {
     await ctx.replyWithHTML('Для запуска рассылки отправь /send.');
   }
 
@@ -150,6 +201,7 @@ export class TelegramBroadcastScene extends BaseScene {
       '• social = telegram',
       `• hasDM = ${state.filter.hasDM}`,
       `• isBlockedBot = ${state.filter.isBlockedBot}`,
+      `• mode = ${state.mode ?? BroadcastMessageMode.Copy}`,
       '',
       'Для продолжения отправь /next.',
     ].join('\n');
@@ -157,5 +209,9 @@ export class TelegramBroadcastScene extends BaseScene {
 
   private getSettingsKeyboard() {
     return Markup.keyboard([['/next'], ['/cancel']]).resize();
+  }
+
+  private getConfirmKeyboard(state: TelegramBroadcastState) {
+    return this.keyboardFactory.getBroadcastConfirm(state.mode);
   }
 }

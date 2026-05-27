@@ -11,6 +11,8 @@ import { getBroadcastHistoryLimit } from './broadcast.config';
 import {
   BROADCAST_QUEUE_NAME,
   DEFAULT_BROADCAST_JOB_DELAY_MS,
+  DEFAULT_BROADCAST_PROGRESS_INTERVAL_MS,
+  DEFAULT_BROADCAST_PROGRESS_STEP,
 } from './broadcast.constants';
 import {
   BroadcastAudienceFilter,
@@ -124,6 +126,8 @@ export class BroadcastService {
       return campaign;
     }
 
+    await this.broadcastQueue.pause();
+
     for (const delivery of deliveries) {
       await this.broadcastQueue.add(
         'send',
@@ -158,6 +162,13 @@ export class BroadcastService {
 
   public async getCampaign(campaignId: number) {
     return await this.campaignRepository.findOne({ id: campaignId });
+  }
+
+  public async updateCampaignSourceMessage(
+    campaignId: number,
+    sourceMessage: BroadcastSourceMessage,
+  ) {
+    await this.campaignRepository.update(campaignId, { sourceMessage });
   }
 
   public async markDeliverySent(
@@ -209,6 +220,37 @@ export class BroadcastService {
     return { sentCount, failedCount, skippedCount, totalCount, status };
   }
 
+  public shouldUpdateProgress(params: {
+    sourceMessage: BroadcastSourceMessage;
+    doneCount: number;
+    totalCount: number;
+    finished: boolean;
+  }) {
+    const reportMessage = params.sourceMessage.reportMessage;
+    if (!reportMessage) return false;
+    if (params.finished) return true;
+
+    const now = Date.now();
+    const lastUpdatedAt = reportMessage.lastUpdatedAt ?? 0;
+    const lastDoneCount = reportMessage.lastDoneCount ?? 0;
+
+    return (
+      now - lastUpdatedAt >= DEFAULT_BROADCAST_PROGRESS_INTERVAL_MS &&
+      params.doneCount - lastDoneCount >= DEFAULT_BROADCAST_PROGRESS_STEP
+    );
+  }
+
+  public async markProgressUpdated(
+    campaign: BroadcastCampaign,
+    doneCount: number,
+  ) {
+    if (!campaign.sourceMessage.reportMessage) return;
+
+    campaign.sourceMessage.reportMessage.lastUpdatedAt = Date.now();
+    campaign.sourceMessage.reportMessage.lastDoneCount = doneCount;
+    await this.updateCampaignSourceMessage(campaign.id, campaign.sourceMessage);
+  }
+
   public async terminateActiveCampaigns() {
     await this.broadcastQueue.pause();
     await Promise.all([
@@ -228,16 +270,26 @@ export class BroadcastService {
     await this.broadcastQueue.resume();
   }
 
-  public async getQueueStatus() {
-    const [active, waiting, delayed, failed, completed] = await Promise.all([
-      this.broadcastQueue.getActiveCount(),
-      this.broadcastQueue.getWaitingCount(),
-      this.broadcastQueue.getDelayedCount(),
-      this.broadcastQueue.getFailedCount(),
-      this.broadcastQueue.getCompletedCount(),
-    ]);
+  public async pauseQueue() {
+    await this.broadcastQueue.pause();
+  }
 
-    return { active, waiting, delayed, failed, completed };
+  public async resumeQueue() {
+    await this.broadcastQueue.resume();
+  }
+
+  public async getQueueStatus() {
+    const [active, waiting, delayed, failed, completed, paused] =
+      await Promise.all([
+        this.broadcastQueue.getActiveCount(),
+        this.broadcastQueue.getWaitingCount(),
+        this.broadcastQueue.getDelayedCount(),
+        this.broadcastQueue.getFailedCount(),
+        this.broadcastQueue.getCompletedCount(),
+        this.broadcastQueue.isPaused(),
+      ]);
+
+    return { active, waiting, delayed, failed, completed, paused };
   }
 
   private async pruneHistory() {

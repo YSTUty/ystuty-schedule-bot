@@ -5,11 +5,13 @@ import { TelegramError } from 'telegraf';
 import { SocialType } from '@my-common/constants';
 
 import {
+  BroadcastCampaignStatus,
   BroadcastMessageMode,
   BroadcastTransport,
   BroadcastTransportResult,
 } from '../../../broadcast/broadcast.types';
 import { BroadcastTransportRegistry } from '../../../broadcast/transport/broadcast-transport.registry';
+import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TelegramService } from '../../telegram.service';
 
 @Injectable()
@@ -21,6 +23,7 @@ export class TelegramBroadcastTransport
   constructor(
     private readonly telegramService: TelegramService,
     private readonly registry: BroadcastTransportRegistry,
+    private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {}
 
   onModuleInit() {
@@ -36,10 +39,24 @@ export class TelegramBroadcastTransport
 
     if (params.mode === BroadcastMessageMode.Copy) {
       if (!params.sourceMessage.chatId || !params.sourceMessage.messageId) {
-        throw new Error('Telegram copy broadcast requires source message');
+        throw new Error('Telegram broadcast requires source message');
       }
 
       const result = await this.telegramService.bot.telegram.copyMessage(
+        chatId,
+        params.sourceMessage.chatId,
+        params.sourceMessage.messageId,
+      );
+
+      return { messageId: String(result.message_id) };
+    }
+
+    if (params.mode === BroadcastMessageMode.Forward) {
+      if (!params.sourceMessage.chatId || !params.sourceMessage.messageId) {
+        throw new Error('Telegram broadcast requires source message');
+      }
+
+      const result = await this.telegramService.bot.telegram.forwardMessage(
         chatId,
         params.sourceMessage.chatId,
         params.sourceMessage.messageId,
@@ -69,6 +86,36 @@ export class TelegramBroadcastTransport
       await this.telegramService.bot.telegram.deleteMessage(
         Number(params.targetSocialId),
         Number(params.messageId),
+      );
+      return true;
+    } catch (err) {
+      if (err instanceof TelegramError) return false;
+      throw err;
+    }
+  }
+
+  public async updateCampaignProgress(params: {
+    reportMessage: { chatId: number; messageId: number };
+    status: BroadcastCampaignStatus;
+    text: string;
+  }): Promise<boolean> {
+    try {
+      const isFinal = [
+        BroadcastCampaignStatus.Completed,
+        BroadcastCampaignStatus.Terminated,
+        BroadcastCampaignStatus.Failed,
+      ].includes(params.status);
+      await this.telegramService.bot.telegram.editMessageText(
+        params.reportMessage.chatId,
+        params.reportMessage.messageId,
+        undefined,
+        params.text,
+        {
+          parse_mode: 'HTML',
+          ...(isFinal
+            ? this.keyboardFactory.getClear(true)
+            : this.keyboardFactory.getBroadcastQueueControls(false)),
+        },
       );
       return true;
     } catch (err) {

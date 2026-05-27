@@ -18,6 +18,7 @@ export enum BroadcastDeliveryStatus {
 
 export enum BroadcastMessageMode {
   Copy = 'copy',
+  Forward = 'forward',
   Text = 'text',
 }
 
@@ -33,7 +34,15 @@ export type BroadcastSourceMessage = {
   chatId?: number;
   messageId?: number;
   text?: string;
+  attachment?: string;
+  stickerId?: number;
   parseMode?: 'HTML' | 'MarkdownV2' | 'Markdown';
+  reportMessage?: {
+    chatId: number;
+    messageId: number;
+    lastUpdatedAt?: number;
+    lastDoneCount?: number;
+  };
 };
 
 export type BroadcastJobData = {
@@ -59,5 +68,11 @@ export interface BroadcastTransport {
   deleteCampaignDelivery(params: {
     targetSocialId: string;
     messageId: string;
+  }): Promise<boolean>;
+
+  updateCampaignProgress?(params: {
+    reportMessage: NonNullable<BroadcastSourceMessage['reportMessage']>;
+    status: BroadcastCampaignStatus;
+    text: string;
   }): Promise<boolean>;
 }

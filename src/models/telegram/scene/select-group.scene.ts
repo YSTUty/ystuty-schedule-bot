@@ -3,7 +3,7 @@ import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
 import { Markup } from 'telegraf';
 
 import { LocalePhrase } from '@my-interfaces';
-import { IContext, IStepContext } from '@my-interfaces/telegram';
+import { ICbQOrMsg, IContext, IStepContext } from '@my-interfaces/telegram';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 // import { UserService } from '../../user/user.service';
@@ -38,7 +38,9 @@ export class SelectGroupScene extends BaseScene {
   @WizardStep(1)
   @Hears(/.+/)
   @Action(/.+/)
-  async step1(@Ctx() ctx: IStepContext) {
+  async step1(
+    @Ctx() ctx: IStepContext<{ firstTime?: boolean; groupName?: string }>,
+  ) {
     const {
       scene: { state },
       userSocial,
@@ -61,7 +63,7 @@ export class SelectGroupScene extends BaseScene {
     ) {
       await ctx.scene.leave();
       // next();
-      this.mainUpdate.onInstitutesList(ctx);
+      this.mainUpdate.onInstitutesList(ctx as unknown as ICbQOrMsg);
       return;
     }
 

@@ -52,6 +52,43 @@ export class VKKeyboardFactory {
     ]);
   }
 
+  public getBroadcastQueueControls(paused = true) {
+    return Keyboard.keyboard([
+      [
+        paused
+          ? Keyboard.callbackButton({
+              label: '▶️ Запустить',
+              payload: { broadcastAction: 'resume' },
+              color: Keyboard.POSITIVE_COLOR,
+            })
+          : Keyboard.callbackButton({
+              label: '⏸ Пауза',
+              payload: { broadcastAction: 'pause' },
+              color: Keyboard.SECONDARY_COLOR,
+            }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: '⛔ Остановить',
+          payload: { broadcastAction: 'terminate' },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastConfirm() {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: '🚀 Создать очередь',
+          payload: { broadcastAction: 'create' },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
   public getAuth(
     ctx: IContext,
     social = true,

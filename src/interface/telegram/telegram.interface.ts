@@ -27,7 +27,6 @@ type Shorthand<FName extends Exclude<keyof Telegram, keyof ApiClient>> = Tail<
 
 export interface ISessionState extends Partial<TgSceneSession> {
   __language_code?: string;
-  __scenes?: { current?: string; state?: any; cursor?: number };
 
   teacherId?: number;
 }
@@ -66,10 +65,10 @@ type CombinedContext = {
 
   state: ContextState;
 
-  scene: Scenes.SceneContextScene<
-    Scenes.SceneContext<SceneSession>,
-    SceneSession
-  > & { state: any };
+  scene: OmitT<
+    Scenes.SceneContextScene<Scenes.SceneContext<SceneSession>, SceneSession>,
+    'state'
+  > & { state: AnyObj };
 
   i18n: I18nContext<
     Record<LocalePhrase | TelegramLocalePhrase, AnyObj | never>
@@ -167,18 +166,18 @@ export type ICallbackQueryContext<T = {}> = IContext<
 >;
 export type ICbQOrMsg = IMessageContext | ICallbackQueryContext;
 
-export type ISceneContext = (IMessageContext | ICallbackQueryContext) & {
-  scene: Scenes.SceneContextScene<
-    Scenes.SceneContext<SceneSession>,
-    SceneSession
-  > & { state: any };
+export type ISceneContext<SceneState = AnyObj> = OmitT<ICbQOrMsg, 'scene'> & {
+  scene: OmitT<
+    Scenes.SceneContextScene<Scenes.SceneContext<SceneSession>, SceneSession>,
+    'state'
+  > & { state: SceneState };
 };
 
-export type IStepContext = (IMessageContext | ICallbackQueryContext) & {
-  scene: Scenes.SceneContextScene<
-    WizardContext<WizardSession>,
-    WizardSession
-  > & { state: any };
+export type IStepContext<SceneState = AnyObj> = OmitT<ICbQOrMsg, 'scene'> & {
+  scene: OmitT<
+    Scenes.SceneContextScene<WizardContext<WizardSession>, WizardSession>,
+    'state'
+  > & { state: SceneState };
   session: Scenes.WizardSession<WizardSession>;
   wizard: WizardContextWizard<WizardContext<WizardSession>>;
 };

@@ -71,7 +71,15 @@ export class BroadcastProcessor {
 
       throw err;
     } finally {
-      await this.broadcastService.refreshCampaignCounters(job.data.campaignId);
+      const counters = await this.broadcastService.refreshCampaignCounters(
+        job.data.campaignId,
+      );
+      const updatedCampaign = await this.broadcastService.getCampaign(
+        job.data.campaignId,
+      );
+      if (updatedCampaign) {
+        await this.updateProgressMessage(updatedCampaign, counters);
+      }
     }
   }
 
@@ -107,5 +115,47 @@ export class BroadcastProcessor {
       'chat not found',
       'peer_id',
     ].some((part) => message.toLowerCase().includes(part));
+  }
+
+  private async updateProgressMessage(
+    campaign: Awaited<ReturnType<BroadcastService['getCampaign']>>,
+    counters: Awaited<ReturnType<BroadcastService['refreshCampaignCounters']>>,
+  ) {
+    if (!campaign?.sourceMessage.reportMessage) return;
+
+    const doneCount =
+      counters.sentCount + counters.failedCount + counters.skippedCount;
+    const finished = doneCount >= counters.totalCount;
+    if (
+      !this.broadcastService.shouldUpdateProgress({
+        sourceMessage: campaign.sourceMessage,
+        doneCount,
+        totalCount: counters.totalCount,
+        finished,
+      })
+    ) {
+      return;
+    }
+
+    const transport = this.transportRegistry.get(campaign.social);
+    if (!transport.updateCampaignProgress) return;
+
+    const text = [
+      `<b>Рассылка #${campaign.id}</b>`,
+      `Готово: <code>${doneCount}/${counters.totalCount}</code>`,
+      `Успешно: <code>${counters.sentCount}</code>`,
+      `Ошибки: <code>${counters.failedCount}</code>`,
+      `Пропущено: <code>${counters.skippedCount}</code>`,
+      `Статус: <code>${counters.status}</code>`,
+    ].join('\n');
+
+    const updated = await transport.updateCampaignProgress({
+      reportMessage: campaign.sourceMessage.reportMessage,
+      status: counters.status,
+      text,
+    });
+    if (updated) {
+      await this.broadcastService.markProgressUpdated(campaign, doneCount);
+    }
   }
 }

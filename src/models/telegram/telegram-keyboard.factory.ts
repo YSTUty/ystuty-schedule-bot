@@ -39,6 +39,31 @@ export class TelegramKeyboardFactory {
     ]).resize();
   }
 
+  public getBroadcastQueueControls(paused = true) {
+    return Markup.inlineKeyboard([
+      [
+        paused
+          ? Markup.button.callback('▶️ Запустить', 'broadcast:queue:resume')
+          : Markup.button.callback('⏸ Пауза', 'broadcast:queue:pause'),
+      ],
+      [Markup.button.callback('⛔ Остановить', 'broadcast:queue:terminate')],
+    ]);
+  }
+
+  public getBroadcastConfirm(mode: 'copy' | 'forward') {
+    const nextMode = mode === 'copy' ? 'forward' : 'copy';
+
+    return Markup.inlineKeyboard([
+      [Markup.button.callback('🚀 Создать очередь', 'broadcast:wizard:send')],
+      [
+        Markup.button.callback(
+          `Режим: ${mode}. Переключить на ${nextMode}`,
+          `broadcast:wizard:mode:${nextMode}`,
+        ),
+      ],
+    ]);
+  }
+
   public getAuth(
     ctx: IContext,
     inline?: true,

@@ -28,6 +28,7 @@ export type BroadcastAudienceFilter = {
   onlyAuthorized?: boolean;
   groupName?: string | null;
   profileType?: string | null;
+  userSocialIds?: number[];
 };
 
 export type BroadcastSourceMessage = {

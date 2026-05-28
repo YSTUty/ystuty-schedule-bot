@@ -3,6 +3,8 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { TelegramError } from 'telegraf';
 
 import { SocialType } from '@my-common/constants';
+import { i18n as i18nTg } from '@my-common/util/tg';
+import { IContext } from '@my-interfaces/telegram';
 
 import {
   BroadcastCampaignStatus,
@@ -19,6 +21,9 @@ export class TelegramBroadcastTransport
   implements BroadcastTransport, OnModuleInit
 {
   public readonly social = SocialType.Telegram;
+  private readonly fakeCtx = {
+    i18n: i18nTg.createContext('ru', {}),
+  } as IContext;
 
   constructor(
     private readonly telegramService: TelegramService,
@@ -114,7 +119,10 @@ export class TelegramBroadcastTransport
           parse_mode: 'HTML',
           ...(isFinal
             ? this.keyboardFactory.getClear(true)
-            : this.keyboardFactory.getBroadcastQueueControls(false)),
+            : this.keyboardFactory.getBroadcastQueueControls(
+                this.fakeCtx,
+                false,
+              )),
         },
       );
       return true;

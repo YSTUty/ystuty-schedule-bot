@@ -5,6 +5,8 @@ import { NextMiddleware } from 'middleware-io';
 
 import { VkAdminGuard, VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
+import { VkHearsLocale } from '@my-common/decorator/vk';
+import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { VK_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants';
@@ -20,11 +22,11 @@ export class BroadcastVkUpdate {
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
 
-  // TODO(broadcast): move command text to i18n when broadcast phrases are added.
-  @Hears(['/broadcast', 'Рассылки'])
+  @Hears('/broadcast')
+  @VkHearsLocale(LocalePhrase.Button_Broadcast)
   async onBroadcast(@Ctx() ctx: IMessageContext) {
     if (!ctx.isDM) {
-      await ctx.send('VK broadcast scene is available only in DM');
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_PrivateOnly));
       return;
     }
 
@@ -36,13 +38,16 @@ export class BroadcastVkUpdate {
     const status = await this.broadcastService.getQueueStatus(
       SocialType.Vkontakte,
     );
-    await ctx.send(this.renderQueueStatus(status), {
-      ...(status.hasPending && {
-        keyboard: this.keyboardFactory
-          .getBroadcastQueueControls(status.paused)
-          .inline(),
-      }),
-    });
+    await ctx.send(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
+      {
+        ...(status.hasPending && {
+          keyboard: this.keyboardFactory
+            .getBroadcastQueueControls(ctx, status.paused)
+            .inline(),
+        }),
+      },
+    );
   }
 
   @Hears('/broadcast_terminate')
@@ -60,9 +65,10 @@ export class BroadcastVkUpdate {
       | 'pause'
       | 'resume'
       | 'terminate'
-      | 'create'
       | undefined;
-    if (!action || action === 'create') return next();
+    if (!action || !['pause', 'resume', 'terminate'].includes(action)) {
+      return next();
+    }
 
     if (action === 'pause') {
       await this.broadcastService.pauseQueue(SocialType.Vkontakte);
@@ -81,19 +87,21 @@ export class BroadcastVkUpdate {
       );
       await ctx.answer({ type: 'show_snackbar', text: 'Рассылка остановлена' });
     }
-  }
 
-  private renderQueueStatus(
-    status: Awaited<ReturnType<BroadcastService['getQueueStatus']>>,
-  ) {
-    return [
-      'Broadcast queue',
-      `Active: ${status.active}`,
-      `Waiting: ${status.waiting}`,
-      `Delayed: ${status.delayed}`,
-      `Completed: ${status.completed}`,
-      `Failed: ${status.failed}`,
-      `Paused: ${status.paused}`,
-    ].join('\n');
+    const status = await this.broadcastService.getQueueStatus(
+      SocialType.Vkontakte,
+    );
+    await ctx.api.messages.edit({
+      peer_id: ctx.peerId,
+      conversation_message_id: ctx.conversationMessageId,
+      message: ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
+      ...(status.hasPending && action !== 'terminate'
+        ? {
+            keyboard: this.keyboardFactory
+              .getBroadcastQueueControls(ctx, status.paused)
+              .inline(),
+          }
+        : { keyboard: this.keyboardFactory.getClose(ctx).inline() }),
+    });
   }
 }

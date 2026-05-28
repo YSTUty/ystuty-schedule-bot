@@ -14,6 +14,18 @@ button:
   profile: Профиль 👤
   select_group: Выбрать группу
   select_group_x: Выбрать группу "${groupName}"
+  broadcast:
+    title: Рассылки
+    create_queue: 🚀 Создать очередь
+    resume: ▶️ Запустить
+    pause: ⏸ Пауза
+    terminate: ⛔ Остановить
+    mode_toggle: "Режим: ${mode}. Переключить на ${nextMode}"
+    select_recipients: Выбрать получателей
+    audience_all: Все по фильтру
+    audience_manual: Тестовая выборка
+    back: Назад
+    back_to_settings: Назад к настройкам
   schedule:
     schedule: Расписание
     for_today: На сегодня
@@ -104,3 +116,51 @@ page:
     not_found: |
       Ошибка: Группа '${groupName}' не найдена
     reset: Группа сброшена
+
+  broadcast:
+    private_only: VK broadcast scene доступен только в личных сообщениях
+    settings: |
+      Настройки рассылки
+      Получателей сейчас: ${recipientsCount}
+      Выбрано вручную: ${selectedCount}
+      Аудитория: ${audienceMode}
+
+      Отправь текст, стикер или сообщение с вложением следующим сообщением.
+      Для отмены: /cancel
+    select_recipients: |
+      Тестовая выборочная рассылка
+      Выбрано: ${selectedCount}
+      Страница: ${currentPage}/${totalPages}
+
+      Нажми на пользователя, чтобы переключить выбор.
+    send_sample: Отправь текст, стикер или сообщение с вложением для рассылки.
+    ready: |
+      Рассылка готова к запуску.
+      Получателей: ${recipientsCount}
+      Выбрано вручную: ${selectedCount}
+
+      Отправь /send или нажми кнопку для создания очереди. Очередь будет создана на паузе.
+    queued: |
+      Рассылка №${campaignId} поставлена в очередь. Получателей: ${recipientsCount}
+    canceled: Рассылка отменена
+    no_recipients: Для тестовой рассылки выбери хотя бы одного получателя.
+    message_not_found: Не удалось определить сообщение для рассылки. Отправь текст, стикер или вложение.
+    send_command_hint: Для запуска отправь /send, для отмены - /cancel.
+    settings_ready_hint: Настройки готовы. Для продолжения отправь /next.
+    source_required: Сначала отправь сообщение-образец.
+    new_sample: Отправь новое сообщение-образец.
+    queue_status: |
+      Broadcast queue
+      Active: ${status.active}
+      Waiting: ${status.waiting}
+      Delayed: ${status.delayed}
+      Completed: ${status.completed}
+      Failed: ${status.failed}
+      Paused: ${status.paused}
+    progress: |
+      Рассылка №${campaignId}
+      Готово: ${doneCount}/${totalCount}
+      Успешно: ${sentCount}
+      Ошибки: ${failedCount}
+      Пропущено: ${skippedCount}
+      Статус: ${status}

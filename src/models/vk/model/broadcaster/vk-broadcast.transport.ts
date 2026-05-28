@@ -3,6 +3,8 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { APIError } from 'vk-io';
 
 import { SocialType } from '@my-common/constants';
+import { i18n as i18nVk } from '@my-common/util/vk';
+import { IContext } from '@my-interfaces/vk';
 
 import {
   BroadcastCampaignStatus,
@@ -17,6 +19,9 @@ import { VkService } from '../../vk.service';
 @Injectable()
 export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
   public readonly social = SocialType.Vkontakte;
+  private readonly fakeCtx = {
+    i18n: i18nVk.createContext('ru', {}),
+  } as IContext;
 
   constructor(
     private readonly vkService: VkService,
@@ -95,7 +100,7 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
         ? { keyboard: this.keyboardFactory.getClose().inline() }
         : {
             keyboard: this.keyboardFactory
-              .getBroadcastQueueControls(false)
+              .getBroadcastQueueControls(this.fakeCtx, false)
               .inline(),
           },
     );

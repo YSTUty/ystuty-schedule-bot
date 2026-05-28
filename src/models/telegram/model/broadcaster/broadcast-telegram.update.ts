@@ -1,8 +1,10 @@
 import { UseFilters, UseGuards } from '@nestjs/common';
-import { Action, Command, Ctx, Hears, Update } from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Update } from '@xtcry/nestjs-telegraf';
 
 import { TelegrafExceptionFilter, TelegramAdminGuard } from '@my-common';
 import { SocialType } from '@my-common/constants';
+import { TgHearsLocale } from '@my-common/decorator/tg';
+import { LocalePhrase } from '@my-interfaces';
 import {
   ICallbackQueryContext,
   IMessageContext,
@@ -21,12 +23,11 @@ export class BroadcastTelegramUpdate {
     private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {}
 
-  // TODO(broadcast): move command text to i18n when broadcast phrases are added.
   @Command('broadcast')
-  @Hears('Рассылки')
+  @TgHearsLocale(LocalePhrase.Button_Broadcast)
   async onBroadcast(@Ctx() ctx: IMessageContext) {
     if (ctx.chat.type !== 'private') {
-      return 'Broadcast wizard is available only in private chat';
+      return ctx.i18n.t(LocalePhrase.Page_Broadcast_PrivateOnly);
     }
 
     await ctx.scene.enter(TELEGRAM_BROADCAST_SCENE);
@@ -38,9 +39,9 @@ export class BroadcastTelegramUpdate {
       SocialType.Telegram,
     );
     await ctx.replyWithHTML(
-      this.renderQueueStatus(status),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
       status.hasPending
-        ? this.keyboardFactory.getBroadcastQueueControls(status.paused)
+        ? this.keyboardFactory.getBroadcastQueueControls(ctx, status.paused)
         : undefined,
     );
   }
@@ -71,25 +72,14 @@ export class BroadcastTelegramUpdate {
     const status = await this.broadcastService.getQueueStatus(
       SocialType.Telegram,
     );
-    await ctx.editMessageText(this.renderQueueStatus(status), {
-      parse_mode: 'HTML',
-      ...(!status.hasPending || action === 'terminate'
-        ? {}
-        : this.keyboardFactory.getBroadcastQueueControls(status.paused)),
-    });
-  }
-
-  private renderQueueStatus(
-    status: Awaited<ReturnType<BroadcastService['getQueueStatus']>>,
-  ) {
-    return [
-      '<b>Broadcast queue</b>',
-      `Active: <code>${status.active}</code>`,
-      `Waiting: <code>${status.waiting}</code>`,
-      `Delayed: <code>${status.delayed}</code>`,
-      `Completed: <code>${status.completed}</code>`,
-      `Failed: <code>${status.failed}</code>`,
-      `Paused: <code>${status.paused}</code>`,
-    ].join('\n');
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
+      {
+        parse_mode: 'HTML',
+        ...(!status.hasPending || action === 'terminate'
+          ? {}
+          : this.keyboardFactory.getBroadcastQueueControls(ctx, status.paused)),
+      },
+    );
   }
 }

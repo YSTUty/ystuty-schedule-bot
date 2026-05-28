@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { Queue } from 'bull';
 
 import { SocialType } from '@my-common/constants';
+import { UserException } from '@my-common/exception';
 
 import { getBroadcastHistoryLimit } from './broadcast.config';
 import {
@@ -50,7 +51,7 @@ export class BroadcastService {
       this.getQueue(social).getDelayedCount(),
     ]);
     if (activeCount + waitingCount + delayedCount > 0) {
-      throw new Error('Another broadcast is already running');
+      throw new UserException('Another broadcast is already running');
     }
 
     const runningCampaign = await this.campaignRepository.findOne({
@@ -60,7 +61,9 @@ export class BroadcastService {
       ],
     });
     if (runningCampaign) {
-      throw new Error(`Broadcast campaign #${runningCampaign.id} is active`);
+      throw new UserException(
+        `Broadcast campaign #${runningCampaign.id} is active`,
+      );
     }
   }
 
@@ -75,11 +78,26 @@ export class BroadcastService {
     return recipients.length;
   }
 
+  public async getRecipientsPage(params: {
+    social: SocialType;
+    filter?: BroadcastAudienceFilter;
+    page?: number;
+    limit?: number;
+  }) {
+    return await this.audienceFilterService.getRecipientsPage(
+      params.social,
+      params.filter,
+      params.page,
+      params.limit,
+    );
+  }
+
   public async createAndQueueCampaign(params: {
     social: SocialType;
     mode: BroadcastMessageMode;
     sourceMessage: BroadcastSourceMessage;
     audienceFilter?: BroadcastAudienceFilter;
+    recipientUserSocialIds?: number[];
     createdBySocialId?: string | number | null;
   }) {
     await this.assertCanStartCampaign(params.social);
@@ -90,7 +108,12 @@ export class BroadcastService {
     );
     const recipients = await this.audienceFilterService.getRecipients(
       params.social,
-      audienceFilter,
+      params.recipientUserSocialIds?.length
+        ? {
+            ...audienceFilter,
+            userSocialIds: params.recipientUserSocialIds,
+          }
+        : audienceFilter,
     );
 
     const campaign = await this.campaignRepository.save(

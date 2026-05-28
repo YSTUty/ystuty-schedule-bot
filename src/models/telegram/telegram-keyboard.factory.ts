@@ -34,31 +34,76 @@ export class TelegramKeyboardFactory {
           ? [ctx.i18n.t(LocalePhrase.Button_Profile)]
           : []),
       ],
-      // TODO(broadcast): replace hardcoded admin label with i18n phrase.
-      ...(isAdmin ? [['Рассылки']] : []),
+      ...(isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
     ]).resize();
   }
 
-  public getBroadcastQueueControls(paused = true) {
+  public getBroadcastQueueControls(ctx: IContext, paused = true) {
     return Markup.inlineKeyboard([
       [
         paused
-          ? Markup.button.callback('▶️ Запустить', 'broadcast:queue:resume')
-          : Markup.button.callback('⏸ Пауза', 'broadcast:queue:pause'),
+          ? Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_Broadcast_Resume),
+              'broadcast:queue:resume',
+            )
+          : Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_Broadcast_Pause),
+              'broadcast:queue:pause',
+            ),
       ],
-      [Markup.button.callback('⛔ Остановить', 'broadcast:queue:terminate')],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
+          'broadcast:queue:terminate',
+        ),
+      ],
     ]);
   }
 
-  public getBroadcastConfirm(mode: 'copy' | 'forward') {
+  public getBroadcastConfirm(ctx: IContext, mode: 'copy' | 'forward') {
     const nextMode = mode === 'copy' ? 'forward' : 'copy';
 
     return Markup.inlineKeyboard([
-      [Markup.button.callback('🚀 Создать очередь', 'broadcast:wizard:send')],
       [
         Markup.button.callback(
-          `Режим: ${mode}. Переключить на ${nextMode}`,
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_CreateQueue),
+          'broadcast:wizard:send',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ModeToggle, {
+            mode,
+            nextMode,
+          }),
           `broadcast:wizard:mode:${nextMode}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:back',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastSettings(ctx: IContext, manualMode = false) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          manualMode
+            ? ctx.i18n.t(LocalePhrase.Button_Broadcast_AudienceAll)
+            : ctx.i18n.t(LocalePhrase.Button_Broadcast_AudienceManual),
+          manualMode
+            ? 'broadcast:wizard:audience:all'
+            : 'broadcast:wizard:audience:manual',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_SelectRecipients),
+          'broadcast:wizard:recipients:1',
         ),
       ],
     ]);

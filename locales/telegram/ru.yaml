@@ -14,6 +14,18 @@ button:
   profile: Профиль 👤
   select_group: Выбрать группу
   select_group_x: Выбрать группу "${groupName}"
+  broadcast:
+    title: Рассылки
+    create_queue: 🚀 Создать очередь
+    resume: ▶️ Запустить
+    pause: ⏸ Пауза
+    terminate: ⛔ Остановить
+    mode_toggle: "Режим: ${mode}. Переключить на ${nextMode}"
+    select_recipients: Выбрать получателей
+    audience_all: Все по фильтру
+    audience_manual: Тестовая выборка
+    back: Назад
+    back_to_settings: Назад к настройкам
   schedule:
     schedule: Расписание
     for_today: На сегодня
@@ -109,6 +121,63 @@ page:
     not_found: |
       <b>Ошибка:</b> Группа <code>${groupName}</code> не найдена
     reset: Группа сброшена
+
+  broadcast:
+    private_only: Broadcast wizard доступен только в личном чате
+    settings: |
+      <b>Настройки рассылки</b>
+      Получателей сейчас: <code>${recipientsCount}</code>
+      Выбрано вручную: <code>${selectedCount}</code>
+      Аудитория: <code>${audienceMode}</code>
+
+      Фильтры первой версии:
+      • social = telegram
+      • hasDM = ${filter.hasDM}
+      • isBlockedBot = ${filter.isBlockedBot}
+      • mode = ${mode}
+
+      Для продолжения отправь /next.
+    select_recipients: |
+      <b>Тестовая выборочная рассылка</b>
+      Выбрано: <code>${selectedCount}</code>
+      Страница: <code>${currentPage}/${totalPages}</code>
+
+      Нажми на пользователя, чтобы переключить выбор.
+    send_sample: Отправь сообщение-образец для рассылки. Оно будет разослано в выбранном режиме.
+    ready: |
+      <b>Рассылка готова к запуску</b>
+      Получателей: <code>${recipientsCount}</code>
+      Выбрано вручную: <code>${selectedCount}</code>
+      Режим: <code>${mode}</code>
+
+      Команды:
+      /send - создать очередь
+      /back - заменить сообщение
+      /cancel - отменить
+    queued: |
+      Рассылка №${campaignId} поставлена в очередь. Получателей: <code>${recipientsCount}</code>
+    canceled: Рассылка отменена
+    no_recipients: Для тестовой рассылки выбери хотя бы одного получателя.
+    message_not_found: Не удалось определить сообщение для рассылки. Отправь текст, стикер или вложение.
+    send_command_hint: Для запуска рассылки отправь /send.
+    settings_ready_hint: Настройки готовы. Для продолжения отправь /next.
+    source_required: Сначала отправь сообщение-образец.
+    new_sample: Отправь новое сообщение-образец.
+    queue_status: |
+      <b>Broadcast queue</b>
+      Active: <code>${status.active}</code>
+      Waiting: <code>${status.waiting}</code>
+      Delayed: <code>${status.delayed}</code>
+      Completed: <code>${status.completed}</code>
+      Failed: <code>${status.failed}</code>
+      Paused: <code>${status.paused}</code>
+    progress: |
+      <b>Рассылка №${campaignId}</b>
+      Готово: <code>${doneCount}/${totalCount}</code>
+      Успешно: <code>${sentCount}</code>
+      Ошибки: <code>${failedCount}</code>
+      Пропущено: <code>${skippedCount}</code>
+      Статус: <code>${status}</code>
 
   telegram:
     select_your_group: Выбрать свою группу

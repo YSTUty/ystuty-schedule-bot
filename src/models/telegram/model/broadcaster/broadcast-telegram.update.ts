@@ -30,20 +30,61 @@ export class BroadcastTelegramUpdate {
       return ctx.i18n.t(LocalePhrase.Page_Broadcast_PrivateOnly);
     }
 
+    if (await this.replyActiveCampaign(ctx)) return;
+
     await ctx.scene.enter(TELEGRAM_BROADCAST_SCENE);
   }
 
   @Command('broadcast_status')
   async onBroadcastStatus(@Ctx() ctx: IMessageContext) {
-    const status = await this.broadcastService.getQueueStatus(
-      SocialType.Telegram,
-    );
+    const [campaign, status] = await Promise.all([
+      this.broadcastService.getActiveCampaign(SocialType.Telegram),
+      this.broadcastService.getQueueStatus(SocialType.Telegram),
+    ]);
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
-      status.hasPending
-        ? this.keyboardFactory.getBroadcastQueueControls(ctx, status.paused)
-        : undefined,
+      {
+        ...(campaign?.sourceMessage.messageId
+          ? {
+              reply_parameters: {
+                message_id: campaign.sourceMessage.messageId,
+              },
+            }
+          : {}),
+        ...(status.hasPending
+          ? this.keyboardFactory.getBroadcastQueueControls(ctx, status.paused)
+          : {}),
+      },
     );
+  }
+
+  private async replyActiveCampaign(ctx: IMessageContext) {
+    const [campaign, status] = await Promise.all([
+      this.broadcastService.getActiveCampaign(SocialType.Telegram),
+      this.broadcastService.getQueueStatus(SocialType.Telegram),
+    ]);
+    if (!campaign && !status.hasPending) return false;
+
+    await ctx.replyWithHTML(
+      [
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_AlreadyActive, { campaign }),
+        '',
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
+      ].join('\n'),
+      {
+        ...(campaign?.sourceMessage.messageId
+          ? {
+              reply_parameters: {
+                message_id: campaign.sourceMessage.messageId,
+              },
+            }
+          : {}),
+        ...(status.hasPending
+          ? this.keyboardFactory.getBroadcastQueueControls(ctx, status.paused)
+          : {}),
+      },
+    );
+    return true;
   }
 
   @Command('broadcast_terminate')

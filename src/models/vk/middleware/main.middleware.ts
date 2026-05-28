@@ -11,6 +11,7 @@ import {
   getRandomId,
   IMessageContextSendOptions,
   MessageContext,
+  MessageEventAction,
 } from 'vk-io';
 import { RedisStorage } from 'vk-io-redis-storage';
 
@@ -142,7 +143,30 @@ export class MainMiddleware {
         return;
       }
 
-      if (ctx.is(['message'])) {
+      if (ctx.is(['message_event'])) {
+        const answer = ctx.answer.bind(ctx);
+        ctx.answer = async (eventData: MessageEventAction) => {
+          const res = await answer(eventData);
+          ctx.state.eventAnswered = true;
+          return res;
+        };
+        ctx.reply = async (
+          text: string | IMessageContextSendOptions,
+          params?: IMessageContextSendOptions,
+        ) => {
+          const forwardOptions = ctx.conversationMessageId
+            ? { conversation_message_ids: ctx.conversationMessageId }
+            : { message_ids: ctx.id };
+          return ctx.send({
+            forward: JSON.stringify({
+              ...forwardOptions,
+              peer_id: ctx.peerId,
+              is_reply: true,
+            }),
+            ...(typeof text !== 'object' ? { message: text, ...params } : text),
+          });
+        };
+      } else if (ctx.is(['message'])) {
         // ...
       } else {
         // * safe `send` method for all context events
@@ -205,6 +229,7 @@ export class MainMiddleware {
 
   private sceneInterceptMiddleware() {
     return async (ctx: IMessageContext, next: NextMiddleware) => {
+      // * Тут доработали логику `this.sceneManager.middlewareIntercept`, что перед входом в сцену проверяем команду "Отмены". Этого можно не делать, если в каждой сцене наследовать класс с обработкой команд выхода из сцены
       if (!ctx.scene.current) {
         return next();
       }
@@ -214,7 +239,7 @@ export class MainMiddleware {
         (checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx) ||
           ['cancel', '/cancel', '/exit'].includes(ctx.text.toLowerCase()))
       ) {
-        const keyboard = this.keyboardFactory.getClose(ctx);
+        const keyboard = this.keyboardFactory.getStart(ctx); // getClose(ctx);
         await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
           keyboard,
         });

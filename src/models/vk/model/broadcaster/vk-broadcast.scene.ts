@@ -2,7 +2,7 @@ import { UseFilters } from '@nestjs/common';
 import { AddStep, Ctx, Scene } from 'nestjs-vk';
 
 import { AttachmentType } from 'vk-io';
-import type { KeyboardBuilder } from 'vk-io';
+import type { MessagesEditParams } from 'vk-io/lib/api/schemas/params';
 
 import { SocialType, VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
@@ -144,23 +144,13 @@ export class VkBroadcastScene {
       return;
     }
 
-    const campaign = await this.broadcastService.createAndQueueCampaign({
-      social: SocialType.Vkontakte,
-      mode: BroadcastMessageMode.Text,
-      sourceMessage: {
-        ...ctx.scene.state.sourceMessage!,
-      },
-      audienceFilter: ctx.scene.state.filter,
-      recipientUserSocialIds: ctx.scene.state.manualRecipients
-        ? ctx.scene.state.selectedRecipientIds
-        : undefined,
-      createdBySocialId: ctx.senderId,
-    });
+    const campaign = await this.createCampaignOrReplyActive(ctx);
+    if (!campaign) return;
 
     if (ctx.scene.state.confirmMessage) {
       await ctx.api.messages.edit({
         peer_id: ctx.scene.state.confirmMessage.chatId,
-        conversation_message_id: ctx.scene.state.confirmMessage.messageId,
+        cmid: ctx.scene.state.confirmMessage.messageId,
         message: this.renderReady(ctx),
         keep_forward_messages: true,
         keyboard: this.keyboardFactory.getClose(ctx).inline(),
@@ -173,6 +163,7 @@ export class VkBroadcastScene {
         recipientsCount: campaign.totalCount,
       }),
       {
+        reply_to: ctx.scene.state.sourceMessage?.messageId,
         keyboard: this.keyboardFactory
           .getBroadcastQueueControls(ctx, true)
           .inline(),
@@ -194,12 +185,14 @@ export class VkBroadcastScene {
 
   private getSourceMessage(ctx: IStepCtx): BroadcastSourceMessage | null {
     if (ctx.hasText) {
-      return { text: ctx.text };
+      return { text: ctx.text, messageId: ctx.id };
     }
 
     if (ctx.hasAttachments(AttachmentType.STICKER)) {
       const stickers = ctx.getAttachments(AttachmentType.STICKER);
-      return stickers[0]?.id ? { stickerId: stickers[0].id } : null;
+      return stickers[0]?.id
+        ? { stickerId: stickers[0].id, messageId: ctx.id }
+        : null;
     }
 
     // TODO(broadcast): продумать корректную пересылку VK-вложений.
@@ -237,6 +230,7 @@ export class VkBroadcastScene {
       ctx.scene.state.manualRecipients = false;
       await this.refreshRecipientsCount(ctx.scene.state);
       await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
+        keep_forward_messages: true,
         keyboard: this.keyboardFactory
           .getBroadcastSettings(ctx, false)
           .inline(),
@@ -277,6 +271,7 @@ export class VkBroadcastScene {
     if (action === 'backToSettings') {
       await this.refreshRecipientsCount(ctx.scene.state);
       await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
+        keep_forward_messages: true,
         keyboard: this.keyboardFactory
           .getBroadcastSettings(ctx, ctx.scene.state.manualRecipients)
           .inline(),
@@ -307,6 +302,7 @@ export class VkBroadcastScene {
         totalPages: recipients.totalPages,
       }),
       {
+        keep_forward_messages: true,
         keyboard: this.keyboardFactory
           .getBroadcastRecipients({
             ctx,
@@ -327,16 +323,58 @@ export class VkBroadcastScene {
   private async editCurrentVkMessage(
     ctx: IStepCtx,
     message: string,
-    params: { keyboard?: KeyboardBuilder | string },
+    params: OmitT<MessagesEditParams, 'peer_id' | 'cmid' | 'message'>,
   ) {
     if (!('conversationMessageId' in ctx)) return;
 
     await ctx.api.messages.edit({
       peer_id: ctx.peerId,
-      conversation_message_id: ctx.conversationMessageId,
+      cmid: ctx.conversationMessageId,
       message,
       ...params,
     });
+  }
+
+  private async createCampaignOrReplyActive(ctx: IStepCtx) {
+    try {
+      return await this.broadcastService.createAndQueueCampaign({
+        social: SocialType.Vkontakte,
+        mode: BroadcastMessageMode.Text,
+        sourceMessage: {
+          ...ctx.scene.state.sourceMessage!,
+        },
+        audienceFilter: ctx.scene.state.filter,
+        recipientUserSocialIds: ctx.scene.state.manualRecipients
+          ? ctx.scene.state.selectedRecipientIds
+          : undefined,
+        createdBySocialId: ctx.senderId,
+      });
+    } catch (err) {
+      const [campaign, status] = await Promise.all([
+        this.broadcastService.getActiveCampaign(SocialType.Vkontakte),
+        this.broadcastService.getQueueStatus(SocialType.Vkontakte),
+      ]);
+      if (!campaign && !status.hasPending) throw err;
+
+      await ctx.send(
+        [
+          ctx.i18n.t(LocalePhrase.Page_Broadcast_AlreadyActive, { campaign }),
+          '',
+          ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
+        ].join('\n'),
+        {
+          ...(campaign?.sourceMessage.messageId
+            ? { reply_to: campaign.sourceMessage.messageId }
+            : {}),
+          ...(status.hasPending && {
+            keyboard: this.keyboardFactory
+              .getBroadcastQueueControls(ctx, status.paused)
+              .inline(),
+          }),
+        },
+      );
+      return null;
+    }
   }
 
   private async backToSettings(ctx: IStepCtx) {

@@ -80,6 +80,7 @@ export enum LocalePhrase {
   Page_Broadcast_Ready = 'page.broadcast.ready',
   Page_Broadcast_Queued = 'page.broadcast.queued',
   Page_Broadcast_Canceled = 'page.broadcast.canceled',
+  Page_Broadcast_AlreadyActive = 'page.broadcast.already_active',
   Page_Broadcast_NoRecipients = 'page.broadcast.no_recipients',
   Page_Broadcast_MessageNotFound = 'page.broadcast.message_not_found',
   Page_Broadcast_SendCommandHint = 'page.broadcast.send_command_hint',

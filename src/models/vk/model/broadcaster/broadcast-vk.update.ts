@@ -30,17 +30,23 @@ export class BroadcastVkUpdate {
       return;
     }
 
+    if (await this.replyActiveCampaign(ctx)) return;
+
     await ctx.scene.enter(VK_BROADCAST_SCENE);
   }
 
   @Hears('/broadcast_status')
   async onBroadcastStatus(@Ctx() ctx: IMessageContext) {
-    const status = await this.broadcastService.getQueueStatus(
-      SocialType.Vkontakte,
-    );
+    const [campaign, status] = await Promise.all([
+      this.broadcastService.getActiveCampaign(SocialType.Vkontakte),
+      this.broadcastService.getQueueStatus(SocialType.Vkontakte),
+    ]);
     await ctx.send(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
       {
+        ...(campaign?.sourceMessage.messageId
+          ? { reply_to: campaign.sourceMessage.messageId }
+          : {}),
         ...(status.hasPending && {
           keyboard: this.keyboardFactory
             .getBroadcastQueueControls(ctx, status.paused)
@@ -54,6 +60,33 @@ export class BroadcastVkUpdate {
   async onBroadcastTerminate(@Ctx() ctx: IMessageContext) {
     await this.broadcastService.terminateActiveCampaigns(SocialType.Vkontakte);
     await ctx.send('Active broadcast queue terminated.');
+  }
+
+  private async replyActiveCampaign(ctx: IMessageContext) {
+    const [campaign, status] = await Promise.all([
+      this.broadcastService.getActiveCampaign(SocialType.Vkontakte),
+      this.broadcastService.getQueueStatus(SocialType.Vkontakte),
+    ]);
+    if (!campaign && !status.hasPending) return false;
+
+    await ctx.send(
+      [
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_AlreadyActive, { campaign }),
+        '',
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
+      ].join('\n'),
+      {
+        ...(campaign?.sourceMessage.messageId
+          ? { reply_to: campaign.sourceMessage.messageId }
+          : {}),
+        ...(status.hasPending && {
+          keyboard: this.keyboardFactory
+            .getBroadcastQueueControls(ctx, status.paused)
+            .inline(),
+        }),
+      },
+    );
+    return true;
   }
 
   @On('message_event')

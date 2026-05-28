@@ -11,7 +11,7 @@ import { APIError, MessageEventContext } from 'vk-io';
 
 import * as xEnv from '@my-environment';
 
-import { UserException } from '@my-common';
+import { UserException } from '@my-common/exception';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
@@ -61,7 +61,9 @@ export class VkExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const isAdmin = xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId);
+    const isAdmin =
+      xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId || ctx.peerId) ||
+      ctx.state.user?.role === 'admin';
     let content = '';
     switch (true) {
       case isAdmin:
@@ -84,7 +86,7 @@ export class VkExceptionFilter implements ExceptionFilter {
     }
 
     try {
-      if (ctx.eventPayload && ctx.answer) {
+      if (ctx.eventPayload && ctx.answer && !ctx.state.eventAnswered) {
         await ctx.answer({
           type: 'show_snackbar',
           text: content,

@@ -195,16 +195,8 @@ export class TelegramBroadcastScene extends BaseScene {
       return;
     }
 
-    const campaign = await this.broadcastService.createAndQueueCampaign({
-      social: SocialType.Telegram,
-      mode: state.mode,
-      sourceMessage: state.sourceMessage,
-      audienceFilter: state.filter,
-      recipientUserSocialIds: state.manualRecipients
-        ? state.selectedRecipientIds
-        : undefined,
-      createdBySocialId: ctx.from?.id,
-    });
+    const campaign = await this.createCampaignOrReplyActive(ctx, state);
+    if (!campaign) return;
 
     if (ctx.callbackQuery?.message) {
       await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
@@ -215,7 +207,10 @@ export class TelegramBroadcastScene extends BaseScene {
         campaignId: campaign.id,
         recipientsCount: campaign.totalCount,
       }),
-      this.keyboardFactory.getBroadcastQueueControls(ctx, true),
+      {
+        reply_parameters: { message_id: state.sourceMessage.messageId! },
+        ...this.keyboardFactory.getBroadcastQueueControls(ctx, true),
+      },
     );
     await this.broadcastService.updateCampaignSourceMessage(campaign.id, {
       ...campaign.sourceMessage,
@@ -280,6 +275,51 @@ export class TelegramBroadcastScene extends BaseScene {
       this.renderSettings(ctx, state),
       this.getSettingsKeyboard(ctx, state),
     );
+  }
+
+  private async createCampaignOrReplyActive(
+    ctx: IStepCtx,
+    state: TelegramBroadcastState,
+  ) {
+    try {
+      return await this.broadcastService.createAndQueueCampaign({
+        social: SocialType.Telegram,
+        mode: state.mode,
+        sourceMessage: state.sourceMessage!,
+        audienceFilter: state.filter,
+        recipientUserSocialIds: state.manualRecipients
+          ? state.selectedRecipientIds
+          : undefined,
+        createdBySocialId: ctx.from?.id,
+      });
+    } catch (err) {
+      const [campaign, status] = await Promise.all([
+        this.broadcastService.getActiveCampaign(SocialType.Telegram),
+        this.broadcastService.getQueueStatus(SocialType.Telegram),
+      ]);
+      if (!campaign && !status.hasPending) throw err;
+
+      await ctx.replyWithHTML(
+        [
+          ctx.i18n.t(LocalePhrase.Page_Broadcast_AlreadyActive, { campaign }),
+          '',
+          ctx.i18n.t(LocalePhrase.Page_Broadcast_QueueStatus, { status }),
+        ].join('\n'),
+        {
+          ...(campaign?.sourceMessage.messageId
+            ? {
+                reply_parameters: {
+                  message_id: campaign.sourceMessage.messageId,
+                },
+              }
+            : {}),
+          ...(status.hasPending
+            ? this.keyboardFactory.getBroadcastQueueControls(ctx, status.paused)
+            : {}),
+        },
+      );
+      return null;
+    }
   }
 
   private async renderRecipientsSelector(ctx: IStepCtx) {

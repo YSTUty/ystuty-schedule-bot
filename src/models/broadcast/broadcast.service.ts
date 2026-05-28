@@ -67,6 +67,16 @@ export class BroadcastService {
     }
   }
 
+  public async getActiveCampaign(social: SocialType) {
+    return await this.campaignRepository.findOne({
+      where: [
+        { social, status: BroadcastCampaignStatus.Queued },
+        { social, status: BroadcastCampaignStatus.Running },
+      ],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   public async countRecipients(
     social: SocialType,
     filter: BroadcastAudienceFilter = {},

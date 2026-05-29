@@ -60,6 +60,100 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  public getBroadcastMenu(ctx: IContext, hasCurrent = false) {
+    return this.getActioner(
+      ctx,
+      [
+        [
+          {
+            title: ctx.i18n.t(LocalePhrase.Button_Broadcast_Create),
+            payload: 'create',
+          },
+        ],
+        [
+          {
+            title: ctx.i18n.t(LocalePhrase.Button_Broadcast_Status),
+            payload: 'status',
+          },
+          ...(hasCurrent
+            ? [
+                {
+                  title: ctx.i18n.t(LocalePhrase.Button_Broadcast_Current),
+                  payload: 'current',
+                },
+              ]
+            : []),
+        ],
+        [
+          {
+            title: ctx.i18n.t(LocalePhrase.Button_Broadcast_List),
+            payload: 'list',
+          },
+        ],
+      ],
+      'broadcast:menu:',
+    );
+  }
+
+  public getBroadcastCampaignsList(
+    ctx: IContext,
+    items: { id: number; status: string }[],
+  ) {
+    return Markup.inlineKeyboard([
+      ...items.map((item) => [
+        Markup.button.callback(
+          `№${item.id} • ${item.status}`,
+          `broadcast:campaign:detail:${item.id}`,
+        ),
+      ]),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToMenu),
+          'broadcast:menu:panel',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastCampaignDetails(
+    ctx: IContext,
+    params: { campaignId: number; active: boolean; paused: boolean },
+  ) {
+    return Markup.inlineKeyboard([
+      ...(params.active
+        ? [
+            [
+              params.paused
+                ? Markup.button.callback(
+                    ctx.i18n.t(LocalePhrase.Button_Broadcast_Resume),
+                    'broadcast:queue:resume',
+                  )
+                : Markup.button.callback(
+                    ctx.i18n.t(LocalePhrase.Button_Broadcast_Pause),
+                    'broadcast:queue:pause',
+                  ),
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
+                'broadcast:queue:terminate',
+              ),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Delete),
+          `broadcast:campaign:delete:${params.campaignId}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToList),
+          'broadcast:menu:list',
+        ),
+      ],
+    ]);
+  }
+
   public getBroadcastConfirm(ctx: IContext, mode: 'copy' | 'forward') {
     const nextMode = mode === 'copy' ? 'forward' : 'copy';
 

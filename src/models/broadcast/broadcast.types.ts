@@ -74,6 +74,7 @@ export interface BroadcastTransport {
   updateCampaignProgress?(params: {
     reportMessage: NonNullable<BroadcastSourceMessage['reportMessage']>;
     status: BroadcastCampaignStatus;
+    paused: boolean;
     text: string;
   }): Promise<boolean>;
 }

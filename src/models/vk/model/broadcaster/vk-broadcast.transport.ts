@@ -85,6 +85,7 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
   public async updateCampaignProgress(params: {
     reportMessage: { chatId: number; messageId: number };
     status: BroadcastCampaignStatus;
+    paused: boolean;
     text: string;
   }): Promise<boolean> {
     const isFinal = [
@@ -100,7 +101,7 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
         ? { keyboard: this.keyboardFactory.getClose().inline() }
         : {
             keyboard: this.keyboardFactory
-              .getBroadcastQueueControls(this.fakeCtx, false)
+              .getBroadcastQueueControls(this.fakeCtx, params.paused)
               .inline(),
           },
     );

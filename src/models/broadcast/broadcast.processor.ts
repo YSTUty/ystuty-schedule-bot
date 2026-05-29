@@ -140,6 +140,9 @@ export class BroadcastProcessorBase {
 
     const transport = this.transportRegistry.get(campaign.social);
     if (!transport.updateCampaignProgress) return;
+    const queueStatus = await this.broadcastService.getQueueStatus(
+      campaign.social,
+    );
 
     const text = [
       `<b>Рассылка #${campaign.id}</b>`,
@@ -153,6 +156,7 @@ export class BroadcastProcessorBase {
     const updated = await transport.updateCampaignProgress({
       reportMessage: campaign.sourceMessage.reportMessage,
       status: counters.status,
+      paused: queueStatus.paused,
       text,
     });
     if (updated) {

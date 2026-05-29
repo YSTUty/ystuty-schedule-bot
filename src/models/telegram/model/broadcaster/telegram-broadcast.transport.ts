@@ -102,6 +102,7 @@ export class TelegramBroadcastTransport
   public async updateCampaignProgress(params: {
     reportMessage: { chatId: number; messageId: number };
     status: BroadcastCampaignStatus;
+    paused: boolean;
     text: string;
   }): Promise<boolean> {
     try {
@@ -121,7 +122,7 @@ export class TelegramBroadcastTransport
             ? this.keyboardFactory.getClear(true)
             : this.keyboardFactory.getBroadcastQueueControls(
                 this.fakeCtx,
-                false,
+                params.paused,
               )),
         },
       );

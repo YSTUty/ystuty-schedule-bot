@@ -27,6 +27,7 @@ import {
 import { BroadcastCampaign } from './entity/broadcast-campaign.entity';
 import { BroadcastDelivery } from './entity/broadcast-delivery.entity';
 import { BroadcastAudienceFilterService } from './filter/broadcast-audience-filter.service';
+import { BroadcastTransportRegistry } from './transport/broadcast-transport.registry';
 
 @Injectable()
 export class BroadcastService {
@@ -42,6 +43,7 @@ export class BroadcastService {
     @InjectQueue(BROADCAST_VK_QUEUE_NAME)
     private readonly vkBroadcastQueue: Queue<BroadcastJobData>,
     private readonly audienceFilterService: BroadcastAudienceFilterService,
+    private readonly transportRegistry: BroadcastTransportRegistry,
   ) {}
 
   public async assertCanStartCampaign(social: SocialType) {
@@ -199,6 +201,60 @@ export class BroadcastService {
 
   public async getCampaign(campaignId: number) {
     return await this.campaignRepository.findOne({ id: campaignId });
+  }
+
+  public async getCampaignForSocial(campaignId: number, social: SocialType) {
+    return await this.campaignRepository.findOne({ id: campaignId, social });
+  }
+
+  public async getRecentCampaigns(social: SocialType, limit = 10) {
+    return await this.campaignRepository.find({
+      where: { social },
+      order: { createdAt: 'DESC' },
+      take: Math.max(1, Math.min(limit, 20)),
+    });
+  }
+
+  public async deleteCampaignDeliveries(
+    campaignId: number,
+    social?: SocialType,
+  ) {
+    const campaign = social
+      ? await this.getCampaignForSocial(campaignId, social)
+      : await this.campaignRepository.findOne({ id: campaignId });
+    if (!campaign) return null;
+
+    if (
+      [
+        BroadcastCampaignStatus.Queued,
+        BroadcastCampaignStatus.Running,
+      ].includes(campaign.status)
+    ) {
+      await this.terminateActiveCampaigns(campaign.social);
+    }
+
+    const deliveries = await this.deliveryRepository.find({
+      where: { campaignId },
+    });
+    const transport = this.transportRegistry.get(campaign.social);
+    let deletedCount = 0;
+    let failedCount = 0;
+
+    for (const delivery of deliveries) {
+      if (!delivery.sentMessageId) continue;
+      const deleted = await transport.deleteCampaignDelivery({
+        targetSocialId: delivery.targetSocialId,
+        messageId: delivery.sentMessageId,
+      });
+      if (deleted) {
+        deletedCount += 1;
+      } else {
+        failedCount += 1;
+      }
+    }
+
+    await this.campaignRepository.remove(campaign);
+    return { campaignId, deletedCount, failedCount };
   }
 
   public async updateCampaignSourceMessage(

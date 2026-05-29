@@ -81,6 +81,133 @@ export class VKKeyboardFactory {
     ]);
   }
 
+  public getBroadcastMenu(ctx: IContext, hasCurrent = false) {
+    return this.getActioner(ctx, [
+      [
+        {
+          title: ctx.i18n.t(LocalePhrase.Button_Broadcast_Create),
+          payload: { broadcastAction: 'menuCreate' },
+          color: Keyboard.POSITIVE_COLOR,
+        },
+      ],
+      [
+        {
+          title: ctx.i18n.t(LocalePhrase.Button_Broadcast_Status),
+          payload: { broadcastAction: 'menuStatus' },
+        },
+        ...(hasCurrent
+          ? [
+              {
+                title: ctx.i18n.t(LocalePhrase.Button_Broadcast_Current),
+                payload: { broadcastAction: 'menuCurrent' },
+              },
+            ]
+          : []),
+      ],
+      [
+        {
+          title: ctx.i18n.t(LocalePhrase.Button_Broadcast_List),
+          payload: { broadcastAction: 'menuList' },
+        },
+      ],
+    ]);
+  }
+
+  public getBroadcastCampaignsList(
+    ctx: IContext,
+    items: { id: number; status: string }[],
+  ) {
+    return this.getActioner(ctx, [
+      ...items.map((item) => [
+        {
+          title: `№${item.id} • ${item.status}`,
+          payload: { broadcastAction: 'detail', campaignId: item.id },
+        },
+      ]),
+      [
+        {
+          title: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToMenu),
+          payload: { broadcastAction: 'menuPanel' },
+        },
+      ],
+    ]);
+  }
+
+  public getBroadcastCampaignDetails(
+    ctx: IContext,
+    params: { campaignId: number; active: boolean; paused: boolean },
+  ) {
+    return Keyboard.keyboard([
+      ...(params.active
+        ? [
+            [
+              params.paused
+                ? Keyboard.callbackButton({
+                    label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Resume),
+                    payload: { broadcastAction: 'resume' },
+                    color: Keyboard.POSITIVE_COLOR,
+                  })
+                : Keyboard.callbackButton({
+                    label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Pause),
+                    payload: { broadcastAction: 'pause' },
+                    color: Keyboard.SECONDARY_COLOR,
+                  }),
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
+                payload: { broadcastAction: 'terminate' },
+                color: Keyboard.NEGATIVE_COLOR,
+              }),
+            ],
+          ]
+        : []),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Delete),
+          payload: {
+            broadcastAction: 'delete',
+            campaignId: params.campaignId,
+          },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToList),
+          payload: { broadcastAction: 'menuList' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getActioner(
+    ctx: IContext,
+    items?:
+      | {
+          title: string;
+          payload: Record<string, unknown>;
+          color?: string;
+        }[]
+      | {
+          title: string;
+          payload: Record<string, unknown>;
+          color?: string;
+        }[][],
+  ) {
+    const rows = (items || []).map((itemOrRow) => {
+      const row = Array.isArray(itemOrRow) ? itemOrRow : [itemOrRow];
+      return row.map((item) =>
+        Keyboard.callbackButton({
+          label: item.title,
+          payload: item.payload,
+          color: item.color || Keyboard.SECONDARY_COLOR,
+        }),
+      );
+    });
+
+    return Keyboard.keyboard(rows);
+  }
+
   public getBroadcastConfirm(ctx: IContext) {
     return Keyboard.keyboard([
       [

@@ -16,6 +16,13 @@ button:
   select_group_x: Выбрать группу "${groupName}"
   broadcast:
     title: Рассылки
+    create: Создать рассылку
+    status: Статус очереди
+    current: Текущая рассылка
+    list: Список рассылок
+    delete: Удалить
+    back_to_menu: Назад в меню
+    back_to_list: Назад к списку
     create_queue: 🚀 Создать очередь
     resume: ▶️ Запустить
     pause: ⏸ Пауза
@@ -160,6 +167,32 @@ page:
       Completed: ${status.completed}
       Failed: ${status.failed}
       Paused: ${status.paused}
+    menu: |
+      Панель рассылок
+
+      Создание, просмотр статуса и управление последними рассылками доступны через кнопки ниже.
+    campaigns_list: |
+      Последние рассылки
+      ${items.length ? items.map((item) => '№' + item.id + ' • ' + item.status + ' • ' + item.sentCount + '/' + item.totalCount + ' • ' + item.createdAt.toLocaleString('ru-RU')).join('\n') : 'Рассылок пока нет'}
+
+      Для деталей выбери рассылку кнопкой ниже.
+    campaign_details: |
+      Рассылка №${campaign.id}
+      Статус: ${campaign.status}
+      Режим: ${campaign.mode}
+      Получателей: ${campaign.totalCount}
+      Успешно: ${campaign.sentCount}
+      Ошибки: ${campaign.failedCount}
+      Пропущено: ${campaign.skippedCount}
+      Создана: ${campaign.createdAt.toLocaleString('ru-RU')}
+    campaign_deleted: |
+      Рассылка №${campaignId} удалена.
+      Удалено сообщений: ${deletedCount}
+      Не удалось удалить: ${failedCount}
+    campaign_delete_usage: |
+      Использование: /broadcast_delete ID
+    campaign_not_found: |
+      Рассылка №${campaignId} не найдена.
     progress: |
       Рассылка №${campaignId}
       Готово: ${doneCount}/${totalCount}

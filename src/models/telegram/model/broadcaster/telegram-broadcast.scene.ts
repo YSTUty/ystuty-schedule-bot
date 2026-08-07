@@ -231,7 +231,11 @@ export class TelegramBroadcastScene extends BaseScene {
         ? BroadcastMessageMode.Forward
         : BroadcastMessageMode.Copy;
 
-    await ctx.tryAnswerCbQuery(`Режим: ${state.mode}`);
+    await ctx.tryAnswerCbQuery(
+      ctx.i18n.t(LocalePhrase.Broadcast_Notification_ModeChanged, {
+        mode: state.mode,
+      }),
+    );
     await ctx.editMessageText(this.renderReady(ctx, state), {
       parse_mode: 'HTML',
       ...this.getConfirmKeyboard(ctx, state),

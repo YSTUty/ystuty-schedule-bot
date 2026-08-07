@@ -102,6 +102,24 @@ export enum LocalePhrase {
   Page_Broadcast_CampaignDeleteUsage = 'page.broadcast.campaign_delete_usage',
   Page_Broadcast_CampaignNotFound = 'page.broadcast.campaign_not_found',
   Page_Broadcast_Progress = 'page.broadcast.progress',
+
+  // Broadcast notifications
+  Broadcast_Notification_QueueCreated = 'broadcast.notification.queue_created',
+  Broadcast_Notification_AudienceAll = 'broadcast.notification.audience_all',
+  Broadcast_Notification_Settings = 'broadcast.notification.settings',
+  Broadcast_Notification_Recipients = 'broadcast.notification.recipients',
+  Broadcast_Notification_Menu = 'broadcast.notification.menu',
+  Broadcast_Notification_Create = 'broadcast.notification.create',
+  Broadcast_Notification_Status = 'broadcast.notification.status',
+  Broadcast_Notification_Current = 'broadcast.notification.current',
+  Broadcast_Notification_List = 'broadcast.notification.list',
+  Broadcast_Notification_Campaign = 'broadcast.notification.campaign',
+  Broadcast_Notification_Deleted = 'broadcast.notification.deleted',
+  Broadcast_Notification_NotFound = 'broadcast.notification.not_found',
+  Broadcast_Notification_Paused = 'broadcast.notification.paused',
+  Broadcast_Notification_Resumed = 'broadcast.notification.resumed',
+  Broadcast_Notification_Terminated = 'broadcast.notification.terminated',
+  Broadcast_Notification_ModeChanged = 'broadcast.notification.mode_changed',
 }
 
 export enum VkLocalePhrase {}

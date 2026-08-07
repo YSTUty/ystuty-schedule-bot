@@ -105,7 +105,7 @@ export class BroadcastVkUpdate {
   @Hears('/broadcast_terminate')
   async onBroadcastTerminate(@Ctx() ctx: IMessageContext) {
     await this.broadcastService.terminateActiveCampaigns(SocialType.Vkontakte);
-    await ctx.send('Active broadcast queue terminated.');
+    await ctx.send(ctx.i18n.t(LocalePhrase.Broadcast_Notification_Terminated));
   }
 
   @On('message_event')
@@ -119,13 +119,19 @@ export class BroadcastVkUpdate {
     }
 
     if (action === 'menuPanel') {
-      await ctx.answer({ type: 'show_snackbar', text: 'Рассылки' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Menu),
+      });
       await this.editPanel(ctx);
       return;
     }
 
     if (action === 'menuCreate') {
-      await ctx.answer({ type: 'show_snackbar', text: 'Создание рассылки' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Create),
+      });
       if (await this.editActiveCampaign(ctx)) return;
 
       await ctx.scene.enter(VK_BROADCAST_SCENE);
@@ -133,13 +139,19 @@ export class BroadcastVkUpdate {
     }
 
     if (action === 'menuStatus') {
-      await ctx.answer({ type: 'show_snackbar', text: 'Статус очереди' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Status),
+      });
       await this.editQueueStatus(ctx);
       return;
     }
 
     if (action === 'menuCurrent') {
-      await ctx.answer({ type: 'show_snackbar', text: 'Текущая рассылка' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Current),
+      });
       const campaign = await this.broadcastService.getActiveCampaign(
         SocialType.Vkontakte,
       );
@@ -153,13 +165,19 @@ export class BroadcastVkUpdate {
     }
 
     if (action === 'menuList') {
-      await ctx.answer({ type: 'show_snackbar', text: 'Список рассылок' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_List),
+      });
       await this.editCampaignsList(ctx);
       return;
     }
 
     if (action === 'detail') {
-      await ctx.answer({ type: 'show_snackbar', text: 'Рассылка' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Campaign),
+      });
       await this.editCampaignDetails(ctx, Number(ctx.eventPayload.campaignId));
       return;
     }
@@ -175,18 +193,24 @@ export class BroadcastVkUpdate {
       await this.broadcastService.pauseQueue(SocialType.Vkontakte);
       await ctx.answer({
         type: 'show_snackbar',
-        text: 'Рассылка приостановлена',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Paused),
       });
     }
     if (action === 'resume') {
       await this.broadcastService.resumeQueue(SocialType.Vkontakte);
-      await ctx.answer({ type: 'show_snackbar', text: 'Рассылка продолжена' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Resumed),
+      });
     }
     if (action === 'terminate') {
       await this.broadcastService.terminateActiveCampaigns(
         SocialType.Vkontakte,
       );
-      await ctx.answer({ type: 'show_snackbar', text: 'Рассылка остановлена' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Terminated),
+      });
     }
 
     const status = await this.broadcastService.getQueueStatus(
@@ -286,7 +310,11 @@ export class BroadcastVkUpdate {
     );
     await ctx.answer({
       type: 'show_snackbar',
-      text: result ? 'Рассылка удалена' : 'Рассылка не найдена',
+      text: ctx.i18n.t(
+        result
+          ? LocalePhrase.Broadcast_Notification_Deleted
+          : LocalePhrase.Broadcast_Notification_NotFound,
+      ),
     });
 
     await ctx.api.messages.edit({

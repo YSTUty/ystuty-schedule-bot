@@ -133,7 +133,10 @@ export class VkBroadcastScene {
     }
 
     if (isCreateAction && 'answer' in ctx) {
-      await ctx.answer({ type: 'show_snackbar', text: 'Создание очереди' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_QueueCreated),
+      });
     }
 
     if (
@@ -235,7 +238,10 @@ export class VkBroadcastScene {
           .getBroadcastSettings(ctx, false)
           .inline(),
       });
-      await ctx.answer({ type: 'show_snackbar', text: 'Аудитория: все' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_AudienceAll),
+      });
       return true;
     }
 
@@ -276,7 +282,10 @@ export class VkBroadcastScene {
           .getBroadcastSettings(ctx, ctx.scene.state.manualRecipients)
           .inline(),
       });
-      await ctx.answer({ type: 'show_snackbar', text: 'Настройки' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
       return true;
     }
 
@@ -317,7 +326,10 @@ export class VkBroadcastScene {
           .inline(),
       },
     );
-    await ctx.answer({ type: 'show_snackbar', text: 'Выбор получателей' });
+    await ctx.answer({
+      type: 'show_snackbar',
+      text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Recipients),
+    });
   }
 
   private async editCurrentVkMessage(
@@ -383,7 +395,10 @@ export class VkBroadcastScene {
     await this.refreshRecipientsCount(ctx.scene.state);
 
     if ('answer' in ctx) {
-      await ctx.answer({ type: 'show_snackbar', text: 'Настройки' });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
     }
 
     await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {

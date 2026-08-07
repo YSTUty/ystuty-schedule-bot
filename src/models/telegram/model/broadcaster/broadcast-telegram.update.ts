@@ -166,7 +166,11 @@ export class BroadcastTelegramUpdate {
       SocialType.Telegram,
     );
     await ctx.tryAnswerCbQuery(
-      result ? 'Рассылка удалена' : 'Рассылка не найдена',
+      ctx.i18n.t(
+        result
+          ? LocalePhrase.Broadcast_Notification_Deleted
+          : LocalePhrase.Broadcast_Notification_NotFound,
+      ),
     );
 
     if (!result) {
@@ -196,7 +200,9 @@ export class BroadcastTelegramUpdate {
   @Command('broadcast_terminate')
   async onBroadcastTerminate(@Ctx() ctx: IMessageContext) {
     await this.broadcastService.terminateActiveCampaigns(SocialType.Telegram);
-    await ctx.replyWithHTML('Active broadcast queue terminated.');
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Broadcast_Notification_Terminated),
+    );
   }
 
   @Action(/broadcast:queue:(?<action>pause|resume|terminate)/)
@@ -205,15 +211,21 @@ export class BroadcastTelegramUpdate {
 
     if (action === 'pause') {
       await this.broadcastService.pauseQueue(SocialType.Telegram);
-      await ctx.tryAnswerCbQuery('Рассылка приостановлена');
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Broadcast_Notification_Paused),
+      );
     }
     if (action === 'resume') {
       await this.broadcastService.resumeQueue(SocialType.Telegram);
-      await ctx.tryAnswerCbQuery('Рассылка продолжена');
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Broadcast_Notification_Resumed),
+      );
     }
     if (action === 'terminate') {
       await this.broadcastService.terminateActiveCampaigns(SocialType.Telegram);
-      await ctx.tryAnswerCbQuery('Рассылка остановлена');
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Broadcast_Notification_Terminated),
+      );
     }
 
     const status = await this.broadcastService.getQueueStatus(

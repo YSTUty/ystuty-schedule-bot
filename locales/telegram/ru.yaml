@@ -216,6 +216,26 @@ page:
       Пропущено: <code>${skippedCount}</code>
       Статус: <code>${status}</code>
 
+broadcast:
+  notification:
+    queue_created: Создание очереди
+    audience_all: |
+      Аудитория: все
+    settings: Настройки
+    recipients: Выбор получателей
+    menu: Рассылки
+    create: Создание рассылки
+    status: Статус очереди
+    current: Текущая рассылка
+    list: Список рассылок
+    campaign: Рассылка
+    deleted: Рассылка удалена
+    not_found: Рассылка не найдена
+    paused: Рассылка приостановлена
+    resumed: Рассылка продолжена
+    terminated: Рассылка остановлена
+    mode_changed: "Режим: ${mode}"
+
   telegram:
     select_your_group: Выбрать свою группу
     schedule:

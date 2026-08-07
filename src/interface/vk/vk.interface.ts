@@ -20,6 +20,8 @@ export interface ISessionState {
   __scene?: { current: string };
 
   socialConnectLink?: string;
+  teacherId?: number;
+  teacherSearchQuery?: string;
 }
 
 interface ISessionConversationState {

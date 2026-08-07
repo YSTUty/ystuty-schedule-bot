@@ -39,12 +39,13 @@ button:
     for_tomorrow: На завтра
     for_week: На неделю
     for_next_week: На следующую
+    teacher: Преподаватель
+    my_teacher: Моё расписание
   groups:
     list_inst_and_groups: 🏫 Список институтов и групп 📚
     list_groups: 📚 Список групп 📚
     list_institutes: 🏫 Список институтов 🏫
     change_institute: 🏫 Сменить институт 🏫
-
 
 regexp:
   start: //?(start|старт|начать)( .*)?/i
@@ -118,6 +119,26 @@ page:
       ⚠️ Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
       ${content}
     not_found_today: Похоже, что на этот день нету расписания... 🐜
+    teachers_list: |
+      <b>Преподаватели</b>
+      <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+
+      ${query ? 'Поиск: <code>' + query + '</code>' : 'Выбери преподавателя или отправь /teacher Фамилия'}
+    teacher_selected: |
+      Выбран преподаватель: <b>${teacher.name}</b>
+
+      Теперь доступны команды <code>/tday</code> и <code>/tweek</code>.
+    teacher_not_found: |
+      Преподаватель по запросу <code>${query}</code> не найден.
+    teacher_search_hint: |
+      Использование: <code>/teacher Фамилия</code>
+      Например: <code>/teacher Иванов</code>
+    teacher_not_selected: |
+      Сначала выбери преподавателя через <code>/teacher</code> или <code>/tlist</code>.
+    week_title: |
+      Расписание на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
+    teacher_week_title: |
+      Расписание преподавателя на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
 
   select_group:
     enter_name_with_example: |

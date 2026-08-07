@@ -30,6 +30,15 @@ export class VKKeyboardFactory {
           payload: { phrase: LocalePhrase.Button_Schedule_Schedule },
           color: Keyboard.SECONDARY_COLOR,
         }),
+        ...(ctx.isDM
+          ? [
+              Keyboard.textButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
+                payload: { phrase: LocalePhrase.Button_Schedule_Teacher },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ]
+          : []),
       ],
       [
         ...(ctx.isDM && ctx.state.user
@@ -37,6 +46,11 @@ export class VKKeyboardFactory {
               Keyboard.textButton({
                 label: ctx.i18n.t(LocalePhrase.Button_Profile),
                 payload: { phrase: LocalePhrase.Button_Profile },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+              Keyboard.textButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher),
+                payload: { phrase: LocalePhrase.Button_Schedule_MyTeacher },
                 color: Keyboard.SECONDARY_COLOR,
               }),
             ]
@@ -281,6 +295,24 @@ export class VKKeyboardFactory {
     });
   }
 
+  /** Постраничный список преподавателей для выбора расписания. */
+  public getTeachersList(params: {
+    ctx: IContext;
+    items: { id: number; name: string }[];
+    currentPage: number;
+    totalPages: number;
+  }) {
+    return this.getPagination({
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((teacher) => ({
+        title: teacher.name,
+        payload: { teacherAction: 'select', teacherId: teacher.id },
+      })),
+      getPagePayload: (page) => ({ teacherAction: 'list', page }),
+    });
+  }
+
   public getPagination(params: {
     currentPage: number;
     totalPages: number;
@@ -400,41 +432,39 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getSchedule(ctx: IContext, groupName?: string) {
+  public getSchedule(
+    ctx: IContext,
+    target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
+  ) {
+    const payload = (phrase: LocalePhrase) => ({
+      phrase,
+      ...(target.type === 'teacher'
+        ? { teacherId: target.id }
+        : { groupName: target.id }),
+    });
+
     return Keyboard.keyboard([
       [
         Keyboard.textButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
-          payload: {
-            phrase: LocalePhrase.Button_Schedule_ForToday,
-            groupName,
-          },
+          payload: payload(LocalePhrase.Button_Schedule_ForToday),
           color: Keyboard.SECONDARY_COLOR,
         }),
         Keyboard.textButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
-          payload: {
-            phrase: LocalePhrase.Button_Schedule_ForTomorrow,
-            groupName,
-          },
+          payload: payload(LocalePhrase.Button_Schedule_ForTomorrow),
           color: Keyboard.POSITIVE_COLOR,
         }),
       ],
       [
         Keyboard.textButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForWeek),
-          payload: {
-            phrase: LocalePhrase.Button_Schedule_ForWeek,
-            groupName,
-          },
+          payload: payload(LocalePhrase.Button_Schedule_ForWeek),
           color: Keyboard.PRIMARY_COLOR,
         }),
         Keyboard.textButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForNextWeek),
-          payload: {
-            phrase: LocalePhrase.Button_Schedule_ForNextWeek,
-            groupName,
-          },
+          payload: payload(LocalePhrase.Button_Schedule_ForNextWeek),
           color: Keyboard.PRIMARY_COLOR,
         }),
       ],

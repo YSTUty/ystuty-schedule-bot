@@ -207,21 +207,58 @@ export class YSTUtyService implements OnModuleInit {
     return this.allTeachersList.map((e) => e.name);
   }
 
-  public getTeacherName(id: number) {
-    return this.allTeachersList.find((e) => e.id === id)?.name;
+  public getTeacher(id: number) {
+    return this.allTeachersList.find((teacher) => teacher.id === id);
   }
 
-  public async teachersList(page = 1, count = 20) {
-    const teachers = this.allTeachersList;
+  public getTeacherName(id: number) {
+    return this.getTeacher(id)?.name;
+  }
+
+  public getTeacherByExactName(name?: string | null) {
+    if (!name) return undefined;
+
+    const normalizedName = this.normalizeTeacherName(name);
+    const teachers = this.allTeachersList.filter(
+      (teacher) => this.normalizeTeacherName(teacher.name) === normalizedName,
+    );
+
+    return teachers.length === 1 ? teachers[0] : undefined;
+  }
+
+  public teachersList(page = 1, count = 20, query?: string | null) {
+    const normalizedQuery = this.normalizeTeacherName(query || '');
+    const searchTokens = normalizedQuery.split(' ').filter(Boolean);
+    const teachers = this.allTeachersList
+      .filter((teacher) => {
+        const normalizedName = this.normalizeTeacherName(teacher.name);
+        return searchTokens.every((token) => normalizedName.includes(token));
+      })
+      .sort((first, second) => first.name.localeCompare(second.name, 'ru'));
     const totalCount = teachers.length;
-    const totalPageCount = page * count;
-    const items = teachers.slice(totalPageCount - count, totalPageCount);
+    const safeCount = Math.max(1, count);
+    const totalPages = Math.max(1, Math.ceil(totalCount / safeCount));
+    const currentPage = Math.max(1, Math.min(page, totalPages));
+    const offset = (currentPage - 1) * safeCount;
+    const items = teachers.slice(offset, offset + safeCount);
 
     return {
       items,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / count),
+      currentPage,
+      totalPages,
+      totalCount,
+      query: query?.trim() || '',
     };
+  }
+
+  private normalizeTeacherName(name: string) {
+    return name
+      .trim()
+      .toLocaleLowerCase('ru')
+      .replace(/ё/g, 'е')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   public async findNext({

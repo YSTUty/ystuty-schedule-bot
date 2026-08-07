@@ -210,6 +210,37 @@ export class MainUpdate {
     @Ctx() ctx: IMessageEventContext,
     @Next() next: NextMiddleware,
   ) {
+    const teacherAction = ctx.eventPayload.teacherAction as string | undefined;
+    if (teacherAction === 'list') {
+      await this.renderTeachersList(ctx, Number(ctx.eventPayload.page) || 1);
+      await ctx.answer({ type: 'show_snackbar', text: 'OK' });
+      return;
+    }
+
+    if (teacherAction === 'select') {
+      const teacherId = Number(ctx.eventPayload.teacherId);
+      const teacher = this.ystutyService.getTeacher(teacherId);
+      if (!teacher) {
+        await ctx.answer({ type: 'show_snackbar', text: 'Not found' });
+        return;
+      }
+
+      ctx.session.teacherId = teacher.id;
+      ctx.session.teacherSearchQuery = undefined;
+      await ctx.api.messages.edit({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        message: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
+          teacher,
+        }),
+        keyboard: this.keyboardFactory
+          .getSchedule(ctx, { type: 'teacher', id: teacher.id })
+          .inline(),
+      });
+      await ctx.answer({ type: 'show_snackbar', text: 'OK' });
+      return;
+    }
+
     const phrase = ctx.eventPayload.phrase as LocalePhrase;
     if (!phrase) return next();
 
@@ -250,13 +281,62 @@ export class MainUpdate {
   }
 
   @Hears('/tlist')
+  @VkHearsLocale(LocalePhrase.Button_Schedule_Teacher)
   // @UseGuards(new VkAdminGuard(true))
   async onTeachersList(@Ctx() ctx: IMessageContext) {
-    await ctx.send(
-      `List teachers (50 max): ${this.ystutyService.teacherNames
-        .slice(0, 50)
-        .join(', ')}`,
-    );
+    ctx.session.teacherSearchQuery = undefined;
+    await this.renderTeachersList(ctx);
+  }
+
+  @Hears(/^\/teacher(?:\s+(?<query>.+))?$/i)
+  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
+    const query = ctx.$match?.groups?.query?.trim();
+    if (!query) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint));
+      return;
+    }
+
+    ctx.session.teacherSearchQuery = query;
+    const { totalCount } = this.ystutyService.teachersList(1, 20, query);
+    if (totalCount === 0) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, { query }),
+      );
+      return;
+    }
+
+    await this.renderTeachersList(ctx);
+  }
+
+  /** Рендерит список преподавателей в сообщении или обновляет inline-клавиатуру. */
+  private async renderTeachersList(
+    ctx: IMessageContext | IMessageEventContext,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages, query } =
+      this.ystutyService.teachersList(page, 5, ctx.session.teacherSearchQuery);
+    const message = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
+      currentPage,
+      totalPages,
+      query,
+    });
+    console.log({items, currentPage, totalPages, query});
+
+    const keyboard = this.keyboardFactory
+      .getTeachersList({ ctx, items, currentPage, totalPages })
+      .inline();
+
+    if ('eventPayload' in ctx) {
+      await ctx.api.messages.edit({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        message,
+        keyboard,
+      });
+      return;
+    }
+
+    await ctx.send(message, { keyboard });
   }
 
   @VkHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)

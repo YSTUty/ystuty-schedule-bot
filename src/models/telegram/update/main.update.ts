@@ -14,6 +14,7 @@ import { Markup, TelegramError } from 'telegraf';
 import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
+  allowerHtmlTags,
   md5,
   patternGroupName,
   TelegrafExceptionFilter,
@@ -447,8 +448,9 @@ export class MainUpdate {
   }
 
   @Command('tlist')
+  @TgHearsLocale(LocalePhrase.Button_Schedule_Teacher)
   @Action(/pager:tlist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
-  async onTeachersList(@Ctx() ctx: ICbQOrMsg) {
+  async onTeachersList(@Ctx() ctx: ICbQOrMsg, preserveQuery = false) {
     let page: number | null = null;
     let count: number | null = null;
 
@@ -457,15 +459,25 @@ export class MainUpdate {
         page = Number(ctx.match.groups.page);
         count = Number(ctx.match.groups.count);
       }
-    } else if ('text' in ctx.message && !ctx.state.isLocalePhrase) {
-      [, page, count] = ctx.message.text.split(' ').map(Number);
+    } else {
+      if (!preserveQuery) {
+        ctx.session.teacherSearchQuery = undefined;
+      }
+
+      if ('text' in ctx.message && !ctx.state.isLocalePhrase) {
+        [, page, count] = ctx.message.text.split(' ').map(Number);
+      }
     }
 
     page = page || 1;
     count = count || 20;
 
-    const { items, currentPage, totalPages } =
-      await this.ystutyService.teachersList(page, count);
+    const { items, currentPage, totalPages, query } =
+      this.ystutyService.teachersList(
+        page,
+        count,
+        ctx.session.teacherSearchQuery,
+      );
 
     const keyboard = this.keyboardFactory.getPagination(
       `tlist-${count}`,
@@ -480,10 +492,11 @@ export class MainUpdate {
       true,
     );
 
-    const content = xs`
-        <b>Список преподавателей</b>
-        <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
-    `;
+    const content = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
+      currentPage,
+      totalPages,
+      query: allowerHtmlTags(query, ''),
+    });
 
     if (ctx.callbackQuery) {
       try {
@@ -496,6 +509,30 @@ export class MainUpdate {
     } else {
       await ctx.replyWithHTML(content, keyboard);
     }
+  }
+
+  @Command('teacher')
+  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
+    const query = ctx.payload?.trim();
+    if (!query) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint),
+      );
+      return;
+    }
+
+    ctx.session.teacherSearchQuery = query;
+    const { totalCount } = this.ystutyService.teachersList(1, 20, query);
+    if (totalCount === 0) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
+          query: allowerHtmlTags(query, ''),
+        }),
+      );
+      return;
+    }
+
+    await this.onTeachersList(ctx, true);
   }
 
   @Hears(
@@ -590,29 +627,35 @@ export class MainUpdate {
     }
   }
 
-  // @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
-  @Action(/selectTeacher:(?<teacherId>(.*))/i)
+  @Action(/selectTeacher:(?<teacherId>[0-9]+)/i)
   async hearSelectTeacher(@Ctx() ctx: ICbQOrMsg) {
-    const { chat } = ctx;
     const teacherId = Number(ctx.match?.groups?.teacherId);
 
-    if (!chat || chat.type !== 'private') {
-      await ctx.tryAnswerCbQuery('Nope');
-      return;
-    }
-
-    // await ctx.scene.enter(SELECT_GROUP_SCENE, { teacherId });
-
-    const teacherName = this.ystutyService.getTeacherName(teacherId);
-    if (!teacherName) {
+    const teacher = this.ystutyService.getTeacher(teacherId);
+    if (!teacher) {
       await ctx.replyWithHTML(
-        `Преподаватель с ID <code>${teacherId}</code> не найден.`,
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
+          query: teacherId,
+        }),
       );
       return;
     }
-    // ctx.userSocial.teacherId = teacherId;
+
     ctx.session.teacherId = teacherId;
-    await ctx.replyWithHTML(`Выбран преподаватель: <b>${teacherName}</b>`);
+    ctx.session.teacherSearchQuery = undefined;
+    const safeTeacher = {
+      ...teacher,
+      name: allowerHtmlTags(teacher.name, ''),
+    };
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
+        teacher: safeTeacher,
+      }),
+      this.keyboardFactory.getScheduleInline(ctx, {
+        type: 'teacher',
+        id: teacher.id,
+      }),
+    );
 
     if (ctx.callbackQuery) {
       await ctx.tryAnswerCbQuery();

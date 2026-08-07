@@ -1,4 +1,4 @@
-export const patternTeacherId = '(?<teacherId>[0-9]{2,6})';
+export const patternTeacherId = '(?<teacherId>[0-9]+)';
 const patternGroupNameTemplate =
   '?<groupName>[А-я]{2,6}' +
   '(-|\\s)' +

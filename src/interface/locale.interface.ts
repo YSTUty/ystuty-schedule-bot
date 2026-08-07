@@ -39,6 +39,8 @@ export enum LocalePhrase {
   Button_Schedule_ForTomorrow = 'button.schedule.for_tomorrow',
   Button_Schedule_ForWeek = 'button.schedule.for_week',
   Button_Schedule_ForNextWeek = 'button.schedule.for_next_week',
+  Button_Schedule_Teacher = 'button.schedule.teacher',
+  Button_Schedule_MyTeacher = 'button.schedule.my_teacher',
 
   Button_Groups_ListInstAndGroups = 'button.groups.list_inst_and_groups',
   Button_Groups_ListGroups = 'button.groups.list_groups',
@@ -62,6 +64,13 @@ export enum LocalePhrase {
   Page_Help = 'page.help',
   Page_Schedule_NearestSchedule = 'page.schedule.nearest_schedule',
   Page_Schedule_NotFoundToday = 'page.schedule.not_found_today',
+  Page_Schedule_TeachersList = 'page.schedule.teachers_list',
+  Page_Schedule_TeacherSelected = 'page.schedule.teacher_selected',
+  Page_Schedule_TeacherNotFound = 'page.schedule.teacher_not_found',
+  Page_Schedule_TeacherSearchHint = 'page.schedule.teacher_search_hint',
+  Page_Schedule_TeacherNotSelected = 'page.schedule.teacher_not_selected',
+  Page_Schedule_WeekTitle = 'page.schedule.week_title',
+  Page_Schedule_TeacherWeekTitle = 'page.schedule.teacher_week_title',
 
   Page_Auth_NeedAuth = 'page.auth.need_auth',
   Page_Auth_Done = 'page.auth.done',

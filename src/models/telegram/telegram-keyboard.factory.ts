@@ -28,10 +28,18 @@ export class TelegramKeyboardFactory {
         ctx.user?.role === 'admin');
 
     return Markup.keyboard([
-      [ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)],
+      [
+        ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule),
+        ...(ctx.chat?.type === 'private'
+          ? [ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher)]
+          : []),
+      ],
       [
         ...(ctx.chat?.type === 'private' && ctx.user
-          ? [ctx.i18n.t(LocalePhrase.Button_Profile)]
+          ? [
+              ctx.i18n.t(LocalePhrase.Button_Profile),
+              ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher),
+            ]
           : []),
       ],
       ...(isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
@@ -282,11 +290,16 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getScheduleInline(ctx: IContext, groupName: string = '') {
+  public getScheduleInline(
+    ctx: IContext,
+    target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
+  ) {
     const makeButton = (phrase: LocalePhrase) =>
       Markup.button.callback(
         ctx.i18n.t(phrase),
-        groupName ? `${phrase}:${groupName}` : phrase,
+        target.type === 'teacher'
+          ? `${phrase}:teacher:${target.id}`
+          : `${phrase}:${target.id}`,
       );
 
     return Markup.inlineKeyboard([

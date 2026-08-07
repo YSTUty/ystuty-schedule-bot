@@ -1,9 +1,11 @@
 ##
 # [container] prepare package.json
 ##
-FROM endeveit/docker-jq AS prepackage
+FROM alpine:3.22 AS prepackage
 
 WORKDIR /tmp
+
+RUN apk add --no-cache jq
 
 COPY package.json .
 
@@ -71,6 +73,7 @@ ENV NODE_ENV=production
 
 COPY --from=prod-deps /deps/node_modules ./node_modules
 COPY --from=build /home/node/app/dist ./dist
+COPY --from=build /home/node/app/locales ./locales
 COPY --from=build /home/node/app/package.json ./package.json
 
 USER node

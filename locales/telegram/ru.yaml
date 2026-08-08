@@ -149,6 +149,12 @@ page:
     enter_name_with_example: |
       Напиши название нужной группы.\nНапример, <code>${randomGroupName}</code> \
       или <code>${randomGroupName2.toLowerCase()}</code>
+    institutes_list: |
+      Список институтов
+      Страница: ${currentPage}/${totalPages}
+    groups_list: |
+      Список групп${instituteName ? ': ' + instituteName : ''}
+      Страница: ${currentPage}/${totalPages}
     selected: |
       Выбрана группа: <code>${selectedGroupName}</code>
     not_found: |

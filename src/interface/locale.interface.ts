@@ -87,6 +87,8 @@ export enum LocalePhrase {
   Page_Profile_Info = 'page.profile.info',
 
   Page_SelectGroup_EnterNameWithExample = 'page.select_group.enter_name_with_example',
+  Page_SelectGroup_InstitutesList = 'page.select_group.institutes_list',
+  Page_SelectGroup_GroupsList = 'page.select_group.groups_list',
   Page_SelectGroup_Selected = 'page.select_group.selected',
   Page_SelectGroup_NotFound = 'page.select_group.not_found',
   Page_SelectGroup_Reset = 'page.select_group.reset',

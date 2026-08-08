@@ -1,11 +1,12 @@
 import { UseFilters } from '@nestjs/common';
-import { AddStep, Ctx, Scene, SceneLeave } from 'nestjs-vk';
+import { AddStep, Ctx, Next, Scene, SceneLeave } from 'nestjs-vk';
 
 import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 
 import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { MainUpdate } from '../update/main.update';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -15,6 +16,7 @@ export class SelectGroupScene {
   constructor(
     private readonly ystutyService: YSTUtyService,
     private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly mainUpdate: MainUpdate,
   ) {}
 
   @AddStep()
@@ -25,14 +27,21 @@ export class SelectGroupScene {
     } = ctx;
     let { groupName } = state;
 
+    if (
+      'eventPayload' in ctx &&
+      ctx.eventPayload?.groupAction === 'institutes'
+    ) {
+      await ctx.scene.leave();
+      await this.mainUpdate.onInstitutesList(ctx);
+      return;
+    }
+
     if (!ctx.scene.step.firstTime) {
       groupName = ctx.text;
     }
 
     if (ctx.scene.step.firstTime && !groupName) {
-      const keyboard = this.keyboardFactory
-        .getCancel(ctx)
-        .inline(this.keyboardFactory.needInline(ctx));
+      const keyboard = this.keyboardFactory.getSelectGroupScene(ctx).inline();
       await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
           randomGroupName:
@@ -91,8 +100,9 @@ export class SelectGroupScene {
     }
 
     const keyboard = this.keyboardFactory
-      .getCancel(ctx)
-      .inline(this.keyboardFactory.needInline(ctx));
+      .getSelectGroupScene(ctx)
+      // Callback-кнопки VK работают только в inline-клавиатуре, в том числе в ЛС.
+      .inline();
     return ctx.send(
       ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
       { keyboard },

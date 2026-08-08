@@ -12,6 +12,18 @@ type VKPaginationItem =
   | string
   | { title: string; payload: Record<string, unknown>; selected?: boolean };
 
+const VK_BUTTON_LABEL_MAX_LENGTH = 40;
+const VK_INLINE_KEYBOARD_MAX_ROWS = 6;
+const VK_INLINE_KEYBOARD_MAX_COLUMNS = 4;
+// Фактический лимит VK API для inline callback-клавиатур
+const VK_INLINE_KEYBOARD_MAX_BUTTONS = 10;
+
+/** Возвращает подпись, совместимую с лимитом VK в 40 символов. */
+const getVKButtonLabel = (label: string) =>
+  label.length > VK_BUTTON_LABEL_MAX_LENGTH
+    ? `${label.slice(0, VK_BUTTON_LABEL_MAX_LENGTH - 2)}..`
+    : label;
+
 @Injectable()
 export class VKKeyboardFactory {
   public needInline(ctx: IContext) {
@@ -81,7 +93,7 @@ export class VKKeyboardFactory {
           ]
         : []),
       [
-        ...(isAdmin
+        ...(ctx.isDM && isAdmin
           ? [
               Keyboard.textButton({
                 label: ctx.i18n.t(LocalePhrase.Button_Broadcast),
@@ -353,28 +365,8 @@ export class VKKeyboardFactory {
     getPagePayload: (page: number) => Record<string, unknown>;
     additionalButtons?: IKeyboardProxyButton[][];
   }) {
-    const rows: IKeyboardProxyButton[][] = [];
-
-    for (const itemOrRow of params.items || []) {
-      const row = Array.isArray(itemOrRow) ? itemOrRow : [itemOrRow];
-      rows.push(
-        row.map((item) => {
-          const title = typeof item === 'string' ? item : item.title;
-          const payload = typeof item === 'string' ? {} : item.payload;
-          const selected = typeof item === 'string' ? false : item.selected;
-
-          return Keyboard.callbackButton({
-            label: title,
-            payload,
-            color: selected
-              ? Keyboard.POSITIVE_COLOR
-              : Keyboard.SECONDARY_COLOR,
-          });
-        }),
-      );
-    }
-
-    rows.push([
+    const additionalButtons = params.additionalButtons || [];
+    const paginationButtons = [
       ...(params.currentPage > 1
         ? [
             Keyboard.callbackButton({
@@ -398,9 +390,81 @@ export class VKKeyboardFactory {
             }),
           ]
         : []),
-    ]);
+    ];
+    const additionalButtonsCount = additionalButtons.reduce(
+      (count, row) => count + row.length,
+      0,
+    );
+    const maxItemsCount = Math.max(
+      0,
+      VK_INLINE_KEYBOARD_MAX_BUTTONS -
+        paginationButtons.length -
+        additionalButtonsCount,
+    );
+    // VK позволяет максимум шесть рядов, один из них всегда занят pager.
+    const maxItemsRows = Math.max(
+      0,
+      VK_INLINE_KEYBOARD_MAX_ROWS - 1 - additionalButtons.length,
+    );
+    const rows: IKeyboardProxyButton[][] = [];
+    let remainingItemsCount = maxItemsCount;
 
-    return Keyboard.keyboard([...rows, ...(params.additionalButtons || [])]);
+    for (const itemOrRow of (params.items || []).slice(0, maxItemsRows)) {
+      if (remainingItemsCount === 0) break;
+
+      const row = Array.isArray(itemOrRow) ? itemOrRow : [itemOrRow];
+      const buttons = row
+        .slice(0, Math.min(VK_INLINE_KEYBOARD_MAX_COLUMNS, remainingItemsCount))
+        .map((item) => {
+        const title = typeof item === 'string' ? item : item.title;
+        const payload = typeof item === 'string' ? {} : item.payload;
+        const selected = typeof item === 'string' ? false : item.selected;
+
+        return Keyboard.callbackButton({
+          label: getVKButtonLabel(title),
+          payload,
+          color: selected
+            ? Keyboard.POSITIVE_COLOR
+            : Keyboard.SECONDARY_COLOR,
+        });
+      });
+
+      rows.push(buttons);
+      remainingItemsCount -= buttons.length;
+    }
+
+    rows.push(paginationButtons);
+
+    return Keyboard.keyboard([...rows, ...additionalButtons]);
+  }
+
+  /** Клавиатура сцены выбора группы: ввод вручную или переход к институтам. */
+  public getSelectGroupScene(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
+          payload: { groupAction: 'institutes' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Cancel),
+          payload: { phrase: LocalePhrase.Button_Cancel },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** Кнопка возврата из списка групп к списку институтов. */
+  public getInstitutesListButton(ctx: IContext) {
+    return Keyboard.callbackButton({
+      label: ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
+      payload: { groupAction: 'institutes' },
+      color: Keyboard.PRIMARY_COLOR,
+    });
   }
 
   public getAuth(

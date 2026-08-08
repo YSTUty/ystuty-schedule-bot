@@ -13,6 +13,7 @@ import { NextMiddleware } from 'middleware-io';
 import { APIError, VK } from 'vk-io';
 
 import {
+  md5,
   teacherListCommandRegExp,
   teacherSearchCommandRegExp,
   teacherSearchSlashCommandRegExp,
@@ -219,6 +220,28 @@ export class MainUpdate {
     @Next() next: NextMiddleware,
   ) {
     const teacherAction = ctx.eventPayload.teacherAction as string | undefined;
+    const groupAction = ctx.eventPayload.groupAction as string | undefined;
+    if (groupAction === 'institutes') {
+      await ctx.scene.leave();
+      await this.renderInstitutesList(ctx, Number(ctx.eventPayload.page) || 1);
+      return;
+    }
+
+    if (groupAction === 'groups') {
+      await this.renderGroupsList(
+        ctx,
+        String(ctx.eventPayload.instituteNameMD5 || '') || undefined,
+        Number(ctx.eventPayload.page) || 1,
+      );
+      return;
+    }
+
+    if (groupAction === 'select') {
+      const groupName = String(ctx.eventPayload.groupName || '');
+      await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+      return;
+    }
+
     if (teacherAction === 'list') {
       const state = await this.getTeacherListState(ctx);
       if (!state) {
@@ -311,14 +334,112 @@ export class MainUpdate {
     await ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
   }
 
+  @Hears('/institutes')
+  @VkHearsLocale(LocalePhrase.Button_Groups_ListInstAndGroups)
+  async onInstitutesList(@Ctx() ctx: IMessageContext | IMessageEventContext) {
+    await this.renderInstitutesList(ctx);
+  }
+
   @Hears('/glist')
-  // @UseGuards(new VkAdminGuard(true))
-  async onGroupsList(@Ctx() ctx: IMessageContext) {
-    await ctx.send(
-      `List groups (50 max): ${this.ystutyService.groupNames
-        .slice(0, 50)
-        .join(', ')}`,
+  async onGroupsList(@Ctx() ctx: IMessageContext | IMessageEventContext) {
+    await this.renderGroupsList(ctx);
+  }
+
+  /** Отображает институты, оставляя пять строк под элементы и одну под pager. */
+  private async renderInstitutesList(
+    ctx: IMessageContext | IMessageEventContext,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages } =
+      this.ystutyService.groupsInstitutesList(page, 5);
+    const keyboard = this.keyboardFactory.getPagination({
+      currentPage,
+      totalPages,
+      items: items.map((name) => ({
+        title: name,
+        payload: { groupAction: 'groups', instituteNameMD5: md5(name) },
+      })),
+      getPagePayload: (page) => ({ groupAction: 'institutes', page }),
+    });
+    const message = ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, {
+      currentPage,
+      totalPages,
+    });
+
+    await this.sendOrEditGroupList(ctx, message, keyboard);
+  }
+
+  /** Отображает группы выбранного института или общий список по slash-команде. */
+  private async renderGroupsList(
+    ctx: IMessageContext | IMessageEventContext,
+    instituteNameMD5?: string,
+    page = 1,
+  ) {
+    const columnsCount = 4;
+    const pageSize = instituteNameMD5 ? 6 : 7;
+    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
+      page,
+      pageSize,
+      instituteNameMD5 || null,
     );
+    const instituteName = instituteNameMD5
+      ? this.ystutyService.instituteNameByMD5(instituteNameMD5)
+      : undefined;
+    const keyboard = this.keyboardFactory.getPagination({
+      currentPage,
+      totalPages,
+      items: this.getGroupListRows(items, columnsCount),
+      getPagePayload: (page) => ({
+        groupAction: 'groups',
+        instituteNameMD5,
+        page,
+      }),
+      additionalButtons: instituteNameMD5
+        ? [[this.keyboardFactory.getInstitutesListButton(ctx)]]
+        : undefined,
+    });
+    const message = ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
+      instituteName,
+      currentPage,
+      totalPages,
+    });
+
+    await this.sendOrEditGroupList(ctx, message, keyboard);
+  }
+
+  /** Явно разбивает группы по четыре кнопки, не оставляя это на усмотрение paginator. */
+  private getGroupListRows(groupNames: string[], columnsCount: number) {
+    return Array.from(
+      { length: Math.ceil(groupNames.length / columnsCount) },
+      (_, index) =>
+        groupNames
+          .slice(index * columnsCount, (index + 1) * columnsCount)
+          .map((groupName) => ({
+            title: groupName,
+            payload: { groupAction: 'select', groupName },
+          })),
+    );
+  }
+
+  /** Отправляет новый список или заменяет сообщение, от которого пришёл callback. */
+  private async sendOrEditGroupList(
+    ctx: IMessageContext | IMessageEventContext,
+    message: string,
+    keyboard: ReturnType<VKKeyboardFactory['getPagination']>,
+  ) {
+    const inlineKeyboard = keyboard.inline();
+
+    if ('eventPayload' in ctx) {
+      await ctx.api.messages.edit({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        message,
+        keyboard: inlineKeyboard,
+      });
+      return;
+    }
+
+    await ctx.send(message, { keyboard: inlineKeyboard });
   }
 
   @Hears('/tlist')

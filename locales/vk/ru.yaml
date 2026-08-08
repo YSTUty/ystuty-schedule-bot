@@ -41,6 +41,11 @@ button:
     for_next_week: На следующую
     teacher: Выбрать преподавателя
     my_teacher: Расписание преподавателя
+  groups:
+    list_inst_and_groups: 🏫 Список институтов и групп 📚
+    list_groups: 📚 Список групп 📚
+    list_institutes: 🏫 Список институтов 🏫
+    change_institute: 🏫 Сменить институт 🏫
 
 regexp:
   start: //?(start|старт|начать)( .*)?/i
@@ -145,10 +150,16 @@ page:
     enter_name_with_example: |
       Напиши название нужной группы.\nНапример, ${randomGroupName} \
       или ${randomGroupName2.toLowerCase()}
+    institutes_list: |
+      Список институтов
+      Страница: ${currentPage}/${totalPages}
+    groups_list: |
+      Список групп${instituteName ? ': ' + instituteName : ''}
+      Страница: ${currentPage}/${totalPages}
     selected: |
       Выбрана группа: ${selectedGroupName}
     not_found: |
-      Ошибка: Группа '${groupName}' не найдена
+      Ошибка: Группа "${groupName}" не найдена
     reset: Группа сброшена
 
   broadcast:

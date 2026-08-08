@@ -335,24 +335,24 @@ export class TelegramBroadcastScene extends BaseScene {
       limit: 8,
     });
     const selected = new Set(state.selectedRecipientIds);
-    const keyboard = this.keyboardFactory.getPagination(
-      'broadcast-recipients',
-      page.currentPage,
-      page.totalPages,
-      page.items.map((recipient) => ({
+    const keyboard = this.keyboardFactory.getPagination({
+      name: 'broadcast-recipients',
+      currentPage: page.currentPage,
+      totalPages: page.totalPages,
+      items: page.items.map((recipient) => ({
         title: `${selected.has(recipient.id) ? '✅' : '⬜'} ${this.renderRecipientTitle(recipient)}`,
         payload: String(recipient.id),
       })),
-      'broadcast:wizard:recipient:',
-      [
+      actionPrefix: 'broadcast:wizard:recipient:',
+      additionalButtons: [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
           'broadcast:wizard:settings',
         ),
       ],
-      false,
-      false,
-    );
+      columnizer: false,
+      sortByLength: false,
+    });
 
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(

@@ -352,18 +352,17 @@ export class MainUpdate {
     const { items, currentPage, totalPages } =
       this.ystutyService.groupsInstitutesList(page, count);
 
-    const keyboard = this.keyboardFactory.getPagination(
-      `inst-list-${count}`,
+    const keyboard = this.keyboardFactory.getPagination({
+      name: `inst-list-${count}`,
       currentPage,
       totalPages,
-      items.map((e) => ({
+      items: items.map((e) => ({
         title: e,
         payload: md5(e),
       })),
-      'pager:glist:',
-      [],
-      true,
-    );
+      actionPrefix: 'pager:glist:',
+      columnizer: true,
+    });
 
     const content = xs`
         <b>Список институтов</b>
@@ -411,13 +410,13 @@ export class MainUpdate {
       instituteNameMD5,
     );
 
-    const keyboard = this.keyboardFactory.getPagination(
-      `glist${instituteNameMD5 ? `:${instituteNameMD5}` : ''}-${count}`,
+    const keyboard = this.keyboardFactory.getPagination({
+      name: `glist${instituteNameMD5 ? `:${instituteNameMD5}` : ''}-${count}`,
       currentPage,
       totalPages,
       items,
-      'selectGroup:',
-      [
+      actionPrefix: 'selectGroup:',
+      additionalButtons: [
         ...(instituteNameMD5
           ? [
               Markup.button.callback(
@@ -427,8 +426,8 @@ export class MainUpdate {
             ]
           : []),
       ],
-      true,
-    );
+      columnizer: true,
+    });
 
     const instituteName = instituteNameMD5
       ? this.ystutyService.instituteNameByMD5(instituteNameMD5)

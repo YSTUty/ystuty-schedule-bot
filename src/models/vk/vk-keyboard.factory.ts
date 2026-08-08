@@ -12,6 +12,17 @@ type VKPaginationItem =
   | string
   | { title: string; payload: Record<string, unknown>; selected?: boolean };
 
+type VKPaginationOptions = {
+  currentPage: number;
+  totalPages: number;
+  items?: (VKPaginationItem | VKPaginationItem[])[];
+  getPagePayload: (page: number) => Record<string, unknown>;
+  additionalButtons?: IKeyboardProxyButton[][];
+  pagerMode?: PaginationPagerMode;
+};
+
+type PaginationPagerMode = 'edges' | 'nearby';
+
 const VK_BUTTON_LABEL_MAX_LENGTH = 40;
 const VK_INLINE_KEYBOARD_MAX_ROWS = 6;
 const VK_INLINE_KEYBOARD_MAX_COLUMNS = 4;
@@ -358,64 +369,50 @@ export class VKKeyboardFactory {
     });
   }
 
-  public getPagination(params: {
-    currentPage: number;
-    totalPages: number;
-    items?: (VKPaginationItem | VKPaginationItem[])[];
-    getPagePayload: (page: number) => Record<string, unknown>;
-    additionalButtons?: IKeyboardProxyButton[][];
-  }) {
+  /** Собирает VK pagination из item-рядов, pager и дополнительных кнопок. */
+  public getPagination(params: VKPaginationOptions) {
+    const itemRows = this.getPaginationBuild(params);
+    const pagerRow = this.getPaginationPager(params);
+    const rows = [...itemRows, pagerRow, ...(params.additionalButtons || [])];
+    const buttonsCount = rows.reduce((count, row) => count + row.length, 0);
+
+    if (rows.length > VK_INLINE_KEYBOARD_MAX_ROWS) {
+      throw new RangeError(
+        `VK pagination exceeds ${VK_INLINE_KEYBOARD_MAX_ROWS} rows`,
+      );
+    }
+    if (buttonsCount > VK_INLINE_KEYBOARD_MAX_BUTTONS) {
+      throw new RangeError(
+        `VK inline pagination exceeds ${VK_INLINE_KEYBOARD_MAX_BUTTONS} buttons`,
+      );
+    }
+    return Keyboard.keyboard(rows);
+  }
+
+  /** Строит item-ряды с учётом ограничений VK на кнопки, строки и колонки. */
+  public getPaginationBuild(params: VKPaginationOptions) {
     const additionalButtons = params.additionalButtons || [];
-    const paginationButtons = [
-      ...(params.currentPage > 1
-        ? [
-            Keyboard.callbackButton({
-              label: '‹',
-              payload: params.getPagePayload(params.currentPage - 1),
-              color: Keyboard.SECONDARY_COLOR,
-            }),
-          ]
-        : []),
-      Keyboard.callbackButton({
-        label: `${params.currentPage}/${params.totalPages}`,
-        payload: params.getPagePayload(params.currentPage),
-        color: Keyboard.SECONDARY_COLOR,
-      }),
-      ...(params.currentPage < params.totalPages
-        ? [
-            Keyboard.callbackButton({
-              label: '›',
-              payload: params.getPagePayload(params.currentPage + 1),
-              color: Keyboard.SECONDARY_COLOR,
-            }),
-          ]
-        : []),
-    ];
-    const additionalButtonsCount = additionalButtons.reduce(
-      (count, row) => count + row.length,
-      0,
-    );
-    const maxItemsCount = Math.max(
-      0,
-      VK_INLINE_KEYBOARD_MAX_BUTTONS -
-        paginationButtons.length -
-        additionalButtonsCount,
-    );
     // VK позволяет максимум шесть рядов, один из них всегда занят pager.
     const maxItemsRows = Math.max(
       0,
       VK_INLINE_KEYBOARD_MAX_ROWS - 1 - additionalButtons.length,
     );
-    const rows: IKeyboardProxyButton[][] = [];
-    let remainingItemsCount = maxItemsCount;
+    const itemRows = params.items || [];
+    if (itemRows.length > maxItemsRows) {
+      throw new RangeError(
+        `VK pagination exceeds ${maxItemsRows} item rows: ${itemRows.length}`,
+      );
+    }
 
-    for (const itemOrRow of (params.items || []).slice(0, maxItemsRows)) {
-      if (remainingItemsCount === 0) break;
-
+    return itemRows.map((itemOrRow) => {
       const row = Array.isArray(itemOrRow) ? itemOrRow : [itemOrRow];
-      const buttons = row
-        .slice(0, Math.min(VK_INLINE_KEYBOARD_MAX_COLUMNS, remainingItemsCount))
-        .map((item) => {
+      if (row.length > VK_INLINE_KEYBOARD_MAX_COLUMNS) {
+        throw new RangeError(
+          `VK pagination row exceeds ${VK_INLINE_KEYBOARD_MAX_COLUMNS} buttons`,
+        );
+      }
+
+      return row.map((item) => {
         const title = typeof item === 'string' ? item : item.title;
         const payload = typeof item === 'string' ? {} : item.payload;
         const selected = typeof item === 'string' ? false : item.selected;
@@ -423,19 +420,57 @@ export class VKKeyboardFactory {
         return Keyboard.callbackButton({
           label: getVKButtonLabel(title),
           payload,
-          color: selected
-            ? Keyboard.POSITIVE_COLOR
-            : Keyboard.SECONDARY_COLOR,
+          color: selected ? Keyboard.POSITIVE_COLOR : Keyboard.SECONDARY_COLOR,
         });
       });
+    });
+  }
 
-      rows.push(buttons);
-      remainingItemsCount -= buttons.length;
+  /** Строит ряд навигации текущей страницы для VK callback-клавиатуры. */
+  public getPaginationPager(params: VKPaginationOptions) {
+    const toButton = (page: number, label: string) =>
+      Keyboard.callbackButton({
+        label,
+        payload: params.getPagePayload(page),
+        color: Keyboard.SECONDARY_COLOR,
+      });
+    const noop = () => Keyboard.callbackButton({ label: '-', payload: {} });
+    const { currentPage, totalPages } = params;
+    const mode = params.pagerMode || 'edges';
+
+    if (mode === 'edges') {
+      return [
+        currentPage > 1 ? toButton(1, '«1') : noop(),
+        currentPage > 1
+          ? toButton(currentPage - 1, `‹${currentPage - 1}`)
+          : noop(),
+        toButton(currentPage, `-${currentPage}-`),
+        currentPage < totalPages
+          ? toButton(currentPage + 1, `${currentPage + 1}›`)
+          : noop(),
+        currentPage < totalPages
+          ? toButton(totalPages, `${totalPages}»`)
+          : noop(),
+      ];
     }
 
-    rows.push(paginationButtons);
-
-    return Keyboard.keyboard([...rows, ...additionalButtons]);
+    const previousMiddle = Math.floor((1 + currentPage) / 2);
+    const nextMiddle = Math.ceil((currentPage + totalPages) / 2);
+    return [
+      previousMiddle > 1 && previousMiddle < currentPage
+        ? toButton(previousMiddle, `«${previousMiddle}`)
+        : noop(),
+      currentPage > 1
+        ? toButton(currentPage - 1, `‹${currentPage - 1}`)
+        : noop(),
+      toButton(currentPage, `-${currentPage}-`),
+      nextMiddle > currentPage && nextMiddle < totalPages
+        ? toButton(nextMiddle, `${nextMiddle}»`)
+        : noop(),
+      currentPage < totalPages
+        ? toButton(currentPage + 1, `${currentPage + 1}›`)
+        : noop(),
+    ];
   }
 
   /** Клавиатура сцены выбора группы: ввод вручную или переход к институтам. */

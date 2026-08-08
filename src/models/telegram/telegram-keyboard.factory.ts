@@ -19,6 +19,22 @@ export type PaginationItemType =
   | string
   | { title: string; suffix?: string; payload: string };
 
+type TelegramPaginationOptions<T extends PaginationItemType> = {
+  name: string;
+  currentPage: number;
+  totalPages: number;
+  items?: (T | T[])[];
+  actionPrefix?: string;
+  additionalButtons?:
+    | Hideable<InlineKeyboardButton>[]
+    | Hideable<InlineKeyboardButton>[][];
+  columnizer?: boolean | number;
+  sortByLength?: boolean;
+  pagerMode?: PaginationPagerMode;
+};
+
+type PaginationPagerMode = 'edges' | 'nearby';
+
 @Injectable()
 export class TelegramKeyboardFactory {
   public getStart(ctx: IContext) {
@@ -329,23 +345,57 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  /** Собирает keyboard пагинации из item-рядов, pager и дополнительных кнопок. */
   public getPagination<T extends PaginationItemType>(
-    name: string,
-    current: number,
-    maxpage: number,
-    items?: (T | T[])[],
-    actionPrefix: string = '',
-    additionalButtons:
-      | Hideable<InlineKeyboardButton>[]
-      | Hideable<InlineKeyboardButton>[][] = [],
-    columnizerBtns: boolean | number = false,
-    sortByLength: boolean = true,
+    options: TelegramPaginationOptions<T>,
   ) {
+    const {
+      name,
+      currentPage,
+      totalPages,
+      items,
+      actionPrefix = '',
+      additionalButtons = [],
+      columnizer = false,
+      sortByLength = true,
+      pagerMode = 'edges',
+    } = options;
+
+    const itemRows = this.getPaginationBuild({
+      items,
+      actionPrefix,
+      columnizer,
+      sortByLength,
+    });
+    const pagerRow = this.getPaginationPager({
+      name,
+      currentPage,
+      totalPages,
+      mode: pagerMode,
+    });
+
+    return Markup.inlineKeyboard([
+      ...itemRows,
+      pagerRow,
+      ...this.getPaginationAdditionalRows(additionalButtons),
+    ]);
+  }
+
+  /** Строит ряды кнопок элементов с необязательным автоматическим разбиением по ширине. */
+  public getPaginationBuild<T extends PaginationItemType>(params: {
+    items?: (T | T[])[];
+    actionPrefix?: string;
+    columnizer?: boolean | number;
+    sortByLength?: boolean;
+  }) {
+    let { items } = params;
+    const actionPrefix = params.actionPrefix || '';
+    const sortByLength = params.sortByLength !== false;
     const buttonsItems: Hideable<InlineKeyboardButton>[][] = [];
     let columns = 1;
 
-    const maxLength = columnizerBtns === true ? 10 : columnizerBtns || 10;
-    columnizerBtns = columnizerBtns !== false;
+    const maxLength = params.columnizer === true ? 10 : params.columnizer || 10;
+    const columnizerBtns = params.columnizer !== false;
 
     if (items && items.length > 0) {
       if (columnizerBtns) {
@@ -396,7 +446,7 @@ export class TelegramKeyboardFactory {
             }
           }
           rowBtns.push(
-            Markup.button.callback(title, `${actionPrefix || ''}${payload}`),
+            Markup.button.callback(title, `${actionPrefix}${payload}`),
           );
           if (columnizerBtns) {
             if (rowBtns.length >= columns) {
@@ -416,38 +466,68 @@ export class TelegramKeyboardFactory {
       }
     }
 
-    const buttonsPager: Hideable<InlineKeyboardButton>[] = [];
-    buttonsPager.push(
-      current > 1
-        ? Markup.button.callback(`«1`, `pager:${name}:1`)
-        : Markup.button.callback(`☺`, 'nope'),
-      current > 2
-        ? Markup.button.callback(
-            `‹${current - 1}`,
-            `pager:${name}:${current - 1}`,
-          )
-        : Markup.button.callback(`☺`, 'nope'),
-      Markup.button.callback(`-${current}-`, `pager:${name}:${current}`),
-      current < maxpage - 1
-        ? Markup.button.callback(
-            `${current + 1}›`,
-            `pager:${name}:${current + 1}`,
-          )
-        : Markup.button.callback(`☺`, 'nope'),
-      current < maxpage
-        ? Markup.button.callback(`${maxpage}»`, `pager:${name}:${maxpage}`)
-        : Markup.button.callback(`☺`, 'nope:The end'),
-    );
+    return buttonsItems;
+  }
 
-    return Markup.inlineKeyboard([
-      ...buttonsItems,
-      buttonsPager,
-      ...((<E>(arr: E[] | E[][]): arr is E[][] => Array.isArray(arr[0]))(
-        additionalButtons,
-      )
-        ? additionalButtons
-        : [additionalButtons]),
-    ]);
+  /** Строит ряд навигации pagination, включая переходы к краям списка. */
+  public getPaginationPager(params: {
+    name: string;
+    currentPage: number;
+    totalPages: number;
+    mode?: PaginationPagerMode;
+  }) {
+    const toButton = (page: number, label: string) =>
+      Markup.button.callback(label, `pager:${params.name}:${page}`);
+    const noop = () => Markup.button.callback('-', 'nope');
+    const { currentPage, totalPages } = params;
+    const mode = params.mode || 'edges';
+
+    if (mode === 'edges') {
+      return [
+        currentPage > 1 ? toButton(1, '«1') : noop(),
+        currentPage > 1
+          ? toButton(currentPage - 1, `‹${currentPage - 1}`)
+          : noop(),
+        toButton(currentPage, `-${currentPage}-`),
+        currentPage < totalPages
+          ? toButton(currentPage + 1, `${currentPage + 1}›`)
+          : noop(),
+        currentPage < totalPages
+          ? toButton(totalPages, `${totalPages}»`)
+          : noop(),
+      ];
+    }
+
+    const previousMiddle = Math.floor((1 + currentPage) / 2);
+    const nextMiddle = Math.ceil((currentPage + totalPages) / 2);
+    return [
+      previousMiddle > 1 && previousMiddle < currentPage
+        ? toButton(previousMiddle, `«${previousMiddle}`)
+        : noop(),
+      currentPage > 1
+        ? toButton(currentPage - 1, `‹${currentPage - 1}`)
+        : noop(),
+      toButton(currentPage, `-${currentPage}-`),
+      nextMiddle > currentPage && nextMiddle < totalPages
+        ? toButton(nextMiddle, `${nextMiddle}»`)
+        : noop(),
+      currentPage < totalPages
+        ? toButton(currentPage + 1, `${currentPage + 1}›`)
+        : noop(),
+    ];
+  }
+
+  /** Нормализует одиночный ряд или набор рядов дополнительных inline-кнопок. */
+  private getPaginationAdditionalRows(
+    buttons:
+      | Hideable<InlineKeyboardButton>[]
+      | Hideable<InlineKeyboardButton>[][],
+  ) {
+    return (
+      (<E>(arr: E[] | E[][]): arr is E[][] => Array.isArray(arr[0]))(buttons)
+        ? buttons
+        : [buttons]
+    ) as Hideable<InlineKeyboardButton>[][];
   }
 
   /**
@@ -463,19 +543,18 @@ export class TelegramKeyboardFactory {
       totalPages: number;
     },
   ) {
-    return this.getPagination(
-      `teacher-list:${params.listId}`,
-      params.currentPage,
-      params.totalPages,
-      params.items.map((teacher) => ({
+    return this.getPagination({
+      name: `teacher-list:${params.listId}`,
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((teacher) => ({
         title: teacher.name,
         payload: `${params.listId}:${teacher.id}`,
       })),
-      'selectTeacher:',
-      [],
-      true,
-      false,
-    );
+      actionPrefix: 'selectTeacher:',
+      columnizer: true,
+      sortByLength: false,
+    });
   }
 
   public getActioner<T extends PaginationItemType>(

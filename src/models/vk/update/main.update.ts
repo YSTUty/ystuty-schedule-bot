@@ -378,8 +378,8 @@ export class MainUpdate {
     instituteNameMD5?: string,
     page = 1,
   ) {
-    const columnsCount = 4;
-    const pageSize = instituteNameMD5 ? 6 : 7;
+    const columnsCount = 2;
+    const pageSize = instituteNameMD5 ? 4 : 5;
     const { items, currentPage, totalPages } = this.ystutyService.groupsList(
       page,
       pageSize,

@@ -309,6 +309,9 @@ export class MainUpdate {
         await this.openTeachersList(ctx, '');
         return;
       }
+      case LocalePhrase.Button_Cancel: {
+        return next();
+      }
       case LocalePhrase.Button_SelectGroup: {
         const groupName = ctx.eventPayload.groupName as string;
         await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
@@ -330,8 +333,8 @@ export class MainUpdate {
       }
     }
 
-    // return next();
     await ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
+    // return next();
   }
 
   @Hears('/institutes')

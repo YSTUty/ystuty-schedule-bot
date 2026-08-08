@@ -14,11 +14,16 @@ import {
   MessageEventAction,
 } from 'vk-io';
 import { RedisStorage } from 'vk-io-redis-storage';
+import { MessagesDeleteParams } from 'vk-io/lib/api/schemas/params';
 
 import { SocialType } from '@my-common/constants';
 import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
-import { IContext, IMessageContext } from '@my-interfaces/vk';
+import {
+  IContext,
+  IMessageContext,
+  IMessageEventContext,
+} from '@my-interfaces/vk';
 
 import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
@@ -166,6 +171,23 @@ export class MainMiddleware {
             ...(typeof text !== 'object' ? { message: text, ...params } : text),
           });
         };
+
+        ctx.deleteMessage = async (
+          options: Partial<MessagesDeleteParams> = {},
+        ) => {
+          const convMid = ctx.conversationMessageId;
+          const target = !!convMid
+            ? { peer_id: ctx.peerId, cmids: convMid }
+            : { message_ids: ctx.id };
+          const messageIds = await ctx.api.messages.delete({
+            ...options,
+            ...target,
+          });
+          return messageIds;
+        };
+
+        // define
+        ctx.isDM = ctx.peerId < 0 || ctx.peerId < 2e9;
       } else if (ctx.is(['message'])) {
         // ...
       } else {
@@ -228,18 +250,29 @@ export class MainMiddleware {
   }
 
   private sceneInterceptMiddleware() {
-    return async (ctx: IMessageContext, next: NextMiddleware) => {
+    return async (
+      ctx: IMessageContext | IMessageEventContext,
+      next: NextMiddleware,
+    ) => {
       // * Тут доработали логику `this.sceneManager.middlewareIntercept`, что перед входом в сцену проверяем команду "Отмены". Этого можно не делать, если в каждой сцене наследовать класс с обработкой команд выхода из сцены
       if (!ctx.scene.current) {
         return next();
       }
 
-      const normalizedText = ctx.text?.trim().toLocaleLowerCase('ru');
+      const payloadPhrase = ctx.eventPayload?.phrase as
+        | LocalePhrase
+        | undefined;
+
+      const phraseKey = LocalePhrase.Button_Cancel;
+      const normalizedText = (payloadPhrase || ctx.text)
+        ?.trim()
+        .toLocaleLowerCase('ru');
       const cancelButtonText = ctx.i18n
-        .t(LocalePhrase.Button_Cancel)
+        .t(phraseKey)
         .trim()
         .toLocaleLowerCase('ru');
       const isCancel =
+        payloadPhrase === phraseKey ||
         normalizedText === cancelButtonText ||
         ['cancel', '/cancel', 'exit', '/exit'].includes(normalizedText || '');
 
@@ -248,6 +281,10 @@ export class MainMiddleware {
         await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
           keyboard,
         });
+        if ('eventPayload' in ctx) {
+          ctx.deleteMessage({ delete_for_all: true }).catch();
+          // ctx.answer({ type: 'show_snackbar', text: 'Отменено' }).catch();
+        }
         return ctx.scene.leave({ canceled: true });
       }
 

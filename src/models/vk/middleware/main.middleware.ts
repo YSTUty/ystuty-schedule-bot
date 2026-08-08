@@ -16,7 +16,7 @@ import {
 import { RedisStorage } from 'vk-io-redis-storage';
 
 import { SocialType } from '@my-common/constants';
-import { checkLocaleCondition, i18n } from '@my-common/util/vk';
+import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
@@ -234,11 +234,16 @@ export class MainMiddleware {
         return next();
       }
 
-      if (
-        ctx.text &&
-        (checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx) ||
-          ['cancel', '/cancel', '/exit'].includes(ctx.text.toLowerCase()))
-      ) {
+      const normalizedText = ctx.text?.trim().toLocaleLowerCase('ru');
+      const cancelButtonText = ctx.i18n
+        .t(LocalePhrase.Button_Cancel)
+        .trim()
+        .toLocaleLowerCase('ru');
+      const isCancel =
+        normalizedText === cancelButtonText ||
+        ['cancel', '/cancel', 'exit', '/exit'].includes(normalizedText || '');
+
+      if (isCancel) {
         const keyboard = this.keyboardFactory.getStart(ctx); // getClose(ctx);
         await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
           keyboard,

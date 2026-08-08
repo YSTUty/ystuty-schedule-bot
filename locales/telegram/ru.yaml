@@ -125,20 +125,21 @@ page:
       <b>Преподаватели</b>
       <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
 
-      ${query ? 'Поиск: <code>' + query + '</code>' : 'Выбери преподавателя или отправь /teacher Фамилия'}
+      ${query ? 'Поиск: <code>' + query + '</code>' : 'Выбери преподавателя или напиши <code>преподаватель Фамилия</code>'}
     teacher_selected: |
       Выбран преподаватель: <b>${teacher.name}</b>
 
-      Теперь доступны команды <code>/tday</code> и <code>/tweek</code>.
+      Расписание: <code>/tday</code> или <code>расписание преподавателя</code>.
+      На неделю: <code>/tweek</code> или <code>расписание преподавателя на неделю</code>.
     teacher_not_found: |
       Преподаватель по запросу <code>${query}</code> не найден.
     teacher_search_hint: |
-      Использование: <code>/teacher Фамилия</code>
-      Например: <code>/teacher Иванов</code>
+      Использование: <code>/teacher Фамилия</code> или <code>преподаватель Фамилия</code>
+      Например: <code>преподаватель Иванов</code>
     teacher_list_expired: Список преподавателей устарел. Открой новый через /tlist.
     teacher_keyboard_updated: Клавиатура расписания обновлена.
     teacher_not_selected: |
-      Сначала выбери преподавателя через <code>/teacher</code> или <code>/tlist</code>.
+      Сначала выбери преподавателя через <code>преподаватель Фамилия</code> или <code>/tlist</code>.
     week_title: |
       Расписание на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
     teacher_week_title: |

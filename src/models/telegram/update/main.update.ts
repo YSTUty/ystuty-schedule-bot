@@ -17,6 +17,8 @@ import {
   allowerHtmlTags,
   md5,
   patternGroupName,
+  teacherListCommandRegExp,
+  teacherSearchCommandRegExp,
   TelegrafExceptionFilter,
   TelegramAdminGuard,
   xs,
@@ -450,6 +452,7 @@ export class MainUpdate {
   }
 
   @Command('tlist')
+  @Hears(teacherListCommandRegExp)
   @TgHearsLocale(LocalePhrase.Button_Schedule_Teacher)
   @Action(LocalePhrase.Button_Schedule_Teacher)
   async onTeachersList(@Ctx() ctx: ICbQOrMsg) {
@@ -486,8 +489,9 @@ export class MainUpdate {
   }
 
   @Command('teacher')
+  @Hears(teacherSearchCommandRegExp)
   async onTeacherSearch(@Ctx() ctx: IMessageContext) {
-    const query = ctx.payload?.trim();
+    const query = ctx.payload?.trim() || ctx.match?.groups?.query?.trim();
     if (!query) {
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint),

@@ -12,7 +12,13 @@ import {
 import { NextMiddleware } from 'middleware-io';
 import { APIError, VK } from 'vk-io';
 
-import { VkAdminGuard, VkExceptionFilter } from '@my-common';
+import {
+  teacherListCommandRegExp,
+  teacherSearchCommandRegExp,
+  teacherSearchSlashCommandRegExp,
+  VkAdminGuard,
+  VkExceptionFilter,
+} from '@my-common';
 import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
@@ -316,13 +322,15 @@ export class MainUpdate {
   }
 
   @Hears('/tlist')
+  @Hears(teacherListCommandRegExp)
   @VkHearsLocale(LocalePhrase.Button_Schedule_Teacher)
   // @UseGuards(new VkAdminGuard(true))
   async onTeachersList(@Ctx() ctx: IMessageContext) {
     await this.openTeachersList(ctx, '');
   }
 
-  @Hears(/^\/teacher(?:\s+(?<query>.+))?$/i)
+  @Hears(teacherSearchSlashCommandRegExp)
+  @Hears(teacherSearchCommandRegExp)
   async onTeacherSearch(@Ctx() ctx: IMessageContext) {
     const query = ctx.$match?.groups?.query?.trim();
     if (!query) {

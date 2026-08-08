@@ -1,13 +1,24 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, On, Update } from '@xtcry/nestjs-telegraf';
+import {
+  Action,
+  Command,
+  Ctx,
+  Hears,
+  On,
+  Update,
+} from '@xtcry/nestjs-telegraf';
 
 import * as tg from 'telegraf/typings/core/types/typegram';
 import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
   allowerHtmlTags,
+  isPersonalTeacherScheduleCommand,
+  isPersonalTeacherWeekCommand,
   patternGroupName,
   patternTeacherId,
+  personalTeacherScheduleCommandRegExp,
+  personalTeacherWeekCommandRegExp,
   TelegrafExceptionFilter,
 } from '@my-common';
 import { TgHearsLocale } from '@my-common/decorator/tg';
@@ -172,6 +183,7 @@ export class ScheduleUpdate {
   @Command('tt')
   @Command('day')
   @Command('tday')
+  @Hears(personalTeacherScheduleCommandRegExp)
   @TgHearsLocale([
     LocalePhrase.RegExp_Schedule_For_OneDay,
     LocalePhrase.Button_Schedule_Schedule,
@@ -209,6 +221,9 @@ export class ScheduleUpdate {
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
     const isPersonalTeacherCommand =
       ctx.command === 'tday' ||
+      (ctx.message &&
+        'text' in ctx.message &&
+        isPersonalTeacherScheduleCommand(ctx.message.text)) ||
       (ctx.message &&
         'text' in ctx.message &&
         ctx.message.text ===
@@ -339,6 +354,7 @@ export class ScheduleUpdate {
 
   @Command('week')
   @Command('tweek')
+  @Hears(personalTeacherWeekCommandRegExp)
   @TgHearsLocale([
     LocalePhrase.RegExp_Schedule_For_Week,
     LocalePhrase.Button_Schedule_ForWeek,
@@ -372,6 +388,9 @@ export class ScheduleUpdate {
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
     const isPersonalTeacherCommand =
       ctx.command === 'tweek' ||
+      (ctx.message &&
+        'text' in ctx.message &&
+        isPersonalTeacherWeekCommand(ctx.message.text)) ||
       (ctx.message &&
         'text' in ctx.message &&
         ctx.message.text ===

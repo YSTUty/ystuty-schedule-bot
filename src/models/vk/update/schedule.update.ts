@@ -1,7 +1,13 @@
 import { UseFilters } from '@nestjs/common';
 import { Ctx, Hears, Update } from 'nestjs-vk';
 
-import { VkExceptionFilter } from '@my-common';
+import {
+  isPersonalTeacherScheduleCommand,
+  isPersonalTeacherWeekCommand,
+  personalTeacherScheduleCommandRegExp,
+  personalTeacherWeekCommandRegExp,
+  VkExceptionFilter,
+} from '@my-common';
 import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext } from '@my-interfaces/vk';
@@ -26,10 +32,12 @@ export class ScheduleUpdate {
     LocalePhrase.Button_Schedule_MyTeacher,
   ])
   @Hears('/tday')
+  @Hears(personalTeacherScheduleCommandRegExp)
   async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
     const teacherIdFromPayload = Number(ctx.messagePayload?.teacherId);
     const isPersonalTeacherRequest =
       ctx.text?.trim().toLowerCase() === '/tday' ||
+      isPersonalTeacherScheduleCommand(ctx.text) ||
       ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_MyTeacher;
     const _skipDays = ctx.$match?.groups?.skipDays ?? null;
     let skipDays = Number(_skipDays) || 0;
@@ -99,10 +107,12 @@ export class ScheduleUpdate {
     LocalePhrase.Button_Schedule_ForNextWeek,
   ])
   @Hears('/tweek')
+  @Hears(personalTeacherWeekCommandRegExp)
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
     const teacherIdFromPayload = Number(ctx.messagePayload?.teacherId);
     const isPersonalTeacherRequest =
-      ctx.text?.trim().toLowerCase() === '/tweek';
+      ctx.text?.trim().toLowerCase() === '/tweek' ||
+      isPersonalTeacherWeekCommand(ctx.text);
     const isNextWeek =
       !!ctx.$match?.groups?.next ||
       ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;

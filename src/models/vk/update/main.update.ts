@@ -231,7 +231,6 @@ export class MainUpdate {
         state.pageSize,
         Number(ctx.eventPayload.page) || 1,
       );
-      await ctx.answer({ type: 'show_snackbar', text: 'OK' });
       return;
     }
 
@@ -264,7 +263,12 @@ export class MainUpdate {
           .getSchedule(ctx, { type: 'teacher', id: teacher.id })
           .inline(),
       });
-      await ctx.answer({ type: 'show_snackbar', text: 'OK' });
+      if (ctx.isDM) {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
+          { keyboard: this.keyboardFactory.getStart(ctx) },
+        );
+      }
       return;
     }
 
@@ -272,6 +276,10 @@ export class MainUpdate {
     if (!phrase) return next();
 
     switch (phrase) {
+      case LocalePhrase.Button_Schedule_Teacher: {
+        await this.openTeachersList(ctx, '');
+        return;
+      }
       case LocalePhrase.Button_SelectGroup: {
         const groupName = ctx.eventPayload.groupName as string;
         await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
@@ -398,7 +406,10 @@ export class MainUpdate {
     });
   }
 
-  @VkHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
+  @VkHearsLocale([
+    LocalePhrase.RegExp_Schedule_SelectGroup,
+    LocalePhrase.Button_SelectGroup,
+  ])
   async hearSelectGroup(@Ctx() ctx: IMessageContext) {
     const { senderId, peerId, state } = ctx;
     const groupName = ctx.$match?.groups?.groupName;

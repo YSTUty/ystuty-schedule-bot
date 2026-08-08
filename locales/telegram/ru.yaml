@@ -34,13 +34,13 @@ button:
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
-    schedule: Расписание
+    schedule: Расписание группы
     for_today: На сегодня
     for_tomorrow: На завтра
     for_week: На неделю
     for_next_week: На следующую
-    teacher: Преподаватель
-    my_teacher: Моё расписание
+    teacher: Выбрать преподавателя
+    my_teacher: Расписание преподавателя
   groups:
     list_inst_and_groups: 🏫 Список институтов и групп 📚
     list_groups: 📚 Список групп 📚
@@ -67,10 +67,12 @@ page:
   start: |
     Привет! Это бот для расписания ЯГТУ
     ${ctx.userSocial.groupName ? '' : '\nНапиши <code>help</code> для получения списка команд'} \
+    ${ctx.chat?.type === 'private' ? '\nДля смены группы или преподавателя используй кнопки ниже.' : ''} \
     ${webViewLink ? ('\nПросмотр расписания в браузере — <a href="https://' + webViewLink + (ctx.userSocial.groupName ? ('/g/' + ctx.userSocial.groupName) : '') + '">View</a>') : ''}
 
   init_bot: |
-    Чтобы продолжить, необходимо <b>авторизироваться</b> или <i>выбрать учебную группу</i>.
+    Чтобы посмотреть расписание, можно <b>авторизироваться</b>, <i>выбрать учебную группу</i> или преподавателя.
+    Авторизация для просмотра расписания не обязательна.
 
   help: |
     Команды для обращения к боту:
@@ -134,6 +136,7 @@ page:
       Использование: <code>/teacher Фамилия</code>
       Например: <code>/teacher Иванов</code>
     teacher_list_expired: Список преподавателей устарел. Открой новый через /tlist.
+    teacher_keyboard_updated: Клавиатура расписания обновлена.
     teacher_not_selected: |
       Сначала выбери преподавателя через <code>/teacher</code> или <code>/tlist</code>.
     week_title: |

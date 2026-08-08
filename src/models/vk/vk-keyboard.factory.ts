@@ -23,39 +23,63 @@ export class VKKeyboardFactory {
       xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId || ctx.peerId) ||
       ctx.state.user?.role === 'admin';
 
+    const hasGroup = !!ctx.state.userSocial?.groupName;
+    const hasTeacher = !!ctx.session.teacherId;
+
     return Keyboard.keyboard([
-      [
-        Keyboard.textButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule),
-          payload: { phrase: LocalePhrase.Button_Schedule_Schedule },
-          color: Keyboard.SECONDARY_COLOR,
-        }),
-        ...(ctx.isDM
+      ...(hasGroup
+        ? [
+            [
+              Keyboard.textButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule),
+                payload: { phrase: LocalePhrase.Button_Schedule_Schedule },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ],
+          ]
+        : ctx.isDM
           ? [
+              [
+                Keyboard.textButton({
+                  label: ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                  payload: { phrase: LocalePhrase.Button_SelectGroup },
+                  color: Keyboard.SECONDARY_COLOR,
+                }),
+              ],
+            ]
+          : []),
+      ...(ctx.isDM && !hasTeacher
+        ? [
+            [
               Keyboard.textButton({
                 label: ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
                 payload: { phrase: LocalePhrase.Button_Schedule_Teacher },
                 color: Keyboard.SECONDARY_COLOR,
               }),
+            ],
+          ]
+        : ctx.isDM && hasTeacher
+          ? [
+              [
+                Keyboard.textButton({
+                  label: ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher),
+                  payload: { phrase: LocalePhrase.Button_Schedule_MyTeacher },
+                  color: Keyboard.SECONDARY_COLOR,
+                }),
+              ],
             ]
           : []),
-      ],
-      [
-        ...(ctx.isDM && ctx.state.user
-          ? [
+      ...(ctx.isDM && ctx.state.user
+        ? [
+            [
               Keyboard.textButton({
                 label: ctx.i18n.t(LocalePhrase.Button_Profile),
                 payload: { phrase: LocalePhrase.Button_Profile },
                 color: Keyboard.SECONDARY_COLOR,
               }),
-              Keyboard.textButton({
-                label: ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher),
-                payload: { phrase: LocalePhrase.Button_Schedule_MyTeacher },
-                color: Keyboard.SECONDARY_COLOR,
-              }),
-            ]
-          : []),
-      ],
+            ],
+          ]
+        : []),
       [
         ...(isAdmin
           ? [
@@ -402,6 +426,13 @@ export class VKKeyboardFactory {
               Keyboard.callbackButton({
                 label: ctx.i18n.t(LocalePhrase.Button_SelectGroup),
                 payload: { phrase: LocalePhrase.Button_SelectGroup },
+                color: Keyboard.POSITIVE_COLOR,
+              }),
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
+                payload: {
+                  phrase: LocalePhrase.Button_Schedule_Teacher,
+                },
                 color: Keyboard.POSITIVE_COLOR,
               }),
             ],

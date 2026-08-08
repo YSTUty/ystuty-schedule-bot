@@ -27,21 +27,24 @@ export class TelegramKeyboardFactory {
       (xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id) ||
         ctx.user?.role === 'admin');
 
+    const isPrivate = ctx.chat?.type === 'private';
+    const hasGroup = !!ctx.userSocial?.groupName;
+    const hasTeacher = !!ctx.session.teacherId;
+
     return Markup.keyboard([
-      [
-        ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule),
-        ...(ctx.chat?.type === 'private'
-          ? [ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher)]
+      ...(hasGroup
+        ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)]]
+        : isPrivate
+          ? [[ctx.i18n.t(LocalePhrase.Button_SelectGroup)]]
+          : [[ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)]]),
+      ...(isPrivate && !hasTeacher
+        ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher)]]
+        : isPrivate && hasTeacher
+          ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher)]]
           : []),
-      ],
-      [
-        ...(ctx.chat?.type === 'private' && ctx.user
-          ? [
-              ctx.i18n.t(LocalePhrase.Button_Profile),
-              ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher),
-            ]
-          : []),
-      ],
+      ...(isPrivate && ctx.user
+        ? [[ctx.i18n.t(LocalePhrase.Button_Profile)]]
+        : []),
       ...(isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
     ]).resize();
   }
@@ -253,6 +256,10 @@ export class TelegramKeyboardFactory {
                       ctx.i18n.t(LocalePhrase.Button_SelectGroup),
                       LocalePhrase.Button_SelectGroup,
                     ),
+                    Markup.button.callback(
+                      ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
+                      LocalePhrase.Button_Schedule_Teacher,
+                    ),
                   ],
                 ]
               : []),
@@ -269,6 +276,14 @@ export class TelegramKeyboardFactory {
           ])
         : Markup.keyboard([
             [ctx.i18n.t(phrase)],
+            ...(addSelectGroup
+              ? [
+                  [
+                    ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                    ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
+                  ],
+                ]
+              : []),
             ...(addCancel ? [[ctx.i18n.t(LocalePhrase.Button_Cancel)]] : []),
           ]).resize()),
     };

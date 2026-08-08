@@ -451,7 +451,8 @@ export class MainUpdate {
 
   @Command('tlist')
   @TgHearsLocale(LocalePhrase.Button_Schedule_Teacher)
-  async onTeachersList(@Ctx() ctx: IMessageContext) {
+  @Action(LocalePhrase.Button_Schedule_Teacher)
+  async onTeachersList(@Ctx() ctx: ICbQOrMsg) {
     await this.openTeachersList(ctx, '');
   }
 
@@ -508,7 +509,9 @@ export class MainUpdate {
   }
 
   /** Создаёт отдельное Redis-состояние для нового сообщения со списком преподавателей. */
-  private async openTeachersList(ctx: IMessageContext, query: string) {
+  private async openTeachersList(ctx: ICbQOrMsg, query: string) {
+    if (!ctx.chat) return;
+
     const pageSize = 10;
     const listId = await this.teacherListStateService.create({
       transport: 'telegram',
@@ -608,7 +611,10 @@ export class MainUpdate {
     await ctx.answerCbQuery();
   }
 
-  @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
+  @TgHearsLocale([
+    LocalePhrase.RegExp_Schedule_SelectGroup,
+    LocalePhrase.Button_SelectGroup,
+  ])
   @Action(/selectGroup:(?<groupName>(.*))/i)
   async hearSelectGroup(@Ctx() ctx: ICbQOrMsg) {
     const { from, chat, state, conversation, userSocial } = ctx;
@@ -696,6 +702,13 @@ export class MainUpdate {
         id: teacher.id,
       }),
     );
+
+    if (ctx.chat?.type === 'private') {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
+        this.keyboardFactory.getStart(ctx),
+      );
+    }
 
     if (ctx.callbackQuery) {
       await ctx.tryAnswerCbQuery();

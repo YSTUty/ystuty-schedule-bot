@@ -298,6 +298,7 @@ export class VKKeyboardFactory {
   /** Постраничный список преподавателей для выбора расписания. */
   public getTeachersList(params: {
     ctx: IContext;
+    listId: string;
     items: { id: number; name: string }[];
     currentPage: number;
     totalPages: number;
@@ -307,9 +308,17 @@ export class VKKeyboardFactory {
       totalPages: params.totalPages,
       items: params.items.map((teacher) => ({
         title: teacher.name,
-        payload: { teacherAction: 'select', teacherId: teacher.id },
+        payload: {
+          teacherAction: 'select',
+          listId: params.listId,
+          teacherId: teacher.id,
+        },
       })),
-      getPagePayload: (page) => ({ teacherAction: 'list', page }),
+      getPagePayload: (page) => ({
+        teacherAction: 'list',
+        listId: params.listId,
+        page,
+      }),
     });
   }
 

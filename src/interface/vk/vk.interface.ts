@@ -21,7 +21,6 @@ export interface ISessionState {
 
   socialConnectLink?: string;
   teacherId?: number;
-  teacherSearchQuery?: string;
 }
 
 interface ISessionConversationState {

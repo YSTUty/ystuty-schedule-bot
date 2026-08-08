@@ -31,6 +31,7 @@ import {
 } from '@my-interfaces/telegram';
 
 import { UserService } from '../../user/user.service';
+import { TeacherListStateService } from '../../ystuty/teacher-list-state.service';
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
@@ -44,6 +45,7 @@ export class MainUpdate {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
     private readonly ystutyService: YSTUtyService,
+    private readonly teacherListStateService: TeacherListStateService,
     private readonly userService: UserService,
     private readonly telegramService: TelegramService,
   ) {}
@@ -449,49 +451,95 @@ export class MainUpdate {
 
   @Command('tlist')
   @TgHearsLocale(LocalePhrase.Button_Schedule_Teacher)
-  @Action(/pager:tlist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
-  async onTeachersList(@Ctx() ctx: ICbQOrMsg, preserveQuery = false) {
-    let page: number | null = null;
-    let count: number | null = null;
+  async onTeachersList(@Ctx() ctx: IMessageContext) {
+    await this.openTeachersList(ctx, '');
+  }
 
-    if (ctx.updateType === 'callback_query') {
-      if (ctx.match?.groups) {
-        page = Number(ctx.match.groups.page);
-        count = Number(ctx.match.groups.count);
-      }
-    } else {
-      if (!preserveQuery) {
-        ctx.session.teacherSearchQuery = undefined;
-      }
+  @Action(/pager:teacher-list:(?<listId>[a-f0-9]{12}):(?<page>[0-9]+)/i)
+  async onTeachersListPage(@Ctx() ctx: ICallbackQueryContext) {
+    const listId = ctx.match?.groups?.listId;
+    const page = Number(ctx.match?.groups?.page) || 1;
+    const state =
+      listId && ctx.chat
+        ? await this.teacherListStateService.get(listId, {
+            transport: 'telegram',
+            ownerId: ctx.from.id,
+            peerId: ctx.chat.id,
+          })
+        : null;
 
-      if ('text' in ctx.message && !ctx.state.isLocalePhrase) {
-        [, page, count] = ctx.message.text.split(' ').map(Number);
-      }
+    if (!state) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+      );
+      return;
     }
 
-    page = page || 1;
-    count = count || 20;
+    await this.renderTeachersList(
+      ctx,
+      listId!,
+      state.query,
+      state.pageSize,
+      page,
+    );
+  }
 
-    const { items, currentPage, totalPages, query } =
-      this.ystutyService.teachersList(
-        page,
-        count,
-        ctx.session.teacherSearchQuery,
+  @Command('teacher')
+  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
+    const query = ctx.payload?.trim();
+    if (!query) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint),
       );
+      return;
+    }
 
-    const keyboard = this.keyboardFactory.getPagination(
-      `tlist-${count}`,
+    const { totalCount } = this.ystutyService.teachersList(1, 10, query);
+    if (totalCount === 0) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
+          query: allowerHtmlTags(query, ''),
+        }),
+      );
+      return;
+    }
+
+    await this.openTeachersList(ctx, query);
+  }
+
+  /** Создаёт отдельное Redis-состояние для нового сообщения со списком преподавателей. */
+  private async openTeachersList(ctx: IMessageContext, query: string) {
+    const pageSize = 10;
+    const listId = await this.teacherListStateService.create({
+      transport: 'telegram',
+      ownerId: ctx.from.id,
+      peerId: ctx.chat.id,
+      query,
+      pageSize,
+    });
+
+    await this.renderTeachersList(ctx, listId, query, pageSize);
+  }
+
+  /** Рендерит указанную страницу, используя query исходного сообщения, а не session. */
+  private async renderTeachersList(
+    ctx: ICbQOrMsg,
+    listId: string,
+    query: string,
+    pageSize: number,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages } = this.ystutyService.teachersList(
+      page,
+      pageSize,
+      query,
+    );
+    const keyboard = this.keyboardFactory.getTeachersListPagination(ctx, {
+      listId,
+      items,
       currentPage,
       totalPages,
-      items.map((e) => ({
-        title: e.name,
-        payload: String(e.id),
-      })),
-      'selectTeacher:',
-      [],
-      true,
-    );
-
+    });
     const content = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
       currentPage,
       totalPages,
@@ -506,33 +554,10 @@ export class MainUpdate {
         });
       } catch {}
       await ctx.tryAnswerCbQuery();
-    } else {
-      await ctx.replyWithHTML(content, keyboard);
-    }
-  }
-
-  @Command('teacher')
-  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
-    const query = ctx.payload?.trim();
-    if (!query) {
-      await ctx.replyWithHTML(
-        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint),
-      );
       return;
     }
 
-    ctx.session.teacherSearchQuery = query;
-    const { totalCount } = this.ystutyService.teachersList(1, 20, query);
-    if (totalCount === 0) {
-      await ctx.replyWithHTML(
-        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
-          query: allowerHtmlTags(query, ''),
-        }),
-      );
-      return;
-    }
-
-    await this.onTeachersList(ctx, true);
+    await ctx.replyWithHTML(content, keyboard);
   }
 
   @Hears(
@@ -627,9 +652,25 @@ export class MainUpdate {
     }
   }
 
-  @Action(/selectTeacher:(?<teacherId>[0-9]+)/i)
-  async hearSelectTeacher(@Ctx() ctx: ICbQOrMsg) {
+  @Action(/selectTeacher:(?<listId>[a-f0-9]{12}):(?<teacherId>[0-9]+)/i)
+  async hearSelectTeacher(@Ctx() ctx: ICallbackQueryContext) {
+    const listId = ctx.match?.groups?.listId;
     const teacherId = Number(ctx.match?.groups?.teacherId);
+    const state =
+      listId && ctx.chat
+        ? await this.teacherListStateService.get(listId, {
+            transport: 'telegram',
+            ownerId: ctx.from.id,
+            peerId: ctx.chat.id,
+          })
+        : null;
+
+    if (!state) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+      );
+      return;
+    }
 
     const teacher = this.ystutyService.getTeacher(teacherId);
     if (!teacher) {
@@ -642,7 +683,6 @@ export class MainUpdate {
     }
 
     ctx.session.teacherId = teacherId;
-    ctx.session.teacherSearchQuery = undefined;
     const safeTeacher = {
       ...teacher,
       name: allowerHtmlTags(teacher.name, ''),

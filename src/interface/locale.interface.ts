@@ -68,6 +68,7 @@ export enum LocalePhrase {
   Page_Schedule_TeacherSelected = 'page.schedule.teacher_selected',
   Page_Schedule_TeacherNotFound = 'page.schedule.teacher_not_found',
   Page_Schedule_TeacherSearchHint = 'page.schedule.teacher_search_hint',
+  Page_Schedule_TeacherListExpired = 'page.schedule.teacher_list_expired',
   Page_Schedule_TeacherNotSelected = 'page.schedule.teacher_not_selected',
   Page_Schedule_WeekTitle = 'page.schedule.week_title',
   Page_Schedule_TeacherWeekTitle = 'page.schedule.teacher_week_title',

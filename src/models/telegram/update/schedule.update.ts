@@ -209,7 +209,8 @@ export class ScheduleUpdate {
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
     const isPersonalTeacherCommand =
       ctx.command === 'tday' ||
-      ('text' in ctx.message &&
+      (ctx.message &&
+        'text' in ctx.message &&
         ctx.message.text ===
           ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher));
     const selectedTeacherId = teacherIdFromMath
@@ -369,7 +370,12 @@ export class ScheduleUpdate {
   )
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
-    const isPersonalTeacherCommand = ctx.command === 'tweek';
+    const isPersonalTeacherCommand =
+      ctx.command === 'tweek' ||
+      (ctx.message &&
+        'text' in ctx.message &&
+        ctx.message.text ===
+          ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher));
     const selectedTeacherId = teacherIdFromMath
       ? Number(teacherIdFromMath)
       : isPersonalTeacherCommand

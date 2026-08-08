@@ -18,6 +18,7 @@ import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { UserService } from '../../user/user.service';
+import { TeacherListStateService } from '../../ystuty/teacher-list-state.service';
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../vk.constants';
@@ -33,6 +34,7 @@ export class MainUpdate {
     private readonly vk: VK,
     private readonly vkService: VkService,
     private readonly ystutyService: YSTUtyService,
+    private readonly teacherListStateService: TeacherListStateService,
     private readonly userService: UserService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
@@ -212,12 +214,38 @@ export class MainUpdate {
   ) {
     const teacherAction = ctx.eventPayload.teacherAction as string | undefined;
     if (teacherAction === 'list') {
-      await this.renderTeachersList(ctx, Number(ctx.eventPayload.page) || 1);
+      const state = await this.getTeacherListState(ctx);
+      if (!state) {
+        await this.openTeachersList(ctx, '');
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+        });
+        return;
+      }
+
+      await this.renderTeachersList(
+        ctx,
+        String(ctx.eventPayload.listId),
+        state.query,
+        state.pageSize,
+        Number(ctx.eventPayload.page) || 1,
+      );
       await ctx.answer({ type: 'show_snackbar', text: 'OK' });
       return;
     }
 
     if (teacherAction === 'select') {
+      const state = await this.getTeacherListState(ctx);
+      if (!state) {
+        await this.openTeachersList(ctx, '');
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+        });
+        return;
+      }
+
       const teacherId = Number(ctx.eventPayload.teacherId);
       const teacher = this.ystutyService.getTeacher(teacherId);
       if (!teacher) {
@@ -226,7 +254,6 @@ export class MainUpdate {
       }
 
       ctx.session.teacherId = teacher.id;
-      ctx.session.teacherSearchQuery = undefined;
       await ctx.api.messages.edit({
         peer_id: ctx.peerId,
         cmid: ctx.conversationMessageId,
@@ -284,8 +311,7 @@ export class MainUpdate {
   @VkHearsLocale(LocalePhrase.Button_Schedule_Teacher)
   // @UseGuards(new VkAdminGuard(true))
   async onTeachersList(@Ctx() ctx: IMessageContext) {
-    ctx.session.teacherSearchQuery = undefined;
-    await this.renderTeachersList(ctx);
+    await this.openTeachersList(ctx, '');
   }
 
   @Hears(/^\/teacher(?:\s+(?<query>.+))?$/i)
@@ -296,7 +322,6 @@ export class MainUpdate {
       return;
     }
 
-    ctx.session.teacherSearchQuery = query;
     const { totalCount } = this.ystutyService.teachersList(1, 20, query);
     if (totalCount === 0) {
       await ctx.send(
@@ -305,25 +330,47 @@ export class MainUpdate {
       return;
     }
 
-    await this.renderTeachersList(ctx);
+    await this.openTeachersList(ctx, query);
   }
 
-  /** Рендерит список преподавателей в сообщении или обновляет inline-клавиатуру. */
+  /** Создаёт отдельное Redis-состояние для нового сообщения со списком преподавателей. */
+  private async openTeachersList(
+    ctx: IMessageContext | IMessageEventContext,
+    query: string,
+  ) {
+    const pageSize = 5;
+    const listId = await this.teacherListStateService.create({
+      transport: 'vkontakte',
+      ownerId: ctx.senderId || ctx.userId,
+      peerId: ctx.peerId,
+      query,
+      pageSize,
+    });
+
+    await this.renderTeachersList(ctx, listId, query, pageSize);
+  }
+
+  /** Рендерит страницу списка по query, сохранённому в state конкретного сообщения. */
   private async renderTeachersList(
     ctx: IMessageContext | IMessageEventContext,
+    listId: string,
+    query: string,
+    pageSize: number,
     page = 1,
   ) {
-    const { items, currentPage, totalPages, query } =
-      this.ystutyService.teachersList(page, 5, ctx.session.teacherSearchQuery);
+    const { items, currentPage, totalPages } = this.ystutyService.teachersList(
+      page,
+      pageSize,
+      query,
+    );
     const message = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
       currentPage,
       totalPages,
       query,
     });
-    console.log({items, currentPage, totalPages, query});
 
     const keyboard = this.keyboardFactory
-      .getTeachersList({ ctx, items, currentPage, totalPages })
+      .getTeachersList({ ctx, listId, items, currentPage, totalPages })
       .inline();
 
     if ('eventPayload' in ctx) {
@@ -337,6 +384,18 @@ export class MainUpdate {
     }
 
     await ctx.send(message, { keyboard });
+  }
+
+  /** Проверяет, что callback относится к списку текущего пользователя и диалога. */
+  private async getTeacherListState(ctx: IMessageEventContext) {
+    const listId = ctx.eventPayload.listId;
+    if (typeof listId !== 'string') return null;
+
+    return await this.teacherListStateService.get(listId, {
+      transport: 'vkontakte',
+      ownerId: ctx.senderId || ctx.userId,
+      peerId: ctx.peerId,
+    });
   }
 
   @VkHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)

@@ -27,7 +27,7 @@ button:
     resume: ▶️ Запустить
     pause: ⏸ Пауза
     terminate: ⛔ Остановить
-    mode_toggle: "Режим: ${mode}. Переключить на ${nextMode}"
+    mode_toggle: 'Режим: ${mode}. Переключить на ${nextMode}'
     select_recipients: Выбрать получателей
     audience_all: Все по фильтру
     audience_manual: Тестовая выборка
@@ -129,6 +129,7 @@ page:
     teacher_search_hint: |
       Использование: /teacher Фамилия
       Например: /teacher Иванов
+    teacher_list_expired: Список преподавателей устарел. Открой новый через /tlist.
     teacher_not_selected: |
       Сначала выбери преподавателя через /teacher или /tlist.
     week_title: |
@@ -241,4 +242,4 @@ broadcast:
     paused: Рассылка приостановлена
     resumed: Рассылка продолжена
     terminated: Рассылка остановлена
-    mode_changed: "Режим: ${mode}"
+    mode_changed: 'Режим: ${mode}'

@@ -29,7 +29,6 @@ export interface ISessionState extends Partial<TgSceneSession> {
   __language_code?: string;
 
   teacherId?: number;
-  teacherSearchQuery?: string;
 }
 
 interface ISessionConversationState extends Partial<TgSceneSession> {

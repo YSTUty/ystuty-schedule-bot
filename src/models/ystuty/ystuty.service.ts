@@ -234,7 +234,15 @@ export class YSTUtyService implements OnModuleInit {
         const normalizedName = this.normalizeTeacherName(teacher.name);
         return searchTokens.every((token) => normalizedName.includes(token));
       })
-      .sort((first, second) => first.name.localeCompare(second.name, 'ru'));
+      .sort((first, second) => {
+        const normalizedCompare = this.normalizeTeacherName(
+          first.name,
+        ).localeCompare(this.normalizeTeacherName(second.name), 'ru');
+        if (normalizedCompare !== 0) return normalizedCompare;
+
+        const originalCompare = first.name.localeCompare(second.name, 'ru');
+        return originalCompare || first.id - second.id;
+      });
     const totalCount = teachers.length;
     const safeCount = Math.max(1, count);
     const totalPages = Math.max(1, Math.ceil(totalCount / safeCount));

@@ -435,6 +435,34 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  /**
+   * Строит pagination конкретного списка преподавателей.
+   * listId связывает callbacks с query и page size исходного сообщения.
+   */
+  public getTeachersListPagination(
+    ctx: IContext,
+    params: {
+      listId: string;
+      items: { id: number; name: string }[];
+      currentPage: number;
+      totalPages: number;
+    },
+  ) {
+    return this.getPagination(
+      `teacher-list:${params.listId}`,
+      params.currentPage,
+      params.totalPages,
+      params.items.map((teacher) => ({
+        title: teacher.name,
+        payload: `${params.listId}:${teacher.id}`,
+      })),
+      'selectTeacher:',
+      [],
+      true,
+      false,
+    );
+  }
+
   public getActioner<T extends PaginationItemType>(
     ctx: IContext,
     items?: (T | T[])[],

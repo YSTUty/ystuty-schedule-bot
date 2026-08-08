@@ -4,6 +4,7 @@ import { HttpModule } from '@nestjs/axios';
 
 import * as xEnv from '@my-environment';
 
+import { TeacherListStateService } from './teacher-list-state.service';
 import { YSTUtyService } from './ystuty.service';
 
 @Global()
@@ -20,7 +21,7 @@ import { YSTUtyService } from './ystuty.service';
       },
     }),
   ],
-  providers: [YSTUtyService],
-  exports: [YSTUtyService],
+  providers: [YSTUtyService, TeacherListStateService],
+  exports: [YSTUtyService, TeacherListStateService],
 })
 export class YSTUtyModule {}

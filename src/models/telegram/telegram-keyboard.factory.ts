@@ -7,7 +7,6 @@ import {
   ReplyKeyboardMarkup,
   ReplyKeyboardRemove,
 } from 'telegraf/typings/core/types/typegram';
-import { Markup as MarkupType } from 'telegraf/typings/markup';
 
 import * as xEnv from '@my-environment';
 
@@ -101,8 +100,8 @@ export class TelegramKeyboardFactory {
   ) {
     const hours = buildScheduleNotificationPage(
       Array.from({ length: 18 }, (_, index) => index + 6),
-      page,
-      6,
+      notificationId ? 1 : page,
+      notificationId ? 18 : 6,
     );
     return Markup.inlineKeyboard([
       ...hours.rows.map((row) =>
@@ -269,7 +268,7 @@ export class TelegramKeyboardFactory {
             [
               Markup.button.callback(
                 ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Delete),
-                `scheduleNotification:delete:${notification.id}`,
+                `scheduleNotification:deleteConfirm:${notification.id}`,
               ),
             ],
           ]
@@ -300,7 +299,7 @@ export class TelegramKeyboardFactory {
       [
         Markup.button.callback(
           `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
-          `scheduleNotification:editHour:${notification.id}`,
+          `scheduleNotification:editTime:${notification.id}`,
         ),
       ],
       [
@@ -333,59 +332,20 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotificationGroups(
+  /** Подтверждение защищает от случайного удаления настройки рассылки. */
+  public getScheduleNotificationDeleteConfirmation(
     ctx: IContext,
     notificationId: number,
-    groupNames: string[],
-    page: number,
-    returnToEditor = false,
   ) {
-    const groups = buildScheduleNotificationPage(groupNames, page, 9);
     return Markup.inlineKeyboard([
-      ...groups.rows.map((row) =>
-        row.map((groupName) =>
-          Markup.button.callback(
-            groupName,
-            `scheduleNotification:group:${notificationId}:${groupName}:${returnToEditor ? 'edit' : ''}`,
-          ),
-        ),
-      ),
-      ...(groups.totalPages > 1
-        ? [
-            [
-              ...(groups.previousPage
-                ? [
-                    Markup.button.callback(
-                      ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
-                      ),
-                      `scheduleNotification:groups:${notificationId}:${groups.previousPage}:${returnToEditor ? 'edit' : ''}`,
-                    ),
-                  ]
-                : []),
-              Markup.button.callback(
-                `${groups.currentPage}/${groups.totalPages}`,
-                'nope',
-              ),
-              ...(groups.nextPage
-                ? [
-                    Markup.button.callback(
-                      ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_NextPage,
-                      ),
-                      `scheduleNotification:groups:${notificationId}:${groups.nextPage}:${returnToEditor ? 'edit' : ''}`,
-                    ),
-                  ]
-                : []),
-            ],
-          ]
-        : []),
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
-          returnToEditor
-            ? `scheduleNotification:edit:${notificationId}`
-            : 'scheduleNotification:settings',
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_DeleteConfirm),
+          `scheduleNotification:delete:${notificationId}`,
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_DeleteCancel),
+          'scheduleNotification:settings',
         ),
       ],
     ]);

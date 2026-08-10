@@ -10,16 +10,20 @@ import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { ScheduleNotificationService } from '../../../schedule-notification/schedule-notification.service';
 import { ScheduleNotificationTargetDayOffset } from '../../../schedule-notification/schedule-notification.types';
-import { YSTUtyService } from '../../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+
+import {
+  VK_SCHEDULE_NOTIFICATION_GROUP_SCENE,
+  VkScheduleNotificationGroupScene,
+} from './vk-schedule-notification-group.scene';
 
 @Update()
 @UseFilters(VkExceptionFilter)
 export class VkScheduleNotificationUpdate {
   constructor(
     private readonly notificationService: ScheduleNotificationService,
-    private readonly ystutyService: YSTUtyService,
     private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly groupScene: VkScheduleNotificationGroupScene,
   ) {}
 
   @VkHearsLocale(LocalePhrase.Button_ScheduleNotification)
@@ -74,35 +78,23 @@ export class VkScheduleNotificationUpdate {
           )
           .inline(),
       );
-    } else if (action === 'changeGroup' || action === 'groups') {
+    } else if (action === 'changeGroup') {
+      await ctx.scene.enter(VK_SCHEDULE_NOTIFICATION_GROUP_SCENE, {
+        state: { notificationId: Number(ctx.eventPayload.notificationId) },
+      });
+      await this.groupScene.open(ctx);
+    } else if (action === 'editTime') {
       await this.editStep(
         ctx,
-        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_SelectGroup),
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_SelectHour),
         this.keyboardFactory
-          .getScheduleNotificationGroups(
+          .getScheduleNotificationHours(
             ctx,
+            1,
             Number(ctx.eventPayload.notificationId),
-            this.ystutyService.groupNames,
-            Number(ctx.eventPayload.page) || 1,
-            Boolean(ctx.eventPayload.returnToEditor),
           )
           .inline(),
       );
-    } else if (action === 'group') {
-      const changed = await this.notificationService.changeGroup(
-        ctx.state.userSocial.id,
-        Number(ctx.eventPayload.notificationId),
-        String(ctx.eventPayload.groupName),
-      );
-      await ctx.answer({
-        type: 'show_snackbar',
-        text: changed ? 'Группа изменена' : 'Рассылка не найдена',
-      });
-      if (ctx.eventPayload.returnToEditor) {
-        await this.openEditor(ctx, Number(ctx.eventPayload.notificationId));
-      } else {
-        await this.openSettings(ctx, true);
-      }
     } else if (action === 'editHour') {
       const notificationId = Number(ctx.eventPayload.notificationId);
       const hour = Number(ctx.eventPayload.hour);
@@ -136,6 +128,29 @@ export class VkScheduleNotificationUpdate {
           ) as ScheduleNotificationTargetDayOffset,
         },
       );
+    } else if (action === 'editWeekdays') {
+      const notification = await this.notificationService.getFirstNotification(
+        ctx.state.userSocial.id,
+      );
+      if (
+        notification &&
+        notification.id === Number(ctx.eventPayload.notificationId)
+      ) {
+        await this.editStep(
+          ctx,
+          ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Settings, {
+            notification: {
+              ...notification,
+              weekdaysLabel: this.getWeekdaysLabel(notification.weekdays),
+            },
+          }),
+          this.keyboardFactory
+            .getScheduleNotificationEditorWeekdays(ctx, notification)
+            .inline(),
+        );
+      } else {
+        await this.openSettings(ctx, true);
+      }
     } else if (action === 'editWeekday') {
       const notification = await this.notificationService.getFirstNotification(
         ctx.state.userSocial.id,
@@ -236,6 +251,17 @@ export class VkScheduleNotificationUpdate {
         Boolean(ctx.eventPayload.isEnabled),
       );
       await this.openSettings(ctx, true);
+    } else if (action === 'deleteConfirm') {
+      await this.editStep(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_ConfirmDelete),
+        this.keyboardFactory
+          .getScheduleNotificationDeleteConfirmation(
+            ctx,
+            Number(ctx.eventPayload.notificationId),
+          )
+          .inline(),
+      );
     } else if (action === 'delete') {
       await this.notificationService.delete(
         ctx.state.userSocial.id,
@@ -302,7 +328,7 @@ export class VkScheduleNotificationUpdate {
     );
   }
 
-  private async openEditor(ctx: IMessageEventContext, notificationId: number) {
+  public async openEditor(ctx: IMessageEventContext, notificationId: number) {
     const notification = await this.notificationService.getFirstNotification(
       ctx.state.userSocial.id,
     );

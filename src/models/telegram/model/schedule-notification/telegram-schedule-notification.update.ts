@@ -6,15 +6,19 @@ import { ICallbackQueryContext, ICbQOrMsg } from '@my-interfaces/telegram';
 
 import { ScheduleNotificationService } from '../../../schedule-notification/schedule-notification.service';
 import { ScheduleNotificationTargetDayOffset } from '../../../schedule-notification/schedule-notification.types';
-import { YSTUtyService } from '../../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+
+import {
+  TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE,
+  TelegramScheduleNotificationGroupScene,
+} from './telegram-schedule-notification-group.scene';
 
 @Update()
 export class TelegramScheduleNotificationUpdate {
   constructor(
     private readonly notificationService: ScheduleNotificationService,
-    private readonly ystutyService: YSTUtyService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly groupScene: TelegramScheduleNotificationGroupScene,
   ) {}
 
   @TgHearsLocale(LocalePhrase.Button_ScheduleNotification)
@@ -47,37 +51,23 @@ export class TelegramScheduleNotificationUpdate {
       await this.openEditor(ctx, Number(params[0]));
       return;
     }
-    if (action === 'changeGroup' || action === 'groups') {
-      const notificationId = Number(params[0]);
-      const page = Number(params[1]);
-      const returnToEditor = params[2] === 'edit';
-      await this.editStep(
-        ctx,
-        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_SelectGroup),
-        this.keyboardFactory.getScheduleNotificationGroups(
-          ctx,
-          notificationId,
-          this.ystutyService.groupNames,
-          page || 1,
-          returnToEditor,
-        ),
-      );
+    if (action === 'changeGroup') {
+      await ctx.scene.enter(TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE, {
+        notificationId: Number(params[0]),
+      });
+      await this.groupScene.open(ctx);
       return;
     }
-    if (action === 'group') {
-      const changed = await this.notificationService.changeGroup(
-        ctx.userSocial.id,
-        Number(params[0]),
-        params[1],
+    if (action === 'editTime') {
+      await this.editStep(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_SelectHour),
+        this.keyboardFactory.getScheduleNotificationHours(
+          ctx,
+          1,
+          Number(params[0]),
+        ),
       );
-      await ctx.tryAnswerCbQuery(
-        changed ? 'Группа изменена' : 'Рассылка не найдена',
-      );
-      if (params[2] === 'edit') {
-        await this.openEditor(ctx, Number(params[0]));
-      } else {
-        await this.openSettings(ctx, true);
-      }
       return;
     }
     if (action === 'editHours') {
@@ -235,6 +225,17 @@ export class TelegramScheduleNotificationUpdate {
         params[1] === '1',
       );
       await this.openSettings(ctx, true);
+      return;
+    }
+    if (action === 'deleteConfirm') {
+      await this.editStep(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_ConfirmDelete),
+        this.keyboardFactory.getScheduleNotificationDeleteConfirmation(
+          ctx,
+          Number(params[0]),
+        ),
+      );
       return;
     }
     if (action === 'delete') {

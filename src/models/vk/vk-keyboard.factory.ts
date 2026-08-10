@@ -389,7 +389,7 @@ export class VKKeyboardFactory {
                 LocalePhrase.Button_ScheduleNotification_Delete,
               ),
               payload: {
-                scheduleNotificationAction: 'delete',
+                scheduleNotificationAction: 'deleteConfirm',
                 notificationId: notification.id,
               },
               color: Keyboard.NEGATIVE_COLOR,
@@ -420,20 +420,23 @@ export class VKKeyboardFactory {
       weekdays: number[];
     },
   ) {
-    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
-          label: `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
+          label: getVKButtonLabel(
+            `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
+          ),
           payload: {
-            scheduleNotificationAction: 'editHour',
+            scheduleNotificationAction: 'editTime',
             notificationId: notification.id,
           },
         }),
       ],
       [
         Keyboard.callbackButton({
-          label: `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+          label: getVKButtonLabel(
+            `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+          ),
           payload: {
             scheduleNotificationAction: 'editDay',
             notificationId: notification.id,
@@ -441,6 +444,47 @@ export class VKKeyboardFactory {
           },
         }),
       ],
+      [
+        Keyboard.callbackButton({
+          label: getVKButtonLabel('Дни недели'),
+          payload: {
+            scheduleNotificationAction: 'editWeekdays',
+            notificationId: notification.id,
+          },
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_ChangeGroup),
+          ),
+          payload: {
+            scheduleNotificationAction: 'changeGroup',
+            notificationId: notification.id,
+          },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
+          ),
+          payload: { scheduleNotificationAction: 'editSave' },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** Вторая страница выбора дней редактора: VK ограничивает inline-клавиатуру десятью кнопками. */
+  public getScheduleNotificationEditorWeekdays(
+    ctx: IContext,
+    notification: {
+      id: number;
+      weekdays: number[];
+    },
+  ) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return Keyboard.keyboard([
       ...[0, 3, 6].map((startIndex) =>
         labels.slice(startIndex, startIndex + 3).map((label, index) => {
           const weekday = startIndex + index + 1;
@@ -456,16 +500,18 @@ export class VKKeyboardFactory {
       ),
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
-          payload: { scheduleNotificationAction: 'editSave' },
-          color: Keyboard.POSITIVE_COLOR,
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          payload: {
+            scheduleNotificationAction: 'edit',
+            notificationId: notification.id,
+          },
         }),
       ],
     ]);
   }
 
-  /** Дополнительные действия редактора выводятся отдельно из-за лимита VK в шесть рядов. */
-  public getScheduleNotificationEditorActions(
+  /** Подтверждение защищает от случайного удаления настройки рассылки. */
+  public getScheduleNotificationDeleteConfirmation(
     ctx: IContext,
     notificationId: number,
   ) {
@@ -473,88 +519,20 @@ export class VKKeyboardFactory {
       [
         Keyboard.callbackButton({
           label: ctx.i18n.t(
-            LocalePhrase.Button_ScheduleNotification_ChangeGroup,
+            LocalePhrase.Button_ScheduleNotification_DeleteConfirm,
           ),
           payload: {
-            scheduleNotificationAction: 'changeGroup',
+            scheduleNotificationAction: 'delete',
             notificationId,
-            returnToEditor: true,
           },
-          color: Keyboard.SECONDARY_COLOR,
+          color: Keyboard.NEGATIVE_COLOR,
         }),
-      ],
-    ]);
-  }
-
-  public getScheduleNotificationGroups(
-    ctx: IContext,
-    notificationId: number,
-    groupNames: string[],
-    page: number,
-    returnToEditor = false,
-  ) {
-    const groups = buildScheduleNotificationPage(groupNames, page, 4, 2);
-    return Keyboard.keyboard([
-      ...groups.rows.map((row) =>
-        row.map((groupName) =>
-          Keyboard.callbackButton({
-            label: getVKButtonLabel(groupName),
-            payload: {
-              scheduleNotificationAction: 'group',
-              notificationId,
-              groupName,
-              returnToEditor,
-            },
-          }),
-        ),
-      ),
-      ...(groups.totalPages > 1
-        ? [
-            [
-              ...(groups.previousPage
-                ? [
-                    Keyboard.callbackButton({
-                      label: ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
-                      ),
-                      payload: {
-                        scheduleNotificationAction: 'groups',
-                        notificationId,
-                        page: groups.previousPage,
-                        returnToEditor,
-                      },
-                    }),
-                  ]
-                : []),
-              Keyboard.callbackButton({
-                label: `${groups.currentPage}/${groups.totalPages}`,
-                payload: {},
-              }),
-              ...(groups.nextPage
-                ? [
-                    Keyboard.callbackButton({
-                      label: ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_NextPage,
-                      ),
-                      payload: {
-                        scheduleNotificationAction: 'groups',
-                        notificationId,
-                        page: groups.nextPage,
-                        returnToEditor,
-                      },
-                    }),
-                  ]
-                : []),
-            ],
-          ]
-        : []),
-      [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
-          payload: {
-            scheduleNotificationAction: returnToEditor ? 'edit' : 'settings',
-            ...(returnToEditor ? { notificationId } : {}),
-          },
+          label: ctx.i18n.t(
+            LocalePhrase.Button_ScheduleNotification_DeleteCancel,
+          ),
+          payload: { scheduleNotificationAction: 'settings' },
+          color: Keyboard.SECONDARY_COLOR,
         }),
       ],
     ]);
@@ -1044,6 +1022,7 @@ export class VKKeyboardFactory {
   }
 
   public getClose(ctx?: IContext) {
+    void ctx;
     return Keyboard.keyboard([]).oneTime();
   }
 }

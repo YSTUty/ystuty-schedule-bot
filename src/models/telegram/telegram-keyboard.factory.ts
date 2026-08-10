@@ -14,6 +14,8 @@ import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
+import { buildScheduleNotificationPage } from '../schedule-notification/schedule-notification-keyboard.util';
+
 type Hideable<B> = B & { hide?: boolean };
 export type PaginationItemType =
   | string
@@ -58,8 +60,13 @@ export class TelegramKeyboardFactory {
         : isPrivate && hasTeacher
           ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher)]]
           : []),
-      ...(isPrivate && ctx.user
-        ? [[ctx.i18n.t(LocalePhrase.Button_Profile)]]
+      ...(isPrivate
+        ? [
+            [
+              ...(ctx.user ? [ctx.i18n.t(LocalePhrase.Button_Profile)] : []),
+              ctx.i18n.t(LocalePhrase.Button_ScheduleNotification),
+            ],
+          ]
         : []),
       ...(isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
     ]).resize();
@@ -82,6 +89,303 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
           'broadcast:queue:terminate',
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationHours(
+    ctx: IContext,
+    page = 1,
+    notificationId?: number,
+  ) {
+    const hours = buildScheduleNotificationPage(
+      Array.from({ length: 18 }, (_, index) => index + 6),
+      page,
+      6,
+    );
+    return Markup.inlineKeyboard([
+      ...hours.rows.map((row) =>
+        row.map((hour) =>
+          Markup.button.callback(
+            `${String(hour).padStart(2, '0')}:00`,
+            notificationId
+              ? `scheduleNotification:editHour:${notificationId}:${hour}`
+              : `scheduleNotification:hour:${hour}`,
+          ),
+        ),
+      ),
+      ...(hours.totalPages > 1
+        ? [
+            [
+              ...(hours.previousPage
+                ? [
+                    Markup.button.callback(
+                      ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
+                      ),
+                      notificationId
+                        ? `scheduleNotification:editHours:${notificationId}:${hours.previousPage}`
+                        : `scheduleNotification:hours:${hours.previousPage}`,
+                    ),
+                  ]
+                : []),
+              Markup.button.callback(
+                `${hours.currentPage}/${hours.totalPages}`,
+                'nope',
+              ),
+              ...(hours.nextPage
+                ? [
+                    Markup.button.callback(
+                      ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_NextPage,
+                      ),
+                      notificationId
+                        ? `scheduleNotification:editHours:${notificationId}:${hours.nextPage}`
+                        : `scheduleNotification:hours:${hours.nextPage}`,
+                    ),
+                  ]
+                : []),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          notificationId
+            ? `scheduleNotification:edit:${notificationId}`
+            : 'scheduleNotification:settings',
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationMinutes(
+    ctx: IContext,
+    hour: number,
+    notificationId?: number,
+  ) {
+    return Markup.inlineKeyboard([
+      [0, 10, 20].map((minute) =>
+        Markup.button.callback(
+          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+          notificationId
+            ? `scheduleNotification:editMinute:${notificationId}:${hour}:${minute}`
+            : `scheduleNotification:minute:${hour}:${minute}`,
+        ),
+      ),
+      [30, 40, 50].map((minute) =>
+        Markup.button.callback(
+          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+          notificationId
+            ? `scheduleNotification:editMinute:${notificationId}:${hour}:${minute}`
+            : `scheduleNotification:minute:${hour}:${minute}`,
+        ),
+      ),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          notificationId
+            ? `scheduleNotification:editHours:${notificationId}:1`
+            : 'scheduleNotification:hours:1',
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationTargetDay(
+    ctx: IContext,
+    hour: number,
+    minute: number,
+  ) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
+          `scheduleNotification:day:${hour}:${minute}:0`,
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
+          `scheduleNotification:day:${hour}:${minute}:1`,
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationWeekdays(
+    ctx: IContext,
+    hour: number,
+    minute: number,
+    targetDayOffset: number,
+    weekdays: number[],
+  ) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return Markup.inlineKeyboard([
+      ...[0, 3, 6].map((startIndex) =>
+        labels.slice(startIndex, startIndex + 3).map((label, index) => {
+          const weekday = startIndex + index + 1;
+          return Markup.button.callback(
+            `${weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            `scheduleNotification:weekday:${hour}:${minute}:${targetDayOffset}:${weekday}:${weekdays.join(',')}`,
+          );
+        }),
+      ),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
+          `scheduleNotification:save:${hour}:${minute}:${targetDayOffset}:${weekdays.join(',')}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          `scheduleNotification:minute:${hour}`,
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationSettings(
+    ctx: IContext,
+    notification?: { id: number; isEnabled: boolean },
+  ) {
+    return Markup.inlineKeyboard(
+      notification
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Edit),
+                `scheduleNotification:edit:${notification.id}`,
+              ),
+            ],
+            [
+              Markup.button.callback(
+                notification.isEnabled
+                  ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Disable)
+                  : ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Enable),
+                `scheduleNotification:enabled:${notification.id}:${notification.isEnabled ? '0' : '1'}`,
+              ),
+            ],
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Delete),
+                `scheduleNotification:delete:${notification.id}`,
+              ),
+            ],
+          ]
+        : [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Create),
+                'scheduleNotification:create',
+              ),
+            ],
+          ],
+    );
+  }
+
+  /** Клавиатура редактирования сохраняет каждое изменение сразу. */
+  public getScheduleNotificationEditor(
+    ctx: IContext,
+    notification: {
+      id: number;
+      deliveryHour: number;
+      deliveryMinute: number;
+      targetDayOffset: number;
+      weekdays: number[];
+    },
+  ) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
+          `scheduleNotification:editHour:${notification.id}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+          `scheduleNotification:editDay:${notification.id}:${notification.targetDayOffset ? 0 : 1}`,
+        ),
+      ],
+      ...[0, 3, 6].map((startIndex) =>
+        labels.slice(startIndex, startIndex + 3).map((label, index) => {
+          const weekday = startIndex + index + 1;
+          return Markup.button.callback(
+            `${notification.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            `scheduleNotification:editWeekday:${notification.id}:${weekday}`,
+          );
+        }),
+      ),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_ChangeGroup),
+          `scheduleNotification:changeGroup:${notification.id}:1:edit`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
+          'scheduleNotification:editSave',
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationGroups(
+    ctx: IContext,
+    notificationId: number,
+    groupNames: string[],
+    page: number,
+    returnToEditor = false,
+  ) {
+    const groups = buildScheduleNotificationPage(groupNames, page, 9);
+    return Markup.inlineKeyboard([
+      ...groups.rows.map((row) =>
+        row.map((groupName) =>
+          Markup.button.callback(
+            groupName,
+            `scheduleNotification:group:${notificationId}:${groupName}:${returnToEditor ? 'edit' : ''}`,
+          ),
+        ),
+      ),
+      ...(groups.totalPages > 1
+        ? [
+            [
+              ...(groups.previousPage
+                ? [
+                    Markup.button.callback(
+                      ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
+                      ),
+                      `scheduleNotification:groups:${notificationId}:${groups.previousPage}:${returnToEditor ? 'edit' : ''}`,
+                    ),
+                  ]
+                : []),
+              Markup.button.callback(
+                `${groups.currentPage}/${groups.totalPages}`,
+                'nope',
+              ),
+              ...(groups.nextPage
+                ? [
+                    Markup.button.callback(
+                      ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_NextPage,
+                      ),
+                      `scheduleNotification:groups:${notificationId}:${groups.nextPage}:${returnToEditor ? 'edit' : ''}`,
+                    ),
+                  ]
+                : []),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          returnToEditor
+            ? `scheduleNotification:edit:${notificationId}`
+            : 'scheduleNotification:settings',
         ),
       ],
     ]);

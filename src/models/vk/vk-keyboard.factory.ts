@@ -8,6 +8,8 @@ import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 
+import { buildScheduleNotificationPage } from '../schedule-notification/schedule-notification-keyboard.util';
+
 type VKPaginationItem =
   | string
   | { title: string; payload: Record<string, unknown>; selected?: boolean };
@@ -92,12 +94,23 @@ export class VKKeyboardFactory {
               ],
             ]
           : []),
-      ...(ctx.isDM && ctx.state.user
+      ...(ctx.isDM
         ? [
             [
+              ...(ctx.state.user
+                ? [
+                    Keyboard.textButton({
+                      label: ctx.i18n.t(LocalePhrase.Button_Profile),
+                      payload: { phrase: LocalePhrase.Button_Profile },
+                      color: Keyboard.SECONDARY_COLOR,
+                    }),
+                  ]
+                : []),
               Keyboard.textButton({
-                label: ctx.i18n.t(LocalePhrase.Button_Profile),
-                payload: { phrase: LocalePhrase.Button_Profile },
+                label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification),
+                payload: {
+                  phrase: LocalePhrase.Button_ScheduleNotification,
+                },
                 color: Keyboard.SECONDARY_COLOR,
               }),
             ],
@@ -137,6 +150,411 @@ export class VKKeyboardFactory {
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
           payload: { broadcastAction: 'terminate' },
           color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationHours(
+    ctx: IContext,
+    page = 1,
+    notificationId?: number,
+  ) {
+    const hours = buildScheduleNotificationPage(
+      Array.from({ length: 18 }, (_, index) => index + 6),
+      page,
+      6,
+    );
+    return Keyboard.keyboard([
+      ...hours.rows.map((row) =>
+        row.map((hour) =>
+          Keyboard.callbackButton({
+            label: `${String(hour).padStart(2, '0')}:00`,
+            payload: notificationId
+              ? {
+                  scheduleNotificationAction: 'editHour',
+                  notificationId,
+                  hour,
+                }
+              : { scheduleNotificationAction: 'hour', hour },
+          }),
+        ),
+      ),
+      ...(hours.totalPages > 1
+        ? [
+            [
+              ...(hours.previousPage
+                ? [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
+                      ),
+                      payload: {
+                        scheduleNotificationAction: notificationId
+                          ? 'editHours'
+                          : 'hours',
+                        page: hours.previousPage,
+                        ...(notificationId ? { notificationId } : {}),
+                      },
+                    }),
+                  ]
+                : []),
+              Keyboard.callbackButton({
+                label: `${hours.currentPage}/${hours.totalPages}`,
+                payload: {},
+              }),
+              ...(hours.nextPage
+                ? [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_NextPage,
+                      ),
+                      payload: {
+                        scheduleNotificationAction: notificationId
+                          ? 'editHours'
+                          : 'hours',
+                        page: hours.nextPage,
+                        ...(notificationId ? { notificationId } : {}),
+                      },
+                    }),
+                  ]
+                : []),
+            ],
+          ]
+        : []),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          payload: {
+            scheduleNotificationAction: notificationId ? 'edit' : 'settings',
+            ...(notificationId ? { notificationId } : {}),
+          },
+        }),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationMinutes(
+    ctx: IContext,
+    hour: number,
+    notificationId?: number,
+  ) {
+    return Keyboard.keyboard([
+      [0, 10, 20].map((minute) =>
+        Keyboard.callbackButton({
+          label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+          payload: notificationId
+            ? {
+                scheduleNotificationAction: 'editMinute',
+                notificationId,
+                hour,
+                minute,
+              }
+            : { scheduleNotificationAction: 'minute', hour, minute },
+        }),
+      ),
+      [30, 40, 50].map((minute) =>
+        Keyboard.callbackButton({
+          label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+          payload: notificationId
+            ? {
+                scheduleNotificationAction: 'editMinute',
+                notificationId,
+                hour,
+                minute,
+              }
+            : { scheduleNotificationAction: 'minute', hour, minute },
+        }),
+      ),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          payload: {
+            scheduleNotificationAction: notificationId ? 'editHours' : 'hours',
+            page: 1,
+            ...(notificationId ? { notificationId } : {}),
+          },
+        }),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationTargetDay(
+    ctx: IContext,
+    hour: number,
+    minute: number,
+  ) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
+          payload: {
+            scheduleNotificationAction: 'day',
+            hour,
+            minute,
+            targetDayOffset: 0,
+          },
+        }),
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
+          payload: {
+            scheduleNotificationAction: 'day',
+            hour,
+            minute,
+            targetDayOffset: 1,
+          },
+        }),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationWeekdays(
+    ctx: IContext,
+    hour: number,
+    minute: number,
+    targetDayOffset: number,
+    weekdays: number[],
+  ) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return Keyboard.keyboard([
+      ...[0, 3, 6].map((startIndex) =>
+        labels.slice(startIndex, startIndex + 3).map((label, index) => {
+          const weekday = startIndex + index + 1;
+          return Keyboard.callbackButton({
+            label: `${weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            payload: {
+              scheduleNotificationAction: 'weekday',
+              hour,
+              minute,
+              targetDayOffset,
+              weekday,
+              weekdays,
+            },
+          });
+        }),
+      ),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
+          payload: {
+            scheduleNotificationAction: 'save',
+            hour,
+            minute,
+            targetDayOffset,
+            weekdays,
+          },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          payload: { scheduleNotificationAction: 'minute', hour },
+        }),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationSettings(
+    ctx: IContext,
+    notification?: { id: number; isEnabled: boolean },
+  ) {
+    const buttons = notification
+      ? [
+          [
+            Keyboard.callbackButton({
+              label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Edit),
+              payload: {
+                scheduleNotificationAction: 'edit',
+                notificationId: notification.id,
+              },
+              color: Keyboard.PRIMARY_COLOR,
+            }),
+          ],
+          [
+            Keyboard.callbackButton({
+              label: notification.isEnabled
+                ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Disable)
+                : ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Enable),
+              payload: {
+                scheduleNotificationAction: 'enabled',
+                notificationId: notification.id,
+                isEnabled: !notification.isEnabled,
+              },
+            }),
+          ],
+          [
+            Keyboard.callbackButton({
+              label: ctx.i18n.t(
+                LocalePhrase.Button_ScheduleNotification_Delete,
+              ),
+              payload: {
+                scheduleNotificationAction: 'delete',
+                notificationId: notification.id,
+              },
+              color: Keyboard.NEGATIVE_COLOR,
+            }),
+          ],
+        ]
+      : [];
+    if (!notification) {
+      buttons.push([
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Create),
+          payload: { scheduleNotificationAction: 'create' },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ]);
+    }
+    return Keyboard.keyboard(buttons);
+  }
+
+  /** Клавиатура редактирования сохраняет каждое изменение сразу. */
+  public getScheduleNotificationEditor(
+    ctx: IContext,
+    notification: {
+      id: number;
+      deliveryHour: number;
+      deliveryMinute: number;
+      targetDayOffset: number;
+      weekdays: number[];
+    },
+  ) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
+          payload: {
+            scheduleNotificationAction: 'editHour',
+            notificationId: notification.id,
+          },
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+          payload: {
+            scheduleNotificationAction: 'editDay',
+            notificationId: notification.id,
+            targetDayOffset: notification.targetDayOffset ? 0 : 1,
+          },
+        }),
+      ],
+      ...[0, 3, 6].map((startIndex) =>
+        labels.slice(startIndex, startIndex + 3).map((label, index) => {
+          const weekday = startIndex + index + 1;
+          return Keyboard.callbackButton({
+            label: `${notification.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            payload: {
+              scheduleNotificationAction: 'editWeekday',
+              notificationId: notification.id,
+              weekday,
+            },
+          });
+        }),
+      ),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
+          payload: { scheduleNotificationAction: 'editSave' },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** Дополнительные действия редактора выводятся отдельно из-за лимита VK в шесть рядов. */
+  public getScheduleNotificationEditorActions(
+    ctx: IContext,
+    notificationId: number,
+  ) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(
+            LocalePhrase.Button_ScheduleNotification_ChangeGroup,
+          ),
+          payload: {
+            scheduleNotificationAction: 'changeGroup',
+            notificationId,
+            returnToEditor: true,
+          },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getScheduleNotificationGroups(
+    ctx: IContext,
+    notificationId: number,
+    groupNames: string[],
+    page: number,
+    returnToEditor = false,
+  ) {
+    const groups = buildScheduleNotificationPage(groupNames, page, 4, 2);
+    return Keyboard.keyboard([
+      ...groups.rows.map((row) =>
+        row.map((groupName) =>
+          Keyboard.callbackButton({
+            label: getVKButtonLabel(groupName),
+            payload: {
+              scheduleNotificationAction: 'group',
+              notificationId,
+              groupName,
+              returnToEditor,
+            },
+          }),
+        ),
+      ),
+      ...(groups.totalPages > 1
+        ? [
+            [
+              ...(groups.previousPage
+                ? [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
+                      ),
+                      payload: {
+                        scheduleNotificationAction: 'groups',
+                        notificationId,
+                        page: groups.previousPage,
+                        returnToEditor,
+                      },
+                    }),
+                  ]
+                : []),
+              Keyboard.callbackButton({
+                label: `${groups.currentPage}/${groups.totalPages}`,
+                payload: {},
+              }),
+              ...(groups.nextPage
+                ? [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotification_NextPage,
+                      ),
+                      payload: {
+                        scheduleNotificationAction: 'groups',
+                        notificationId,
+                        page: groups.nextPage,
+                        returnToEditor,
+                      },
+                    }),
+                  ]
+                : []),
+            ],
+          ]
+        : []),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          payload: {
+            scheduleNotificationAction: returnToEditor ? 'edit' : 'settings',
+            ...(returnToEditor ? { notificationId } : {}),
+          },
         }),
       ],
     ]);
@@ -494,10 +912,13 @@ export class VKKeyboardFactory {
   }
 
   /** Кнопка возврата из списка групп к списку институтов. */
-  public getInstitutesListButton(ctx: IContext) {
+  public getInstitutesListButton(
+    ctx: IContext,
+    payload: Record<string, unknown> = { groupAction: 'institutes' },
+  ) {
     return Keyboard.callbackButton({
       label: ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
-      payload: { groupAction: 'institutes' },
+      payload,
       color: Keyboard.PRIMARY_COLOR,
     });
   }

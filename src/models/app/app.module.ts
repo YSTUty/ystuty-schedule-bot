@@ -10,6 +10,7 @@ import { RolesGuard } from '@my-common/guard/roles.guard';
 import { BroadcastModule } from '../broadcast/broadcast.module';
 import { MetricsModule } from '../metrics/metrics.module';
 import { RedisModule } from '../redis/redis.module';
+import { ScheduleNotificationModule } from '../schedule-notification/schedule-notification.module';
 import { SocialConnectModule } from '../social-connect/social-connect.module';
 import { SocialModule } from '../social/social.module';
 import { TelegramModule } from '../telegram/telegram.module';
@@ -44,6 +45,7 @@ import { AppService } from './app.service';
     SocialConnectModule,
     SocialModule,
     BroadcastModule,
+    ScheduleNotificationModule,
     MetricsModule.forRoot(),
     YSTUtyModule,
     RedisModule,

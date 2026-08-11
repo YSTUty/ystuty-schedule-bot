@@ -57,6 +57,7 @@ type CombinedContext = {
   isDM: boolean;
   /** Проверяет, является ли текущий update callback-событием VK. */
   isMessageEventContext: () => this is IMessageEventContext;
+  isMessageContext: () => this is IMessageContext;
   /** Редактирует исходное callback-сообщение или ничего не делает вне message_event. */
   editMessage: (params: Pick<IMessageContextSendOptions, 'keyboard' | 'message'>) => Promise<unknown>;
 } & {};

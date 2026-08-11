@@ -154,6 +154,11 @@ export class MainMiddleware {
         // 'eventPayload' in ctx && 'answer' in ctx
         return this.is(['message_event']);
       };
+      ctx.isMessageContext = function (
+        this: IContext,
+      ): this is IMessageContext {
+        return this.is(['message_new', 'message_edit', 'message_reply']);
+      };
       ctx.editMessage = async ({ message, keyboard }) => {
         if (!ctx.isMessageEventContext()) {
           return;
@@ -258,10 +263,18 @@ export class MainMiddleware {
       );
       ctx.state.appeal = false;
 
-      if (ctx.text && triggerRegexp.test(ctx.text)) {
-        const triggerMsg = ctx.text.match(triggerRegexp);
-        ctx.text = ctx.text.slice(triggerMsg[0].length);
-        ctx.state.appeal = true;
+      if (ctx.isMessageContext()) {
+        if (ctx.replyMessage?.$groupId === ctx.$groupId) {
+          ctx.state.appeal = true;
+        }
+
+        if (ctx.text) {
+          const triggerMsg = ctx.text.match(triggerRegexp);
+          if (triggerMsg) {
+            ctx.text = ctx.text.slice(triggerMsg[0].length);
+            ctx.state.appeal = true;
+          }
+        }
       }
       return next();
     };

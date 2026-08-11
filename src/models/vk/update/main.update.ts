@@ -20,7 +20,7 @@ import {
   VkAdminGuard,
   VkExceptionFilter,
 } from '@my-common';
-import { VkHearsLocale } from '@my-common/decorator/vk';
+import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
@@ -47,7 +47,7 @@ export class MainUpdate {
   ) {}
 
   @Hears('/admin')
-  @UseGuards(new VkAdminGuard(true))
+  @UseGuards(VkAdminGuard(true))
   async onAdmin(@Ctx() ctx: IMessageContext) {
     await ctx.send('YOUARE ADMIN');
   }
@@ -213,7 +213,7 @@ export class MainUpdate {
     await this.vkService.parseChatTitle(ctx, ctx.eventText);
   }
 
-  @On('message_event')
+  @OnMessageEvent()
   // TODO: add event/action decorator
   async onMessageEvent(
     @Ctx() ctx: IMessageEventContext,
@@ -549,6 +549,7 @@ export class MainUpdate {
   ])
   async hearSelectGroup(@Ctx() ctx: IMessageContext) {
     const { senderId, peerId, state } = ctx;
+
     const groupName = ctx.$match?.groups?.groupName;
     const withTrigger = !!ctx.$match?.groups?.trigger;
 

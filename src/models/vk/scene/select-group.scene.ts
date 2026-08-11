@@ -90,12 +90,21 @@ export class SelectGroupScene {
       const keyboard = this.keyboardFactory
         .getStart(ctx)
         .inline(this.keyboardFactory.needInline(ctx));
-      await ctx.send(
-        ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
-          selectedGroupName,
-        }),
-        { keyboard },
-      );
+      if (ctx.isMessageEventContext()) {
+        await ctx.editMessage({
+          message: ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
+            selectedGroupName,
+          }),
+          keyboard,
+        });
+      } else {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
+            selectedGroupName,
+          }),
+          { keyboard },
+        );
+      }
       return ctx.scene.leave();
     }
 

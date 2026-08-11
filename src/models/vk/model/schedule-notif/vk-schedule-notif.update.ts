@@ -1,9 +1,9 @@
 import { UseFilters } from '@nestjs/common';
-import { Ctx, Next, On, Update } from 'nestjs-vk';
+import { Ctx, Next, Update } from 'nestjs-vk';
 
 import { NextMiddleware } from 'middleware-io';
 
-import { VkHearsLocale } from '@my-common/decorator/vk';
+import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
 import { VkExceptionFilter } from '@my-common/filter/vk-exception.filter';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
@@ -35,7 +35,7 @@ export class VkScheduleNotifUpdate {
     await this.openSettings(ctx);
   }
 
-  @On('message_event')
+  @OnMessageEvent()
   async onMessageEvent(
     @Ctx() ctx: IMessageEventContext,
     @Next() next: NextMiddleware,

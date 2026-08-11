@@ -82,6 +82,17 @@ const getAttr = (raw: string, name: string) => {
   return m?.[2] ?? m?.[3] ?? m?.[4] ?? '';
 };
 
+const escapables = {
+  '<': '&lt;',
+  '>': '&gt;',
+  '&': '&amp;',
+  "'": '&#39;',
+  '"': '&quot;',
+};
+/** Example use `<code>${escapeHTML(String(str))}</code>` */
+export const escapeHTML = (s: string) =>
+  s.replace(/<|>|&|"|'/g, (r) => escapables[r as keyof typeof escapables] || r);
+
 const escapeHtmlAttr = (s: string) =>
   s
     .replace(/</g, '&lt;')

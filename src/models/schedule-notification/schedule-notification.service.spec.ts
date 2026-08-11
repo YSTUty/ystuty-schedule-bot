@@ -126,4 +126,24 @@ describe('ScheduleNotificationService', () => {
       },
     );
   });
+
+  it('resets missing target attempts when changing a notification group', async () => {
+    const { service, notificationRepository } = createService();
+    notificationRepository.update.mockResolvedValue({ affected: 1 });
+
+    await service.changeGroup(userSocial.id, 7, 'ЦИС-21');
+
+    expect(notificationRepository.update).toHaveBeenCalledWith(
+      {
+        id: 7,
+        userSocialId: userSocial.id,
+        targetType: 'group',
+      },
+      {
+        targetId: 'ЦИС-21',
+        lastError: null,
+        missingTargetAttempts: 0,
+      },
+    );
+  });
 });

@@ -63,7 +63,7 @@ describe('VKKeyboardFactory', () => {
 
     expect(
       JSON.parse(renderedKeyboard.buttons[0][0].action.payload)
-        .scheduleNotificationAction,
+        .scheduleNotifAction,
     ).toBe('editTime');
   });
 
@@ -81,7 +81,16 @@ describe('VKKeyboardFactory', () => {
       );
 
     expect(
-      JSON.parse(deleteButton.action.payload).scheduleNotificationAction,
+      JSON.parse(deleteButton.action.payload).scheduleNotifAction,
     ).toBe('deleteConfirm');
+  });
+
+  it('uses a compact three-button pager for notification hours', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotificationHours(ctx);
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons).toHaveLength(4);
+    expect(renderedKeyboard.buttons[2]).toHaveLength(3);
+    expect(renderedKeyboard.buttons[2][1].action.label).toBe('-1-');
   });
 });

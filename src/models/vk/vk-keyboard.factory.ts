@@ -9,21 +9,23 @@ import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 
 import { buildScheduleNotificationPage } from '../schedule-notification/schedule-notification-keyboard.util';
+import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notification/schedule-notification-ui.util';
 
-type VKPaginationItem =
+export type VKPaginationItem =
   | string
   | { title: string; payload: Record<string, unknown>; selected?: boolean };
 
-type VKPaginationOptions = {
+export type VKPaginationOptions = {
   currentPage: number;
   totalPages: number;
   items?: (VKPaginationItem | VKPaginationItem[])[];
   getPagePayload: (page: number) => Record<string, unknown>;
   additionalButtons?: IKeyboardProxyButton[][];
+  /** @default 'edges' */
   pagerMode?: PaginationPagerMode;
 };
 
-type PaginationPagerMode = 'edges' | 'nearby';
+type PaginationPagerMode = 'compact' | 'compact-pages' | 'edges' | 'nearby';
 
 const VK_BUTTON_LABEL_MAX_LENGTH = 40;
 const VK_INLINE_KEYBOARD_MAX_ROWS = 6;
@@ -165,73 +167,39 @@ export class VKKeyboardFactory {
       page,
       6,
     );
-    return Keyboard.keyboard([
-      ...hours.rows.map((row) =>
-        row.map((hour) =>
-          Keyboard.callbackButton({
-            label: `${String(hour).padStart(2, '0')}:00`,
-            payload: notificationId
-              ? {
-                  scheduleNotificationAction: 'editHour',
-                  notificationId,
-                  hour,
-                }
-              : { scheduleNotificationAction: 'hour', hour },
-          }),
-        ),
+    return this.getPagination({
+      currentPage: hours.currentPage,
+      totalPages: hours.totalPages,
+      items: hours.rows.map((row) =>
+        row.map((hour) => ({
+          title: `${String(hour).padStart(2, '0')}:**`,
+          payload: notificationId
+            ? {
+                scheduleNotifAction: 'editHour',
+                notificationId,
+                hour,
+              }
+            : { scheduleNotifAction: 'hour', hour },
+        })),
       ),
-      ...(hours.totalPages > 1
-        ? [
-            [
-              ...(hours.previousPage
-                ? [
-                    Keyboard.callbackButton({
-                      label: ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
-                      ),
-                      payload: {
-                        scheduleNotificationAction: notificationId
-                          ? 'editHours'
-                          : 'hours',
-                        page: hours.previousPage,
-                        ...(notificationId ? { notificationId } : {}),
-                      },
-                    }),
-                  ]
-                : []),
-              Keyboard.callbackButton({
-                label: `${hours.currentPage}/${hours.totalPages}`,
-                payload: {},
-              }),
-              ...(hours.nextPage
-                ? [
-                    Keyboard.callbackButton({
-                      label: ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_NextPage,
-                      ),
-                      payload: {
-                        scheduleNotificationAction: notificationId
-                          ? 'editHours'
-                          : 'hours',
-                        page: hours.nextPage,
-                        ...(notificationId ? { notificationId } : {}),
-                      },
-                    }),
-                  ]
-                : []),
-            ],
-          ]
-        : []),
-      [
-        Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
-          payload: {
-            scheduleNotificationAction: notificationId ? 'edit' : 'settings',
-            ...(notificationId ? { notificationId } : {}),
-          },
-        }),
+      getPagePayload: (nextPage) => ({
+        scheduleNotifAction: notificationId ? 'editHours' : 'hours',
+        page: nextPage,
+        ...(notificationId ? { notificationId } : {}),
+      }),
+      additionalButtons: [
+        [
+          Keyboard.callbackButton({
+            label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+            payload: {
+              scheduleNotifAction: notificationId ? 'edit' : 'settings',
+              ...(notificationId ? { notificationId } : {}),
+            },
+          }),
+        ],
       ],
-    ]);
+      pagerMode: 'compact',
+    });
   }
 
   public getScheduleNotificationMinutes(
@@ -240,37 +208,29 @@ export class VKKeyboardFactory {
     notificationId?: number,
   ) {
     return Keyboard.keyboard([
-      [0, 10, 20].map((minute) =>
-        Keyboard.callbackButton({
-          label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-          payload: notificationId
-            ? {
-                scheduleNotificationAction: 'editMinute',
-                notificationId,
-                hour,
-                minute,
-              }
-            : { scheduleNotificationAction: 'minute', hour, minute },
-        }),
-      ),
-      [30, 40, 50].map((minute) =>
-        Keyboard.callbackButton({
-          label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-          payload: notificationId
-            ? {
-                scheduleNotificationAction: 'editMinute',
-                notificationId,
-                hour,
-                minute,
-              }
-            : { scheduleNotificationAction: 'minute', hour, minute },
-        }),
+      ...[
+        SCHEDULE_NOTIFICATION_MINUTES.slice(0, 3),
+        SCHEDULE_NOTIFICATION_MINUTES.slice(3),
+      ].map((minuteRow) =>
+        minuteRow.map((minute) =>
+          Keyboard.callbackButton({
+            label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+            payload: notificationId
+              ? {
+                  scheduleNotifAction: 'editMinute',
+                  notificationId,
+                  hour,
+                  minute,
+                }
+              : { scheduleNotifAction: 'minute', hour, minute },
+          }),
+        ),
       ),
       [
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
           payload: {
-            scheduleNotificationAction: notificationId ? 'editHours' : 'hours',
+            scheduleNotifAction: notificationId ? 'editHours' : 'hours',
             page: 1,
             ...(notificationId ? { notificationId } : {}),
           },
@@ -289,7 +249,7 @@ export class VKKeyboardFactory {
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
           payload: {
-            scheduleNotificationAction: 'day',
+            scheduleNotifAction: 'day',
             hour,
             minute,
             targetDayOffset: 0,
@@ -298,7 +258,7 @@ export class VKKeyboardFactory {
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
           payload: {
-            scheduleNotificationAction: 'day',
+            scheduleNotifAction: 'day',
             hour,
             minute,
             targetDayOffset: 1,
@@ -323,7 +283,7 @@ export class VKKeyboardFactory {
           return Keyboard.callbackButton({
             label: `${weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
             payload: {
-              scheduleNotificationAction: 'weekday',
+              scheduleNotifAction: 'weekday',
               hour,
               minute,
               targetDayOffset,
@@ -335,9 +295,9 @@ export class VKKeyboardFactory {
       ),
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
           payload: {
-            scheduleNotificationAction: 'save',
+            scheduleNotifAction: 'save',
             hour,
             minute,
             targetDayOffset,
@@ -349,7 +309,7 @@ export class VKKeyboardFactory {
       [
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
-          payload: { scheduleNotificationAction: 'minute', hour },
+          payload: { scheduleNotifAction: 'minute', hour },
         }),
       ],
     ]);
@@ -365,7 +325,7 @@ export class VKKeyboardFactory {
             Keyboard.callbackButton({
               label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Edit),
               payload: {
-                scheduleNotificationAction: 'edit',
+                scheduleNotifAction: 'edit',
                 notificationId: notification.id,
               },
               color: Keyboard.PRIMARY_COLOR,
@@ -377,7 +337,7 @@ export class VKKeyboardFactory {
                 ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Disable)
                 : ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Enable),
               payload: {
-                scheduleNotificationAction: 'enabled',
+                scheduleNotifAction: 'enabled',
                 notificationId: notification.id,
                 isEnabled: !notification.isEnabled,
               },
@@ -389,7 +349,7 @@ export class VKKeyboardFactory {
                 LocalePhrase.Button_ScheduleNotification_Delete,
               ),
               payload: {
-                scheduleNotificationAction: 'deleteConfirm',
+                scheduleNotifAction: 'deleteConfirm',
                 notificationId: notification.id,
               },
               color: Keyboard.NEGATIVE_COLOR,
@@ -401,7 +361,7 @@ export class VKKeyboardFactory {
       buttons.push([
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Create),
-          payload: { scheduleNotificationAction: 'create' },
+          payload: { scheduleNotifAction: 'create' },
           color: Keyboard.POSITIVE_COLOR,
         }),
       ]);
@@ -427,7 +387,7 @@ export class VKKeyboardFactory {
             `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
           ),
           payload: {
-            scheduleNotificationAction: 'editTime',
+            scheduleNotifAction: 'editTime',
             notificationId: notification.id,
           },
         }),
@@ -438,7 +398,7 @@ export class VKKeyboardFactory {
             `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
           ),
           payload: {
-            scheduleNotificationAction: 'editDay',
+            scheduleNotifAction: 'editDay',
             notificationId: notification.id,
             targetDayOffset: notification.targetDayOffset ? 0 : 1,
           },
@@ -448,7 +408,7 @@ export class VKKeyboardFactory {
         Keyboard.callbackButton({
           label: getVKButtonLabel('Дни недели'),
           payload: {
-            scheduleNotificationAction: 'editWeekdays',
+            scheduleNotifAction: 'editWeekdays',
             notificationId: notification.id,
           },
         }),
@@ -459,16 +419,16 @@ export class VKKeyboardFactory {
             ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_ChangeGroup),
           ),
           payload: {
-            scheduleNotificationAction: 'changeGroup',
+            scheduleNotifAction: 'changeGroup',
             notificationId: notification.id,
           },
           color: Keyboard.SECONDARY_COLOR,
         }),
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
           ),
-          payload: { scheduleNotificationAction: 'editSave' },
+          payload: { scheduleNotifAction: 'editSave' },
           color: Keyboard.POSITIVE_COLOR,
         }),
       ],
@@ -491,7 +451,7 @@ export class VKKeyboardFactory {
           return Keyboard.callbackButton({
             label: `${notification.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
             payload: {
-              scheduleNotificationAction: 'editWeekday',
+              scheduleNotifAction: 'editWeekday',
               notificationId: notification.id,
               weekday,
             },
@@ -502,7 +462,7 @@ export class VKKeyboardFactory {
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
           payload: {
-            scheduleNotificationAction: 'edit',
+            scheduleNotifAction: 'edit',
             notificationId: notification.id,
           },
         }),
@@ -522,7 +482,7 @@ export class VKKeyboardFactory {
             LocalePhrase.Button_ScheduleNotification_DeleteConfirm,
           ),
           payload: {
-            scheduleNotificationAction: 'delete',
+            scheduleNotifAction: 'delete',
             notificationId,
           },
           color: Keyboard.NEGATIVE_COLOR,
@@ -531,7 +491,7 @@ export class VKKeyboardFactory {
           label: ctx.i18n.t(
             LocalePhrase.Button_ScheduleNotification_DeleteCancel,
           ),
-          payload: { scheduleNotificationAction: 'settings' },
+          payload: { scheduleNotifAction: 'settings' },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],
@@ -824,48 +784,52 @@ export class VKKeyboardFactory {
 
   /** Строит ряд навигации текущей страницы для VK callback-клавиатуры. */
   public getPaginationPager(params: VKPaginationOptions) {
-    const toButton = (page: number, label: string) =>
+    const toBtn = (page: number, label: string) =>
       Keyboard.callbackButton({
         label,
         payload: params.getPagePayload(page),
         color: Keyboard.SECONDARY_COLOR,
       });
-    const noop = () => Keyboard.callbackButton({ label: '-', payload: {} });
-    const { currentPage, totalPages } = params;
+    const noop = () =>
+      Keyboard.callbackButton({ label: '-', payload: { nope: {} } });
+    const { currentPage: curPage, totalPages } = params;
     const mode = params.pagerMode || 'edges';
 
-    if (mode === 'edges') {
+    if (mode === 'compact' || mode === 'compact-pages') {
       return [
-        currentPage > 1 ? toButton(1, '«1') : noop(),
-        currentPage > 1
-          ? toButton(currentPage - 1, `‹${currentPage - 1}`)
-          : noop(),
-        toButton(currentPage, `-${currentPage}-`),
-        currentPage < totalPages
-          ? toButton(currentPage + 1, `${currentPage + 1}›`)
-          : noop(),
-        currentPage < totalPages
-          ? toButton(totalPages, `${totalPages}»`)
-          : noop(),
+        curPage > 1 ? toBtn(curPage - 1, '‹') : noop(),
+        toBtn(
+          curPage,
+          mode === 'compact-pages'
+            ? `-${curPage}/${totalPages}-`
+            : `-${curPage}-`,
+        ),
+        curPage < totalPages ? toBtn(curPage + 1, '›') : noop(),
       ];
     }
 
-    const previousMiddle = Math.floor((1 + currentPage) / 2);
-    const nextMiddle = Math.ceil((currentPage + totalPages) / 2);
+    if (mode === 'edges') {
+      return [
+        curPage > 1 ? toBtn(1, '«1') : noop(),
+        curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
+        toBtn(curPage, `-${curPage}-`),
+        curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
+        curPage < totalPages ? toBtn(totalPages, `${totalPages}»`) : noop(),
+      ];
+    }
+
+    const previousMiddle = Math.floor((1 + curPage) / 2);
+    const nextMiddle = Math.ceil((curPage + totalPages) / 2);
     return [
-      previousMiddle > 1 && previousMiddle < currentPage
-        ? toButton(previousMiddle, `«${previousMiddle}`)
+      previousMiddle > 1 && previousMiddle < curPage
+        ? toBtn(previousMiddle, `«${previousMiddle}`)
         : noop(),
-      currentPage > 1
-        ? toButton(currentPage - 1, `‹${currentPage - 1}`)
+      curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
+      toBtn(curPage, `-${curPage}-`),
+      nextMiddle > curPage && nextMiddle < totalPages
+        ? toBtn(nextMiddle, `${nextMiddle}»`)
         : noop(),
-      toButton(currentPage, `-${currentPage}-`),
-      nextMiddle > currentPage && nextMiddle < totalPages
-        ? toButton(nextMiddle, `${nextMiddle}»`)
-        : noop(),
-      currentPage < totalPages
-        ? toButton(currentPage + 1, `${currentPage + 1}›`)
-        : noop(),
+      curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
     ];
   }
 
@@ -898,6 +862,21 @@ export class VKKeyboardFactory {
       label: ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
       payload,
       color: Keyboard.PRIMARY_COLOR,
+    });
+  }
+
+  /** Inline-отмена локального выбора группы, не запускающая глобальную отмену scene. */
+  public getScheduleNotificationGroupPickerCancelButton(
+    ctx: IContext,
+    notificationId: number,
+  ) {
+    return Keyboard.callbackButton({
+      label: ctx.i18n.t(LocalePhrase.Button_Cancel),
+      payload: {
+        scheduleNotifGroupAction: 'cancel',
+        notificationId,
+      },
+      color: Keyboard.SECONDARY_COLOR,
     });
   }
 

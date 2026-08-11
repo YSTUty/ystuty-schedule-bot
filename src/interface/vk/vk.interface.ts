@@ -6,6 +6,7 @@ import type { ISessionContext } from '@vk-io/session';
 import type {
   API,
   Context as VKContext,
+  IMessageContextSendOptions,
   MessageContext as VKMessageContext,
   MessageEventContext as VKMessageEventContext,
 } from 'vk-io';
@@ -53,6 +54,11 @@ type CombinedContext = {
   session: ISessionContext & ISessionState;
   sessionConversation: ISessionContext & ISessionConversationState;
   scene: IVKSceneContext['scene'];
+  isDM: boolean;
+  /** Проверяет, является ли текущий update callback-событием VK. */
+  isMessageEventContext: () => this is IMessageEventContext;
+  /** Редактирует исходное callback-сообщение или ничего не делает вне message_event. */
+  editMessage: (params: Pick<IMessageContextSendOptions, 'keyboard' | 'message'>) => Promise<unknown>;
 } & {};
 
 export type IContext<T = {}> = VKContext<{}, ContextState> &

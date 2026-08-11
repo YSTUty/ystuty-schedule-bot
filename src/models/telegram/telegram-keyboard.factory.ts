@@ -14,13 +14,16 @@ import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
 import { buildScheduleNotificationPage } from '../schedule-notification/schedule-notification-keyboard.util';
+import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notification/schedule-notification-ui.util';
 
 type Hideable<B> = B & { hide?: boolean };
 export type PaginationItemType =
   | string
   | { title: string; suffix?: string; payload: string };
 
-type TelegramPaginationOptions<T extends PaginationItemType> = {
+export type TelegramPaginationOptions<
+  T extends PaginationItemType = PaginationItemType,
+> = {
   name: string;
   currentPage: number;
   totalPages: number;
@@ -32,6 +35,7 @@ type TelegramPaginationOptions<T extends PaginationItemType> = {
   columnizer?: boolean | number;
   sortByLength?: boolean;
   pagerMode?: PaginationPagerMode;
+  hidePager?: boolean;
 };
 
 type PaginationPagerMode = 'edges' | 'nearby';
@@ -95,22 +99,22 @@ export class TelegramKeyboardFactory {
 
   public getScheduleNotificationHours(
     ctx: IContext,
-    page = 1,
+    _page = 1,
     notificationId?: number,
   ) {
     const hours = buildScheduleNotificationPage(
       Array.from({ length: 18 }, (_, index) => index + 6),
-      notificationId ? 1 : page,
-      notificationId ? 18 : 6,
+      1,
+      18,
     );
     return Markup.inlineKeyboard([
       ...hours.rows.map((row) =>
         row.map((hour) =>
           Markup.button.callback(
-            `${String(hour).padStart(2, '0')}:00`,
+            `${String(hour).padStart(2, '0')}:**`,
             notificationId
-              ? `scheduleNotification:editHour:${notificationId}:${hour}`
-              : `scheduleNotification:hour:${hour}`,
+              ? `scheduleNotif:editHour:${notificationId}:${hour}`
+              : `scheduleNotif:hour:${hour}`,
           ),
         ),
       ),
@@ -124,8 +128,8 @@ export class TelegramKeyboardFactory {
                         LocalePhrase.Button_ScheduleNotification_PreviousPage,
                       ),
                       notificationId
-                        ? `scheduleNotification:editHours:${notificationId}:${hours.previousPage}`
-                        : `scheduleNotification:hours:${hours.previousPage}`,
+                        ? `scheduleNotif:editHours:${notificationId}:${hours.previousPage}`
+                        : `scheduleNotif:hours:${hours.previousPage}`,
                     ),
                   ]
                 : []),
@@ -140,8 +144,8 @@ export class TelegramKeyboardFactory {
                         LocalePhrase.Button_ScheduleNotification_NextPage,
                       ),
                       notificationId
-                        ? `scheduleNotification:editHours:${notificationId}:${hours.nextPage}`
-                        : `scheduleNotification:hours:${hours.nextPage}`,
+                        ? `scheduleNotif:editHours:${notificationId}:${hours.nextPage}`
+                        : `scheduleNotif:hours:${hours.nextPage}`,
                     ),
                   ]
                 : []),
@@ -152,8 +156,8 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
           notificationId
-            ? `scheduleNotification:edit:${notificationId}`
-            : 'scheduleNotification:settings',
+            ? `scheduleNotif:edit:${notificationId}`
+            : 'scheduleNotif:settings',
         ),
       ],
     ]);
@@ -165,28 +169,25 @@ export class TelegramKeyboardFactory {
     notificationId?: number,
   ) {
     return Markup.inlineKeyboard([
-      [0, 10, 20].map((minute) =>
-        Markup.button.callback(
-          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-          notificationId
-            ? `scheduleNotification:editMinute:${notificationId}:${hour}:${minute}`
-            : `scheduleNotification:minute:${hour}:${minute}`,
-        ),
-      ),
-      [30, 40, 50].map((minute) =>
-        Markup.button.callback(
-          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-          notificationId
-            ? `scheduleNotification:editMinute:${notificationId}:${hour}:${minute}`
-            : `scheduleNotification:minute:${hour}:${minute}`,
+      ...[
+        SCHEDULE_NOTIFICATION_MINUTES.slice(0, 3),
+        SCHEDULE_NOTIFICATION_MINUTES.slice(3),
+      ].map((minuteRow) =>
+        minuteRow.map((minute) =>
+          Markup.button.callback(
+            `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+            notificationId
+              ? `scheduleNotif:editMinute:${notificationId}:${hour}:${minute}`
+              : `scheduleNotif:minute:${hour}:${minute}`,
+          ),
         ),
       ),
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
           notificationId
-            ? `scheduleNotification:editHours:${notificationId}:1`
-            : 'scheduleNotification:hours:1',
+            ? `scheduleNotif:editHours:${notificationId}:1`
+            : 'scheduleNotif:hours:1',
         ),
       ],
     ]);
@@ -201,11 +202,11 @@ export class TelegramKeyboardFactory {
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
-          `scheduleNotification:day:${hour}:${minute}:0`,
+          `scheduleNotif:day:${hour}:${minute}:0`,
         ),
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
-          `scheduleNotification:day:${hour}:${minute}:1`,
+          `scheduleNotif:day:${hour}:${minute}:1`,
         ),
       ],
     ]);
@@ -225,20 +226,20 @@ export class TelegramKeyboardFactory {
           const weekday = startIndex + index + 1;
           return Markup.button.callback(
             `${weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
-            `scheduleNotification:weekday:${hour}:${minute}:${targetDayOffset}:${weekday}:${weekdays.join(',')}`,
+            `scheduleNotif:weekday:${hour}:${minute}:${targetDayOffset}:${weekday}:${weekdays.join(',')}`,
           );
         }),
       ),
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
-          `scheduleNotification:save:${hour}:${minute}:${targetDayOffset}:${weekdays.join(',')}`,
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
+          `scheduleNotif:save:${hour}:${minute}:${targetDayOffset}:${weekdays.join(',')}`,
         ),
       ],
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
-          `scheduleNotification:minute:${hour}`,
+          `scheduleNotif:minute:${hour}`,
         ),
       ],
     ]);
@@ -254,7 +255,7 @@ export class TelegramKeyboardFactory {
             [
               Markup.button.callback(
                 ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Edit),
-                `scheduleNotification:edit:${notification.id}`,
+                `scheduleNotif:edit:${notification.id}`,
               ),
             ],
             [
@@ -262,13 +263,13 @@ export class TelegramKeyboardFactory {
                 notification.isEnabled
                   ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Disable)
                   : ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Enable),
-                `scheduleNotification:enabled:${notification.id}:${notification.isEnabled ? '0' : '1'}`,
+                `scheduleNotif:enabled:${notification.id}:${notification.isEnabled ? '0' : '1'}`,
               ),
             ],
             [
               Markup.button.callback(
                 ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Delete),
-                `scheduleNotification:deleteConfirm:${notification.id}`,
+                `scheduleNotif:deleteConfirm:${notification.id}`,
               ),
             ],
           ]
@@ -276,7 +277,7 @@ export class TelegramKeyboardFactory {
             [
               Markup.button.callback(
                 ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Create),
-                'scheduleNotification:create',
+                'scheduleNotif:create',
               ),
             ],
           ],
@@ -299,13 +300,13 @@ export class TelegramKeyboardFactory {
       [
         Markup.button.callback(
           `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
-          `scheduleNotification:editTime:${notification.id}`,
+          `scheduleNotif:editTime:${notification.id}`,
         ),
       ],
       [
         Markup.button.callback(
           `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
-          `scheduleNotification:editDay:${notification.id}:${notification.targetDayOffset ? 0 : 1}`,
+          `scheduleNotif:editDay:${notification.id}:${notification.targetDayOffset ? 0 : 1}`,
         ),
       ],
       ...[0, 3, 6].map((startIndex) =>
@@ -313,20 +314,20 @@ export class TelegramKeyboardFactory {
           const weekday = startIndex + index + 1;
           return Markup.button.callback(
             `${notification.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
-            `scheduleNotification:editWeekday:${notification.id}:${weekday}`,
+            `scheduleNotif:editWeekday:${notification.id}:${weekday}`,
           );
         }),
       ),
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_ChangeGroup),
-          `scheduleNotification:changeGroup:${notification.id}:1:edit`,
+          `scheduleNotif:changeGroup:${notification.id}:1:edit`,
         ),
       ],
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Save),
-          'scheduleNotification:editSave',
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
+          'scheduleNotif:editSave',
         ),
       ],
     ]);
@@ -341,11 +342,11 @@ export class TelegramKeyboardFactory {
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_DeleteConfirm),
-          `scheduleNotification:delete:${notificationId}`,
+          `scheduleNotif:delete:${notificationId}`,
         ),
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_DeleteCancel),
-          'scheduleNotification:settings',
+          'scheduleNotif:settings',
         ),
       ],
     ]);
@@ -623,6 +624,7 @@ export class TelegramKeyboardFactory {
       columnizer = false,
       sortByLength = true,
       pagerMode = 'edges',
+      hidePager = false,
     } = options;
 
     const itemRows = this.getPaginationBuild({
@@ -631,16 +633,18 @@ export class TelegramKeyboardFactory {
       columnizer,
       sortByLength,
     });
-    const pagerRow = this.getPaginationPager({
-      name,
-      currentPage,
-      totalPages,
-      mode: pagerMode,
-    });
+    const pagerRow = hidePager
+      ? []
+      : this.getPaginationPager({
+          name,
+          currentPage,
+          totalPages,
+          mode: pagerMode,
+        });
 
     return Markup.inlineKeyboard([
       ...itemRows,
-      pagerRow,
+      ...[pagerRow],
       ...this.getPaginationAdditionalRows(additionalButtons),
     ]);
   }
@@ -740,44 +744,34 @@ export class TelegramKeyboardFactory {
     totalPages: number;
     mode?: PaginationPagerMode;
   }) {
-    const toButton = (page: number, label: string) =>
+    const toBtn = (page: number, label: string) =>
       Markup.button.callback(label, `pager:${params.name}:${page}`);
     const noop = () => Markup.button.callback('-', 'nope');
-    const { currentPage, totalPages } = params;
+    const { currentPage: curPage, totalPages } = params;
     const mode = params.mode || 'edges';
 
     if (mode === 'edges') {
       return [
-        currentPage > 1 ? toButton(1, '«1') : noop(),
-        currentPage > 1
-          ? toButton(currentPage - 1, `‹${currentPage - 1}`)
-          : noop(),
-        toButton(currentPage, `-${currentPage}-`),
-        currentPage < totalPages
-          ? toButton(currentPage + 1, `${currentPage + 1}›`)
-          : noop(),
-        currentPage < totalPages
-          ? toButton(totalPages, `${totalPages}»`)
-          : noop(),
+        curPage > 1 ? toBtn(1, '«1') : noop(),
+        curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
+        toBtn(curPage, `-${curPage}-`),
+        curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
+        curPage < totalPages ? toBtn(totalPages, `${totalPages}»`) : noop(),
       ];
     }
 
-    const previousMiddle = Math.floor((1 + currentPage) / 2);
-    const nextMiddle = Math.ceil((currentPage + totalPages) / 2);
+    const previousMiddle = Math.floor((1 + curPage) / 2);
+    const nextMiddle = Math.ceil((curPage + totalPages) / 2);
     return [
-      previousMiddle > 1 && previousMiddle < currentPage
-        ? toButton(previousMiddle, `«${previousMiddle}`)
+      previousMiddle > 1 && previousMiddle < curPage
+        ? toBtn(previousMiddle, `«${previousMiddle}`)
         : noop(),
-      currentPage > 1
-        ? toButton(currentPage - 1, `‹${currentPage - 1}`)
+      curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
+      toBtn(curPage, `-${curPage}-`),
+      nextMiddle > curPage && nextMiddle < totalPages
+        ? toBtn(nextMiddle, `${nextMiddle}»`)
         : noop(),
-      toButton(currentPage, `-${currentPage}-`),
-      nextMiddle > currentPage && nextMiddle < totalPages
-        ? toButton(nextMiddle, `${nextMiddle}»`)
-        : noop(),
-      currentPage < totalPages
-        ? toButton(currentPage + 1, `${currentPage + 1}›`)
-        : noop(),
+      curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
     ];
   }
 

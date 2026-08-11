@@ -28,6 +28,13 @@ export class TelegramScheduleNotificationTransport
       ScheduleNotificationTransport['sendScheduleNotification']
     >[0],
   ) {
+    return await this.sendMessage(params);
+  }
+
+  /** Отправляет личное сервисное сообщение получателю рассылки. */
+  public async sendMessage(
+    params: Parameters<ScheduleNotificationTransport['sendMessage']>[0],
+  ) {
     const message = await this.telegramService.sendMessage(
       params.recipient.socialId,
       params.text,

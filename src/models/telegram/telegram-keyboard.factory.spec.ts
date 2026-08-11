@@ -5,11 +5,10 @@ describe('TelegramKeyboardFactory', () => {
     i18n: { t: (phrase: string) => phrase },
   } as any;
 
-  it('shows all notification hours when editing an existing notification', () => {
+  it('shows all notification hours when creating a notification', () => {
     const keyboard = new TelegramKeyboardFactory().getScheduleNotificationHours(
       ctx,
       1,
-      7,
     );
     const buttons = keyboard.reply_markup.inline_keyboard.flat();
 
@@ -17,7 +16,7 @@ describe('TelegramKeyboardFactory', () => {
       19,
     );
     expect(buttons[0]).toMatchObject({
-      callback_data: 'scheduleNotification:editHour:7:6',
+      callback_data: 'scheduleNotif:hour:6',
     });
   });
 
@@ -32,7 +31,7 @@ describe('TelegramKeyboardFactory', () => {
       });
 
     expect(keyboard.reply_markup.inline_keyboard[0][0]).toMatchObject({
-      callback_data: 'scheduleNotification:editTime:7',
+      callback_data: 'scheduleNotif:editTime:7',
     });
   });
 });

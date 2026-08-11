@@ -219,6 +219,15 @@ export class MainUpdate {
     @Ctx() ctx: IMessageEventContext,
     @Next() next: NextMiddleware,
   ) {
+    if ('nope' in ctx.eventPayload && ctx.eventPayload.nope) {
+      const text = ctx.eventPayload.nope?.text;
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: text ?? 'Nope ¯\\_(ツ)_/¯',
+      });
+      return;
+    }
+
     const teacherAction = ctx.eventPayload.teacherAction as string | undefined;
     const groupAction = ctx.eventPayload.groupAction as string | undefined;
     if (groupAction === 'institutes') {
@@ -230,7 +239,7 @@ export class MainUpdate {
     if (groupAction === 'groups') {
       await this.renderGroupsList(
         ctx,
-        String(ctx.eventPayload.instituteNameMD5 || '') || undefined,
+        String(ctx.eventPayload.instituteHash || '') || undefined,
         Number(ctx.eventPayload.page) || 1,
       );
       return;
@@ -360,7 +369,7 @@ export class MainUpdate {
       totalPages,
       items: items.map((name) => ({
         title: name,
-        payload: { groupAction: 'groups', instituteNameMD5: md5(name) },
+        payload: { groupAction: 'groups', instituteHash: md5(name) },
       })),
       getPagePayload: (page) => ({ groupAction: 'institutes', page }),
     });
@@ -375,18 +384,19 @@ export class MainUpdate {
   /** Отображает группы выбранного института или общий список по slash-команде. */
   private async renderGroupsList(
     ctx: IMessageContext | IMessageEventContext,
-    instituteNameMD5?: string,
+    instituteHash?: string,
     page = 1,
   ) {
     const columnsCount = 2;
-    const pageSize = instituteNameMD5 ? 4 : 5;
+    const pageSize = instituteHash ? 4 : 5;
+    // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
     const { items, currentPage, totalPages } = this.ystutyService.groupsList(
       page,
       pageSize,
-      instituteNameMD5 || null,
+      instituteHash || null,
     );
-    const instituteName = instituteNameMD5
-      ? this.ystutyService.instituteNameByMD5(instituteNameMD5)
+    const instituteName = instituteHash
+      ? this.ystutyService.instituteNameByHash(instituteHash)
       : undefined;
     const keyboard = this.keyboardFactory.getPagination({
       currentPage,
@@ -394,10 +404,10 @@ export class MainUpdate {
       items: this.getGroupListRows(items, columnsCount),
       getPagePayload: (page) => ({
         groupAction: 'groups',
-        instituteNameMD5,
+        instituteHash,
         page,
       }),
-      additionalButtons: instituteNameMD5
+      additionalButtons: instituteHash
         ? [[this.keyboardFactory.getInstitutesListButton(ctx)]]
         : undefined,
     });
@@ -432,13 +442,8 @@ export class MainUpdate {
   ) {
     const inlineKeyboard = keyboard.inline();
 
-    if ('eventPayload' in ctx) {
-      await ctx.api.messages.edit({
-        peer_id: ctx.peerId,
-        cmid: ctx.conversationMessageId,
-        message,
-        keyboard: inlineKeyboard,
-      });
+    if (ctx.isMessageEventContext()) {
+      await ctx.editMessage({ message, keyboard: inlineKeyboard });
       return;
     }
 

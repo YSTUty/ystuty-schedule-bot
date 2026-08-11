@@ -48,7 +48,7 @@ button:
     create: Настроить рассылку
     edit: Редактировать
     change_group: Изменить группу
-    save: Сохранить
+    done: Готово
     enable: Включить
     disable: Выключить
     delete: Удалить
@@ -172,7 +172,7 @@ page:
     need_group: Сначала выбери учебную группу, затем настрой рассылку.
     saved: Настройки рассылки сохранены.
     select_group: Выбери группу для этой рассылки.
-    confirm_delete: Удалить рассылку расписания? Это действие нельзя отменить.
+    confirm_delete: Удалить рассылку расписания для группы ${groupName}? Это действие нельзя отменить.
 
   select_group:
     enter_name_with_example: |
@@ -188,6 +188,7 @@ page:
       Выбрана группа: ${selectedGroupName}
     not_found: |
       Ошибка: Группа "${groupName}" не найдена
+      Напиши другое название, Отмена или /cancel.
     reset: Группа сброшена
 
   broadcast:

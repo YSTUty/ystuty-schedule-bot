@@ -148,7 +148,25 @@ export class MainMiddleware {
         return;
       }
 
-      if (ctx.is(['message_event'])) {
+      ctx.isMessageEventContext = function (
+        this: IContext,
+      ): this is IMessageEventContext {
+        // 'eventPayload' in ctx && 'answer' in ctx
+        return this.is(['message_event']);
+      };
+      ctx.editMessage = async ({ message, keyboard }) => {
+        if (!ctx.isMessageEventContext()) {
+          return;
+        }
+        return ctx.api.messages.edit({
+          peer_id: ctx.peerId,
+          cmid: ctx.conversationMessageId,
+          message,
+          keyboard,
+        });
+      };
+
+      if (ctx.isMessageEventContext()) {
         const answer = ctx.answer.bind(ctx);
         ctx.answer = async (eventData: MessageEventAction) => {
           const res = await answer(eventData);

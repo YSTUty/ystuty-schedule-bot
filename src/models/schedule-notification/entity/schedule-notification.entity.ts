@@ -54,6 +54,10 @@ export class ScheduleNotification {
   @Column({ type: 'boolean', default: true })
   public isEnabled: boolean;
 
+  /** Количество обнаружений отсутствующей цели в Schedule API. */
+  @Column({ type: 'smallint', default: 0 })
+  public missingTargetAttempts: number;
+
   @Column({ type: 'timestamp with time zone', nullable: true })
   public lastDeliveredAt: Date | null;
 

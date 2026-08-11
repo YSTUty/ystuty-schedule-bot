@@ -22,6 +22,9 @@ import { ScheduleNotificationTransportRegistry } from './transport/schedule-noti
     ScheduleNotificationScheduler,
     ScheduleNotificationTransportRegistry,
   ],
-  exports: [ScheduleNotificationService, ScheduleNotificationTransportRegistry],
+  exports: [
+    ScheduleNotificationService,
+    ScheduleNotificationTransportRegistry,
+  ],
 })
 export class ScheduleNotificationModule {}

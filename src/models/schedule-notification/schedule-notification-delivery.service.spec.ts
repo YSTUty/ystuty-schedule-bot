@@ -39,10 +39,12 @@ describe('ScheduleNotificationDeliveryService', () => {
     const deliveryRepository = { save: jest.fn(async (value) => value) };
     const ystutyService = {
       getGroupByName: jest.fn(),
+      getTeacher: jest.fn(),
       findNext: jest.fn(),
     };
     const transport = {
       sendScheduleNotification: jest.fn(),
+      sendMessage: jest.fn(),
     };
     const transportRegistry = { get: jest.fn(() => transport) };
 
@@ -62,6 +64,10 @@ describe('ScheduleNotificationDeliveryService', () => {
 
   beforeEach(() => {
     Object.assign(notification, {
+      targetType: ScheduleNotificationTargetType.Group,
+      targetId: 'ЦИС-11',
+      isEnabled: true,
+      missingTargetAttempts: 0,
       lastError: null,
       lastDeliveredAt: null,
       lastFailedAt: null,
@@ -103,5 +109,56 @@ describe('ScheduleNotificationDeliveryService', () => {
     });
     expect(delivery.status).toBe(ScheduleNotificationDeliveryStatus.Sent);
     expect(delivery.sentMessageId).toBe('42');
+  });
+
+  it('disables a notification and informs the recipient after the seventh missing target during the academic year', async () => {
+    const { service, ystutyService, transport, notificationRepository } =
+      createService();
+    notification.missingTargetAttempts = 6;
+    ystutyService.getGroupByName.mockReturnValue(undefined);
+
+    await service.deliver(notification, delivery, new Date('2026-09-01'));
+
+    expect(notification).toMatchObject({
+      isEnabled: false,
+      missingTargetAttempts: 7,
+      lastError: 'Group is absent from Schedule API',
+    });
+    expect(transport.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: userSocial,
+        text: expect.stringContaining('автоматически отключена'),
+      }),
+    );
+    expect(notificationRepository.save).toHaveBeenCalledWith(notification);
+  });
+
+  it('does not increase missing target attempts during summer', async () => {
+    const { service, ystutyService, transport } = createService();
+    notification.missingTargetAttempts = 6;
+    ystutyService.getGroupByName.mockReturnValue(undefined);
+
+    await service.deliver(notification, delivery, new Date('2026-07-01'));
+
+    expect(notification).toMatchObject({
+      isEnabled: true,
+      missingTargetAttempts: 6,
+    });
+    expect(transport.sendScheduleNotification).not.toHaveBeenCalled();
+  });
+
+  it('checks a teacher target by identifier before delivery', async () => {
+    const { service, ystutyService, transport } = createService();
+    Object.assign(notification, {
+      targetType: ScheduleNotificationTargetType.Teacher,
+      targetId: '17',
+    });
+    ystutyService.getTeacher.mockReturnValue(undefined);
+
+    await service.deliver(notification, delivery, new Date('2026-09-01'));
+
+    expect(ystutyService.getTeacher).toHaveBeenCalledWith(17);
+    expect(transport.sendScheduleNotification).not.toHaveBeenCalled();
+    expect(notification.lastError).toBe('Teacher is absent from Schedule API');
   });
 });

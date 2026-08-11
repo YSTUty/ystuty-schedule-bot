@@ -28,6 +28,13 @@ export class VkScheduleNotificationTransport
       ScheduleNotificationTransport['sendScheduleNotification']
     >[0],
   ) {
+    return await this.sendMessage(params);
+  }
+
+  /** Отправляет личное сервисное сообщение получателю рассылки. */
+  public async sendMessage(
+    params: Parameters<ScheduleNotificationTransport['sendMessage']>[0],
+  ) {
     const messageId = await this.vkService.sendMessage(
       params.recipient.socialId,
       params.text,

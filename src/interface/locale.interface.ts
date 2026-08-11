@@ -36,7 +36,7 @@ export enum LocalePhrase {
   Button_ScheduleNotification = 'button.schedule_notification.title',
   Button_ScheduleNotification_Create = 'button.schedule_notification.create',
   Button_ScheduleNotification_Edit = 'button.schedule_notification.edit',
-  Button_ScheduleNotification_Save = 'button.schedule_notification.save',
+  Button_ScheduleNotification_Done = 'button.schedule_notification.done',
   Button_ScheduleNotification_Enable = 'button.schedule_notification.enable',
   Button_ScheduleNotification_Disable = 'button.schedule_notification.disable',
   Button_ScheduleNotification_Delete = 'button.schedule_notification.delete',

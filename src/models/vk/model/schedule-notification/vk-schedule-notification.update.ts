@@ -10,6 +10,11 @@ import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { ScheduleNotificationService } from '../../../schedule-notification/schedule-notification.service';
 import { ScheduleNotificationTargetDayOffset } from '../../../schedule-notification/schedule-notification.types';
+import {
+  getWeekdaysLabel,
+  parseWeekdays,
+  toggleWeekday,
+} from '../../../schedule-notification/schedule-notification-ui.util';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
 import {
@@ -23,7 +28,6 @@ export class VkScheduleNotificationUpdate {
   constructor(
     private readonly notificationService: ScheduleNotificationService,
     private readonly keyboardFactory: VKKeyboardFactory,
-    private readonly groupScene: VkScheduleNotificationGroupScene,
   ) {}
 
   @VkHearsLocale(LocalePhrase.Button_ScheduleNotification)
@@ -36,7 +40,7 @@ export class VkScheduleNotificationUpdate {
     @Ctx() ctx: IMessageEventContext,
     @Next() next: NextMiddleware,
   ) {
-    const action = (ctx.eventPayload.scheduleNotificationAction ||
+    const action = (ctx.eventPayload.scheduleNotifAction ||
       (ctx.eventPayload.phrase === LocalePhrase.Button_ScheduleNotification &&
         'settings')) as string | undefined;
     if (!action) {
@@ -82,7 +86,6 @@ export class VkScheduleNotificationUpdate {
       await ctx.scene.enter(VK_SCHEDULE_NOTIFICATION_GROUP_SCENE, {
         state: { notificationId: Number(ctx.eventPayload.notificationId) },
       });
-      await this.groupScene.open(ctx);
     } else if (action === 'editTime') {
       await this.editStep(
         ctx,
@@ -141,7 +144,7 @@ export class VkScheduleNotificationUpdate {
           ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Settings, {
             notification: {
               ...notification,
-              weekdaysLabel: this.getWeekdaysLabel(notification.weekdays),
+              weekdaysLabel: getWeekdaysLabel(notification.weekdays),
             },
           }),
           this.keyboardFactory
@@ -160,7 +163,7 @@ export class VkScheduleNotificationUpdate {
         notification.id === Number(ctx.eventPayload.notificationId)
       ) {
         await this.updateEditorSettings(ctx, notification.id, {
-          weekdays: this.toggleWeekday(
+          weekdays: toggleWeekday(
             notification.weekdays,
             Number(ctx.eventPayload.weekday),
           ),
@@ -211,8 +214,8 @@ export class VkScheduleNotificationUpdate {
         [1, 2, 3, 4, 5, 6, 7],
       );
     } else if (action === 'weekday') {
-      const weekdays = this.toggleWeekday(
-        this.parseWeekdays(ctx.eventPayload.weekdays),
+      const weekdays = toggleWeekday(
+        parseWeekdays(ctx.eventPayload.weekdays),
         Number(ctx.eventPayload.weekday),
       );
       await this.showWeekdays(
@@ -232,7 +235,7 @@ export class VkScheduleNotificationUpdate {
             targetDayOffset: Number(
               ctx.eventPayload.targetDayOffset,
             ) as ScheduleNotificationTargetDayOffset,
-            weekdays: this.parseWeekdays(ctx.eventPayload.weekdays),
+            weekdays: parseWeekdays(ctx.eventPayload.weekdays),
           },
         );
         await ctx.answer({ type: 'show_snackbar', text: 'Сохранено' });
@@ -252,13 +255,26 @@ export class VkScheduleNotificationUpdate {
       );
       await this.openSettings(ctx, true);
     } else if (action === 'deleteConfirm') {
+      const notification = await this.notificationService.getFirstNotification(
+        ctx.state.userSocial.id,
+      );
+      if (
+        !notification ||
+        notification.id !== Number(ctx.eventPayload.notificationId)
+      ) {
+        await ctx.answer({ type: 'show_snackbar', text: 'Рассылка не найдена' });
+        await this.openSettings(ctx, true);
+        return;
+      }
       await this.editStep(
         ctx,
-        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_ConfirmDelete),
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_ConfirmDelete, {
+          groupName: notification.targetId,
+        }),
         this.keyboardFactory
           .getScheduleNotificationDeleteConfirmation(
             ctx,
-            Number(ctx.eventPayload.notificationId),
+            notification.id,
           )
           .inline(),
       );
@@ -278,7 +294,7 @@ export class VkScheduleNotificationUpdate {
     if (!ctx.state.userSocial.groupName) {
       const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_NeedGroup);
       const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
-      if (edit && this.isMessageEventContext(ctx)) {
+      if (edit && ctx.isMessageEventContext()) {
         await this.editStep(ctx, text, keyboard);
       } else {
         await ctx.send(text, { keyboard });
@@ -291,7 +307,7 @@ export class VkScheduleNotificationUpdate {
     );
     const notificationView = notification && {
       ...notification,
-      weekdaysLabel: this.getWeekdaysLabel(notification.weekdays),
+      weekdaysLabel: getWeekdaysLabel(notification.weekdays),
     };
     const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Settings, {
       notification: notificationView,
@@ -299,7 +315,7 @@ export class VkScheduleNotificationUpdate {
     const keyboard = this.keyboardFactory
       .getScheduleNotificationSettings(ctx, notification)
       .inline();
-    if (edit && this.isMessageEventContext(ctx)) {
+    if (edit && ctx.isMessageEventContext()) {
       await this.editStep(ctx, text, keyboard);
     } else {
       await ctx.send(text, { keyboard });
@@ -342,7 +358,7 @@ export class VkScheduleNotificationUpdate {
       ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Settings, {
         notification: {
           ...notification,
-          weekdaysLabel: this.getWeekdaysLabel(notification.weekdays),
+          weekdaysLabel: getWeekdaysLabel(notification.weekdays),
         },
       }),
       this.keyboardFactory
@@ -388,44 +404,7 @@ export class VkScheduleNotificationUpdate {
     message: string,
     keyboard: any,
   ) {
-    await ctx.api.messages.edit({
-      peer_id: ctx.peerId,
-      cmid: ctx.conversationMessageId,
-      message,
-      keyboard,
-    });
+    await ctx.editMessage({ message, keyboard });
   }
 
-  private isMessageEventContext(
-    ctx: IMessageContext | IMessageEventContext,
-  ): ctx is IMessageEventContext {
-    return 'eventPayload' in ctx && 'answer' in ctx;
-  }
-
-  private toggleWeekday(weekdays: number[], weekday: number) {
-    return weekdays.includes(weekday)
-      ? weekdays.length === 1
-        ? weekdays
-        : weekdays.filter((item) => item !== weekday)
-      : [...weekdays, weekday].sort((first, second) => first - second);
-  }
-
-  private parseWeekdays(input: unknown) {
-    return Array.isArray(input)
-      ? input
-          .map(Number)
-          .filter(
-            (weekday) =>
-              Number.isInteger(weekday) && weekday >= 1 && weekday <= 7,
-          )
-      : [];
-  }
-
-  private getWeekdaysLabel(weekdays: number[]) {
-    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    return weekdays
-      .map((weekday) => labels[weekday - 1])
-      .filter(Boolean)
-      .join(', ');
-  }
 }

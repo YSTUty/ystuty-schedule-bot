@@ -137,6 +137,13 @@ export class YSTUtyService implements OnModuleInit {
     );
   }
 
+  /** Находит группу по короткому callback-идентификатору Telegram. */
+  public groupNameByHash(groupHash: string) {
+    return this.groupNames.find((groupName) =>
+      md5(groupName).startsWith(groupHash),
+    );
+  }
+
   public parseGroupName(str: string) {
     const match = matchGroupName(str, 'gi');
     if (!match) {
@@ -162,19 +169,16 @@ export class YSTUtyService implements OnModuleInit {
     return this.allGroupsList.flatMap((e) => e.groups);
   }
 
-  public instituteNameByMD5(nameMD5: string) {
-    const name = this.allGroupsList.find((e) => md5(e.name) === nameMD5)?.name;
+  public instituteNameByHash(instituteHash: string) {
+    const name = this.allGroupsList.find((e) =>
+      md5(e.name).startsWith(instituteHash),
+    )?.name;
     return name;
   }
 
-  public groupsList(
-    page = 1,
-    count = 20,
-    instituteNameMD5: string | null = null,
-  ) {
-    // const { groupNames } = this;
+  public groupsList(page = 1, count = 20, instituteHash: string | null = null) {
     const groupNames = this.allGroupsList
-      .filter((e) => !instituteNameMD5 || md5(e.name) === instituteNameMD5)
+      .filter((e) => !instituteHash || md5(e.name).startsWith(instituteHash))
       .flatMap((e) => e.groups);
 
     const totalCount = groupNames.length;

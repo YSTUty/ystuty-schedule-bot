@@ -43,6 +43,7 @@ export class ScheduleNotificationService {
         targetType: ScheduleNotificationTargetType.Group,
         targetId: groupName,
         isEnabled: true,
+        missingTargetAttempts: 0,
         lastDeliveredAt: null,
         lastFailedAt: null,
         lastError: null,
@@ -139,7 +140,11 @@ export class ScheduleNotificationService {
         userSocialId,
         targetType: ScheduleNotificationTargetType.Group,
       },
-      { targetId: selectedGroupName, lastError: null },
+      {
+        targetId: selectedGroupName,
+        lastError: null,
+        missingTargetAttempts: 0,
+      },
     );
     return result.affected === 1;
   }

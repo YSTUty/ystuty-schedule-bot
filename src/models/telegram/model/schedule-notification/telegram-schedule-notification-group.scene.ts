@@ -3,14 +3,15 @@ import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
 import { Markup } from 'telegraf';
 import { InlineKeyboardMarkup } from 'telegraf/typings/types';
 
-import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
-import { ICallbackQueryContext, IStepContext } from '@my-interfaces/telegram';
+import { IStepContext } from '@my-interfaces/telegram';
 
+import { getWeekdaysLabel } from '../../../schedule-notification/schedule-notification-ui.util';
 import { ScheduleNotificationService } from '../../../schedule-notification/schedule-notification.service';
 import { YSTUtyService } from '../../../ystuty/ystuty.service';
 import { BaseScene } from '../../scene/base.scene';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+import { TgGroupPicker } from '../tg-group-picker';
 
 export const TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE =
   'TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE';
@@ -24,26 +25,20 @@ type ScheduleNotificationGroupSceneState = {
 export class TelegramScheduleNotificationGroupScene extends BaseScene {
   constructor(
     private readonly notificationService: ScheduleNotificationService,
+    private readonly groupPicker: TgGroupPicker,
     private readonly ystutyService: YSTUtyService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {
     super();
   }
 
-  /** Открывает список институтов сразу после входа в сцену. */
-  public async open(ctx: ICallbackQueryContext) {
-    await this.renderInstitutes(
-      ctx as IStepContext<ScheduleNotificationGroupSceneState>,
-      1,
-    );
-  }
-
   @WizardStep(1)
   @Hears(/.+/)
-  @Action(/scheduleNotificationGroup:.+/)
-  @Action(/pager:schedule-notification-institutes:(?<page>[0-9]+)/)
+  @Action(/scheduleNotif:changeGroup:[0-9]+/)
+  @Action(/sched-notif-group:.+/)
+  @Action(/pager:sched-notif:institutes:(?<page>[0-9]+)/)
   @Action(
-    /pager:schedule-notification-groups:(?<instituteNameMD5>[a-f0-9]{32}):(?<page>[0-9]+)/,
+    /pager:sched-notif:groups:(?<instituteHash>[a-f0-9]{12}):(?<page>[0-9]+)/,
   )
   async step(@Ctx() ctx: IStepContext<ScheduleNotificationGroupSceneState>) {
     const notificationId = ctx.scene.state.notificationId;
@@ -61,24 +56,33 @@ export class TelegramScheduleNotificationGroupScene extends BaseScene {
       return;
     }
 
-    if (callbackData.startsWith('pager:schedule-notification-institutes:')) {
-      await this.renderInstitutes(ctx, Number(callbackData.split(':')[2]) || 1);
+    if (callbackData.startsWith('scheduleNotif:changeGroup:')) {
+      await this.renderInstitutes(ctx, notificationId, 1);
       return;
     }
-    if (callbackData.startsWith('pager:schedule-notification-groups:')) {
-      const [, , instituteNameMD5, page] = callbackData.split(':');
+
+    if (callbackData.startsWith('pager:sched-notif:institutes:')) {
+      await this.renderInstitutes(
+        ctx,
+        notificationId,
+        Number(callbackData.split(':')[3]) || 1,
+      );
+      return;
+    }
+    if (callbackData.startsWith('pager:sched-notif:groups:')) {
+      const [, , , instituteHash, page] = callbackData.split(':');
       await this.renderGroups(
         ctx,
         notificationId,
-        instituteNameMD5,
+        instituteHash,
         Number(page) || 1,
       );
       return;
     }
 
     const [, action, firstParam, secondParam] = callbackData.split(':');
-    if (action === 'institutes') {
-      await this.renderInstitutes(ctx, Number(firstParam) || 1);
+    if (action === 'institutes' || action === 'back') {
+      await this.renderInstitutes(ctx, notificationId, Number(firstParam) || 1);
       return;
     }
     if (action === 'groups') {
@@ -91,33 +95,39 @@ export class TelegramScheduleNotificationGroupScene extends BaseScene {
       return;
     }
     if (action === 'select') {
-      await this.selectGroup(ctx, notificationId, firstParam);
+      await this.selectGroup(
+        ctx,
+        notificationId,
+        this.ystutyService.groupNameByHash(firstParam) || '',
+      );
+      return;
+    }
+    if (action === 'cancel') {
+      await this.returnToEditor(ctx, notificationId);
     }
   }
 
   private async renderInstitutes(
     ctx: IStepContext<ScheduleNotificationGroupSceneState>,
+    notificationId: number,
     page: number,
   ) {
-    const { items, currentPage, totalPages } =
-      this.ystutyService.groupsInstitutesList(page, 26);
-    const keyboard = this.keyboardFactory.getPagination({
-      name: 'schedule-notification-institutes',
-      currentPage,
-      totalPages,
-      items: items.map((title) => ({
-        title,
-        payload: `groups:${md5(title)}:1`,
-      })),
-      actionPrefix: 'scheduleNotificationGroup:',
-      columnizer: true,
+    const { text, keyboard } = this.groupPicker.renderInstitutes(ctx, page, {
+      prefix: 'sched-notif-group:',
+      pagerName: 'sched-notif:institutes',
+      onItem: (instituteHash) => `groups:${instituteHash}:1`,
+      additionalButtons: [
+        [
+          Markup.button.callback(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+            `sched-notif-group:cancel:${notificationId}`,
+          ),
+        ],
+      ],
     });
     await this.editOrReply(
       ctx,
-      ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, {
-        currentPage,
-        totalPages,
-      }),
+      text,
       keyboard,
     );
   }
@@ -125,39 +135,34 @@ export class TelegramScheduleNotificationGroupScene extends BaseScene {
   private async renderGroups(
     ctx: IStepContext<ScheduleNotificationGroupSceneState>,
     notificationId: number,
-    instituteNameMD5: string,
+    instituteHash: string,
     page: number,
   ) {
-    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
-      page,
-      26,
-      instituteNameMD5,
-    );
-    const instituteName =
-      this.ystutyService.instituteNameByMD5(instituteNameMD5);
-    const keyboard = this.keyboardFactory.getPagination({
-      name: `schedule-notification-groups:${instituteNameMD5}`,
-      currentPage,
-      totalPages,
-      items: items.map((title) => ({ title, payload: `select:${title}` })),
-      actionPrefix: 'scheduleNotificationGroup:',
-      additionalButtons: [
-        Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
-          'scheduleNotificationGroup:institutes:1',
-        ),
-      ],
-      columnizer: true,
-    });
-    await this.editOrReply(
+    const { text, keyboard } = this.groupPicker.renderGroups(
       ctx,
-      ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
-        instituteName,
-        currentPage,
-        totalPages,
-      }),
-      keyboard,
+      instituteHash,
+      page,
+      {
+        prefix: 'sched-notif-group:',
+        pagerName: (hash) => `sched-notif:groups:${hash}`,
+        onItem: (groupHash) => `select:${groupHash}`,
+        additionalButtons: [
+          [
+            Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
+              'sched-notif-group:back:1',
+            ),
+          ],
+          [
+            Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+              `sched-notif-group:cancel:${notificationId}`,
+            ),
+          ],
+        ],
+      },
     );
+    await this.editOrReply(ctx, text, keyboard);
   }
 
   private async selectGroup(
@@ -181,6 +186,52 @@ export class TelegramScheduleNotificationGroupScene extends BaseScene {
 
     await ctx.scene.leave();
     await ctx.tryAnswerCbQuery('Группа изменена');
+    await this.renderEditor(ctx, notificationId);
+  }
+
+  private async renderNotFound(
+    ctx: IStepContext<ScheduleNotificationGroupSceneState>,
+    groupName: string,
+  ) {
+    await this.editOrReply(
+      ctx,
+      ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
+      this.keyboardFactory.getPagination({
+        name: 'schedule-notification-not-found',
+        currentPage: 1,
+        totalPages: 1,
+        items: [],
+        additionalButtons: [
+          [
+            Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
+              'sched-notif-group:institutes:1',
+            ),
+          ],
+          [
+            Markup.button.callback(
+              ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+              `sched-notif-group:cancel:${ctx.scene.state.notificationId}`,
+            ),
+          ],
+        ],
+      }),
+    );
+  }
+
+  /** Возвращает к редактору, не затрагивая глобальную отмену BaseScene. */
+  private async returnToEditor(
+    ctx: IStepContext<ScheduleNotificationGroupSceneState>,
+    notificationId: number,
+  ) {
+    await ctx.scene.leave();
+    await this.renderEditor(ctx, notificationId);
+  }
+
+  private async renderEditor(
+    ctx: IStepContext<ScheduleNotificationGroupSceneState>,
+    notificationId: number,
+  ) {
     const notification = await this.notificationService.getFirstNotification(
       ctx.userSocial.id,
     );
@@ -192,28 +243,10 @@ export class TelegramScheduleNotificationGroupScene extends BaseScene {
       ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Settings, {
         notification: {
           ...notification,
-          weekdaysLabel: this.getWeekdaysLabel(notification.weekdays),
+          weekdaysLabel: getWeekdaysLabel(notification.weekdays),
         },
       }),
       this.keyboardFactory.getScheduleNotificationEditor(ctx, notification),
-    );
-  }
-
-  private async renderNotFound(
-    ctx: IStepContext<ScheduleNotificationGroupSceneState>,
-    groupName: string,
-  ) {
-    await this.editOrReply(
-      ctx,
-      ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
-      Markup.inlineKeyboard([
-        [
-          Markup.button.callback(
-            ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
-            'scheduleNotificationGroup:institutes:1',
-          ),
-        ],
-      ]),
     );
   }
 
@@ -228,13 +261,5 @@ export class TelegramScheduleNotificationGroupScene extends BaseScene {
       return;
     }
     await ctx.replyWithHTML(text, keyboard);
-  }
-
-  private getWeekdaysLabel(weekdays: number[]) {
-    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    return weekdays
-      .map((weekday) => labels[weekday - 1])
-      .filter(Boolean)
-      .join(', ');
   }
 }

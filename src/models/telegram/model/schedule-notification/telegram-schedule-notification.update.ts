@@ -6,6 +6,11 @@ import { ICallbackQueryContext, ICbQOrMsg } from '@my-interfaces/telegram';
 
 import { ScheduleNotificationService } from '../../../schedule-notification/schedule-notification.service';
 import { ScheduleNotificationTargetDayOffset } from '../../../schedule-notification/schedule-notification.types';
+import {
+  getWeekdaysLabel,
+  parseWeekdays,
+  toggleWeekday,
+} from '../../../schedule-notification/schedule-notification-ui.util';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 
 import {
@@ -18,7 +23,6 @@ export class TelegramScheduleNotificationUpdate {
   constructor(
     private readonly notificationService: ScheduleNotificationService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
-    private readonly groupScene: TelegramScheduleNotificationGroupScene,
   ) {}
 
   @TgHearsLocale(LocalePhrase.Button_ScheduleNotification)
@@ -26,7 +30,7 @@ export class TelegramScheduleNotificationUpdate {
     await this.openSettings(ctx);
   }
 
-  @Action(/^scheduleNotification:(?<action>[^:]+)(?::(?<params>.*))?$/)
+  @Action(/^scheduleNotif:(?<action>[^:]+)(?::(?<params>.*))?$/)
   async onAction(@Ctx() ctx: ICallbackQueryContext) {
     if (ctx.chat?.type !== 'private') {
       return;
@@ -55,7 +59,6 @@ export class TelegramScheduleNotificationUpdate {
       await ctx.scene.enter(TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE, {
         notificationId: Number(params[0]),
       });
-      await this.groupScene.open(ctx);
       return;
     }
     if (action === 'editTime') {
@@ -121,10 +124,7 @@ export class TelegramScheduleNotificationUpdate {
         return;
       }
       await this.updateEditorSettings(ctx, notification.id, {
-        weekdays: this.toggleWeekday(
-          notification.weekdays.join(','),
-          Number(params[1]),
-        ),
+        weekdays: toggleWeekday(notification.weekdays, Number(params[1])),
       });
       return;
     }
@@ -186,7 +186,7 @@ export class TelegramScheduleNotificationUpdate {
     }
     if (action === 'weekday') {
       const [hour, minute, targetDayOffset, weekday, rawWeekdays] = params;
-      const weekdays = this.toggleWeekday(rawWeekdays, Number(weekday));
+      const weekdays = toggleWeekday(parseWeekdays(rawWeekdays), Number(weekday));
       await this.showWeekdays(
         ctx,
         Number(hour),
@@ -205,7 +205,7 @@ export class TelegramScheduleNotificationUpdate {
           targetDayOffset: Number(
             targetDayOffset,
           ) as ScheduleNotificationTargetDayOffset,
-          weekdays: this.parseWeekdays(rawWeekdays),
+          weekdays: parseWeekdays(rawWeekdays),
         });
         await ctx.tryAnswerCbQuery(
           ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Saved),
@@ -228,12 +228,22 @@ export class TelegramScheduleNotificationUpdate {
       return;
     }
     if (action === 'deleteConfirm') {
+      const notification = await this.notificationService.getFirstNotification(
+        ctx.userSocial.id,
+      );
+      if (!notification || notification.id !== Number(params[0])) {
+        await ctx.tryAnswerCbQuery('Рассылка не найдена');
+        await this.openSettings(ctx, true);
+        return;
+      }
       await this.editStep(
         ctx,
-        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_ConfirmDelete),
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_ConfirmDelete, {
+          groupName: notification.targetId,
+        }),
         this.keyboardFactory.getScheduleNotificationDeleteConfirmation(
           ctx,
-          Number(params[0]),
+          notification.id,
         ),
       );
       return;
@@ -269,7 +279,7 @@ export class TelegramScheduleNotificationUpdate {
     );
     const notificationView = notification && {
       ...notification,
-      weekdaysLabel: this.getWeekdaysLabel(notification.weekdays),
+      weekdaysLabel: getWeekdaysLabel(notification.weekdays),
     };
     const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Settings, {
       notification: notificationView,
@@ -319,7 +329,7 @@ export class TelegramScheduleNotificationUpdate {
       ctx.i18n.t(LocalePhrase.Page_ScheduleNotification_Settings, {
         notification: {
           ...notification,
-          weekdaysLabel: this.getWeekdaysLabel(notification.weekdays),
+          weekdaysLabel: getWeekdaysLabel(notification.weekdays),
         },
       }),
       this.keyboardFactory.getScheduleNotificationEditor(ctx, notification),
@@ -369,29 +379,4 @@ export class TelegramScheduleNotificationUpdate {
     });
   }
 
-  private toggleWeekday(rawWeekdays: string | undefined, weekday: number) {
-    const weekdays = this.parseWeekdays(rawWeekdays);
-    return weekdays.includes(weekday)
-      ? weekdays.length === 1
-        ? weekdays
-        : weekdays.filter((item) => item !== weekday)
-      : [...weekdays, weekday].sort((first, second) => first - second);
-  }
-
-  private parseWeekdays(rawWeekdays: string | undefined) {
-    return (rawWeekdays || '')
-      .split(',')
-      .map(Number)
-      .filter(
-        (weekday) => Number.isInteger(weekday) && weekday >= 1 && weekday <= 7,
-      );
-  }
-
-  private getWeekdaysLabel(weekdays: number[]) {
-    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    return weekdays
-      .map((weekday) => labels[weekday - 1])
-      .filter(Boolean)
-      .join(', ');
-  }
 }

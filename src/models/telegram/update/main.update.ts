@@ -384,16 +384,16 @@ export class MainUpdate {
 
   @Command('glist')
   @Action(
-    /pager:glist(:(?<instituteNameMD5>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
+    /pager:glist(:(?<instituteHash>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
   )
   async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
     let page: number | null = null;
     let count: number | null = null;
-    let instituteNameMD5: string | null = null;
+    let instituteHash: string | null = null;
 
     if (ctx.updateType === 'callback_query') {
       if (ctx.match?.groups) {
-        instituteNameMD5 = ctx.match.groups.instituteNameMD5;
+        instituteHash = ctx.match.groups.instituteHash;
         page = Number(ctx.match.groups.page);
         count = Number(ctx.match.groups.count);
       }
@@ -404,20 +404,21 @@ export class MainUpdate {
     page = page || 1;
     count = count || 26;
 
+    // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
     const { items, currentPage, totalPages } = this.ystutyService.groupsList(
       page,
       count,
-      instituteNameMD5,
+      instituteHash,
     );
 
     const keyboard = this.keyboardFactory.getPagination({
-      name: `glist${instituteNameMD5 ? `:${instituteNameMD5}` : ''}-${count}`,
+      name: `glist${instituteHash ? `:${instituteHash}` : ''}-${count}`,
       currentPage,
       totalPages,
       items,
       actionPrefix: 'selectGroup:',
       additionalButtons: [
-        ...(instituteNameMD5
+        ...(instituteHash
           ? [
               Markup.button.callback(
                 ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
@@ -429,8 +430,8 @@ export class MainUpdate {
       columnizer: true,
     });
 
-    const instituteName = instituteNameMD5
-      ? this.ystutyService.instituteNameByMD5(instituteNameMD5)
+    const instituteName = instituteHash
+      ? this.ystutyService.instituteNameByHash(instituteHash)
       : null;
     const content = xs`
         <b>Список групп${instituteName ? ` <i>(${instituteName})</i>` : ''}</b>

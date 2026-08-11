@@ -27,6 +27,7 @@ export class ScheduleNotificationDeliveryService {
   public async deliver(
     notification: ScheduleNotification,
     delivery: ScheduleNotificationDelivery,
+    now = new Date(),
   ) {
     try {
       const recipient = notification.userSocial;
@@ -41,32 +42,28 @@ export class ScheduleNotificationDeliveryService {
           'Personal messages are unavailable',
         );
       }
-      if (notification.targetType !== ScheduleNotificationTargetType.Group) {
+      const target = this.getTarget(notification);
+      if (!target) {
         return await this.markSkipped(
           notification,
           delivery,
-          'Unsupported notification target',
-        );
-      }
-
-      const groupName = this.ystutyService.getGroupByName(
-        notification.targetId,
-      );
-      if (!groupName) {
-        return await this.markSkipped(
-          notification,
-          delivery,
-          'Group is absent from Schedule API',
+          `${
+            notification.targetType === ScheduleNotificationTargetType.Group
+              ? 'Group'
+              : 'Teacher'
+          } is absent from Schedule API`,
+          now,
+          true,
         );
       }
 
       const [, schedule] = await this.ystutyService.findNext({
-        groupName,
+        ...target.scheduleTarget,
         skipDays: notification.targetDayOffset,
       });
       const text = `${
         schedule || 'На этот день нету расписания'
-      }\n[${groupName}]`;
+      }\n[${target.name}]`;
       const transport = this.transportRegistry.get(notification.transport);
       const result = await transport.sendScheduleNotification({
         recipient,
@@ -107,18 +104,65 @@ export class ScheduleNotificationDeliveryService {
     notification: ScheduleNotification,
     delivery: ScheduleNotificationDelivery,
     error: string,
+    now = new Date(),
+    isMissingTarget = false,
   ) {
     Object.assign(delivery, {
       status: ScheduleNotificationDeliveryStatus.Skipped,
       error,
     });
     await this.deliveryRepository.save(delivery);
+    const missingTargetAttempts =
+      isMissingTarget && this.isAcademicYearMonth(now)
+        ? (notification.missingTargetAttempts || 0) + 1
+        : notification.missingTargetAttempts || 0;
+    const isDeactivated = missingTargetAttempts >= 7;
     await this.notificationRepository.save(
       Object.assign(notification, {
-        lastFailedAt: new Date(),
+        isEnabled: isDeactivated ? false : notification.isEnabled,
+        missingTargetAttempts,
+        lastFailedAt: now,
         lastError: error,
       }),
     );
+    if (isDeactivated) {
+      const transport = this.transportRegistry.get(notification.transport);
+      await transport.sendMessage({
+        recipient: notification.userSocial,
+        text: `Рассылка расписания автоматически отключена: ${error}. Выберите актуальную группу или преподавателя в настройках.`,
+      });
+    }
     return delivery;
+  }
+
+  /** Находит и нормализует цель рассылки для единого вызова Schedule API. */
+  private getTarget(notification: ScheduleNotification) {
+    if (notification.targetType === ScheduleNotificationTargetType.Group) {
+      const groupName = this.ystutyService.getGroupByName(notification.targetId);
+      return groupName
+        ? { name: groupName, scheduleTarget: { groupName } }
+        : undefined;
+    }
+    if (notification.targetType === ScheduleNotificationTargetType.Teacher) {
+      const teacher = this.ystutyService.getTeacher(Number(notification.targetId));
+      return teacher
+        ? {
+            name: teacher.name,
+            scheduleTarget: { teacherId: teacher.id },
+          }
+        : undefined;
+    }
+    return undefined;
+  }
+
+  /** В июле и августе не проверяем исчезновение цели: списки API могут быть неполными. */
+  private isAcademicYearMonth(now: Date) {
+    const month = Number(
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Moscow',
+        month: 'numeric',
+      }).format(now),
+    );
+    return month < 7 || month > 8;
   }
 }

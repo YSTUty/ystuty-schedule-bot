@@ -9,6 +9,11 @@ export type ScheduleNotificationTransportResult = {
 export interface ScheduleNotificationTransport {
   readonly social: SocialType;
 
+  sendMessage(params: {
+    recipient: UserSocial;
+    text: string;
+  }): Promise<ScheduleNotificationTransportResult>;
+
   sendScheduleNotification(params: {
     recipient: UserSocial;
     text: string;

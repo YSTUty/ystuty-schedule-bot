@@ -136,7 +136,10 @@ export class SelectGroupScene extends BaseScene {
       return;
     }
 
-    const selectedGroupName = this.ystutyService.getGroupByName(groupName);
+    const selectedGroupName =
+      groupName &&
+      (this.ystutyService.getGroupByName(groupName) ||
+        this.ystutyService.parseGroupName(groupName));
     if (selectedGroupName) {
       if (isChat) {
         ctx.sessionConversation.selectedGroupName = selectedGroupName;

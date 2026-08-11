@@ -41,11 +41,12 @@ export class ScheduleUpdate {
   async onInlineQuery(@Ctx() ctx: IContext<{}, TgUpdate.InlineQueryUpdate>) {
     // TODO: add to queue and wait
 
-    const groupNameFromQuery = ctx.inlineQuery.query.trim();
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromQuery || ctx.userSocial?.groupName,
-    );
-
+    const groupNameQuery =
+      ctx.inlineQuery.query.trim() || ctx.userSocial?.groupName;
+    const groupName =
+      groupNameQuery &&
+      (this.ystutyService.getGroupByName(groupNameQuery) ||
+        this.ystutyService.parseGroupName(groupNameQuery));
     if (!groupName) {
       if (ctx.userSocial?.groupName) {
         await ctx.answerInlineQuery(
@@ -254,9 +255,11 @@ export class ScheduleUpdate {
           : ctx.sessionConversation.selectedGroupName;
 
       const groupNameFromMath = ctx.match?.groups?.groupName;
-      const groupName = this.ystutyService.getGroupByName(
-        groupNameFromMath || selectedGroupName,
-      );
+      const groupNameQuery = groupNameFromMath || selectedGroupName;
+      const groupName =
+        groupNameQuery &&
+        (this.ystutyService.getGroupByName(groupNameQuery) ||
+          this.ystutyService.parseGroupName(groupNameQuery));
 
       if (!groupName) {
         if (selectedGroupName) {
@@ -421,9 +424,11 @@ export class ScheduleUpdate {
           : ctx.sessionConversation.selectedGroupName;
 
       const groupNameFromMath = ctx.match?.groups?.groupName;
-      const groupName = this.ystutyService.getGroupByName(
-        groupNameFromMath || selectedGroupName,
-      );
+      const groupNameQuery = groupNameFromMath || selectedGroupName;
+      const groupName =
+        groupNameQuery &&
+        (this.ystutyService.getGroupByName(groupNameQuery) ||
+          this.ystutyService.parseGroupName(groupNameQuery));
 
       if (!groupName) {
         if (selectedGroupName) {

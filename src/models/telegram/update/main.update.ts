@@ -577,9 +577,11 @@ export class MainUpdate {
         : ctx.sessionConversation.selectedGroupName;
 
     const groupNameFromMath = ctx.match?.groups?.groupName;
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath || selectedGroupName,
-    );
+    const groupNameQuery = groupNameFromMath || selectedGroupName;
+    const groupName =
+      groupNameQuery &&
+      (this.ystutyService.getGroupByName(groupNameQuery) ||
+        this.ystutyService.parseGroupName(groupNameQuery));
 
     if (!groupName) {
       if (selectedGroupName) {

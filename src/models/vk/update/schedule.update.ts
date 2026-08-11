@@ -197,9 +197,12 @@ export class ScheduleUpdate {
       ? ctx.state.userSocial.groupName
       : ctx.sessionConversation.selectedGroupName;
     const groupNameFromMatch = ctx.$match?.groups?.groupName;
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMatch || ctx.messagePayload?.groupName || selectedGroupName,
-    );
+    const groupNameQuery =
+      groupNameFromMatch || ctx.messagePayload?.groupName || selectedGroupName;
+    const groupName =
+      groupNameQuery &&
+      (this.ystutyService.getGroupByName(groupNameQuery) ||
+        this.ystutyService.parseGroupName(groupNameQuery));
 
     if (groupName) {
       return { id: groupName, type: 'group', name: groupName };

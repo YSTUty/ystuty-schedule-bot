@@ -76,7 +76,10 @@ export class SelectGroupScene {
       return ctx.scene.leave();
     }
 
-    const selectedGroupName = this.ystutyService.getGroupByName(groupName);
+    const selectedGroupName =
+      groupName &&
+      (this.ystutyService.getGroupByName(groupName) ||
+        this.ystutyService.parseGroupName(groupName));
     if (selectedGroupName) {
       if (isChat) {
         ctx.sessionConversation.selectedGroupName = selectedGroupName;

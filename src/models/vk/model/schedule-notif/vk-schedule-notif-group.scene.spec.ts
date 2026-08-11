@@ -83,4 +83,37 @@ describe('VkScheduleNotifGroupScene', () => {
     );
     expect(groupPicker.renderInstitutes).not.toHaveBeenCalled();
   });
+
+  it('extracts a group name from manual input before changing the notif', async () => {
+    const notifService = {
+      changeGroup: jest.fn().mockResolvedValue(true),
+      getFirstNotif: jest.fn().mockResolvedValue(null),
+    };
+    const ystutyService = {
+      getGroupByName: jest.fn().mockReturnValue(undefined),
+      parseGroupName: jest.fn().mockReturnValue('ЦИС-18'),
+    };
+    const scene = new VkScheduleNotifGroupScene(
+      notifService as any,
+      {} as any,
+      ystutyService as any,
+      { getScheduleNotifEditor: jest.fn() } as any,
+    );
+    const ctx = {
+      text: 'группа цис-18',
+      eventPayload: {},
+      scene: {
+        state: { notifId: 7 },
+        step: { firstTime: false },
+        leave: jest.fn(),
+      },
+      state: { userSocial: { id: 1 } },
+      isMessageEventContext: jest.fn().mockReturnValue(false),
+    } as any;
+
+    await scene.step(ctx);
+
+    expect(ystutyService.parseGroupName).toHaveBeenCalledWith('группа цис-18');
+    expect(notifService.changeGroup).toHaveBeenCalledWith(1, 7, 'ЦИС-18');
+  });
 });

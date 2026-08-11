@@ -170,14 +170,17 @@ export class TgScheduleNotifGroupScene extends BaseScene {
     notifId: number,
     groupName: string,
   ) {
-    if (!this.ystutyService.getGroupByName(groupName)) {
+    const selectedGroupName =
+      this.ystutyService.getGroupByName(groupName) ||
+      this.ystutyService.parseGroupName(groupName);
+    if (!selectedGroupName) {
       await this.renderNotFound(ctx, groupName);
       return;
     }
     const changed = await this.notifService.changeGroup(
       ctx.userSocial.id,
       notifId,
-      groupName,
+      selectedGroupName,
     );
     if (!changed) {
       await this.renderNotFound(ctx, groupName);

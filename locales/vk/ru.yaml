@@ -164,7 +164,7 @@ page:
   schedule_notification:
     settings: |
       Рассылка расписания
-      ${notification ? ('Группа: ' + notification.targetId + '\nВремя: ' + String(notification.deliveryHour).padStart(2, '0') + ':' + String(notification.deliveryMinute).padStart(2, '0') + '\nРасписание: ' + (notification.targetDayOffset ? 'на завтра' : 'на сегодня') + '\nДни: ' + notification.weekdaysLabel + '\nСтатус: ' + (notification.isEnabled ? 'включена' : 'выключена')) : 'Рассылка пока не настроена.'}
+      ${notif ? ('Группа: ' + notif.targetId + '\nВремя: ' + String(notif.deliveryHour).padStart(2, '0') + ':' + String(notif.deliveryMinute).padStart(2, '0') + '\nРасписание: ' + (notif.targetDayOffset ? 'на завтра' : 'на сегодня') + '\nДни: ' + notif.weekdaysLabel + '\nСтатус: ' + (notif.isEnabled ? 'включена' : 'выключена')) : 'Рассылка пока не настроена.'}
     select_hour: Выбери время отправки.
     select_minute: Выбери минуты отправки.
     select_target_day: Выбери, расписание на какой день получать в это время.

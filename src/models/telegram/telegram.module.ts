@@ -9,7 +9,7 @@ import { MainMiddleware } from './middleware/main.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { UserMiddleware } from './middleware/user.middleware';
 import { TelegramBroadcasterModule } from './model/broadcaster/telegram-broadcaster.module';
-import { TelegramScheduleNotificationModule } from './model/schedule-notification/telegram-schedule-notification.module';
+import { TgScheduleNotifModule } from './model/schedule-notif/tg-schedule-notif.module';
 import { AuthScene } from './scene/auth.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
@@ -38,7 +38,7 @@ export class TelegramModule {
       module: TelegramModule,
       imports: [
         TelegramBroadcasterModule,
-        TelegramScheduleNotificationModule,
+        TgScheduleNotifModule,
         TelegrafModule.forRootAsync({
           inject: [...middlewares],
           useFactory: async (

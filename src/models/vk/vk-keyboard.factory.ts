@@ -8,8 +8,8 @@ import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 
-import { buildScheduleNotificationPage } from '../schedule-notification/schedule-notification-keyboard.util';
-import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notification/schedule-notification-ui.util';
+import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
+import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
 
 export type VKPaginationItem =
   | string
@@ -109,9 +109,9 @@ export class VKKeyboardFactory {
                   ]
                 : []),
               Keyboard.textButton({
-                label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification),
+                label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif),
                 payload: {
-                  phrase: LocalePhrase.Button_ScheduleNotification,
+                  phrase: LocalePhrase.Button_ScheduleNotif,
                 },
                 color: Keyboard.SECONDARY_COLOR,
               }),
@@ -157,12 +157,12 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotificationHours(
+  public getScheduleNotifHours(
     ctx: IContext,
     page = 1,
-    notificationId?: number,
+    notifId?: number,
   ) {
-    const hours = buildScheduleNotificationPage(
+    const hours = buildScheduleNotifPage(
       Array.from({ length: 18 }, (_, index) => index + 6),
       page,
       6,
@@ -173,27 +173,27 @@ export class VKKeyboardFactory {
       items: hours.rows.map((row) =>
         row.map((hour) => ({
           title: `${String(hour).padStart(2, '0')}:**`,
-          payload: notificationId
+          payload: notifId
             ? {
                 scheduleNotifAction: 'editHour',
-                notificationId,
+                notifId,
                 hour,
               }
             : { scheduleNotifAction: 'hour', hour },
         })),
       ),
       getPagePayload: (nextPage) => ({
-        scheduleNotifAction: notificationId ? 'editHours' : 'hours',
+        scheduleNotifAction: notifId ? 'editHours' : 'hours',
         page: nextPage,
-        ...(notificationId ? { notificationId } : {}),
+        ...(notifId ? { notifId } : {}),
       }),
       additionalButtons: [
         [
           Keyboard.callbackButton({
-            label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+            label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
             payload: {
-              scheduleNotifAction: notificationId ? 'edit' : 'settings',
-              ...(notificationId ? { notificationId } : {}),
+              scheduleNotifAction: notifId ? 'edit' : 'settings',
+              ...(notifId ? { notifId } : {}),
             },
           }),
         ],
@@ -202,10 +202,10 @@ export class VKKeyboardFactory {
     });
   }
 
-  public getScheduleNotificationMinutes(
+  public getScheduleNotifMinutes(
     ctx: IContext,
     hour: number,
-    notificationId?: number,
+    notifId?: number,
   ) {
     return Keyboard.keyboard([
       ...[
@@ -215,10 +215,10 @@ export class VKKeyboardFactory {
         minuteRow.map((minute) =>
           Keyboard.callbackButton({
             label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-            payload: notificationId
+            payload: notifId
               ? {
                   scheduleNotifAction: 'editMinute',
-                  notificationId,
+                  notifId,
                   hour,
                   minute,
                 }
@@ -228,18 +228,18 @@ export class VKKeyboardFactory {
       ),
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
           payload: {
-            scheduleNotifAction: notificationId ? 'editHours' : 'hours',
+            scheduleNotifAction: notifId ? 'editHours' : 'hours',
             page: 1,
-            ...(notificationId ? { notificationId } : {}),
+            ...(notifId ? { notifId } : {}),
           },
         }),
       ],
     ]);
   }
 
-  public getScheduleNotificationTargetDay(
+  public getScheduleNotifTargetDay(
     ctx: IContext,
     hour: number,
     minute: number,
@@ -268,7 +268,7 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotificationWeekdays(
+  public getScheduleNotifWeekdays(
     ctx: IContext,
     hour: number,
     minute: number,
@@ -295,7 +295,7 @@ export class VKKeyboardFactory {
       ),
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
           payload: {
             scheduleNotifAction: 'save',
             hour,
@@ -308,59 +308,59 @@ export class VKKeyboardFactory {
       ],
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
           payload: { scheduleNotifAction: 'minute', hour },
         }),
       ],
     ]);
   }
 
-  public getScheduleNotificationSettings(
+  public getScheduleNotifSettings(
     ctx: IContext,
-    notification?: { id: number; isEnabled: boolean },
+    notif?: { id: number; isEnabled: boolean },
   ) {
-    const buttons = notification
+    const buttons = notif
       ? [
           [
             Keyboard.callbackButton({
-              label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Edit),
+              label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Edit),
               payload: {
                 scheduleNotifAction: 'edit',
-                notificationId: notification.id,
+                notifId: notif.id,
               },
               color: Keyboard.PRIMARY_COLOR,
             }),
           ],
           [
             Keyboard.callbackButton({
-              label: notification.isEnabled
-                ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Disable)
-                : ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Enable),
+              label: notif.isEnabled
+                ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Disable)
+                : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Enable),
               payload: {
                 scheduleNotifAction: 'enabled',
-                notificationId: notification.id,
-                isEnabled: !notification.isEnabled,
+                notifId: notif.id,
+                isEnabled: !notif.isEnabled,
               },
             }),
           ],
           [
             Keyboard.callbackButton({
               label: ctx.i18n.t(
-                LocalePhrase.Button_ScheduleNotification_Delete,
+                LocalePhrase.Button_ScheduleNotif_Delete,
               ),
               payload: {
                 scheduleNotifAction: 'deleteConfirm',
-                notificationId: notification.id,
+                notifId: notif.id,
               },
               color: Keyboard.NEGATIVE_COLOR,
             }),
           ],
         ]
       : [];
-    if (!notification) {
+    if (!notif) {
       buttons.push([
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Create),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
           payload: { scheduleNotifAction: 'create' },
           color: Keyboard.POSITIVE_COLOR,
         }),
@@ -370,9 +370,9 @@ export class VKKeyboardFactory {
   }
 
   /** Клавиатура редактирования сохраняет каждое изменение сразу. */
-  public getScheduleNotificationEditor(
+  public getScheduleNotifEditor(
     ctx: IContext,
-    notification: {
+    notif: {
       id: number;
       deliveryHour: number;
       deliveryMinute: number;
@@ -384,23 +384,23 @@ export class VKKeyboardFactory {
       [
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
+            `Время: ${String(notif.deliveryHour).padStart(2, '0')}:${String(notif.deliveryMinute).padStart(2, '0')}`,
           ),
           payload: {
             scheduleNotifAction: 'editTime',
-            notificationId: notification.id,
+            notifId: notif.id,
           },
         }),
       ],
       [
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+            `Расписание: ${notif.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
           ),
           payload: {
             scheduleNotifAction: 'editDay',
-            notificationId: notification.id,
-            targetDayOffset: notification.targetDayOffset ? 0 : 1,
+            notifId: notif.id,
+            targetDayOffset: notif.targetDayOffset ? 0 : 1,
           },
         }),
       ],
@@ -409,24 +409,24 @@ export class VKKeyboardFactory {
           label: getVKButtonLabel('Дни недели'),
           payload: {
             scheduleNotifAction: 'editWeekdays',
-            notificationId: notification.id,
+            notifId: notif.id,
           },
         }),
       ],
       [
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_ChangeGroup),
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeGroup),
           ),
           payload: {
             scheduleNotifAction: 'changeGroup',
-            notificationId: notification.id,
+            notifId: notif.id,
           },
           color: Keyboard.SECONDARY_COLOR,
         }),
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
           ),
           payload: { scheduleNotifAction: 'editSave' },
           color: Keyboard.POSITIVE_COLOR,
@@ -436,9 +436,9 @@ export class VKKeyboardFactory {
   }
 
   /** Вторая страница выбора дней редактора: VK ограничивает inline-клавиатуру десятью кнопками. */
-  public getScheduleNotificationEditorWeekdays(
+  public getScheduleNotifEditorWeekdays(
     ctx: IContext,
-    notification: {
+    notif: {
       id: number;
       weekdays: number[];
     },
@@ -449,10 +449,10 @@ export class VKKeyboardFactory {
         labels.slice(startIndex, startIndex + 3).map((label, index) => {
           const weekday = startIndex + index + 1;
           return Keyboard.callbackButton({
-            label: `${notification.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            label: `${notif.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
             payload: {
               scheduleNotifAction: 'editWeekday',
-              notificationId: notification.id,
+              notifId: notif.id,
               weekday,
             },
           });
@@ -460,10 +460,10 @@ export class VKKeyboardFactory {
       ),
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
           payload: {
             scheduleNotifAction: 'edit',
-            notificationId: notification.id,
+            notifId: notif.id,
           },
         }),
       ],
@@ -471,25 +471,25 @@ export class VKKeyboardFactory {
   }
 
   /** Подтверждение защищает от случайного удаления настройки рассылки. */
-  public getScheduleNotificationDeleteConfirmation(
+  public getScheduleNotifDeleteConfirmation(
     ctx: IContext,
-    notificationId: number,
+    notifId: number,
   ) {
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
           label: ctx.i18n.t(
-            LocalePhrase.Button_ScheduleNotification_DeleteConfirm,
+            LocalePhrase.Button_ScheduleNotif_DeleteConfirm,
           ),
           payload: {
             scheduleNotifAction: 'delete',
-            notificationId,
+            notifId,
           },
           color: Keyboard.NEGATIVE_COLOR,
         }),
         Keyboard.callbackButton({
           label: ctx.i18n.t(
-            LocalePhrase.Button_ScheduleNotification_DeleteCancel,
+            LocalePhrase.Button_ScheduleNotif_DeleteCancel,
           ),
           payload: { scheduleNotifAction: 'settings' },
           color: Keyboard.SECONDARY_COLOR,
@@ -866,15 +866,15 @@ export class VKKeyboardFactory {
   }
 
   /** Inline-отмена локального выбора группы, не запускающая глобальную отмену scene. */
-  public getScheduleNotificationGroupPickerCancelButton(
+  public getScheduleNotifGroupPickerCancelButton(
     ctx: IContext,
-    notificationId: number,
+    notifId: number,
   ) {
     return Keyboard.callbackButton({
       label: ctx.i18n.t(LocalePhrase.Button_Cancel),
       payload: {
         scheduleNotifGroupAction: 'cancel',
-        notificationId,
+        notifId,
       },
       color: Keyboard.SECONDARY_COLOR,
     });

@@ -13,8 +13,8 @@ import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
-import { buildScheduleNotificationPage } from '../schedule-notification/schedule-notification-keyboard.util';
-import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notification/schedule-notification-ui.util';
+import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
+import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
 
 type Hideable<B> = B & { hide?: boolean };
 export type PaginationItemType =
@@ -67,7 +67,7 @@ export class TelegramKeyboardFactory {
         ? [
             [
               ...(ctx.user ? [ctx.i18n.t(LocalePhrase.Button_Profile)] : []),
-              ctx.i18n.t(LocalePhrase.Button_ScheduleNotification),
+              ctx.i18n.t(LocalePhrase.Button_ScheduleNotif),
             ],
           ]
         : []),
@@ -97,12 +97,12 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotificationHours(
+  public getScheduleNotifHours(
     ctx: IContext,
     _page = 1,
-    notificationId?: number,
+    notifId?: number,
   ) {
-    const hours = buildScheduleNotificationPage(
+    const hours = buildScheduleNotifPage(
       Array.from({ length: 18 }, (_, index) => index + 6),
       1,
       18,
@@ -112,8 +112,8 @@ export class TelegramKeyboardFactory {
         row.map((hour) =>
           Markup.button.callback(
             `${String(hour).padStart(2, '0')}:**`,
-            notificationId
-              ? `scheduleNotif:editHour:${notificationId}:${hour}`
+            notifId
+              ? `scheduleNotif:editHour:${notifId}:${hour}`
               : `scheduleNotif:hour:${hour}`,
           ),
         ),
@@ -125,10 +125,10 @@ export class TelegramKeyboardFactory {
                 ? [
                     Markup.button.callback(
                       ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_PreviousPage,
+                        LocalePhrase.Button_ScheduleNotif_PreviousPage,
                       ),
-                      notificationId
-                        ? `scheduleNotif:editHours:${notificationId}:${hours.previousPage}`
+                      notifId
+                        ? `scheduleNotif:editHours:${notifId}:${hours.previousPage}`
                         : `scheduleNotif:hours:${hours.previousPage}`,
                     ),
                   ]
@@ -141,10 +141,10 @@ export class TelegramKeyboardFactory {
                 ? [
                     Markup.button.callback(
                       ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotification_NextPage,
+                        LocalePhrase.Button_ScheduleNotif_NextPage,
                       ),
-                      notificationId
-                        ? `scheduleNotif:editHours:${notificationId}:${hours.nextPage}`
+                      notifId
+                        ? `scheduleNotif:editHours:${notifId}:${hours.nextPage}`
                         : `scheduleNotif:hours:${hours.nextPage}`,
                     ),
                   ]
@@ -154,19 +154,19 @@ export class TelegramKeyboardFactory {
         : []),
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
-          notificationId
-            ? `scheduleNotif:edit:${notificationId}`
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+          notifId
+            ? `scheduleNotif:edit:${notifId}`
             : 'scheduleNotif:settings',
         ),
       ],
     ]);
   }
 
-  public getScheduleNotificationMinutes(
+  public getScheduleNotifMinutes(
     ctx: IContext,
     hour: number,
-    notificationId?: number,
+    notifId?: number,
   ) {
     return Markup.inlineKeyboard([
       ...[
@@ -176,24 +176,24 @@ export class TelegramKeyboardFactory {
         minuteRow.map((minute) =>
           Markup.button.callback(
             `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-            notificationId
-              ? `scheduleNotif:editMinute:${notificationId}:${hour}:${minute}`
+            notifId
+              ? `scheduleNotif:editMinute:${notifId}:${hour}:${minute}`
               : `scheduleNotif:minute:${hour}:${minute}`,
           ),
         ),
       ),
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
-          notificationId
-            ? `scheduleNotif:editHours:${notificationId}:1`
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+          notifId
+            ? `scheduleNotif:editHours:${notifId}:1`
             : 'scheduleNotif:hours:1',
         ),
       ],
     ]);
   }
 
-  public getScheduleNotificationTargetDay(
+  public getScheduleNotifTargetDay(
     ctx: IContext,
     hour: number,
     minute: number,
@@ -212,7 +212,7 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotificationWeekdays(
+  public getScheduleNotifWeekdays(
     ctx: IContext,
     hour: number,
     minute: number,
@@ -232,51 +232,51 @@ export class TelegramKeyboardFactory {
       ),
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
           `scheduleNotif:save:${hour}:${minute}:${targetDayOffset}:${weekdays.join(',')}`,
         ),
       ],
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Back),
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
           `scheduleNotif:minute:${hour}`,
         ),
       ],
     ]);
   }
 
-  public getScheduleNotificationSettings(
+  public getScheduleNotifSettings(
     ctx: IContext,
-    notification?: { id: number; isEnabled: boolean },
+    notif?: { id: number; isEnabled: boolean },
   ) {
     return Markup.inlineKeyboard(
-      notification
+      notif
         ? [
             [
               Markup.button.callback(
-                ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Edit),
-                `scheduleNotif:edit:${notification.id}`,
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Edit),
+                `scheduleNotif:edit:${notif.id}`,
               ),
             ],
             [
               Markup.button.callback(
-                notification.isEnabled
-                  ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Disable)
-                  : ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Enable),
-                `scheduleNotif:enabled:${notification.id}:${notification.isEnabled ? '0' : '1'}`,
+                notif.isEnabled
+                  ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Disable)
+                  : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Enable),
+                `scheduleNotif:enabled:${notif.id}:${notif.isEnabled ? '0' : '1'}`,
               ),
             ],
             [
               Markup.button.callback(
-                ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Delete),
-                `scheduleNotif:deleteConfirm:${notification.id}`,
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete),
+                `scheduleNotif:deleteConfirm:${notif.id}`,
               ),
             ],
           ]
         : [
             [
               Markup.button.callback(
-                ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Create),
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
                 'scheduleNotif:create',
               ),
             ],
@@ -285,9 +285,9 @@ export class TelegramKeyboardFactory {
   }
 
   /** Клавиатура редактирования сохраняет каждое изменение сразу. */
-  public getScheduleNotificationEditor(
+  public getScheduleNotifEditor(
     ctx: IContext,
-    notification: {
+    notif: {
       id: number;
       deliveryHour: number;
       deliveryMinute: number;
@@ -299,34 +299,34 @@ export class TelegramKeyboardFactory {
     return Markup.inlineKeyboard([
       [
         Markup.button.callback(
-          `Время: ${String(notification.deliveryHour).padStart(2, '0')}:${String(notification.deliveryMinute).padStart(2, '0')}`,
-          `scheduleNotif:editTime:${notification.id}`,
+          `Время: ${String(notif.deliveryHour).padStart(2, '0')}:${String(notif.deliveryMinute).padStart(2, '0')}`,
+          `scheduleNotif:editTime:${notif.id}`,
         ),
       ],
       [
         Markup.button.callback(
-          `Расписание: ${notification.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
-          `scheduleNotif:editDay:${notification.id}:${notification.targetDayOffset ? 0 : 1}`,
+          `Расписание: ${notif.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+          `scheduleNotif:editDay:${notif.id}:${notif.targetDayOffset ? 0 : 1}`,
         ),
       ],
       ...[0, 3, 6].map((startIndex) =>
         labels.slice(startIndex, startIndex + 3).map((label, index) => {
           const weekday = startIndex + index + 1;
           return Markup.button.callback(
-            `${notification.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
-            `scheduleNotif:editWeekday:${notification.id}:${weekday}`,
+            `${notif.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            `scheduleNotif:editWeekday:${notif.id}:${weekday}`,
           );
         }),
       ),
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_ChangeGroup),
-          `scheduleNotif:changeGroup:${notification.id}:1:edit`,
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeGroup),
+          `scheduleNotif:changeGroup:${notif.id}:1:edit`,
         ),
       ],
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_Done),
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
           'scheduleNotif:editSave',
         ),
       ],
@@ -334,18 +334,18 @@ export class TelegramKeyboardFactory {
   }
 
   /** Подтверждение защищает от случайного удаления настройки рассылки. */
-  public getScheduleNotificationDeleteConfirmation(
+  public getScheduleNotifDeleteConfirmation(
     ctx: IContext,
-    notificationId: number,
+    notifId: number,
   ) {
     return Markup.inlineKeyboard([
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_DeleteConfirm),
-          `scheduleNotif:delete:${notificationId}`,
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteConfirm),
+          `scheduleNotif:delete:${notifId}`,
         ),
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotification_DeleteCancel),
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteCancel),
           'scheduleNotif:settings',
         ),
       ],

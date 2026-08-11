@@ -5,8 +5,8 @@ describe('TelegramKeyboardFactory', () => {
     i18n: { t: (phrase: string) => phrase },
   } as any;
 
-  it('shows all notification hours when creating a notification', () => {
-    const keyboard = new TelegramKeyboardFactory().getScheduleNotificationHours(
+  it('shows all notif hours when creating a notif', () => {
+    const keyboard = new TelegramKeyboardFactory().getScheduleNotifHours(
       ctx,
       1,
     );
@@ -20,9 +20,9 @@ describe('TelegramKeyboardFactory', () => {
     });
   });
 
-  it('opens hour selection before choosing minutes in the notification editor', () => {
+  it('opens hour selection before choosing minutes in the notif editor', () => {
     const keyboard =
-      new TelegramKeyboardFactory().getScheduleNotificationEditor(ctx, {
+      new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
         id: 7,
         deliveryHour: 8,
         deliveryMinute: 30,

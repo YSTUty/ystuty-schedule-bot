@@ -5,7 +5,7 @@ describe('VKKeyboardFactory', () => {
     i18n: { t: (phrase: string) => phrase },
   } as any;
 
-  it('limits schedule notification group labels to 40 characters', () => {
+  it('limits schedule notif group labels to 40 characters', () => {
     const keyboard = new VKKeyboardFactory().getPagination({
       currentPage: 1,
       totalPages: 1,
@@ -18,8 +18,8 @@ describe('VKKeyboardFactory', () => {
     expect(renderedKeyboard.buttons[0][0].action.label).toHaveLength(40);
   });
 
-  it('creates a schedule notification editor within VK inline keyboard limits', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotificationEditor(
+  it('creates a schedule notif editor within VK inline keyboard limits', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(
       ctx,
       {
         id: 1,
@@ -39,7 +39,7 @@ describe('VKKeyboardFactory', () => {
 
   it('creates the editor weekday page within VK inline keyboard limits', () => {
     const keyboard =
-      new VKKeyboardFactory().getScheduleNotificationEditorWeekdays(ctx, {
+      new VKKeyboardFactory().getScheduleNotifEditorWeekdays(ctx, {
         id: 1,
         weekdays: [1, 2, 3, 4, 5, 6, 7],
       });
@@ -48,8 +48,8 @@ describe('VKKeyboardFactory', () => {
     expect(renderedKeyboard.buttons.flat()).toHaveLength(8);
   });
 
-  it('opens hour selection before choosing minutes in the notification editor', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotificationEditor(
+  it('opens hour selection before choosing minutes in the notif editor', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(
       ctx,
       {
         id: 7,
@@ -68,7 +68,7 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('asks for deletion confirmation instead of deleting immediately', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotificationSettings(
+    const keyboard = new VKKeyboardFactory().getScheduleNotifSettings(
       ctx,
       { id: 7, isEnabled: true },
     );
@@ -85,8 +85,8 @@ describe('VKKeyboardFactory', () => {
     ).toBe('deleteConfirm');
   });
 
-  it('uses a compact three-button pager for notification hours', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotificationHours(ctx);
+  it('uses a compact three-button pager for notif hours', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifHours(ctx);
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
     expect(renderedKeyboard.buttons).toHaveLength(4);

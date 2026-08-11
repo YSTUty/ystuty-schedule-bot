@@ -202,6 +202,7 @@ export class MainUpdate {
     }
   }
 
+  // * Только если бот администратор
   @On('chat_title_update')
   async onChatTitleUpdate(@Ctx() ctx: IMessageContext) {
     if (!ctx.eventText) {

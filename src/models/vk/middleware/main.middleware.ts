@@ -94,6 +94,7 @@ export class MainMiddleware {
   get middlewaresAfter(): Middleware<Context> {
     const composer = Composer.builder<Context>();
 
+    composer.use(this.unhandledMessageEventMiddleware);
     composer.use(this.sceneInterceptMiddleware());
     composer.use(this.hearManagerProvider.middleware);
 
@@ -235,6 +236,22 @@ export class MainMiddleware {
         } catch {}
         throw err;
       }
+    };
+  }
+
+  /** Подтверждает callback, который не обработал ни один VK handler. */
+  private get unhandledMessageEventMiddleware() {
+    return async (ctx: IContext, next: NextMiddleware) => {
+      await next?.();
+
+      if (!ctx.isMessageEventContext() || ctx.state.eventAnswered) {
+        return;
+      }
+
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: 'Nope ¯\\_(ツ)_/¯',
+      });
     };
   }
 

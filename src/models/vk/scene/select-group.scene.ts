@@ -22,7 +22,7 @@ export class SelectGroupScene {
   @AddStep()
   async step1(@Ctx() ctx: IStepContext<{ groupName: string }>) {
     const {
-      isChat,
+      isChat: isConv,
       scene: { state },
     } = ctx;
     let { groupName } = state;
@@ -54,14 +54,14 @@ export class SelectGroupScene {
     }
 
     if (
-      (isChat && !ctx.state.appeal) ||
+      (isConv && !ctx.state.appeal) ||
       !ctx.is(['message', 'message_event'])
     ) {
       return;
     }
 
     if (groupName === '0') {
-      if (isChat) {
+      if (isConv) {
         ctx.sessionConversation.selectedGroupName = undefined;
       } else {
         ctx.state.userSocial.groupName = null;
@@ -81,7 +81,7 @@ export class SelectGroupScene {
       (this.ystutyService.getGroupByName(groupName) ||
         this.ystutyService.parseGroupName(groupName));
     if (selectedGroupName) {
-      if (isChat) {
+      if (isConv) {
         ctx.sessionConversation.selectedGroupName = selectedGroupName;
         if (ctx.state.conversation) {
           ctx.state.conversation.groupName = selectedGroupName;

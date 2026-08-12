@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 
+import { Conversation } from '../social/entity/conversation.entity';
 import { UserSocial } from '../user/entity/user-social.entity';
 import { YSTUtyService } from '../ystuty/ystuty.service';
 
@@ -83,11 +84,119 @@ export class ScheduleNotifService {
     return await this.notifRepository.save(notif);
   }
 
+  /** Создаёт или обновляет единственную рассылку выбранной группы беседы. */
+  public async upsertFirstConversationNotif(
+    conversation: Conversation,
+    settings: ScheduleNotifSettings,
+  ) {
+    assertScheduleNotifSettings(settings);
+    const groupName = this.ystutyService.getGroupByName(conversation.groupName);
+    if (!groupName) {
+      throw new Error(
+        'Select a group for the conversation before configuring notifs',
+      );
+    }
+
+    const notif = await this.getFirstConversationNotif(conversation.id);
+    if (!notif) {
+      return await this.notifRepository.save(
+        this.notifRepository.create({
+          conversationId: conversation.id,
+          userSocialId: null,
+          transport: conversation.social,
+          targetType: ScheduleNotifTargetType.Group,
+          targetId: groupName,
+          isEnabled: true,
+          missingTargetAttempts: 0,
+          lastDeliveredAt: null,
+          lastFailedAt: null,
+          lastError: null,
+          ...settings,
+        }),
+      );
+    }
+
+    Object.assign(notif, {
+      ...settings,
+      transport: conversation.social,
+      targetType: ScheduleNotifTargetType.Group,
+      targetId: groupName,
+      isEnabled: true,
+      lastError: null,
+    });
+    return await this.notifRepository.save(notif);
+  }
+
   public async getFirstNotif(userSocialId: number) {
     return await this.notifRepository.findOne({
       where: { userSocialId },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  public async getFirstConversationNotif(conversationId: number) {
+    return await this.notifRepository.findOne({
+      where: { conversationId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  public async setConversationEnabled(
+    conversationId: number,
+    notifId: number,
+    isEnabled: boolean,
+  ) {
+    const result = await this.notifRepository.update(
+      { id: notifId, conversationId },
+      { isEnabled },
+    );
+    return result.affected === 1;
+  }
+
+  public async updateConversationSettings(
+    conversationId: number,
+    notifId: number,
+    settings: ScheduleNotifSettings,
+  ) {
+    assertScheduleNotifSettings(settings);
+    const result = await this.notifRepository.update(
+      { id: notifId, conversationId },
+      { ...settings, lastError: null },
+    );
+    return result.affected === 1;
+  }
+
+  public async deleteConversation(conversationId: number, notifId: number) {
+    const result = await this.notifRepository.delete({
+      id: notifId,
+      conversationId,
+    });
+    return result.affected === 1;
+  }
+
+  /** Меняет цель рассылки беседы, не затрагивая её обычную выбранную группу. */
+  public async changeConversationGroup(
+    conversationId: number,
+    notifId: number,
+    groupName: string,
+  ) {
+    const selectedGroupName = this.ystutyService.getGroupByName(groupName);
+    if (!selectedGroupName) {
+      throw new Error('Selected group is absent from Schedule API');
+    }
+    const result = await this.notifRepository.update(
+      {
+        id: notifId,
+        conversationId,
+        targetType: ScheduleNotifTargetType.Group,
+      },
+      {
+        targetId: selectedGroupName,
+        lastError: null,
+        missingTargetAttempts: 0,
+      },
+    );
+    return result.affected === 1;
   }
 
   public async setEnabled(
@@ -154,17 +263,27 @@ export class ScheduleNotifService {
     deliveryMinute: number;
     isoWeekday: number;
   }) {
-    const notifs = await this.notifRepository.find({
+    const where: FindOneOptions<ScheduleNotif>['where'] = {
+      isEnabled: true,
+      deliveryHour: params.deliveryHour,
+      deliveryMinute: params.deliveryMinute,
+    };
+    const personalNotifs = await this.notifRepository.find({
       where: {
-        isEnabled: true,
-        deliveryHour: params.deliveryHour,
-        deliveryMinute: params.deliveryMinute,
+        ...where,
+        userSocialId: Not(IsNull()),
       },
       relations: ['userSocial'],
     });
-    return notifs.filter((notif) =>
-      notif.weekdays.includes(params.isoWeekday),
-    );
+    const conversationNotifs = await this.notifRepository.find({
+      where: {
+        ...where,
+        conversationId: Not(IsNull()),
+      },
+      relations: ['conversation'],
+    });
+    const notifs = [...personalNotifs, ...conversationNotifs];
+    return notifs.filter((notif) => notif.weekdays.includes(params.isoWeekday));
   }
 
   /** Резервирует минуту отправки; конфликт уникальности означает уже обработанный cron. */

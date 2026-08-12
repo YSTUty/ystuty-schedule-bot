@@ -71,7 +71,8 @@ export class TelegramKeyboardFactory {
             ],
           ]
         : []),
-      ...(isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
+      ...(!isPrivate ? [[ctx.i18n.t(LocalePhrase.Button_ScheduleNotif)]] : []),
+      ...(isPrivate && isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
     ]).resize();
   }
 
@@ -97,14 +98,10 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotifHours(
-    ctx: IContext,
-    _page = 1,
-    notifId?: number,
-  ) {
+  public getScheduleNotifHours(ctx: IContext, page = 1, notifId?: number) {
     const hours = buildScheduleNotifPage(
       Array.from({ length: 18 }, (_, index) => index + 6),
-      1,
+      page,
       18,
     );
     return Markup.inlineKeyboard([
@@ -140,9 +137,7 @@ export class TelegramKeyboardFactory {
               ...(hours.nextPage
                 ? [
                     Markup.button.callback(
-                      ctx.i18n.t(
-                        LocalePhrase.Button_ScheduleNotif_NextPage,
-                      ),
+                      ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_NextPage),
                       notifId
                         ? `scheduleNotif:editHours:${notifId}:${hours.nextPage}`
                         : `scheduleNotif:hours:${hours.nextPage}`,
@@ -155,9 +150,7 @@ export class TelegramKeyboardFactory {
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
-          notifId
-            ? `scheduleNotif:edit:${notifId}`
-            : 'scheduleNotif:settings',
+          notifId ? `scheduleNotif:edit:${notifId}` : 'scheduleNotif:settings',
         ),
       ],
     ]);
@@ -334,10 +327,7 @@ export class TelegramKeyboardFactory {
   }
 
   /** Подтверждение защищает от случайного удаления настройки рассылки. */
-  public getScheduleNotifDeleteConfirmation(
-    ctx: IContext,
-    notifId: number,
-  ) {
+  public getScheduleNotifDeleteConfirmation(ctx: IContext, notifId: number) {
     return Markup.inlineKeyboard([
       [
         Markup.button.callback(

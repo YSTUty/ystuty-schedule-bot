@@ -5,7 +5,7 @@ import { type KeyboardBuilder } from 'vk-io';
 
 import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
-import { IMessageEventContext, IStepContext } from '@my-interfaces/vk';
+import { IStepContext } from '@my-interfaces/vk';
 
 import { getWeekdaysLabel } from '../../../schedule-notif/schedule-notif-ui.util';
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
@@ -41,10 +41,6 @@ export class VkScheduleNotifGroupScene {
         ? (ctx.eventPayload.scheduleNotifGroupAction as string | undefined)
         : undefined;
 
-    this.logger.debug(
-      `action=${action || '-'} page=${ctx.eventPayload?.page || '-'} notifId=${notifId} instituteHash=${ctx.eventPayload?.instituteHash || '-'} firstTime=${ctx.scene.step.firstTime}`,
-    );
-
     if (ctx.scene.step.firstTime) {
       await this.renderInstitutes(ctx, 1);
       return;
@@ -68,11 +64,7 @@ export class VkScheduleNotifGroupScene {
       return;
     }
     if (action === 'select') {
-      await this.selectGroup(
-        ctx,
-        notifId,
-        String(ctx.eventPayload.groupName),
-      );
+      await this.selectGroup(ctx, notifId, String(ctx.eventPayload.groupName));
       return;
     }
     if (action === 'cancel') {
@@ -166,11 +158,17 @@ export class VkScheduleNotifGroupScene {
       await this.renderNotFound(ctx, notifId, groupName);
       return;
     }
-    const changed = await this.notifService.changeGroup(
-      ctx.state.userSocial.id,
-      notifId,
-      selectedGroupName,
-    );
+    const changed = !ctx.isDM
+      ? await this.notifService.changeConversationGroup(
+          ctx.state.conversation!.id,
+          notifId,
+          selectedGroupName,
+        )
+      : await this.notifService.changeGroup(
+          ctx.state.userSocial.id,
+          notifId,
+          selectedGroupName,
+        );
     if (!changed) {
       await this.renderNotFound(ctx, notifId, groupName);
       return;
@@ -196,9 +194,11 @@ export class VkScheduleNotifGroupScene {
     ctx: IStepContext<ScheduleNotifGroupSceneState>,
     notifId: number,
   ) {
-    const notif = await this.notifService.getFirstNotif(
-      ctx.state.userSocial.id,
-    );
+    const notif = !ctx.isDM
+      ? await this.notifService.getFirstConversationNotif(
+          ctx.state.conversation!.id,
+        )
+      : await this.notifService.getFirstNotif(ctx.state.userSocial.id);
     if (!notif || notif.id !== notifId) {
       return;
     }

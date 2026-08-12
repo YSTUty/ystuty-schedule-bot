@@ -10,21 +10,13 @@ import { ScheduleNotifTransportRegistry } from './transport/schedule-notif-trans
 
 @Global()
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      ScheduleNotif,
-      ScheduleNotifDelivery,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([ScheduleNotif, ScheduleNotifDelivery])],
   providers: [
     ScheduleNotifService,
     ScheduleNotifDeliveryService,
     ScheduleNotifScheduler,
     ScheduleNotifTransportRegistry,
   ],
-  exports: [
-    ScheduleNotifService,
-    ScheduleNotifTransportRegistry,
-  ],
+  exports: [ScheduleNotifService, ScheduleNotifTransportRegistry],
 })
 export class ScheduleNotifModule {}

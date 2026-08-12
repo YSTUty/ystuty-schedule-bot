@@ -2,6 +2,10 @@ import { SocialType } from '@my-common/constants';
 
 import { UserSocial } from '../../user/entity/user-social.entity';
 
+export type ScheduleNotifRecipient =
+  | { type: 'user'; userSocial: UserSocial }
+  | { type: 'conversation'; conversationId: number };
+
 export type ScheduleNotifTransportResult = {
   messageId?: string | null;
 };
@@ -15,7 +19,7 @@ export interface ScheduleNotifTransport {
   }): Promise<ScheduleNotifTransportResult>;
 
   sendScheduleNotif(params: {
-    recipient: UserSocial;
+    recipient: ScheduleNotifRecipient;
     text: string;
   }): Promise<ScheduleNotifTransportResult>;
 }

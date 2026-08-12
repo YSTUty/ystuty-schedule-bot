@@ -71,6 +71,8 @@ describe('ScheduleNotifDeliveryService', () => {
       lastError: null,
       lastDeliveredAt: null,
       lastFailedAt: null,
+      userSocial,
+      conversation: null,
     });
     Object.assign(delivery, {
       status: ScheduleNotifDeliveryStatus.Pending,
@@ -111,6 +113,25 @@ describe('ScheduleNotifDeliveryService', () => {
     expect(delivery.sentMessageId).toBe('42');
   });
 
+  it('delivers a conversation notif to its persistent messenger conversation id', async () => {
+    const { service, ystutyService, transport } = createService();
+    Object.assign(notif, {
+      userSocial: null,
+      conversation: { conversationId: -100123 },
+    });
+    ystutyService.getGroupByName.mockReturnValue('ЦИС-11');
+    ystutyService.findNext.mockResolvedValue([1, '<b>Schedule</b>']);
+    transport.sendScheduleNotif.mockResolvedValue({ messageId: '43' });
+
+    await service.deliver(notif, delivery);
+
+    expect(transport.sendScheduleNotif).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: { type: 'conversation', conversationId: -100123 },
+      }),
+    );
+  });
+
   it('disables a notif and informs the recipient after the seventh missing target during the academic year', async () => {
     const { service, ystutyService, transport, notifRepository } =
       createService();
@@ -124,9 +145,9 @@ describe('ScheduleNotifDeliveryService', () => {
       missingTargetAttempts: 7,
       lastError: 'Group is absent from Schedule API',
     });
-    expect(transport.sendMessage).toHaveBeenCalledWith(
+    expect(transport.sendScheduleNotif).toHaveBeenCalledWith(
       expect.objectContaining({
-        recipient: userSocial,
+        recipient: { type: 'user', userSocial },
         text: expect.stringContaining('автоматически отключена'),
       }),
     );

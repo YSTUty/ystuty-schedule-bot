@@ -71,12 +71,7 @@ export class TgScheduleNotifGroupScene extends BaseScene {
     }
     if (callbackData.startsWith('pager:sched-notif:groups:')) {
       const [, , , instituteHash, page] = callbackData.split(':');
-      await this.renderGroups(
-        ctx,
-        notifId,
-        instituteHash,
-        Number(page) || 1,
-      );
+      await this.renderGroups(ctx, notifId, instituteHash, Number(page) || 1);
       return;
     }
 
@@ -125,11 +120,7 @@ export class TgScheduleNotifGroupScene extends BaseScene {
         ],
       ],
     });
-    await this.editOrReply(
-      ctx,
-      text,
-      keyboard,
-    );
+    await this.editOrReply(ctx, text, keyboard);
   }
 
   private async renderGroups(
@@ -177,11 +168,17 @@ export class TgScheduleNotifGroupScene extends BaseScene {
       await this.renderNotFound(ctx, groupName);
       return;
     }
-    const changed = await this.notifService.changeGroup(
-      ctx.userSocial.id,
-      notifId,
-      selectedGroupName,
-    );
+    const changed = this.isConv(ctx)
+      ? await this.notifService.changeConversationGroup(
+          ctx.conversation!.id,
+          notifId,
+          selectedGroupName,
+        )
+      : await this.notifService.changeGroup(
+          ctx.userSocial.id,
+          notifId,
+          selectedGroupName,
+        );
     if (!changed) {
       await this.renderNotFound(ctx, groupName);
       return;
@@ -235,9 +232,9 @@ export class TgScheduleNotifGroupScene extends BaseScene {
     ctx: IStepContext<ScheduleNotifGroupSceneState>,
     notifId: number,
   ) {
-    const notif = await this.notifService.getFirstNotif(
-      ctx.userSocial.id,
-    );
+    const notif = this.isConv(ctx)
+      ? await this.notifService.getFirstConversationNotif(ctx.conversation!.id)
+      : await this.notifService.getFirstNotif(ctx.userSocial.id);
     if (!notif || notif.id !== notifId) {
       return;
     }
@@ -264,5 +261,9 @@ export class TgScheduleNotifGroupScene extends BaseScene {
       return;
     }
     await ctx.replyWithHTML(text, keyboard);
+  }
+
+  private isConv(ctx: IStepContext<ScheduleNotifGroupSceneState>) {
+    return !!ctx.chat && ctx.chat.type !== 'private';
   }
 }

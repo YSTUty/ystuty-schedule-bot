@@ -54,10 +54,7 @@ describe('ScheduleNotifService', () => {
 
     const first = await service.reserveDelivery(notif.id, scheduledFor);
     deliveryRepository.save.mockRejectedValueOnce({ code: '23505' });
-    const repeated = await service.reserveDelivery(
-      notif.id,
-      scheduledFor,
-    );
+    const repeated = await service.reserveDelivery(notif.id, scheduledFor);
 
     expect(notif.targetId).toBe('ЦИС-11');
     expect(first).not.toBeNull();
@@ -86,6 +83,60 @@ describe('ScheduleNotifService', () => {
         id: 7,
         deliveryHour: 21,
         isEnabled: true,
+      }),
+    );
+  });
+
+  it('creates one notif for a conversation using its persistent group', async () => {
+    const { service, notifRepository } = createService();
+    const conversation = {
+      id: 3,
+      social: 'telegram',
+      groupName: 'ЦИС-11',
+    };
+
+    await service.upsertFirstConversationNotif(conversation as any, {
+      deliveryHour: 8,
+      deliveryMinute: 30,
+      targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
+      weekdays: [1, 2, 3, 4, 5],
+    });
+
+    expect(notifRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: conversation.id,
+        transport: conversation.social,
+        targetId: conversation.groupName,
+      }),
+    );
+  });
+
+  it('loads due personal and conversation notifs through separate nullable relations', async () => {
+    const { service, notifRepository } = createService();
+    notifRepository.find
+      .mockResolvedValueOnce([
+        { id: 1, weekdays: [1, 2], userSocialId: userSocial.id },
+      ])
+      .mockResolvedValueOnce([{ id: 2, weekdays: [2], conversationId: 3 }]);
+
+    const due = await service.findDue({
+      deliveryHour: 8,
+      deliveryMinute: 30,
+      isoWeekday: 2,
+    });
+
+    expect(due.map((notif) => notif.id)).toEqual([1, 2]);
+    expect(notifRepository.find).toHaveBeenCalledTimes(2);
+    expect(notifRepository.find).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        relations: ['userSocial'],
+      }),
+    );
+    expect(notifRepository.find).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        relations: ['conversation'],
       }),
     );
   });

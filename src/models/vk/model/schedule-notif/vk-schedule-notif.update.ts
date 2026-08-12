@@ -2,25 +2,23 @@ import { UseFilters } from '@nestjs/common';
 import { Ctx, Next, Update } from 'nestjs-vk';
 
 import { NextMiddleware } from 'middleware-io';
+import { APIError } from 'vk-io';
 
 import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
 import { VkExceptionFilter } from '@my-common/filter/vk-exception.filter';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
-import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
-import { ScheduleNotifTargetDayOffset } from '../../../schedule-notif/schedule-notif.types';
 import {
   getWeekdaysLabel,
   parseWeekdays,
   toggleWeekday,
 } from '../../../schedule-notif/schedule-notif-ui.util';
+import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
+import { ScheduleNotifTargetDayOffset } from '../../../schedule-notif/schedule-notif.types';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
-import {
-  VK_SCHEDULE_NOTIFICATION_GROUP_SCENE,
-  VkScheduleNotifGroupScene,
-} from './vk-schedule-notif-group.scene';
+import { VK_SCHEDULE_NOTIFICATION_GROUP_SCENE } from './vk-schedule-notif-group.scene';
 
 @Update()
 @UseFilters(VkExceptionFilter)
@@ -32,6 +30,10 @@ export class VkScheduleNotifUpdate {
 
   @VkHearsLocale(LocalePhrase.Button_ScheduleNotif)
   async openFromMenu(@Ctx() ctx: IMessageContext) {
+    if (!(await this.canManage(ctx))) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Common_NoAccess));
+      return;
+    }
     await this.openSettings(ctx);
   }
 
@@ -46,7 +48,11 @@ export class VkScheduleNotifUpdate {
     if (!action) {
       return next();
     }
-    if (!ctx.isDM) {
+    if (!(await this.canManage(ctx))) {
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Common_NoAccess),
+      });
       return;
     }
 
@@ -91,11 +97,7 @@ export class VkScheduleNotifUpdate {
         ctx,
         ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectHour),
         this.keyboardFactory
-          .getScheduleNotifHours(
-            ctx,
-            1,
-            Number(ctx.eventPayload.notifId),
-          )
+          .getScheduleNotifHours(ctx, 1, Number(ctx.eventPayload.notifId))
           .inline(),
       );
     } else if (action === 'editHour') {
@@ -113,32 +115,19 @@ export class VkScheduleNotifUpdate {
         await this.openEditor(ctx, notifId);
       }
     } else if (action === 'editMinute') {
-      await this.updateEditorSettings(
-        ctx,
-        Number(ctx.eventPayload.notifId),
-        {
-          deliveryHour: Number(ctx.eventPayload.hour),
-          deliveryMinute: Number(ctx.eventPayload.minute),
-        },
-      );
+      await this.updateEditorSettings(ctx, Number(ctx.eventPayload.notifId), {
+        deliveryHour: Number(ctx.eventPayload.hour),
+        deliveryMinute: Number(ctx.eventPayload.minute),
+      });
     } else if (action === 'editDay') {
-      await this.updateEditorSettings(
-        ctx,
-        Number(ctx.eventPayload.notifId),
-        {
-          targetDayOffset: Number(
-            ctx.eventPayload.targetDayOffset,
-          ) as ScheduleNotifTargetDayOffset,
-        },
-      );
+      await this.updateEditorSettings(ctx, Number(ctx.eventPayload.notifId), {
+        targetDayOffset: Number(
+          ctx.eventPayload.targetDayOffset,
+        ) as ScheduleNotifTargetDayOffset,
+      });
     } else if (action === 'editWeekdays') {
-      const notif = await this.notifService.getFirstNotif(
-        ctx.state.userSocial.id,
-      );
-      if (
-        notif &&
-        notif.id === Number(ctx.eventPayload.notifId)
-      ) {
+      const notif = await this.getNotif(ctx);
+      if (notif && notif.id === Number(ctx.eventPayload.notifId)) {
         await this.editStep(
           ctx,
           ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
@@ -155,13 +144,8 @@ export class VkScheduleNotifUpdate {
         await this.openSettings(ctx, true);
       }
     } else if (action === 'editWeekday') {
-      const notif = await this.notifService.getFirstNotif(
-        ctx.state.userSocial.id,
-      );
-      if (
-        notif &&
-        notif.id === Number(ctx.eventPayload.notifId)
-      ) {
+      const notif = await this.getNotif(ctx);
+      if (notif && notif.id === Number(ctx.eventPayload.notifId)) {
         await this.updateEditorSettings(ctx, notif.id, {
           weekdays: toggleWeekday(
             notif.weekdays,
@@ -192,9 +176,7 @@ export class VkScheduleNotifUpdate {
         await this.editStep(
           ctx,
           ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectMinute),
-          this.keyboardFactory
-            .getScheduleNotifMinutes(ctx, hour)
-            .inline(),
+          this.keyboardFactory.getScheduleNotifMinutes(ctx, hour).inline(),
         );
         return;
       }
@@ -227,17 +209,14 @@ export class VkScheduleNotifUpdate {
       );
     } else if (action === 'save') {
       try {
-        await this.notifService.upsertFirstNotif(
-          ctx.state.userSocial,
-          {
-            deliveryHour: Number(ctx.eventPayload.hour),
-            deliveryMinute: Number(ctx.eventPayload.minute),
-            targetDayOffset: Number(
-              ctx.eventPayload.targetDayOffset,
-            ) as ScheduleNotifTargetDayOffset,
-            weekdays: parseWeekdays(ctx.eventPayload.weekdays),
-          },
-        );
+        await this.upsertNotif(ctx, {
+          deliveryHour: Number(ctx.eventPayload.hour),
+          deliveryMinute: Number(ctx.eventPayload.minute),
+          targetDayOffset: Number(
+            ctx.eventPayload.targetDayOffset,
+          ) as ScheduleNotifTargetDayOffset,
+          weekdays: parseWeekdays(ctx.eventPayload.weekdays),
+        });
         await ctx.answer({ type: 'show_snackbar', text: 'Сохранено' });
       } catch (error) {
         await ctx.answer({
@@ -248,21 +227,19 @@ export class VkScheduleNotifUpdate {
       }
       await this.openSettings(ctx, true);
     } else if (action === 'enabled') {
-      await this.notifService.setEnabled(
-        ctx.state.userSocial.id,
+      await this.setEnabled(
+        ctx,
         Number(ctx.eventPayload.notifId),
         Boolean(ctx.eventPayload.isEnabled),
       );
       await this.openSettings(ctx, true);
     } else if (action === 'deleteConfirm') {
-      const notif = await this.notifService.getFirstNotif(
-        ctx.state.userSocial.id,
-      );
-      if (
-        !notif ||
-        notif.id !== Number(ctx.eventPayload.notifId)
-      ) {
-        await ctx.answer({ type: 'show_snackbar', text: 'Рассылка не найдена' });
+      const notif = await this.getNotif(ctx);
+      if (!notif || notif.id !== Number(ctx.eventPayload.notifId)) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: 'Рассылка не найдена',
+        });
         await this.openSettings(ctx, true);
         return;
       }
@@ -272,17 +249,11 @@ export class VkScheduleNotifUpdate {
           groupName: notif.targetId,
         }),
         this.keyboardFactory
-          .getScheduleNotifDeleteConfirmation(
-            ctx,
-            notif.id,
-          )
+          .getScheduleNotifDeleteConfirmation(ctx, notif.id)
           .inline(),
       );
     } else if (action === 'delete') {
-      await this.notifService.delete(
-        ctx.state.userSocial.id,
-        Number(ctx.eventPayload.notifId),
-      );
+      await this.deleteNotif(ctx, Number(ctx.eventPayload.notifId));
       await this.openSettings(ctx, true);
     }
   }
@@ -291,7 +262,11 @@ export class VkScheduleNotifUpdate {
     ctx: IMessageContext | IMessageEventContext,
     edit = false,
   ) {
-    if (!ctx.state.userSocial.groupName) {
+    if (
+      !(ctx.isDM
+        ? ctx.state.userSocial.groupName
+        : ctx.state.conversation?.groupName)
+    ) {
       const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_NeedGroup);
       const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
       if (edit && ctx.isMessageEventContext()) {
@@ -302,9 +277,7 @@ export class VkScheduleNotifUpdate {
       return;
     }
 
-    const notif = await this.notifService.getFirstNotif(
-      ctx.state.userSocial.id,
-    );
+    const notif = await this.getNotif(ctx);
     const notifView = notif && {
       ...notif,
       weekdaysLabel: getWeekdaysLabel(notif.weekdays),
@@ -333,21 +306,13 @@ export class VkScheduleNotifUpdate {
       ctx,
       ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectWeekdays),
       this.keyboardFactory
-        .getScheduleNotifWeekdays(
-          ctx,
-          hour,
-          minute,
-          targetDayOffset,
-          weekdays,
-        )
+        .getScheduleNotifWeekdays(ctx, hour, minute, targetDayOffset, weekdays)
         .inline(),
     );
   }
 
   public async openEditor(ctx: IMessageEventContext, notifId: number) {
-    const notif = await this.notifService.getFirstNotif(
-      ctx.state.userSocial.id,
-    );
+    const notif = await this.getNotif(ctx);
     if (!notif || notif.id !== notifId) {
       await ctx.answer({ type: 'show_snackbar', text: 'Рассылка не найдена' });
       await this.openSettings(ctx, true);
@@ -361,9 +326,7 @@ export class VkScheduleNotifUpdate {
           weekdaysLabel: getWeekdaysLabel(notif.weekdays),
         },
       }),
-      this.keyboardFactory
-        .getScheduleNotifEditor(ctx, notif)
-        .inline(),
+      this.keyboardFactory.getScheduleNotifEditor(ctx, notif).inline(),
     );
   }
 
@@ -377,25 +340,18 @@ export class VkScheduleNotifUpdate {
       weekdays: number[];
     }>,
   ) {
-    const notif = await this.notifService.getFirstNotif(
-      ctx.state.userSocial.id,
-    );
+    const notif = await this.getNotif(ctx);
     if (!notif || notif.id !== notifId) {
       await ctx.answer({ type: 'show_snackbar', text: 'Рассылка не найдена' });
       await this.openSettings(ctx, true);
       return;
     }
-    await this.notifService.updateSettings(
-      ctx.state.userSocial.id,
-      notifId,
-      {
-        deliveryHour: changes.deliveryHour ?? notif.deliveryHour,
-        deliveryMinute: changes.deliveryMinute ?? notif.deliveryMinute,
-        targetDayOffset:
-          changes.targetDayOffset ?? notif.targetDayOffset,
-        weekdays: changes.weekdays ?? notif.weekdays,
-      },
-    );
+    await this.updateSettings(ctx, notifId, {
+      deliveryHour: changes.deliveryHour ?? notif.deliveryHour,
+      deliveryMinute: changes.deliveryMinute ?? notif.deliveryMinute,
+      targetDayOffset: changes.targetDayOffset ?? notif.targetDayOffset,
+      weekdays: changes.weekdays ?? notif.weekdays,
+    });
     await this.openEditor(ctx, notifId);
   }
 
@@ -407,4 +363,90 @@ export class VkScheduleNotifUpdate {
     await ctx.editMessage({ message, keyboard });
   }
 
+  private async canManage(ctx: IMessageContext | IMessageEventContext) {
+    if (ctx.isDM) return true;
+    const conversation = ctx.state.conversation;
+    if (!conversation) return false;
+    if (conversation.invitedByUserSocialId === ctx.state.userSocial.id) {
+      return true;
+    }
+    try {
+      // TODO: add caching (only required fields)
+      const { items } = await ctx.api.messages.getConversationMembers({
+        peer_id: ctx.peerId,
+      });
+      return !!items.find(
+        (item) =>
+          item.member_id === (ctx.senderId || ctx.userId) && item.is_admin,
+      );
+    } catch (error) {
+      if (error instanceof APIError && error.code === 917) return false;
+      return false;
+    }
+  }
+
+  private async getNotif(ctx: IMessageContext | IMessageEventContext) {
+    return ctx.isDM
+      ? await this.notifService.getFirstNotif(ctx.state.userSocial.id)
+      : await this.notifService.getFirstConversationNotif(
+          ctx.state.conversation!.id,
+        );
+  }
+
+  private async upsertNotif(
+    ctx: IMessageEventContext,
+    settings: Parameters<ScheduleNotifService['upsertFirstNotif']>[1],
+  ) {
+    return ctx.isDM
+      ? await this.notifService.upsertFirstNotif(ctx.state.userSocial, settings)
+      : await this.notifService.upsertFirstConversationNotif(
+          ctx.state.conversation!,
+          settings,
+        );
+  }
+
+  private async setEnabled(
+    ctx: IMessageEventContext,
+    notifId: number,
+    isEnabled: boolean,
+  ) {
+    return ctx.isDM
+      ? await this.notifService.setEnabled(
+          ctx.state.userSocial.id,
+          notifId,
+          isEnabled,
+        )
+      : await this.notifService.setConversationEnabled(
+          ctx.state.conversation!.id,
+          notifId,
+          isEnabled,
+        );
+  }
+
+  private async deleteNotif(ctx: IMessageEventContext, notifId: number) {
+    return ctx.isDM
+      ? await this.notifService.delete(ctx.state.userSocial.id, notifId)
+      : await this.notifService.deleteConversation(
+          ctx.state.conversation!.id,
+          notifId,
+        );
+  }
+
+  private async updateSettings(
+    ctx: IMessageEventContext,
+    notifId: number,
+    settings: Parameters<ScheduleNotifService['updateSettings']>[2],
+  ) {
+    return ctx.isDM
+      ? await this.notifService.updateSettings(
+          ctx.state.userSocial.id,
+          notifId,
+          settings,
+        )
+      : await this.notifService.updateConversationSettings(
+          ctx.state.conversation!.id,
+          notifId,
+          settings,
+        );
+  }
 }

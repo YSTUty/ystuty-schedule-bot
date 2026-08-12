@@ -24,11 +24,18 @@ export class VkScheduleNotifTransport
   }
 
   public async sendScheduleNotif(
-    params: Parameters<
-      ScheduleNotifTransport['sendScheduleNotif']
-    >[0],
+    params: Parameters<ScheduleNotifTransport['sendScheduleNotif']>[0],
   ) {
-    return await this.sendMessage(params);
+    const peerId =
+      params.recipient.type === 'user'
+        ? params.recipient.userSocial.socialId
+        : // only for vk conversation
+          params.recipient.conversationId + 2e9;
+    const messageId = await this.vkService.sendMessage(peerId, params.text);
+    if (!messageId || !Array.isArray(messageId)) {
+      throw new Error('VK did not accept the schedule notif');
+    }
+    return { messageId: String(messageId[0].conversation_message_id) };
   }
 
   /** Отправляет личное сервисное сообщение получателю рассылки. */

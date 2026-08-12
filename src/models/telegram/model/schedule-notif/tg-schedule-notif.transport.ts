@@ -24,11 +24,17 @@ export class TgScheduleNotifTransport
   }
 
   public async sendScheduleNotif(
-    params: Parameters<
-      ScheduleNotifTransport['sendScheduleNotif']
-    >[0],
+    params: Parameters<ScheduleNotifTransport['sendScheduleNotif']>[0],
   ) {
-    return await this.sendMessage(params);
+    const chatId =
+      params.recipient.type === 'user'
+        ? params.recipient.userSocial.socialId
+        : params.recipient.conversationId;
+    const message = await this.telegramService.sendMessage(chatId, params.text);
+    if (!message) {
+      throw new Error('Telegram did not accept the schedule notif');
+    }
+    return { messageId: String(message.message_id) };
   }
 
   /** Отправляет личное сервисное сообщение получателю рассылки. */

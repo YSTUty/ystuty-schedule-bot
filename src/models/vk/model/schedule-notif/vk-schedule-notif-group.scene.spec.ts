@@ -100,6 +100,7 @@ describe('VkScheduleNotifGroupScene', () => {
       { getScheduleNotifEditor: jest.fn() } as any,
     );
     const ctx = {
+      isDM: true,
       text: 'группа цис-18',
       eventPayload: {},
       scene: {
@@ -115,5 +116,65 @@ describe('VkScheduleNotifGroupScene', () => {
 
     expect(ystutyService.parseGroupName).toHaveBeenCalledWith('группа цис-18');
     expect(notifService.changeGroup).toHaveBeenCalledWith(1, 7, 'ЦИС-18');
+  });
+
+  it('returns a conversation notif picker callback to the conversation editor', async () => {
+    const notifService = {
+      changeConversationGroup: jest.fn().mockResolvedValue(true),
+      getFirstConversationNotif: jest.fn().mockResolvedValue({
+        id: 7,
+        weekdays: [1, 2, 3],
+      }),
+      getFirstNotif: jest.fn().mockResolvedValue(null),
+    };
+    const ystutyService = {
+      getGroupByName: jest.fn().mockReturnValue('ЦИС-11'),
+      parseGroupName: jest.fn(),
+    };
+    const scene = new VkScheduleNotifGroupScene(
+      notifService as any,
+      {} as any,
+      ystutyService as any,
+      {
+        getScheduleNotifEditor: jest
+          .fn()
+          .mockReturnValue({ inline: jest.fn() }),
+      } as any,
+    );
+    const ctx = {
+      isDM: false,
+      eventPayload: {
+        scheduleNotifGroupAction: 'select',
+        groupName: 'ЦИС-11',
+      },
+      scene: {
+        state: { notifId: 7 },
+        step: { firstTime: false },
+        leave: jest.fn(async () => {
+          ctx.scene.state = {} as any;
+        }),
+      },
+      state: {
+        conversation: { id: 3 },
+        userSocial: { id: 1 },
+      },
+      i18n: { t: jest.fn().mockReturnValue('Настройки рассылки') },
+      isMessageEventContext: jest.fn().mockReturnValue(true),
+      answer: jest.fn(),
+      editMessage: jest.fn(),
+    } as any;
+
+    await scene.step(ctx);
+
+    expect(notifService.changeConversationGroup).toHaveBeenCalledWith(
+      3,
+      7,
+      'ЦИС-11',
+    );
+    expect(notifService.getFirstConversationNotif).toHaveBeenCalledWith(3);
+    expect(notifService.getFirstNotif).not.toHaveBeenCalled();
+    expect(ctx.editMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Настройки рассылки' }),
+    );
   });
 });

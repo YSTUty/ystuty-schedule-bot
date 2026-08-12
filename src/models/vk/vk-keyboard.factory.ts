@@ -118,6 +118,17 @@ export class VKKeyboardFactory {
             ],
           ]
         : []),
+      ...(!ctx.isDM
+        ? [
+            [
+              Keyboard.textButton({
+                label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif),
+                payload: { phrase: LocalePhrase.Button_ScheduleNotif },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ],
+          ]
+        : []),
       [
         ...(ctx.isDM && isAdmin
           ? [
@@ -157,11 +168,7 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotifHours(
-    ctx: IContext,
-    page = 1,
-    notifId?: number,
-  ) {
+  public getScheduleNotifHours(ctx: IContext, page = 1, notifId?: number) {
     const hours = buildScheduleNotifPage(
       Array.from({ length: 18 }, (_, index) => index + 6),
       page,
@@ -345,9 +352,7 @@ export class VKKeyboardFactory {
           ],
           [
             Keyboard.callbackButton({
-              label: ctx.i18n.t(
-                LocalePhrase.Button_ScheduleNotif_Delete,
-              ),
+              label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete),
               payload: {
                 scheduleNotifAction: 'deleteConfirm',
                 notifId: notif.id,
@@ -471,16 +476,11 @@ export class VKKeyboardFactory {
   }
 
   /** Подтверждение защищает от случайного удаления настройки рассылки. */
-  public getScheduleNotifDeleteConfirmation(
-    ctx: IContext,
-    notifId: number,
-  ) {
+  public getScheduleNotifDeleteConfirmation(ctx: IContext, notifId: number) {
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(
-            LocalePhrase.Button_ScheduleNotif_DeleteConfirm,
-          ),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteConfirm),
           payload: {
             scheduleNotifAction: 'delete',
             notifId,
@@ -488,9 +488,7 @@ export class VKKeyboardFactory {
           color: Keyboard.NEGATIVE_COLOR,
         }),
         Keyboard.callbackButton({
-          label: ctx.i18n.t(
-            LocalePhrase.Button_ScheduleNotif_DeleteCancel,
-          ),
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteCancel),
           payload: { scheduleNotifAction: 'settings' },
           color: Keyboard.SECONDARY_COLOR,
         }),

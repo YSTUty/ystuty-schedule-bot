@@ -11,6 +11,7 @@ import {
 
 import { SocialType } from '@my-common/constants';
 
+import { Conversation } from '../../social/entity/conversation.entity';
 import { UserSocial } from '../../user/entity/user-social.entity';
 import {
   ScheduleNotifTargetDayOffset,
@@ -23,12 +24,20 @@ export class ScheduleNotif {
   @PrimaryGeneratedColumn()
   public id: number;
 
-  @ManyToOne(() => UserSocial, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserSocial, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn()
-  public userSocial: UserSocial;
+  public userSocial: UserSocial | null;
 
-  @Column()
-  public userSocialId: number;
+  @Column({ nullable: true })
+  public userSocialId: number | null;
+
+  @ManyToOne(() => Conversation, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn()
+  public conversation: Conversation | null;
+
+  /** Для беседы допустима ровно одна текущая рассылка. */
+  @Column({ nullable: true, unique: true })
+  public conversationId: number | null;
 
   @Column({ type: 'enum', enum: SocialType })
   public transport: SocialType;

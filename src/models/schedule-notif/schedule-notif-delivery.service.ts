@@ -11,6 +11,7 @@ import {
   ScheduleNotifTargetType,
 } from './schedule-notif.types';
 import { ScheduleNotifTransportRegistry } from './transport/schedule-notif-transport.registry';
+import { type ScheduleNotifRecipient } from './transport/schedule-notif.transport';
 
 @Injectable()
 export class ScheduleNotifDeliveryService {
@@ -30,16 +31,24 @@ export class ScheduleNotifDeliveryService {
     now = new Date(),
   ) {
     try {
-      const recipient = notif.userSocial;
+      const recipient: ScheduleNotifRecipient | undefined = notif.userSocial
+        ? { type: 'user', userSocial: notif.userSocial }
+        : notif.conversation
+          ? {
+              type: 'conversation',
+              conversationId: Number(notif.conversation.conversationId),
+            }
+          : undefined;
       if (
         !notif.isEnabled ||
-        !recipient?.hasDM ||
-        recipient.isBlockedBot
+        !recipient ||
+        (recipient.type === 'user' &&
+          (!recipient.userSocial.hasDM || recipient.userSocial.isBlockedBot))
       ) {
         return await this.markSkipped(
           notif,
           delivery,
-          'Personal messages are unavailable',
+          'Notification recipient is unavailable',
         );
       }
       const target = this.getTarget(notif);
@@ -126,11 +135,21 @@ export class ScheduleNotifDeliveryService {
       }),
     );
     if (isDeactivated) {
-      const transport = this.transportRegistry.get(notif.transport);
-      await transport.sendMessage({
-        recipient: notif.userSocial,
-        text: `Рассылка расписания автоматически отключена: ${error}. Выберите актуальную группу или преподавателя в настройках.`,
-      });
+      const recipient: ScheduleNotifRecipient | undefined = notif.userSocial
+        ? { type: 'user', userSocial: notif.userSocial }
+        : notif.conversation
+          ? {
+              type: 'conversation',
+              conversationId: Number(notif.conversation.conversationId),
+            }
+          : undefined;
+      if (recipient) {
+        const transport = this.transportRegistry.get(notif.transport);
+        await transport.sendScheduleNotif({
+          recipient,
+          text: `Рассылка расписания автоматически отключена: ${error}. Выберите актуальную группу или преподавателя в настройках.`,
+        });
+      }
     }
     return delivery;
   }

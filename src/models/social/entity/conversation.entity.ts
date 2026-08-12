@@ -37,7 +37,7 @@ export class Conversation {
       },
     ],
   })
-  public conversationId: number;
+  public conversationId: number | BigInt;
 
   @Expose()
   @Column({ type: 'character varying', nullable: true })

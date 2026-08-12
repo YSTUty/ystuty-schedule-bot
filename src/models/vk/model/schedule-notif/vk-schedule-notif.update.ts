@@ -288,7 +288,7 @@ export class VkScheduleNotifUpdate {
       notif: notifView,
     });
     const keyboard = this.keyboardFactory
-      .getScheduleNotifSettings(ctx, notif)
+      .getScheduleNotifSettings(ctx, notif ?? undefined)
       .inline();
     if (edit && ctx.isMessageEventContext()) {
       await this.editStep(ctx, text, keyboard);

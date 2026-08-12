@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as dotenvExpand from 'dotenv-expand';
+import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 
 const config = dotenv.config();
 dotenvExpand.expand(config);
@@ -28,18 +29,27 @@ export const YSTUTY_WEB_VIEW_ADDRESS: string =
   process.env.YSTUTY_WEB_VIEW_ADDRESS || '';
 
 // * Postgres
-export const TYPEORM_CONFIG = {
+const postgresDatabase = process.env.POSTGRES_DATABASE || 'ystuty-schedule-bot';
+const postgresSynchronize = process.env.POSTGRES_SYNCHRONIZE
+  ? process.env.POSTGRES_SYNCHRONIZE === 'true'
+  : postgresDatabase.endsWith('dev');
+
+if (postgresSynchronize && NODE_ENV === EnvType.PROD) {
+  throw new Error(
+    'POSTGRES_SYNCHRONIZE must not be enabled in production. Use migrations instead.',
+  );
+}
+
+export const TYPEORM_CONFIG: Partial<PostgresConnectionOptions> = {
   logging: process.env.POSTGRES_LOGGING === 'true',
-  synchronize: false,
+  synchronize: postgresSynchronize,
+  uuidExtension: 'uuid-ossp',
   host: process.env.POSTGRES_HOST || 'postgres',
   port: +process.env.POSTGRES_PORT! || 5432,
   username: process.env.POSTGRES_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD,
-  database: process.env.POSTGRES_DATABASE || 'ystuty-schedule-bot',
+  database: postgresDatabase,
 };
-TYPEORM_CONFIG.synchronize = process.env.POSTGRES_SYNCHRONIZE
-  ? process.env.POSTGRES_SYNCHRONIZE === 'true'
-  : TYPEORM_CONFIG.database.endsWith('dev');
 
 // * Redis
 export const REDIS_HOST: string = process.env.REDIS_HOST || 'redis';

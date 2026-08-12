@@ -200,11 +200,15 @@ export class BroadcastService {
   }
 
   public async getCampaign(campaignId: number) {
-    return await this.campaignRepository.findOne({ id: campaignId });
+    return await this.campaignRepository.findOne({
+      where: { id: campaignId },
+    });
   }
 
   public async getCampaignForSocial(campaignId: number, social: SocialType) {
-    return await this.campaignRepository.findOne({ id: campaignId, social });
+    return await this.campaignRepository.findOne({
+      where: { id: campaignId, social },
+    });
   }
 
   public async getRecentCampaigns(social: SocialType, limit = 10) {
@@ -221,7 +225,9 @@ export class BroadcastService {
   ) {
     const campaign = social
       ? await this.getCampaignForSocial(campaignId, social)
-      : await this.campaignRepository.findOne({ id: campaignId });
+      : await this.campaignRepository.findOne({
+          where: { id: campaignId },
+        });
     if (!campaign) return null;
 
     if (

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindConditions, In, IsNull, Not, Repository } from 'typeorm';
+import { FindOptionsWhere, In, IsNull, Not, Repository } from 'typeorm';
 
 import { SocialType } from '@my-common/constants';
 
@@ -31,7 +31,7 @@ export class BroadcastAudienceFilterService {
     filter: BroadcastAudienceFilter = {},
   ) {
     const normalized = this.normalizeFilter(social, filter);
-    const where: FindConditions<UserSocial> = { social };
+    const where: FindOptionsWhere<UserSocial> = { social };
 
     if (typeof normalized.hasDM === 'boolean') {
       where.hasDM = normalized.hasDM;
@@ -62,7 +62,7 @@ export class BroadcastAudienceFilterService {
     limit = 8,
   ) {
     const normalized = this.normalizeFilter(social, filter);
-    const where: FindConditions<UserSocial> = { social };
+    const where: FindOptionsWhere<UserSocial> = { social };
 
     if (typeof normalized.hasDM === 'boolean') {
       where.hasDM = normalized.hasDM;

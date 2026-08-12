@@ -5,8 +5,9 @@ import type {
 import type { ISessionContext } from '@vk-io/session';
 import type {
   API,
-  Context as VKContext,
   IMessageContextSendOptions,
+  MessageSource,
+  Context as VKContext,
   MessageContext as VKMessageContext,
   MessageEventContext as VKMessageEventContext,
 } from 'vk-io';
@@ -54,12 +55,21 @@ type CombinedContext = {
   session: ISessionContext & ISessionState;
   sessionConversation: ISessionContext & ISessionConversationState;
   scene: IVKSceneContext['scene'];
+
+  peerId: number; // * force set (в mw скипаем, если его нету)
+  // * redefined vk-io ctx features
+  peerType: MessageSource.USER | MessageSource.CHAT | MessageSource.GROUP;
   isDM: boolean;
+  isChat: boolean;
+  chatId?: number;
+
   /** Проверяет, является ли текущий update callback-событием VK. */
   isMessageEventContext: () => this is IMessageEventContext;
   isMessageContext: () => this is IMessageContext;
   /** Редактирует исходное callback-сообщение или ничего не делает вне message_event. */
-  editMessage: (params: Pick<IMessageContextSendOptions, 'keyboard' | 'message'>) => Promise<unknown>;
+  editMessage: (
+    params: Pick<IMessageContextSendOptions, 'keyboard' | 'message'>,
+  ) => Promise<unknown>;
 } & {};
 
 export type IContext<T = {}> = VKContext<{}, ContextState> &

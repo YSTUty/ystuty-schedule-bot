@@ -12,6 +12,7 @@ import {
   IMessageContextSendOptions,
   MessageContext,
   MessageEventAction,
+  MessageSource,
 } from 'vk-io';
 import { RedisStorage } from 'vk-io-redis-storage';
 import { MessagesDeleteParams } from 'vk-io/lib/api/schemas/params';
@@ -172,6 +173,21 @@ export class MainMiddleware {
         });
       };
 
+      // * redefine vk-io ctx features
+      const getPeerType = (id: number) =>
+        2e9 < id
+          ? MessageSource.CHAT
+          : id < 0
+            ? MessageSource.GROUP
+            : MessageSource.USER;
+
+      ctx.peerType = getPeerType(ctx.peerId);
+      ctx.isDM ??= [MessageSource.USER, MessageSource.GROUP].includes(
+        ctx.peerType,
+      );
+      ctx.isChat ??= MessageSource.CHAT == ctx.peerType;
+      ctx.chatId = ctx.isChat ? ctx.peerId - 2e9 : undefined;
+
       if (ctx.isMessageEventContext()) {
         const answer = ctx.answer.bind(ctx);
         ctx.answer = async (eventData: MessageEventAction) => {
@@ -209,9 +225,6 @@ export class MainMiddleware {
           });
           return messageIds;
         };
-
-        // define
-        ctx.isDM = ctx.peerId < 0 || ctx.peerId < 2e9;
       } else if (ctx.is(['message'])) {
         // ...
       } else {
@@ -395,7 +408,7 @@ export class MainMiddleware {
         return;
       }
 
-      if (ctx.isChat) {
+      if (ctx.isChat && ctx.chatId) {
         try {
           let conversation = await this.socialService.findConversationById(
             SocialType.Vkontakte,

@@ -181,12 +181,12 @@ export class MainMiddleware {
             ? MessageSource.GROUP
             : MessageSource.USER;
 
-      ctx.peerType = getPeerType(ctx.peerId);
+      ctx.peerType ??= getPeerType(ctx.peerId);
       ctx.isDM ??= [MessageSource.USER, MessageSource.GROUP].includes(
         ctx.peerType,
       );
       ctx.isChat ??= MessageSource.CHAT == ctx.peerType;
-      ctx.chatId = ctx.isChat ? ctx.peerId - 2e9 : undefined;
+      ctx.chatId ??= ctx.isChat ? ctx.peerId - 2e9 : undefined;
 
       if (ctx.isMessageEventContext()) {
         const answer = ctx.answer.bind(ctx);

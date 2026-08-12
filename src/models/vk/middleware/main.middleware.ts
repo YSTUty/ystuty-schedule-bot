@@ -12,13 +12,19 @@ import {
   IMessageContextSendOptions,
   MessageContext,
   MessageEventAction,
+  MessageSource,
 } from 'vk-io';
 import { RedisStorage } from 'vk-io-redis-storage';
+import { MessagesDeleteParams } from 'vk-io/lib/api/schemas/params';
 
 import { SocialType } from '@my-common/constants';
-import { checkLocaleCondition, i18n } from '@my-common/util/vk';
+import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
-import { IContext, IMessageContext } from '@my-interfaces/vk';
+import {
+  IContext,
+  IMessageContext,
+  IMessageEventContext,
+} from '@my-interfaces/vk';
 
 import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
@@ -89,6 +95,7 @@ export class MainMiddleware {
   get middlewaresAfter(): Middleware<Context> {
     const composer = Composer.builder<Context>();
 
+    composer.use(this.unhandledMessageEventMiddleware);
     composer.use(this.sceneInterceptMiddleware());
     composer.use(this.hearManagerProvider.middleware);
 
@@ -143,7 +150,45 @@ export class MainMiddleware {
         return;
       }
 
-      if (ctx.is(['message_event'])) {
+      ctx.isMessageEventContext = function (
+        this: IContext,
+      ): this is IMessageEventContext {
+        // 'eventPayload' in ctx && 'answer' in ctx
+        return this.is(['message_event']);
+      };
+      ctx.isMessageContext = function (
+        this: IContext,
+      ): this is IMessageContext {
+        return this.is(['message_new', 'message_edit', 'message_reply']);
+      };
+      ctx.editMessage = async ({ message, keyboard }) => {
+        if (!ctx.isMessageEventContext()) {
+          return;
+        }
+        return ctx.api.messages.edit({
+          peer_id: ctx.peerId,
+          cmid: ctx.conversationMessageId,
+          message,
+          keyboard,
+        });
+      };
+
+      // * redefine vk-io ctx features
+      const getPeerType = (id: number) =>
+        2e9 < id
+          ? MessageSource.CHAT
+          : id < 0
+            ? MessageSource.GROUP
+            : MessageSource.USER;
+
+      ctx.peerType ??= getPeerType(ctx.peerId);
+      ctx.isDM ??= [MessageSource.USER, MessageSource.GROUP].includes(
+        ctx.peerType,
+      );
+      ctx.isChat ??= MessageSource.CHAT == ctx.peerType;
+      ctx.chatId ??= ctx.isChat ? ctx.peerId - 2e9 : undefined;
+
+      if (ctx.isMessageEventContext()) {
         const answer = ctx.answer.bind(ctx);
         ctx.answer = async (eventData: MessageEventAction) => {
           const res = await answer(eventData);
@@ -165,6 +210,20 @@ export class MainMiddleware {
             }),
             ...(typeof text !== 'object' ? { message: text, ...params } : text),
           });
+        };
+
+        ctx.deleteMessage = async (
+          options: Partial<MessagesDeleteParams> = {},
+        ) => {
+          const convMid = ctx.conversationMessageId;
+          const target = !!convMid
+            ? { peer_id: ctx.peerId, cmids: convMid }
+            : { message_ids: ctx.id };
+          const messageIds = await ctx.api.messages.delete({
+            ...options,
+            ...target,
+          });
+          return messageIds;
         };
       } else if (ctx.is(['message'])) {
         // ...
@@ -193,6 +252,22 @@ export class MainMiddleware {
     };
   }
 
+  /** Подтверждает callback, который не обработал ни один VK handler. */
+  private get unhandledMessageEventMiddleware() {
+    return async (ctx: IContext, next: NextMiddleware) => {
+      await next?.();
+
+      if (!ctx.isMessageEventContext() || ctx.state.eventAnswered) {
+        return;
+      }
+
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: 'Nope ¯\\_(ツ)_/¯',
+      });
+    };
+  }
+
   public get middlewareCleaner() {
     return async (ctx: IContext, next: NextMiddleware) => {
       await next?.();
@@ -218,31 +293,59 @@ export class MainMiddleware {
       );
       ctx.state.appeal = false;
 
-      if (ctx.text && triggerRegexp.test(ctx.text)) {
-        const triggerMsg = ctx.text.match(triggerRegexp);
-        ctx.text = ctx.text.slice(triggerMsg[0].length);
-        ctx.state.appeal = true;
+      if (ctx.isMessageContext()) {
+        if (ctx.replyMessage?.$groupId === ctx.$groupId) {
+          ctx.state.appeal = true;
+        }
+
+        if (ctx.text) {
+          const triggerMsg = ctx.text.match(triggerRegexp);
+          if (triggerMsg) {
+            ctx.text = ctx.text.slice(triggerMsg[0].length);
+            ctx.state.appeal = true;
+          }
+        }
       }
       return next();
     };
   }
 
   private sceneInterceptMiddleware() {
-    return async (ctx: IMessageContext, next: NextMiddleware) => {
+    return async (
+      ctx: IMessageContext | IMessageEventContext,
+      next: NextMiddleware,
+    ) => {
       // * Тут доработали логику `this.sceneManager.middlewareIntercept`, что перед входом в сцену проверяем команду "Отмены". Этого можно не делать, если в каждой сцене наследовать класс с обработкой команд выхода из сцены
       if (!ctx.scene.current) {
         return next();
       }
 
-      if (
-        ctx.text &&
-        (checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx) ||
-          ['cancel', '/cancel', '/exit'].includes(ctx.text.toLowerCase()))
-      ) {
+      const payloadPhrase = ctx.eventPayload?.phrase as
+        | LocalePhrase
+        | undefined;
+
+      const phraseKey = LocalePhrase.Button_Cancel;
+      const normalizedText = (payloadPhrase || ctx.text)
+        ?.trim()
+        .toLocaleLowerCase('ru');
+      const cancelButtonText = ctx.i18n
+        .t(phraseKey)
+        .trim()
+        .toLocaleLowerCase('ru');
+      const isCancel =
+        payloadPhrase === phraseKey ||
+        normalizedText === cancelButtonText ||
+        ['cancel', '/cancel', 'exit', '/exit'].includes(normalizedText || '');
+
+      if (isCancel) {
         const keyboard = this.keyboardFactory.getStart(ctx); // getClose(ctx);
         await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
           keyboard,
         });
+        if ('eventPayload' in ctx) {
+          ctx.deleteMessage({ delete_for_all: true }).catch();
+          // ctx.answer({ type: 'show_snackbar', text: 'Отменено' }).catch();
+        }
         return ctx.scene.leave({ canceled: true });
       }
 
@@ -305,7 +408,7 @@ export class MainMiddleware {
         return;
       }
 
-      if (ctx.isChat) {
+      if (ctx.isChat && ctx.chatId) {
         try {
           let conversation = await this.socialService.findConversationById(
             SocialType.Vkontakte,

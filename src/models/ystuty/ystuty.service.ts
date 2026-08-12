@@ -137,6 +137,13 @@ export class YSTUtyService implements OnModuleInit {
     );
   }
 
+  /** Находит группу по короткому callback-идентификатору Telegram. */
+  public groupNameByHash(groupHash: string) {
+    return this.groupNames.find((groupName) =>
+      md5(groupName).startsWith(groupHash),
+    );
+  }
+
   public parseGroupName(str: string) {
     const match = matchGroupName(str, 'gi');
     if (!match) {
@@ -162,19 +169,16 @@ export class YSTUtyService implements OnModuleInit {
     return this.allGroupsList.flatMap((e) => e.groups);
   }
 
-  public instituteNameByMD5(nameMD5: string) {
-    const name = this.allGroupsList.find((e) => md5(e.name) === nameMD5)?.name;
+  public instituteNameByHash(instituteHash: string) {
+    const name = this.allGroupsList.find((e) =>
+      md5(e.name).startsWith(instituteHash),
+    )?.name;
     return name;
   }
 
-  public groupsList(
-    page = 1,
-    count = 20,
-    instituteNameMD5: string | null = null,
-  ) {
-    // const { groupNames } = this;
+  public groupsList(page = 1, count = 20, instituteHash: string | null = null) {
     const groupNames = this.allGroupsList
-      .filter((e) => !instituteNameMD5 || md5(e.name) === instituteNameMD5)
+      .filter((e) => !instituteHash || md5(e.name).startsWith(instituteHash))
       .flatMap((e) => e.groups);
 
     const totalCount = groupNames.length;
@@ -207,21 +211,66 @@ export class YSTUtyService implements OnModuleInit {
     return this.allTeachersList.map((e) => e.name);
   }
 
-  public getTeacherName(id: number) {
-    return this.allTeachersList.find((e) => e.id === id)?.name;
+  public getTeacher(id: number) {
+    return this.allTeachersList.find((teacher) => teacher.id === id);
   }
 
-  public async teachersList(page = 1, count = 20) {
-    const teachers = this.allTeachersList;
+  public getTeacherName(id: number) {
+    return this.getTeacher(id)?.name;
+  }
+
+  public getTeacherByExactName(name?: string | null) {
+    if (!name) return undefined;
+
+    const normalizedName = this.normalizeTeacherName(name);
+    const teachers = this.allTeachersList.filter(
+      (teacher) => this.normalizeTeacherName(teacher.name) === normalizedName,
+    );
+
+    return teachers.length === 1 ? teachers[0] : undefined;
+  }
+
+  public teachersList(page = 1, count = 20, query?: string | null) {
+    const normalizedQuery = this.normalizeTeacherName(query || '');
+    const searchTokens = normalizedQuery.split(' ').filter(Boolean);
+    const teachers = this.allTeachersList
+      .filter((teacher) => {
+        const normalizedName = this.normalizeTeacherName(teacher.name);
+        return searchTokens.every((token) => normalizedName.includes(token));
+      })
+      .sort((first, second) => {
+        const normalizedCompare = this.normalizeTeacherName(
+          first.name,
+        ).localeCompare(this.normalizeTeacherName(second.name), 'ru');
+        if (normalizedCompare !== 0) return normalizedCompare;
+
+        const originalCompare = first.name.localeCompare(second.name, 'ru');
+        return originalCompare || first.id - second.id;
+      });
     const totalCount = teachers.length;
-    const totalPageCount = page * count;
-    const items = teachers.slice(totalPageCount - count, totalPageCount);
+    const safeCount = Math.max(1, count);
+    const totalPages = Math.max(1, Math.ceil(totalCount / safeCount));
+    const currentPage = Math.max(1, Math.min(page, totalPages));
+    const offset = (currentPage - 1) * safeCount;
+    const items = teachers.slice(offset, offset + safeCount);
 
     return {
       items,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / count),
+      currentPage,
+      totalPages,
+      totalCount,
+      query: query?.trim() || '',
     };
+  }
+
+  private normalizeTeacherName(name: string) {
+    return name
+      .trim()
+      .toLocaleLowerCase('ru')
+      .replace(/ё/g, 'е')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   public async findNext({

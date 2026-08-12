@@ -1,11 +1,11 @@
 import { UseFilters, UseGuards } from '@nestjs/common';
-import { Ctx, Hears, Next, On, Update } from 'nestjs-vk';
+import { Ctx, Hears, Next, Update } from 'nestjs-vk';
 
 import { NextMiddleware } from 'middleware-io';
 
 import { VkAdminGuard, VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
-import { VkHearsLocale } from '@my-common/decorator/vk';
+import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
@@ -16,7 +16,7 @@ import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
 @Update()
 @UseFilters(VkExceptionFilter)
-@UseGuards(new VkAdminGuard(true))
+@UseGuards(VkAdminGuard(true))
 export class BroadcastVkUpdate {
   constructor(
     private readonly broadcastService: BroadcastService,
@@ -108,12 +108,13 @@ export class BroadcastVkUpdate {
     await ctx.send(ctx.i18n.t(LocalePhrase.Broadcast_Notification_Terminated));
   }
 
-  @On('message_event')
+  @OnMessageEvent()
   async onQueueAction(
     @Ctx() ctx: IMessageEventContext,
     @Next() next: NextMiddleware,
   ) {
     const action = ctx.eventPayload?.broadcastAction as string | undefined;
+
     if (!action) {
       return next();
     }

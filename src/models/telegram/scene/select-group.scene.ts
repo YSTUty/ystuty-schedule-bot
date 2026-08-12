@@ -67,7 +67,7 @@ export class SelectGroupScene extends BaseScene {
       return;
     }
 
-    const isChat = ctx.chat && ctx.chat.type !== 'private';
+    const isConv = ctx.chat && ctx.chat.type !== 'private';
 
     const firstTime = state.firstTime !== false;
     state.firstTime = false;
@@ -116,12 +116,12 @@ export class SelectGroupScene extends BaseScene {
       return;
     }
 
-    if ((isChat && !ctx.state.appeal) || false /* !ctx.message */) {
+    if ((isConv && !ctx.state.appeal) || false /* !ctx.message */) {
       return;
     }
 
     if (groupName === '0') {
-      if (isChat) {
+      if (isConv) {
         delete ctx.sessionConversation.selectedGroupName;
       } else {
         userSocial.groupName = null;
@@ -136,9 +136,12 @@ export class SelectGroupScene extends BaseScene {
       return;
     }
 
-    const selectedGroupName = this.ystutyService.getGroupByName(groupName);
+    const selectedGroupName =
+      groupName &&
+      (this.ystutyService.getGroupByName(groupName) ||
+        this.ystutyService.parseGroupName(groupName));
     if (selectedGroupName) {
-      if (isChat) {
+      if (isConv) {
         ctx.sessionConversation.selectedGroupName = selectedGroupName;
         if (ctx.conversation) {
           ctx.conversation.groupName = selectedGroupName;

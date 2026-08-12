@@ -89,6 +89,9 @@ export class RolesGuard implements CanActivate {
         !ctx.state.user ||
         !allowedRoles.includes(ctx.state.user.role)
       ) {
+        if (allowedRolesSilent.some((e) => e === true)) {
+          throw new VkException('SKIP_FULL');
+        }
         throw new VkException(LocalePhrase.Common_NoAccess);
       }
       return true;

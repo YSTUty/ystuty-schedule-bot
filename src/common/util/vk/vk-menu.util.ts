@@ -2,7 +2,7 @@ import {
   patternGroupName,
   patternGroupName0,
   patternTeacherId,
-} from '@my-common';
+} from '@my-common/util/ystuty.util';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext } from '@my-interfaces/vk';
 

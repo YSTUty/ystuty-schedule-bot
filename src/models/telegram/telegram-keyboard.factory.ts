@@ -7,17 +7,38 @@ import {
   ReplyKeyboardMarkup,
   ReplyKeyboardRemove,
 } from 'telegraf/typings/core/types/typegram';
-import { Markup as MarkupType } from 'telegraf/typings/markup';
 
 import * as xEnv from '@my-environment';
 
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
+import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
+import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
+
 type Hideable<B> = B & { hide?: boolean };
 export type PaginationItemType =
   | string
   | { title: string; suffix?: string; payload: string };
+
+export type TelegramPaginationOptions<
+  T extends PaginationItemType = PaginationItemType,
+> = {
+  name: string;
+  currentPage: number;
+  totalPages: number;
+  items?: (T | T[])[];
+  actionPrefix?: string;
+  additionalButtons?:
+    | Hideable<InlineKeyboardButton>[]
+    | Hideable<InlineKeyboardButton>[][];
+  columnizer?: boolean | number;
+  sortByLength?: boolean;
+  pagerMode?: PaginationPagerMode;
+  hidePager?: boolean;
+};
+
+type PaginationPagerMode = 'edges' | 'nearby';
 
 @Injectable()
 export class TelegramKeyboardFactory {
@@ -27,14 +48,31 @@ export class TelegramKeyboardFactory {
       (xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id) ||
         ctx.user?.role === 'admin');
 
+    const isPrivate = ctx.chat?.type === 'private';
+    const hasGroup = !!ctx.userSocial?.groupName;
+    const hasTeacher = !!ctx.session.teacherId;
+
     return Markup.keyboard([
-      [ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)],
-      [
-        ...(ctx.chat?.type === 'private' && ctx.user
-          ? [ctx.i18n.t(LocalePhrase.Button_Profile)]
+      ...(hasGroup
+        ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)]]
+        : isPrivate
+          ? [[ctx.i18n.t(LocalePhrase.Button_SelectGroup)]]
+          : [[ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)]]),
+      ...(isPrivate && !hasTeacher
+        ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher)]]
+        : isPrivate && hasTeacher
+          ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher)]]
           : []),
-      ],
-      ...(isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
+      ...(isPrivate
+        ? [
+            [
+              ...(ctx.user ? [ctx.i18n.t(LocalePhrase.Button_Profile)] : []),
+              ctx.i18n.t(LocalePhrase.Button_ScheduleNotif),
+            ],
+          ]
+        : []),
+      ...(!isPrivate ? [[ctx.i18n.t(LocalePhrase.Button_ScheduleNotif)]] : []),
+      ...(isPrivate && isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
     ]).resize();
   }
 
@@ -55,6 +93,250 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
           'broadcast:queue:terminate',
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotifHours(ctx: IContext, page = 1, notifId?: number) {
+    const hours = buildScheduleNotifPage(
+      Array.from({ length: 18 }, (_, index) => index + 6),
+      page,
+      18,
+    );
+    return Markup.inlineKeyboard([
+      ...hours.rows.map((row) =>
+        row.map((hour) =>
+          Markup.button.callback(
+            `${String(hour).padStart(2, '0')}:**`,
+            notifId
+              ? `scheduleNotif:editHour:${notifId}:${hour}`
+              : `scheduleNotif:hour:${hour}`,
+          ),
+        ),
+      ),
+      ...(hours.totalPages > 1
+        ? [
+            [
+              ...(hours.previousPage
+                ? [
+                    Markup.button.callback(
+                      ctx.i18n.t(
+                        LocalePhrase.Button_ScheduleNotif_PreviousPage,
+                      ),
+                      notifId
+                        ? `scheduleNotif:editHours:${notifId}:${hours.previousPage}`
+                        : `scheduleNotif:hours:${hours.previousPage}`,
+                    ),
+                  ]
+                : []),
+              Markup.button.callback(
+                `${hours.currentPage}/${hours.totalPages}`,
+                'nope',
+              ),
+              ...(hours.nextPage
+                ? [
+                    Markup.button.callback(
+                      ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_NextPage),
+                      notifId
+                        ? `scheduleNotif:editHours:${notifId}:${hours.nextPage}`
+                        : `scheduleNotif:hours:${hours.nextPage}`,
+                    ),
+                  ]
+                : []),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+          notifId ? `scheduleNotif:edit:${notifId}` : 'scheduleNotif:settings',
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotifMinutes(
+    ctx: IContext,
+    hour: number,
+    notifId?: number,
+  ) {
+    return Markup.inlineKeyboard([
+      ...[
+        SCHEDULE_NOTIFICATION_MINUTES.slice(0, 3),
+        SCHEDULE_NOTIFICATION_MINUTES.slice(3),
+      ].map((minuteRow) =>
+        minuteRow.map((minute) =>
+          Markup.button.callback(
+            `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+            notifId
+              ? `scheduleNotif:editMinute:${notifId}:${hour}:${minute}`
+              : `scheduleNotif:minute:${hour}:${minute}`,
+          ),
+        ),
+      ),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+          notifId
+            ? `scheduleNotif:editHours:${notifId}:1`
+            : 'scheduleNotif:hours:1',
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotifTargetDay(
+    ctx: IContext,
+    hour: number,
+    minute: number,
+  ) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
+          `scheduleNotif:day:${hour}:${minute}:0`,
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
+          `scheduleNotif:day:${hour}:${minute}:1`,
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotifWeekdays(
+    ctx: IContext,
+    hour: number,
+    minute: number,
+    targetDayOffset: number,
+    weekdays: number[],
+  ) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return Markup.inlineKeyboard([
+      ...[0, 3, 6].map((startIndex) =>
+        labels.slice(startIndex, startIndex + 3).map((label, index) => {
+          const weekday = startIndex + index + 1;
+          return Markup.button.callback(
+            `${weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            `scheduleNotif:weekday:${hour}:${minute}:${targetDayOffset}:${weekday}:${weekdays.join(',')}`,
+          );
+        }),
+      ),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
+          `scheduleNotif:save:${hour}:${minute}:${targetDayOffset}:${weekdays.join(',')}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+          `scheduleNotif:minute:${hour}`,
+        ),
+      ],
+    ]);
+  }
+
+  public getScheduleNotifSettings(
+    ctx: IContext,
+    notif?: { id: number; isEnabled: boolean },
+  ) {
+    return Markup.inlineKeyboard(
+      notif
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Edit),
+                `scheduleNotif:edit:${notif.id}`,
+              ),
+            ],
+            [
+              Markup.button.callback(
+                notif.isEnabled
+                  ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Disable)
+                  : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Enable),
+                `scheduleNotif:enabled:${notif.id}:${notif.isEnabled ? '0' : '1'}`,
+              ),
+            ],
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete),
+                `scheduleNotif:deleteConfirm:${notif.id}`,
+              ),
+            ],
+          ]
+        : [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
+                'scheduleNotif:create',
+              ),
+            ],
+          ],
+    );
+  }
+
+  /** Клавиатура редактирования сохраняет каждое изменение сразу. */
+  public getScheduleNotifEditor(
+    ctx: IContext,
+    notif: {
+      id: number;
+      deliveryHour: number;
+      deliveryMinute: number;
+      targetDayOffset: number;
+      weekdays: number[];
+    },
+  ) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          `Время: ${String(notif.deliveryHour).padStart(2, '0')}:${String(notif.deliveryMinute).padStart(2, '0')}`,
+          `scheduleNotif:editTime:${notif.id}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          `Расписание: ${notif.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+          `scheduleNotif:editDay:${notif.id}:${notif.targetDayOffset ? 0 : 1}`,
+        ),
+      ],
+      ...[0, 3, 6].map((startIndex) =>
+        labels.slice(startIndex, startIndex + 3).map((label, index) => {
+          const weekday = startIndex + index + 1;
+          return Markup.button.callback(
+            `${notif.weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
+            `scheduleNotif:editWeekday:${notif.id}:${weekday}`,
+          );
+        }),
+      ),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeGroup),
+          `scheduleNotif:changeGroup:${notif.id}:1:edit`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
+          'scheduleNotif:editSave',
+        ),
+      ],
+    ]);
+  }
+
+  /** Подтверждение защищает от случайного удаления настройки рассылки. */
+  public getScheduleNotifDeleteConfirmation(ctx: IContext, notifId: number) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteConfirm),
+          `scheduleNotif:delete:${notifId}`,
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteCancel),
+          'scheduleNotif:settings',
         ),
       ],
     ]);
@@ -245,6 +527,10 @@ export class TelegramKeyboardFactory {
                       ctx.i18n.t(LocalePhrase.Button_SelectGroup),
                       LocalePhrase.Button_SelectGroup,
                     ),
+                    Markup.button.callback(
+                      ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
+                      LocalePhrase.Button_Schedule_Teacher,
+                    ),
                   ],
                 ]
               : []),
@@ -261,6 +547,14 @@ export class TelegramKeyboardFactory {
           ])
         : Markup.keyboard([
             [ctx.i18n.t(phrase)],
+            ...(addSelectGroup
+              ? [
+                  [
+                    ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                    ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
+                  ],
+                ]
+              : []),
             ...(addCancel ? [[ctx.i18n.t(LocalePhrase.Button_Cancel)]] : []),
           ]).resize()),
     };
@@ -282,11 +576,16 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getScheduleInline(ctx: IContext, groupName: string = '') {
+  public getScheduleInline(
+    ctx: IContext,
+    target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
+  ) {
     const makeButton = (phrase: LocalePhrase) =>
       Markup.button.callback(
         ctx.i18n.t(phrase),
-        groupName ? `${phrase}:${groupName}` : phrase,
+        target.type === 'teacher'
+          ? `${phrase}:teacher:${target.id}`
+          : `${phrase}:${target.id}`,
       );
 
     return Markup.inlineKeyboard([
@@ -301,23 +600,60 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  /** Собирает keyboard пагинации из item-рядов, pager и дополнительных кнопок. */
   public getPagination<T extends PaginationItemType>(
-    name: string,
-    current: number,
-    maxpage: number,
-    items?: (T | T[])[],
-    actionPrefix: string = '',
-    additionalButtons:
-      | Hideable<InlineKeyboardButton>[]
-      | Hideable<InlineKeyboardButton>[][] = [],
-    columnizerBtns: boolean | number = false,
-    sortByLength: boolean = true,
+    options: TelegramPaginationOptions<T>,
   ) {
+    const {
+      name,
+      currentPage,
+      totalPages,
+      items,
+      actionPrefix = '',
+      additionalButtons = [],
+      columnizer = false,
+      sortByLength = true,
+      pagerMode = 'edges',
+      hidePager = false,
+    } = options;
+
+    const itemRows = this.getPaginationBuild({
+      items,
+      actionPrefix,
+      columnizer,
+      sortByLength,
+    });
+    const pagerRow = hidePager
+      ? []
+      : this.getPaginationPager({
+          name,
+          currentPage,
+          totalPages,
+          mode: pagerMode,
+        });
+
+    return Markup.inlineKeyboard([
+      ...itemRows,
+      ...[pagerRow],
+      ...this.getPaginationAdditionalRows(additionalButtons),
+    ]);
+  }
+
+  /** Строит ряды кнопок элементов с необязательным автоматическим разбиением по ширине. */
+  public getPaginationBuild<T extends PaginationItemType>(params: {
+    items?: (T | T[])[];
+    actionPrefix?: string;
+    columnizer?: boolean | number;
+    sortByLength?: boolean;
+  }) {
+    let { items } = params;
+    const actionPrefix = params.actionPrefix || '';
+    const sortByLength = params.sortByLength !== false;
     const buttonsItems: Hideable<InlineKeyboardButton>[][] = [];
     let columns = 1;
 
-    const maxLength = columnizerBtns === true ? 10 : columnizerBtns || 10;
-    columnizerBtns = columnizerBtns !== false;
+    const maxLength = params.columnizer === true ? 10 : params.columnizer || 10;
+    const columnizerBtns = params.columnizer !== false;
 
     if (items && items.length > 0) {
       if (columnizerBtns) {
@@ -368,7 +704,7 @@ export class TelegramKeyboardFactory {
             }
           }
           rowBtns.push(
-            Markup.button.callback(title, `${actionPrefix || ''}${payload}`),
+            Markup.button.callback(title, `${actionPrefix}${payload}`),
           );
           if (columnizerBtns) {
             if (rowBtns.length >= columns) {
@@ -388,38 +724,85 @@ export class TelegramKeyboardFactory {
       }
     }
 
-    const buttonsPager: Hideable<InlineKeyboardButton>[] = [];
-    buttonsPager.push(
-      current > 1
-        ? Markup.button.callback(`«1`, `pager:${name}:1`)
-        : Markup.button.callback(`☺`, 'nope'),
-      current > 2
-        ? Markup.button.callback(
-            `‹${current - 1}`,
-            `pager:${name}:${current - 1}`,
-          )
-        : Markup.button.callback(`☺`, 'nope'),
-      Markup.button.callback(`-${current}-`, `pager:${name}:${current}`),
-      current < maxpage - 1
-        ? Markup.button.callback(
-            `${current + 1}›`,
-            `pager:${name}:${current + 1}`,
-          )
-        : Markup.button.callback(`☺`, 'nope'),
-      current < maxpage
-        ? Markup.button.callback(`${maxpage}»`, `pager:${name}:${maxpage}`)
-        : Markup.button.callback(`☺`, 'nope:The end'),
-    );
+    return buttonsItems;
+  }
 
-    return Markup.inlineKeyboard([
-      ...buttonsItems,
-      buttonsPager,
-      ...((<E>(arr: E[] | E[][]): arr is E[][] => Array.isArray(arr[0]))(
-        additionalButtons,
-      )
-        ? additionalButtons
-        : [additionalButtons]),
-    ]);
+  /** Строит ряд навигации pagination, включая переходы к краям списка. */
+  public getPaginationPager(params: {
+    name: string;
+    currentPage: number;
+    totalPages: number;
+    mode?: PaginationPagerMode;
+  }) {
+    const toBtn = (page: number, label: string) =>
+      Markup.button.callback(label, `pager:${params.name}:${page}`);
+    const noop = () => Markup.button.callback('-', 'nope');
+    const { currentPage: curPage, totalPages } = params;
+    const mode = params.mode || 'edges';
+
+    if (mode === 'edges') {
+      return [
+        curPage > 1 ? toBtn(1, '«1') : noop(),
+        curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
+        toBtn(curPage, `-${curPage}-`),
+        curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
+        curPage < totalPages ? toBtn(totalPages, `${totalPages}»`) : noop(),
+      ];
+    }
+
+    const previousMiddle = Math.floor((1 + curPage) / 2);
+    const nextMiddle = Math.ceil((curPage + totalPages) / 2);
+    return [
+      previousMiddle > 1 && previousMiddle < curPage
+        ? toBtn(previousMiddle, `«${previousMiddle}`)
+        : noop(),
+      curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
+      toBtn(curPage, `-${curPage}-`),
+      nextMiddle > curPage && nextMiddle < totalPages
+        ? toBtn(nextMiddle, `${nextMiddle}»`)
+        : noop(),
+      curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
+    ];
+  }
+
+  /** Нормализует одиночный ряд или набор рядов дополнительных inline-кнопок. */
+  private getPaginationAdditionalRows(
+    buttons:
+      | Hideable<InlineKeyboardButton>[]
+      | Hideable<InlineKeyboardButton>[][],
+  ) {
+    return (
+      (<E>(arr: E[] | E[][]): arr is E[][] => Array.isArray(arr[0]))(buttons)
+        ? buttons
+        : [buttons]
+    ) as Hideable<InlineKeyboardButton>[][];
+  }
+
+  /**
+   * Строит pagination конкретного списка преподавателей.
+   * listId связывает callbacks с query и page size исходного сообщения.
+   */
+  public getTeachersListPagination(
+    ctx: IContext,
+    params: {
+      listId: string;
+      items: { id: number; name: string }[];
+      currentPage: number;
+      totalPages: number;
+    },
+  ) {
+    return this.getPagination({
+      name: `teacher-list:${params.listId}`,
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((teacher) => ({
+        title: teacher.name,
+        payload: `${params.listId}:${teacher.id}`,
+      })),
+      actionPrefix: 'selectTeacher:',
+      columnizer: true,
+      sortByLength: false,
+    });
   }
 
   public getActioner<T extends PaginationItemType>(

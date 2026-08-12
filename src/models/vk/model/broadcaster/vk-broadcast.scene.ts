@@ -299,7 +299,8 @@ export class VkBroadcastScene {
       social: SocialType.Vkontakte,
       filter: ctx.scene.state.filter,
       page,
-      limit: 8,
+      // В списке есть отдельная строка возврата и pager, поэтому доступны четыре получателя.
+      limit: 4,
     });
     const selected = new Set(ctx.scene.state.selectedRecipientIds);
 

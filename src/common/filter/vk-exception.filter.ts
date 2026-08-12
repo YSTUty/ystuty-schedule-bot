@@ -31,6 +31,14 @@ export class VkExceptionFilter implements ExceptionFilter {
     const next = vkHost.getNext();
 
     if (
+      exception instanceof VkException &&
+      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
+    ) {
+      await next?.();
+      return;
+    }
+
+    if (
       exception.message !== LocalePhrase.Common_NoAccess &&
       // Не логировать `ForbiddenException`, т.к. ошибка доступа
       // проверяется по сообщению `LocalePhrase.Common_NoAccess`
@@ -41,14 +49,6 @@ export class VkExceptionFilter implements ExceptionFilter {
         `OnUpdateType(${ctx?.type}): ${exception?.message || exception}`,
         exception.stack,
       );
-    }
-
-    if (
-      exception instanceof VkException &&
-      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
-    ) {
-      await next?.();
-      return;
     }
 
     if (

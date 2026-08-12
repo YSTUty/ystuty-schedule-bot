@@ -21,24 +21,47 @@ button:
     current: Текущая рассылка
     list: Список рассылок
     delete: Удалить
+    delete_confirm: Да, удалить
+    delete_cancel: Отмена
     back_to_menu: Назад в меню
     back_to_list: Назад к списку
     create_queue: 🚀 Создать очередь
     resume: ▶️ Запустить
     pause: ⏸ Пауза
     terminate: ⛔ Остановить
-    mode_toggle: "Режим: ${mode}. Переключить на ${nextMode}"
+    mode_toggle: 'Режим: ${mode}. Переключить на ${nextMode}'
     select_recipients: Выбрать получателей
     audience_all: Все по фильтру
     audience_manual: Тестовая выборка
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
-    schedule: Расписание
+    schedule: Расписание группы
     for_today: На сегодня
     for_tomorrow: На завтра
     for_week: На неделю
     for_next_week: На следующую
+    teacher: Выбрать преподавателя
+    my_teacher: Расписание преподавателя
+  schedule_notification:
+    title: Настройки рассылки
+    create: Настроить рассылку
+    edit: Редактировать
+    change_group: Изменить группу
+    done: Готово
+    enable: Включить
+    disable: Выключить
+    delete: Удалить
+    delete_confirm: Да, удалить
+    delete_cancel: Отмена
+    back: Назад
+    previous_page: ◀
+    next_page: ▶
+  groups:
+    list_inst_and_groups: 🏫 Список институтов и групп 📚
+    list_groups: 📚 Список групп 📚
+    list_institutes: 🏫 Список институтов 🏫
+    change_institute: 🏫 Сменить институт 🏫
 
 regexp:
   start: //?(start|старт|начать)( .*)?/i
@@ -60,11 +83,13 @@ page:
   start: |
     Привет! Это бот для расписания ЯГТУ
     ${ctx.state.userSocial.groupName ? '' : '\nНапиши help для получения списка команд'} \
+    ${ctx.isDM ? '\nДля смены группы или преподавателя используй кнопки ниже.' : ''} \
     ${webViewLink ? ('\nПросмотр расписания в браузере — ' + webViewLink + (ctx.state.userSocial.groupName ? '/g/' + ctx.state.userSocial.groupName : '')) : ''}
 
   init_bot: |
-    Чтобы продолжить, необходимо авторизироваться или выбрать учебную группу.\
-    ${useInline ? '' : ' Для этого напиши — войти или группа'}
+    Чтобы посмотреть расписание, можно авторизироваться, выбрать учебную группу или преподавателя.
+    Авторизация для просмотра расписания не обязательна.\
+    ${useInline ? '' : ' Для этого напиши — войти, группа или преподаватель'}
 
   help: |
     Команды для обращения к боту:
@@ -113,15 +138,57 @@ page:
       ⚠️ Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
       ${content}
     not_found_today: На этот день нету расписания
+    teachers_list: |
+      Преподаватели
+      Страница: ${currentPage}/${totalPages}
+
+      ${query ? 'Поиск: ' + query : 'Выбери преподавателя или напиши преподаватель Фамилия'}
+    teacher_selected: |
+      Выбран преподаватель: ${teacher.name}
+
+      Расписание: /tday или расписание преподавателя.
+      На неделю: /tweek или расписание преподавателя на неделю.
+    teacher_not_found: |
+      Преподаватель по запросу ${query} не найден.
+    teacher_search_hint: |
+      Использование: /teacher Фамилия или преподаватель Фамилия
+      Например: преподаватель Иванов
+    teacher_list_expired: Список преподавателей устарел. Открой новый через /tlist.
+    teacher_keyboard_updated: Клавиатура расписания обновлена.
+    teacher_not_selected: |
+      Сначала выбери преподавателя через преподаватель Фамилия или /tlist.
+    week_title: |
+      Расписание на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
+    teacher_week_title: |
+      Расписание преподавателя на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
+  schedule_notification:
+    settings: |
+      Рассылка расписания
+      ${notif ? ('Группа: ' + notif.targetId + '\nВремя: ' + String(notif.deliveryHour).padStart(2, '0') + ':' + String(notif.deliveryMinute).padStart(2, '0') + '\nРасписание: ' + (notif.targetDayOffset ? 'на завтра' : 'на сегодня') + '\nДни: ' + notif.weekdaysLabel + '\nСтатус: ' + (notif.isEnabled ? 'включена' : 'выключена')) : 'Рассылка пока не настроена.'}
+    select_hour: Выбери время отправки.
+    select_minute: Выбери минуты отправки.
+    select_target_day: Выбери, расписание на какой день получать в это время.
+    select_weekdays: Выбери дни недели. По умолчанию включены все дни.
+    need_group: Сначала выбери учебную группу, затем настрой рассылку.
+    saved: Настройки рассылки сохранены.
+    select_group: Выбери группу для этой рассылки.
+    confirm_delete: Удалить рассылку расписания для группы ${groupName}? Это действие нельзя отменить.
 
   select_group:
     enter_name_with_example: |
       Напиши название нужной группы.\nНапример, ${randomGroupName} \
       или ${randomGroupName2.toLowerCase()}
+    institutes_list: |
+      Список институтов
+      Страница: ${currentPage}/${totalPages}
+    groups_list: |
+      Список групп${instituteName ? ': ' + instituteName : ''}
+      Страница: ${currentPage}/${totalPages}
     selected: |
       Выбрана группа: ${selectedGroupName}
     not_found: |
-      Ошибка: Группа '${groupName}' не найдена
+      Ошибка: Группа "${groupName}" не найдена
+      Напиши другое название, Отмена или /cancel.
     reset: Группа сброшена
 
   broadcast:
@@ -219,4 +286,4 @@ broadcast:
     paused: Рассылка приостановлена
     resumed: Рассылка продолжена
     terminated: Рассылка остановлена
-    mode_changed: "Режим: ${mode}"
+    mode_changed: 'Режим: ${mode}'

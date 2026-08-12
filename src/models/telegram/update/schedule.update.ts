@@ -1,13 +1,24 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, On, Update } from '@xtcry/nestjs-telegraf';
+import {
+  Action,
+  Command,
+  Ctx,
+  Hears,
+  On,
+  Update,
+} from '@xtcry/nestjs-telegraf';
 
 import * as tg from 'telegraf/typings/core/types/typegram';
 import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
   allowerHtmlTags,
+  isPersonalTeacherScheduleCommand,
+  isPersonalTeacherWeekCommand,
   patternGroupName,
   patternTeacherId,
+  personalTeacherScheduleCommandRegExp,
+  personalTeacherWeekCommandRegExp,
   TelegrafExceptionFilter,
 } from '@my-common';
 import { TgHearsLocale } from '@my-common/decorator/tg';
@@ -30,13 +41,12 @@ export class ScheduleUpdate {
   async onInlineQuery(@Ctx() ctx: IContext<{}, TgUpdate.InlineQueryUpdate>) {
     // TODO: add to queue and wait
 
-    console.log('ctx.inlineQuery', ctx.inlineQuery);
-
-    const groupNameFromQuery = ctx.inlineQuery.query.trim();
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromQuery || ctx.userSocial?.groupName,
-    );
-
+    const groupNameQuery =
+      ctx.inlineQuery.query.trim() || ctx.userSocial?.groupName;
+    const groupName =
+      groupNameQuery &&
+      (this.ystutyService.getGroupByName(groupNameQuery) ||
+        this.ystutyService.parseGroupName(groupNameQuery));
     if (!groupName) {
       if (ctx.userSocial?.groupName) {
         await ctx.answerInlineQuery(
@@ -174,11 +184,13 @@ export class ScheduleUpdate {
   @Command('tt')
   @Command('day')
   @Command('tday')
+  @Hears(personalTeacherScheduleCommandRegExp)
   @TgHearsLocale([
     LocalePhrase.RegExp_Schedule_For_OneDay,
     LocalePhrase.Button_Schedule_Schedule,
     LocalePhrase.Button_Schedule_ForToday,
     LocalePhrase.Button_Schedule_ForTomorrow,
+    LocalePhrase.Button_Schedule_MyTeacher,
   ])
   @Action(
     [
@@ -188,7 +200,7 @@ export class ScheduleUpdate {
     ].map(
       (e) =>
         new RegExp(
-          `(?<phrase>${e.replace('.', '\\.')}):?${patternGroupName}?`,
+          `^(?<phrase>${e.replaceAll('.', '\\.')})(?::${patternGroupName})?$`,
           'i',
         ),
     ),
@@ -201,32 +213,53 @@ export class ScheduleUpdate {
     ].map(
       (e) =>
         new RegExp(
-          `(?<phrase>${e.replace('.', '\\.')}):?${patternTeacherId}?`,
+          `^(?<phrase>${e.replaceAll('.', '\\.')}):teacher:${patternTeacherId}$`,
           'i',
         ),
     ),
   )
   async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
-    const selectedTeacherId =
-      teacherIdFromMath ||
-      (ctx.message && 'text' in ctx.message && ctx.message.text === '/tday')
-        ? ctx.session.teacherId
-        : null;
+    const isPersonalTeacherCommand =
+      ctx.command === 'tday' ||
+      (ctx.message &&
+        'text' in ctx.message &&
+        isPersonalTeacherScheduleCommand(ctx.message.text)) ||
+      (ctx.message &&
+        'text' in ctx.message &&
+        ctx.message.text ===
+          ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher));
+    const selectedTeacherId = teacherIdFromMath
+      ? Number(teacherIdFromMath)
+      : isPersonalTeacherCommand
+        ? this.getPersonalTeacherId(ctx)
+        : undefined;
 
-    let targetId: string | number = Number(selectedTeacherId);
-    let targetType: 'group' | 'teacher' = 'teacher';
+    let targetId: string | number;
+    let targetType: 'group' | 'teacher';
 
-    if (!selectedTeacherId) {
+    if (selectedTeacherId) {
+      targetId = selectedTeacherId;
+      targetType = 'teacher';
+    } else {
+      if (isPersonalTeacherCommand) {
+        await ctx.replyWithHTML(
+          ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotSelected),
+        );
+        return;
+      }
+
       const selectedGroupName =
         ctx.chat.type === 'private'
           ? ctx.userSocial.groupName
           : ctx.sessionConversation.selectedGroupName;
 
       const groupNameFromMath = ctx.match?.groups?.groupName;
-      const groupName = this.ystutyService.getGroupByName(
-        groupNameFromMath || selectedGroupName,
-      );
+      const groupNameQuery = groupNameFromMath || selectedGroupName;
+      const groupName =
+        groupNameQuery &&
+        (this.ystutyService.getGroupByName(groupNameQuery) ||
+          this.ystutyService.parseGroupName(groupNameQuery));
 
       if (!groupName) {
         if (selectedGroupName) {
@@ -294,14 +327,18 @@ export class ScheduleUpdate {
       message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
     }
 
-    const targetName =
+    const targetName = allowerHtmlTags(
       targetType === 'group'
-        ? targetId
-        : this.ystutyService.getTeacherName(+targetId);
+        ? String(targetId)
+        : this.ystutyService.getTeacherName(+targetId) || '',
+      '',
+    );
 
     const keyboard = this.keyboardFactory.getScheduleInline(
       ctx,
-      String(targetId),
+      targetType === 'teacher'
+        ? { type: 'teacher', id: Number(targetId) }
+        : { type: 'group', id: String(targetId) },
     );
     const content = `${message}[${targetName}]`;
 
@@ -320,6 +357,7 @@ export class ScheduleUpdate {
 
   @Command('week')
   @Command('tweek')
+  @Hears(personalTeacherWeekCommandRegExp)
   @TgHearsLocale([
     LocalePhrase.RegExp_Schedule_For_Week,
     LocalePhrase.Button_Schedule_ForWeek,
@@ -332,7 +370,7 @@ export class ScheduleUpdate {
     ].map(
       (e) =>
         new RegExp(
-          `(?<phrase>${e.replace('.', '\\.')}):?${patternGroupName}?`,
+          `^(?<phrase>${e.replaceAll('.', '\\.')})(?::${patternGroupName})?$`,
           'i',
         ),
     ),
@@ -344,32 +382,53 @@ export class ScheduleUpdate {
     ].map(
       (e) =>
         new RegExp(
-          `(?<phrase>${e.replace('.', '\\.')}):?${patternTeacherId}?`,
+          `^(?<phrase>${e.replaceAll('.', '\\.')}):teacher:${patternTeacherId}$`,
           'i',
         ),
     ),
   )
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
-    const selectedTeacherId =
-      teacherIdFromMath ||
-      (ctx.message && 'text' in ctx.message && ctx.message.text === '/tweek')
-        ? ctx.session.teacherId
-        : null;
+    const isPersonalTeacherCommand =
+      ctx.command === 'tweek' ||
+      (ctx.message &&
+        'text' in ctx.message &&
+        isPersonalTeacherWeekCommand(ctx.message.text)) ||
+      (ctx.message &&
+        'text' in ctx.message &&
+        ctx.message.text ===
+          ctx.i18n.t(LocalePhrase.Button_Schedule_MyTeacher));
+    const selectedTeacherId = teacherIdFromMath
+      ? Number(teacherIdFromMath)
+      : isPersonalTeacherCommand
+        ? this.getPersonalTeacherId(ctx)
+        : undefined;
 
-    let targetId: string | number = Number(selectedTeacherId);
-    let targetType: 'group' | 'teacher' = 'teacher';
+    let targetId: string | number;
+    let targetType: 'group' | 'teacher';
 
-    if (!selectedTeacherId) {
+    if (selectedTeacherId) {
+      targetId = selectedTeacherId;
+      targetType = 'teacher';
+    } else {
+      if (isPersonalTeacherCommand) {
+        await ctx.replyWithHTML(
+          ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotSelected),
+        );
+        return;
+      }
+
       const selectedGroupName =
         ctx.chat.type === 'private'
           ? ctx.userSocial.groupName
           : ctx.sessionConversation.selectedGroupName;
 
       const groupNameFromMath = ctx.match?.groups?.groupName;
-      const groupName = this.ystutyService.getGroupByName(
-        groupNameFromMath || selectedGroupName,
-      );
+      const groupNameQuery = groupNameFromMath || selectedGroupName;
+      const groupName =
+        groupNameQuery &&
+        (this.ystutyService.getGroupByName(groupNameQuery) ||
+          this.ystutyService.parseGroupName(groupNameQuery));
 
       if (!groupName) {
         if (selectedGroupName) {
@@ -391,19 +450,20 @@ export class ScheduleUpdate {
     const isNextWeek =
       !!ctx.match?.groups?.next ||
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
-    let skipDays = isNextWeek ? 7 + 1 : 1;
+    const skipDays = isNextWeek ? 7 + 1 : 1;
 
     if (!ctx.callbackQuery) {
       await ctx.sendChatAction('typing');
     }
 
-    let [days, message] = await this.ystutyService.findNext({
+    const [days, scheduleMessage] = await this.ystutyService.findNext({
       targetId,
       targetType,
       skipDays,
       isWeek: true,
       withTags: true,
     });
+    let message = scheduleMessage;
 
     if (message) {
       if (days - 1 > skipDays) {
@@ -413,21 +473,28 @@ export class ScheduleUpdate {
         });
       }
 
-      message = `Расписание на ${
-        isNextWeek ? 'следующую ' : ''
-      }неделю:\n${message}`;
+      message = `${ctx.i18n.t(
+        targetType === 'teacher'
+          ? LocalePhrase.Page_Schedule_TeacherWeekTitle
+          : LocalePhrase.Page_Schedule_WeekTitle,
+        { isNextWeek },
+      )}\n${message}`;
     } else {
       message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
     }
 
-    const targetName =
+    const targetName = allowerHtmlTags(
       targetType === 'group'
-        ? targetId
-        : this.ystutyService.getTeacherName(+targetId);
+        ? String(targetId)
+        : this.ystutyService.getTeacherName(+targetId) || '',
+      '',
+    );
 
     const keyboard = this.keyboardFactory.getScheduleInline(
       ctx,
-      String(targetId),
+      targetType === 'teacher'
+        ? { type: 'teacher', id: Number(targetId) }
+        : { type: 'group', id: String(targetId) },
     );
     const content = `${message}[${targetName}]`;
 
@@ -450,5 +517,13 @@ export class ScheduleUpdate {
       }
       await ctx.replyWithHTML(content, keyboard);
     }
+  }
+
+  /** Возвращает выбранного преподавателя или однозначное совпадение ФИО профиля. */
+  private getPersonalTeacherId(ctx: IMessageContext) {
+    return (
+      ctx.session.teacherId ??
+      this.ystutyService.getTeacherByExactName(ctx.user?.fullname)?.id
+    );
   }
 }

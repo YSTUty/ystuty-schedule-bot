@@ -14,8 +14,11 @@ import { Markup, TelegramError } from 'telegraf';
 import type { Update as TgUpdate } from 'telegraf/types';
 
 import {
+  allowerHtmlTags,
   md5,
   patternGroupName,
+  teacherListCommandRegExp,
+  teacherSearchCommandRegExp,
   TelegrafExceptionFilter,
   TelegramAdminGuard,
   xs,
@@ -30,6 +33,7 @@ import {
 } from '@my-interfaces/telegram';
 
 import { UserService } from '../../user/user.service';
+import { TeacherListStateService } from '../../ystuty/teacher-list-state.service';
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
@@ -43,6 +47,7 @@ export class MainUpdate {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
     private readonly ystutyService: YSTUtyService,
+    private readonly teacherListStateService: TeacherListStateService,
     private readonly userService: UserService,
     private readonly telegramService: TelegramService,
   ) {}
@@ -347,18 +352,17 @@ export class MainUpdate {
     const { items, currentPage, totalPages } =
       this.ystutyService.groupsInstitutesList(page, count);
 
-    const keyboard = this.keyboardFactory.getPagination(
-      `inst-list-${count}`,
+    const keyboard = this.keyboardFactory.getPagination({
+      name: `inst-list-${count}`,
       currentPage,
       totalPages,
-      items.map((e) => ({
+      items: items.map((e) => ({
         title: e,
         payload: md5(e),
       })),
-      'pager:glist:',
-      [],
-      true,
-    );
+      actionPrefix: 'pager:glist:',
+      columnizer: true,
+    });
 
     const content = xs`
         <b>Список институтов</b>
@@ -380,16 +384,16 @@ export class MainUpdate {
 
   @Command('glist')
   @Action(
-    /pager:glist(:(?<instituteNameMD5>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
+    /pager:glist(:(?<instituteHash>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
   )
   async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
     let page: number | null = null;
     let count: number | null = null;
-    let instituteNameMD5: string | null = null;
+    let instituteHash: string | null = null;
 
     if (ctx.updateType === 'callback_query') {
       if (ctx.match?.groups) {
-        instituteNameMD5 = ctx.match.groups.instituteNameMD5;
+        instituteHash = ctx.match.groups.instituteHash;
         page = Number(ctx.match.groups.page);
         count = Number(ctx.match.groups.count);
       }
@@ -400,20 +404,21 @@ export class MainUpdate {
     page = page || 1;
     count = count || 26;
 
+    // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
     const { items, currentPage, totalPages } = this.ystutyService.groupsList(
       page,
       count,
-      instituteNameMD5,
+      instituteHash,
     );
 
-    const keyboard = this.keyboardFactory.getPagination(
-      `glist${instituteNameMD5 ? `:${instituteNameMD5}` : ''}-${count}`,
+    const keyboard = this.keyboardFactory.getPagination({
+      name: `glist${instituteHash ? `:${instituteHash}` : ''}-${count}`,
       currentPage,
       totalPages,
       items,
-      'selectGroup:',
-      [
-        ...(instituteNameMD5
+      actionPrefix: 'selectGroup:',
+      additionalButtons: [
+        ...(instituteHash
           ? [
               Markup.button.callback(
                 ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
@@ -422,11 +427,11 @@ export class MainUpdate {
             ]
           : []),
       ],
-      true,
-    );
+      columnizer: true,
+    });
 
-    const instituteName = instituteNameMD5
-      ? this.ystutyService.instituteNameByMD5(instituteNameMD5)
+    const instituteName = instituteHash
+      ? this.ystutyService.instituteNameByHash(instituteHash)
       : null;
     const content = xs`
         <b>Список групп${instituteName ? ` <i>(${instituteName})</i>` : ''}</b>
@@ -447,43 +452,106 @@ export class MainUpdate {
   }
 
   @Command('tlist')
-  @Action(/pager:tlist(-(?<count>[0-9]+))?:(?<page>[0-9]+)/i)
+  @Hears(teacherListCommandRegExp)
+  @TgHearsLocale(LocalePhrase.Button_Schedule_Teacher)
+  @Action(LocalePhrase.Button_Schedule_Teacher)
   async onTeachersList(@Ctx() ctx: ICbQOrMsg) {
-    let page: number | null = null;
-    let count: number | null = null;
+    await this.openTeachersList(ctx, '');
+  }
 
-    if (ctx.updateType === 'callback_query') {
-      if (ctx.match?.groups) {
-        page = Number(ctx.match.groups.page);
-        count = Number(ctx.match.groups.count);
-      }
-    } else if ('text' in ctx.message && !ctx.state.isLocalePhrase) {
-      [, page, count] = ctx.message.text.split(' ').map(Number);
+  @Action(/pager:teacher-list:(?<listId>[a-f0-9]{12}):(?<page>[0-9]+)/i)
+  async onTeachersListPage(@Ctx() ctx: ICallbackQueryContext) {
+    const listId = ctx.match?.groups?.listId;
+    const page = Number(ctx.match?.groups?.page) || 1;
+    const state =
+      listId && ctx.chat
+        ? await this.teacherListStateService.get(listId, {
+            transport: 'telegram',
+            ownerId: ctx.from.id,
+            peerId: ctx.chat.id,
+          })
+        : null;
+
+    if (!state) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+      );
+      return;
     }
 
-    page = page || 1;
-    count = count || 20;
+    await this.renderTeachersList(
+      ctx,
+      listId!,
+      state.query,
+      state.pageSize,
+      page,
+    );
+  }
 
-    const { items, currentPage, totalPages } =
-      await this.ystutyService.teachersList(page, count);
+  @Command('teacher')
+  @Hears(teacherSearchCommandRegExp)
+  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
+    const query = ctx.payload?.trim() || ctx.match?.groups?.query?.trim();
+    if (!query) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint),
+      );
+      return;
+    }
 
-    const keyboard = this.keyboardFactory.getPagination(
-      `tlist-${count}`,
+    const { totalCount } = this.ystutyService.teachersList(1, 10, query);
+    if (totalCount === 0) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
+          query: allowerHtmlTags(query, ''),
+        }),
+      );
+      return;
+    }
+
+    await this.openTeachersList(ctx, query);
+  }
+
+  /** Создаёт отдельное Redis-состояние для нового сообщения со списком преподавателей. */
+  private async openTeachersList(ctx: ICbQOrMsg, query: string) {
+    if (!ctx.chat) return;
+
+    const pageSize = 10;
+    const listId = await this.teacherListStateService.create({
+      transport: 'telegram',
+      ownerId: ctx.from.id,
+      peerId: ctx.chat.id,
+      query,
+      pageSize,
+    });
+
+    await this.renderTeachersList(ctx, listId, query, pageSize);
+  }
+
+  /** Рендерит указанную страницу, используя query исходного сообщения, а не session. */
+  private async renderTeachersList(
+    ctx: ICbQOrMsg,
+    listId: string,
+    query: string,
+    pageSize: number,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages } = this.ystutyService.teachersList(
+      page,
+      pageSize,
+      query,
+    );
+    const keyboard = this.keyboardFactory.getTeachersListPagination(ctx, {
+      listId,
+      items,
       currentPage,
       totalPages,
-      items.map((e) => ({
-        title: e.name,
-        payload: String(e.id),
-      })),
-      'selectTeacher:',
-      [],
-      true,
-    );
-
-    const content = xs`
-        <b>Список преподавателей</b>
-        <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
-    `;
+    });
+    const content = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
+      currentPage,
+      totalPages,
+      query: allowerHtmlTags(query, ''),
+    });
 
     if (ctx.callbackQuery) {
       try {
@@ -493,9 +561,10 @@ export class MainUpdate {
         });
       } catch {}
       await ctx.tryAnswerCbQuery();
-    } else {
-      await ctx.replyWithHTML(content, keyboard);
+      return;
     }
+
+    await ctx.replyWithHTML(content, keyboard);
   }
 
   @Hears(
@@ -508,9 +577,11 @@ export class MainUpdate {
         : ctx.sessionConversation.selectedGroupName;
 
     const groupNameFromMath = ctx.match?.groups?.groupName;
-    const groupName = this.ystutyService.getGroupByName(
-      groupNameFromMath || selectedGroupName,
-    );
+    const groupNameQuery = groupNameFromMath || selectedGroupName;
+    const groupName =
+      groupNameQuery &&
+      (this.ystutyService.getGroupByName(groupNameQuery) ||
+        this.ystutyService.parseGroupName(groupNameQuery));
 
     if (!groupName) {
       if (selectedGroupName) {
@@ -546,7 +617,10 @@ export class MainUpdate {
     await ctx.answerCbQuery();
   }
 
-  @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
+  @TgHearsLocale([
+    LocalePhrase.RegExp_Schedule_SelectGroup,
+    LocalePhrase.Button_SelectGroup,
+  ])
   @Action(/selectGroup:(?<groupName>(.*))/i)
   async hearSelectGroup(@Ctx() ctx: ICbQOrMsg) {
     const { from, chat, state, conversation, userSocial } = ctx;
@@ -564,7 +638,9 @@ export class MainUpdate {
         conversation.invitedByUserSocialId !== userSocial.id
       ) {
         try {
-          const members = await ctx.telegram.getChatAdministrators(chat!.id);
+          const members = await this.telegramService.getCachedChatAdmins(
+            chat!.id,
+          );
           const status = members.find((e) => e.user.id === from.id)?.status;
           if (status && !['administrator', 'creator'].includes(status)) {
             return ctx.i18n.t(LocalePhrase.Error_SelectGroup_OnlyAdminOrOwner);
@@ -590,29 +666,57 @@ export class MainUpdate {
     }
   }
 
-  // @TgHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
-  @Action(/selectTeacher:(?<teacherId>(.*))/i)
-  async hearSelectTeacher(@Ctx() ctx: ICbQOrMsg) {
-    const { chat } = ctx;
+  @Action(/selectTeacher:(?<listId>[a-f0-9]{12}):(?<teacherId>[0-9]+)/i)
+  async hearSelectTeacher(@Ctx() ctx: ICallbackQueryContext) {
+    const listId = ctx.match?.groups?.listId;
     const teacherId = Number(ctx.match?.groups?.teacherId);
+    const state =
+      listId && ctx.chat
+        ? await this.teacherListStateService.get(listId, {
+            transport: 'telegram',
+            ownerId: ctx.from.id,
+            peerId: ctx.chat.id,
+          })
+        : null;
 
-    if (!chat || chat.type !== 'private') {
-      await ctx.tryAnswerCbQuery('Nope');
-      return;
-    }
-
-    // await ctx.scene.enter(SELECT_GROUP_SCENE, { teacherId });
-
-    const teacherName = this.ystutyService.getTeacherName(teacherId);
-    if (!teacherName) {
-      await ctx.replyWithHTML(
-        `Преподаватель с ID <code>${teacherId}</code> не найден.`,
+    if (!state) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
       );
       return;
     }
-    // ctx.userSocial.teacherId = teacherId;
+
+    const teacher = this.ystutyService.getTeacher(teacherId);
+    if (!teacher) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
+          query: teacherId,
+        }),
+      );
+      return;
+    }
+
     ctx.session.teacherId = teacherId;
-    await ctx.replyWithHTML(`Выбран преподаватель: <b>${teacherName}</b>`);
+    const safeTeacher = {
+      ...teacher,
+      name: allowerHtmlTags(teacher.name, ''),
+    };
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
+        teacher: safeTeacher,
+      }),
+      this.keyboardFactory.getScheduleInline(ctx, {
+        type: 'teacher',
+        id: teacher.id,
+      }),
+    );
+
+    if (ctx.chat?.type === 'private') {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
+        this.keyboardFactory.getStart(ctx),
+      );
+    }
 
     if (ctx.callbackQuery) {
       await ctx.tryAnswerCbQuery();

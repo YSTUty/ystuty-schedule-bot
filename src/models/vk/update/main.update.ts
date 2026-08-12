@@ -12,12 +12,20 @@ import {
 import { NextMiddleware } from 'middleware-io';
 import { APIError, VK } from 'vk-io';
 
-import { VkAdminGuard, VkExceptionFilter } from '@my-common';
-import { VkHearsLocale } from '@my-common/decorator/vk';
+import {
+  md5,
+  teacherListCommandRegExp,
+  teacherSearchCommandRegExp,
+  teacherSearchSlashCommandRegExp,
+  VkAdminGuard,
+  VkExceptionFilter,
+} from '@my-common';
+import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { UserService } from '../../user/user.service';
+import { TeacherListStateService } from '../../ystuty/teacher-list-state.service';
 import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../vk.constants';
@@ -33,12 +41,13 @@ export class MainUpdate {
     private readonly vk: VK,
     private readonly vkService: VkService,
     private readonly ystutyService: YSTUtyService,
+    private readonly teacherListStateService: TeacherListStateService,
     private readonly userService: UserService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
 
   @Hears('/admin')
-  @UseGuards(new VkAdminGuard(true))
+  @UseGuards(VkAdminGuard(true))
   async onAdmin(@Ctx() ctx: IMessageContext) {
     await ctx.send('YOUARE ADMIN');
   }
@@ -193,6 +202,7 @@ export class MainUpdate {
     }
   }
 
+  // * Только если бот администратор
   @On('chat_title_update')
   async onChatTitleUpdate(@Ctx() ctx: IMessageContext) {
     if (!ctx.eventText) {
@@ -204,16 +214,114 @@ export class MainUpdate {
     await this.vkService.parseChatTitle(ctx, ctx.eventText);
   }
 
-  @On('message_event')
+  @OnMessageEvent()
   // TODO: add event/action decorator
   async onMessageEvent(
     @Ctx() ctx: IMessageEventContext,
     @Next() next: NextMiddleware,
   ) {
+    if ('nope' in ctx.eventPayload && ctx.eventPayload.nope) {
+      const text = ctx.eventPayload.nope?.text;
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: text ?? 'Nope ¯\\_(ツ)_/¯',
+      });
+      return;
+    }
+
+    const teacherAction = ctx.eventPayload.teacherAction as string | undefined;
+    const groupAction = ctx.eventPayload.groupAction as string | undefined;
+    if (groupAction === 'institutes') {
+      await ctx.scene.leave();
+      await this.renderInstitutesList(ctx, Number(ctx.eventPayload.page) || 1);
+      return;
+    }
+
+    if (groupAction === 'groups') {
+      await this.renderGroupsList(
+        ctx,
+        String(ctx.eventPayload.instituteHash || '') || undefined,
+        Number(ctx.eventPayload.page) || 1,
+      );
+      return;
+    }
+
+    if (groupAction === 'select') {
+      const groupName = String(ctx.eventPayload.groupName || '');
+      await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+      return;
+    }
+
+    if (teacherAction === 'list') {
+      const state = await this.getTeacherListState(ctx);
+      if (!state) {
+        await this.openTeachersList(ctx, '');
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+        });
+        return;
+      }
+
+      await this.renderTeachersList(
+        ctx,
+        String(ctx.eventPayload.listId),
+        state.query,
+        state.pageSize,
+        Number(ctx.eventPayload.page) || 1,
+      );
+      return;
+    }
+
+    if (teacherAction === 'select') {
+      const state = await this.getTeacherListState(ctx);
+      if (!state) {
+        await this.openTeachersList(ctx, '');
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+        });
+        return;
+      }
+
+      const teacherId = Number(ctx.eventPayload.teacherId);
+      const teacher = this.ystutyService.getTeacher(teacherId);
+      if (!teacher) {
+        await ctx.answer({ type: 'show_snackbar', text: 'Not found' });
+        return;
+      }
+
+      ctx.session.teacherId = teacher.id;
+      await ctx.api.messages.edit({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        message: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
+          teacher,
+        }),
+        keyboard: this.keyboardFactory
+          .getSchedule(ctx, { type: 'teacher', id: teacher.id })
+          .inline(),
+      });
+      if (ctx.isDM) {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
+          { keyboard: this.keyboardFactory.getStart(ctx) },
+        );
+      }
+      return;
+    }
+
     const phrase = ctx.eventPayload.phrase as LocalePhrase;
     if (!phrase) return next();
 
     switch (phrase) {
+      case LocalePhrase.Button_Schedule_Teacher: {
+        await this.openTeachersList(ctx, '');
+        return;
+      }
+      case LocalePhrase.Button_Cancel: {
+        return next();
+      }
       case LocalePhrase.Button_SelectGroup: {
         const groupName = ctx.eventPayload.groupName as string;
         await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
@@ -235,33 +343,214 @@ export class MainUpdate {
       }
     }
 
-    // return next();
     await ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
+    // return next();
+  }
+
+  @Hears('/institutes')
+  @VkHearsLocale(LocalePhrase.Button_Groups_ListInstAndGroups)
+  async onInstitutesList(@Ctx() ctx: IMessageContext | IMessageEventContext) {
+    await this.renderInstitutesList(ctx);
   }
 
   @Hears('/glist')
-  // @UseGuards(new VkAdminGuard(true))
-  async onGroupsList(@Ctx() ctx: IMessageContext) {
-    await ctx.send(
-      `List groups (50 max): ${this.ystutyService.groupNames
-        .slice(0, 50)
-        .join(', ')}`,
+  async onGroupsList(@Ctx() ctx: IMessageContext | IMessageEventContext) {
+    await this.renderGroupsList(ctx);
+  }
+
+  /** Отображает институты, оставляя пять строк под элементы и одну под pager. */
+  private async renderInstitutesList(
+    ctx: IMessageContext | IMessageEventContext,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages } =
+      this.ystutyService.groupsInstitutesList(page, 5);
+    const keyboard = this.keyboardFactory.getPagination({
+      currentPage,
+      totalPages,
+      items: items.map((name) => ({
+        title: name,
+        payload: { groupAction: 'groups', instituteHash: md5(name) },
+      })),
+      getPagePayload: (page) => ({ groupAction: 'institutes', page }),
+    });
+    const message = ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, {
+      currentPage,
+      totalPages,
+    });
+
+    await this.sendOrEditGroupList(ctx, message, keyboard);
+  }
+
+  /** Отображает группы выбранного института или общий список по slash-команде. */
+  private async renderGroupsList(
+    ctx: IMessageContext | IMessageEventContext,
+    instituteHash?: string,
+    page = 1,
+  ) {
+    const columnsCount = 2;
+    const pageSize = instituteHash ? 4 : 5;
+    // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
+    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
+      page,
+      pageSize,
+      instituteHash || null,
     );
+    const instituteName = instituteHash
+      ? this.ystutyService.instituteNameByHash(instituteHash)
+      : undefined;
+    const keyboard = this.keyboardFactory.getPagination({
+      currentPage,
+      totalPages,
+      items: this.getGroupListRows(items, columnsCount),
+      getPagePayload: (page) => ({
+        groupAction: 'groups',
+        instituteHash,
+        page,
+      }),
+      additionalButtons: instituteHash
+        ? [[this.keyboardFactory.getInstitutesListButton(ctx)]]
+        : undefined,
+    });
+    const message = ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
+      instituteName,
+      currentPage,
+      totalPages,
+    });
+
+    await this.sendOrEditGroupList(ctx, message, keyboard);
+  }
+
+  /** Явно разбивает группы по четыре кнопки, не оставляя это на усмотрение paginator. */
+  private getGroupListRows(groupNames: string[], columnsCount: number) {
+    return Array.from(
+      { length: Math.ceil(groupNames.length / columnsCount) },
+      (_, index) =>
+        groupNames
+          .slice(index * columnsCount, (index + 1) * columnsCount)
+          .map((groupName) => ({
+            title: groupName,
+            payload: { groupAction: 'select', groupName },
+          })),
+    );
+  }
+
+  /** Отправляет новый список или заменяет сообщение, от которого пришёл callback. */
+  private async sendOrEditGroupList(
+    ctx: IMessageContext | IMessageEventContext,
+    message: string,
+    keyboard: ReturnType<VKKeyboardFactory['getPagination']>,
+  ) {
+    const inlineKeyboard = keyboard.inline();
+
+    if (ctx.isMessageEventContext()) {
+      await ctx.editMessage({ message, keyboard: inlineKeyboard });
+      return;
+    }
+
+    await ctx.send(message, { keyboard: inlineKeyboard });
   }
 
   @Hears('/tlist')
+  @Hears(teacherListCommandRegExp)
+  @VkHearsLocale(LocalePhrase.Button_Schedule_Teacher)
   // @UseGuards(new VkAdminGuard(true))
   async onTeachersList(@Ctx() ctx: IMessageContext) {
-    await ctx.send(
-      `List teachers (50 max): ${this.ystutyService.teacherNames
-        .slice(0, 50)
-        .join(', ')}`,
-    );
+    await this.openTeachersList(ctx, '');
   }
 
-  @VkHearsLocale(LocalePhrase.RegExp_Schedule_SelectGroup)
+  @Hears(teacherSearchSlashCommandRegExp)
+  @Hears(teacherSearchCommandRegExp)
+  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
+    const query = ctx.$match?.groups?.query?.trim();
+    if (!query) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint));
+      return;
+    }
+
+    const { totalCount } = this.ystutyService.teachersList(1, 20, query);
+    if (totalCount === 0) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, { query }),
+      );
+      return;
+    }
+
+    await this.openTeachersList(ctx, query);
+  }
+
+  /** Создаёт отдельное Redis-состояние для нового сообщения со списком преподавателей. */
+  private async openTeachersList(
+    ctx: IMessageContext | IMessageEventContext,
+    query: string,
+  ) {
+    const pageSize = 5;
+    const listId = await this.teacherListStateService.create({
+      transport: 'vkontakte',
+      ownerId: ctx.senderId || ctx.userId,
+      peerId: ctx.peerId,
+      query,
+      pageSize,
+    });
+
+    await this.renderTeachersList(ctx, listId, query, pageSize);
+  }
+
+  /** Рендерит страницу списка по query, сохранённому в state конкретного сообщения. */
+  private async renderTeachersList(
+    ctx: IMessageContext | IMessageEventContext,
+    listId: string,
+    query: string,
+    pageSize: number,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages } = this.ystutyService.teachersList(
+      page,
+      pageSize,
+      query,
+    );
+    const message = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
+      currentPage,
+      totalPages,
+      query,
+    });
+
+    const keyboard = this.keyboardFactory
+      .getTeachersList({ ctx, listId, items, currentPage, totalPages })
+      .inline();
+
+    if ('eventPayload' in ctx) {
+      await ctx.api.messages.edit({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        message,
+        keyboard,
+      });
+      return;
+    }
+
+    await ctx.send(message, { keyboard });
+  }
+
+  /** Проверяет, что callback относится к списку текущего пользователя и диалога. */
+  private async getTeacherListState(ctx: IMessageEventContext) {
+    const listId = ctx.eventPayload.listId;
+    if (typeof listId !== 'string') return null;
+
+    return await this.teacherListStateService.get(listId, {
+      transport: 'vkontakte',
+      ownerId: ctx.senderId || ctx.userId,
+      peerId: ctx.peerId,
+    });
+  }
+
+  @VkHearsLocale([
+    LocalePhrase.RegExp_Schedule_SelectGroup,
+    LocalePhrase.Button_SelectGroup,
+  ])
   async hearSelectGroup(@Ctx() ctx: IMessageContext) {
     const { senderId, peerId, state } = ctx;
+
     const groupName = ctx.$match?.groups?.groupName;
     const withTrigger = !!ctx.$match?.groups?.trigger;
 
@@ -275,9 +564,7 @@ export class MainUpdate {
         state.conversation.invitedByUserSocialId !== state.userSocial.id
       ) {
         try {
-          const { items } = await this.vk.api.messages.getConversationMembers({
-            peer_id: peerId,
-          });
+          const items = await this.vkService.getCachedConvMembers(peerId);
           console.log(items);
           const member = items.find((e) => e.member_id === senderId);
           if (!member || !member.is_admin) {
@@ -304,9 +591,7 @@ export class MainUpdate {
 
     if (ctx.isChat) {
       try {
-        const { items } = await this.vk.api.messages.getConversationMembers({
-          peer_id: ctx.peerId,
-        });
+        const items = await this.vkService.getCachedConvMembers(ctx.peerId);
         const member = items.find((e) => e.member_id === ctx.senderId);
         if (!member || !member.is_admin) {
           return ctx.i18n.t(LocalePhrase.Common_NoAccess);

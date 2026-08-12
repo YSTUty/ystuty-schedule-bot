@@ -7,6 +7,7 @@ import {
 import { InjectBot } from '@xtcry/nestjs-telegraf';
 
 import { Telegraf } from 'telegraf';
+import { ChatMember } from 'telegraf/typings/core/types/typegram';
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 
 import * as xEnv from '@my-environment';
@@ -15,6 +16,12 @@ import { IContext } from '@my-interfaces/telegram';
 
 import { RedisService } from '../redis/redis.service';
 import { YSTUtyService } from '../ystuty/ystuty.service';
+
+const CHAT_ADMINS_CACHE_TTL_SECONDS = 120;
+type CachedChatAdmin = {
+  user: { id: ChatMember['user']['id'] };
+  status: ChatMember['status'];
+};
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnApplicationShutdown {
@@ -169,5 +176,26 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
       await lock.unlock();
       throw err;
     }
+  }
+
+  public async getCachedChatAdmins(chatId: number) {
+    const cacheKey = `telegram:chat-admins:${chatId}`;
+    const cachedAdmins = await this.redisService.redis.get(cacheKey);
+    if (cachedAdmins) {
+      return JSON.parse(cachedAdmins) as CachedChatAdmin[];
+    }
+
+    const admins = await this.bot.telegram.getChatAdministrators(chatId);
+    const cachedValue: CachedChatAdmin[] = admins.map((admin) => ({
+      user: { id: admin.user.id },
+      status: admin.status,
+    }));
+    await this.redisService.redis.set(
+      cacheKey,
+      JSON.stringify(cachedValue),
+      'EX',
+      CHAT_ADMINS_CACHE_TTL_SECONDS,
+    );
+    return cachedValue;
   }
 }

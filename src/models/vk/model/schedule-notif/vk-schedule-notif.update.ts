@@ -17,6 +17,7 @@ import {
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
 import { ScheduleNotifTargetDayOffset } from '../../../schedule-notif/schedule-notif.types';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+import { VkService } from '../../vk.service';
 
 import { VK_SCHEDULE_NOTIFICATION_GROUP_SCENE } from './vk-schedule-notif-group.scene';
 
@@ -26,6 +27,7 @@ export class VkScheduleNotifUpdate {
   constructor(
     private readonly notifService: ScheduleNotifService,
     private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly vkService: VkService,
   ) {}
 
   @VkHearsLocale(LocalePhrase.Button_ScheduleNotif)
@@ -371,10 +373,7 @@ export class VkScheduleNotifUpdate {
       return true;
     }
     try {
-      // TODO: add caching (only required fields)
-      const { items } = await ctx.api.messages.getConversationMembers({
-        peer_id: ctx.peerId,
-      });
+      const items = await this.vkService.getCachedConvMembers(ctx.peerId);
       return !!items.find(
         (item) =>
           item.member_id === (ctx.senderId || ctx.userId) && item.is_admin,

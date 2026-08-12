@@ -18,6 +18,7 @@ describe('VkScheduleNotifUpdate', () => {
     const update = new VkScheduleNotifUpdate(
       notifService as any,
       keyboardFactory as any,
+      {} as any,
     );
     const t = jest.fn().mockReturnValue('confirm delete');
     const ctx = {
@@ -34,5 +35,30 @@ describe('VkScheduleNotifUpdate', () => {
       LocalePhrase.Page_ScheduleNotif_ConfirmDelete,
       { groupName: 'ЦИС-11' },
     );
+  });
+
+  it('checks conversation admin via cached vk service members', async () => {
+    const vkService = {
+      getCachedConvMembers: jest
+        .fn()
+        .mockResolvedValue([{ member_id: 5, is_admin: true }]),
+    };
+    const update = new VkScheduleNotifUpdate(
+      {} as any,
+      {} as any,
+      vkService as any,
+    );
+    const ctx = {
+      isDM: false,
+      peerId: 2000000001,
+      senderId: 5,
+      state: {
+        conversation: { invitedByUserSocialId: 2 },
+        userSocial: { id: 1 },
+      },
+    };
+
+    await expect((update as any).canManage(ctx)).resolves.toBe(true);
+    expect(vkService.getCachedConvMembers).toHaveBeenCalledWith(2000000001);
   });
 });

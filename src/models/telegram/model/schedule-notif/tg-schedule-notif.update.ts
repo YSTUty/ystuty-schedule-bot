@@ -12,6 +12,7 @@ import {
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
 import { ScheduleNotifTargetDayOffset } from '../../../schedule-notif/schedule-notif.types';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+import { TelegramService } from '../../telegram.service';
 
 import { TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE } from './tg-schedule-notif-group.scene';
 
@@ -20,6 +21,7 @@ export class TgScheduleNotifUpdate {
   constructor(
     private readonly notifService: ScheduleNotifService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly telegramService: TelegramService,
   ) {}
 
   @TgHearsLocale(LocalePhrase.Button_ScheduleNotif)
@@ -353,8 +355,9 @@ export class TgScheduleNotifUpdate {
     if (ctx.conversation.invitedByUserSocialId === ctx.userSocial.id)
       return true;
     try {
-      // TODO: add caching
-      const admins = await ctx.telegram.getChatAdministrators(ctx.chat!.id);
+      const admins = await this.telegramService.getCachedChatAdmins(
+        ctx.chat!.id,
+      );
       const status = admins.find(
         (item) => item.user.id === ctx.from!.id,
       )?.status;

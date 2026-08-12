@@ -638,7 +638,9 @@ export class MainUpdate {
         conversation.invitedByUserSocialId !== userSocial.id
       ) {
         try {
-          const members = await ctx.telegram.getChatAdministrators(chat!.id);
+          const members = await this.telegramService.getCachedChatAdmins(
+            chat!.id,
+          );
           const status = members.find((e) => e.user.id === from.id)?.status;
           if (status && !['administrator', 'creator'].includes(status)) {
             return ctx.i18n.t(LocalePhrase.Error_SelectGroup_OnlyAdminOrOwner);

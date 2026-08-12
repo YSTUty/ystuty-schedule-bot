@@ -564,9 +564,7 @@ export class MainUpdate {
         state.conversation.invitedByUserSocialId !== state.userSocial.id
       ) {
         try {
-          const { items } = await this.vk.api.messages.getConversationMembers({
-            peer_id: peerId,
-          });
+          const items = await this.vkService.getCachedConvMembers(peerId);
           console.log(items);
           const member = items.find((e) => e.member_id === senderId);
           if (!member || !member.is_admin) {
@@ -593,9 +591,7 @@ export class MainUpdate {
 
     if (ctx.isChat) {
       try {
-        const { items } = await this.vk.api.messages.getConversationMembers({
-          peer_id: ctx.peerId,
-        });
+        const items = await this.vkService.getCachedConvMembers(ctx.peerId);
         const member = items.find((e) => e.member_id === ctx.senderId);
         if (!member || !member.is_admin) {
           return ctx.i18n.t(LocalePhrase.Common_NoAccess);

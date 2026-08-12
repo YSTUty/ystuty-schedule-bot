@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectVkApi } from 'nestjs-vk';
 
 import { getRandomId, VK } from 'vk-io';
+import { MessagesConversationMember } from 'vk-io/lib/api/schemas/objects';
 import { MessagesSendParams } from 'vk-io/lib/api/schemas/params';
 
 import * as xEnv from '@my-environment';
@@ -10,6 +11,12 @@ import { IContext, IMessageContext } from '@my-interfaces/vk';
 
 import { RedisService } from '../redis/redis.service';
 import { YSTUtyService } from '../ystuty/ystuty.service';
+
+const CONVERSATION_MEMBERS_CACHE_TTL_SECONDS = 120;
+type CachedConversationMember = Pick<
+  MessagesConversationMember,
+  'member_id' | 'is_admin' | 'is_owner'
+>;
 
 @Injectable()
 export class VkService implements OnModuleInit {
@@ -147,5 +154,29 @@ export class VkService implements OnModuleInit {
       await lock.unlock();
       throw err;
     }
+  }
+
+  public async getCachedConvMembers(peerId: number) {
+    const cacheKey = `vk:conversation-members:${peerId}`;
+    const cachedMembers = await this.redisService.redis.get(cacheKey);
+    if (cachedMembers) {
+      return JSON.parse(cachedMembers) as CachedConversationMember[];
+    }
+
+    const { items } = await this.bot.api.messages.getConversationMembers({
+      peer_id: peerId,
+    });
+    const cachedValue: CachedConversationMember[] = items.map((item) => ({
+      member_id: item.member_id,
+      is_admin: item.is_admin,
+      is_owner: item.is_owner,
+    }));
+    await this.redisService.redis.set(
+      cacheKey,
+      JSON.stringify(cachedValue),
+      'EX',
+      CONVERSATION_MEMBERS_CACHE_TTL_SECONDS,
+    );
+    return cachedValue;
   }
 }

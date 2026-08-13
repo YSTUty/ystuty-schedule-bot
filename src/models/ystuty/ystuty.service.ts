@@ -230,6 +230,23 @@ export class YSTUtyService implements OnModuleInit {
     return teachers.length === 1 ? teachers[0] : undefined;
   }
 
+  /** Проверяет, что текст содержит значимую часть ФИО одного преподавателя. */
+  public isTeacherSearchFallbackQuery(query?: string | null) {
+    const normalizedQuery = this.normalizeTeacherName(query || '');
+    if (normalizedQuery.length < 5) return false;
+
+    const queryTokens = normalizedQuery.split(' ').filter(Boolean);
+    return this.allTeachersList.some((teacher) => {
+      const teacherTokens = this.normalizeTeacherName(teacher.name)
+        .split(' ')
+        .filter(Boolean);
+
+      return queryTokens.every((queryToken) =>
+        teacherTokens.some((teacherToken) => teacherToken.includes(queryToken)),
+      );
+    });
+  }
+
   public teachersList(page = 1, count = 20, query?: string | null) {
     const normalizedQuery = this.normalizeTeacherName(query || '');
     const searchTokens = normalizedQuery.split(' ').filter(Boolean);

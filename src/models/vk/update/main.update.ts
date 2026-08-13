@@ -615,6 +615,11 @@ export class MainUpdate {
 
   @HearFallback()
   async onHearFallback(@Ctx() ctx: IMessageContext) {
-    // ...
+    const query = ctx.text?.trim();
+    if (!ctx.isDM || !this.ystutyService.isTeacherSearchFallbackQuery(query)) {
+      return;
+    }
+
+    await this.openTeachersList(ctx, query!);
   }
 }

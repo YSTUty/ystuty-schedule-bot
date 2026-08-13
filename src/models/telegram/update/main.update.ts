@@ -23,7 +23,7 @@ import {
   TelegramAdminGuard,
   xs,
 } from '@my-common';
-import { TgHearsLocale } from '@my-common/decorator/tg';
+import { AllowedChatTypes, TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import {
   ICallbackQueryContext,
@@ -722,5 +722,17 @@ export class MainUpdate {
       await ctx.tryAnswerCbQuery();
       await ctx.deleteMessage();
     }
+  }
+
+  /** Обрабатывает нераспознанное ФИО преподавателя только в личных сообщениях. */
+  @On('text')
+  @AllowedChatTypes('private')
+  async onTeacherNameFallback(@Ctx() ctx: IMessageContext, @Next() next) {
+    if (!('text' in ctx.message)) return next();
+
+    const query = ctx.message.text.trim();
+    if (!this.ystutyService.isTeacherSearchFallbackQuery(query)) return next();
+
+    await this.openTeachersList(ctx, query);
   }
 }

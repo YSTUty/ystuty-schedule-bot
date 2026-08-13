@@ -5,9 +5,8 @@ import {
   Entity,
   Index,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -15,6 +14,8 @@ import {
 import { SocialType } from '@my-common/constants';
 
 import { UserSocial } from '../../user/entity/user-social.entity';
+
+import { UserToConversation } from './userToConversation.entity';
 
 @Entity()
 @Index(['social', 'conversationId'], { unique: true })
@@ -67,14 +68,8 @@ export class Conversation {
   @Column({ type: 'character varying', length: 64, nullable: true })
   public chatType: string;
 
-  @Expose()
-  @ManyToMany(() => UserSocial, (userSocial) => userSocial.conversations)
-  @JoinTable({
-    name: 'user_to_conversation',
-    joinColumn: { name: 'conversationId' },
-    inverseJoinColumn: { name: 'userSocialId' },
-  })
-  public users: UserSocial[];
+  @OneToMany(() => UserToConversation, (membership) => membership.conversation)
+  public userMemberships: UserToConversation[];
 
   @Expose()
   @CreateDateColumn()

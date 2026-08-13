@@ -47,13 +47,14 @@ export class SocialService implements OnModuleInit {
     conv: Partial<Conversation>,
     userSocial?: UserSocial,
   ) {
-    if (!conv.users?.length) {
-      conv.users = userSocial ? [userSocial] : [];
-    }
     conv.social = social;
     const conversation = new Conversation(
       await this.conversationRepository.save(conv),
     );
+
+    if (userSocial) {
+      await this.iAmInConversation(userSocial, conversation.id);
+    }
 
     this.metricsService.conversationCounter.inc({ social });
 

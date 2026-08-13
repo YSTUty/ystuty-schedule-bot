@@ -2,6 +2,5 @@ services:
   app_srv:
     build:
       target: production
-    # command: yarn start:prod
-    command: npm run start:prod
+    command: npm run start:prod_orm
     # command: node dist/main.js

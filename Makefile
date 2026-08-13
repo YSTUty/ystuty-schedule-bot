@@ -32,7 +32,7 @@ networks := ystuty-network # ystuty-access-network
 	up-db up-db-build \
 	up-dev-with-db up-dev-with-db-build \
 	up-prod-with-db up-prod-with-db-build \
-	pull-image deploy deploy-with-db \
+	pull-image migrate-prod migrate-deploy deploy deploy-with-db \
   ensure-networks
 
 help:
@@ -40,8 +40,8 @@ help:
 	'Targets:' \
 	'  up-dev                 Start app (dev)' \
 	'  up-dev-build           Build and start app (dev)' \
-	'  up-prod                Start app (prod)' \
-	'  up-prod-build          Build and start app (prod)' \
+	'  up-prod                Run migrations and start app (prod)' \
+	'  up-prod-build          Build, run migrations, and start app (prod)' \
 	'  up-db                  Start postgres+redis only' \
 	'  up-db-build            Build (if any) and start postgres+redis only' \
 	'  up-dev-with-db         Start db then app (dev)' \
@@ -49,6 +49,8 @@ help:
 	'  up-prod-with-db        Start db then app (prod)' \
 	'  up-prod-with-db-build  Start db then build+app (prod)' \
 	'  pull-image             Pull selected GHCR image without restarting app' \
+	'  migrate-prod           Run migrations in the local production image' \
+	'  migrate-deploy         Run migrations in the selected GHCR image' \
 	'  deploy                 Pull and start GHCR image with external PostgreSQL/Redis' \
 	'  deploy-with-db         Start local PostgreSQL/Redis, then deploy GHCR image' \
 	'  ps                     Show containers' \
@@ -128,6 +130,12 @@ up-prod-with-db-build: up-db
 
 pull-image:
 	@$(image_env) $(dc) $(files_deploy) pull $(service_name)
+
+migrate-prod: ensure-networks
+	@$(dc) $(files_prod) run --rm --no-deps $(service_name) npm run typeorm:run:prod
+
+migrate-deploy: ensure-networks
+	@$(image_env) $(dc) $(files_deploy) run --rm --no-deps $(service_name) npm run typeorm:run:prod
 
 deploy: ensure-networks pull-image
 	@$(image_env) $(dc) $(files_deploy) up -d --no-deps --force-recreate $(service_name)

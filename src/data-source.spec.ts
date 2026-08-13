@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+
 describe('dataSource', () => {
   const originalEnv = { ...process.env };
 
@@ -15,8 +17,10 @@ describe('dataSource', () => {
 
     expect(options.synchronize).toBe(false);
     expect(options.dropSchema).toBe(false);
-    expect(options.entities).toEqual(['src/**/*.entity{.ts,.js}']);
-    expect(options.migrations).toEqual(['src/migrations/*{.ts,.js}']);
+    expect(options.entities).toEqual([join(__dirname, '**/*.entity{.ts,.js}')]);
+    expect(options.migrations).toEqual([
+      join(__dirname, 'migrations/*{.ts,.js}'),
+    ]);
     expect(options.migrationsTableName).toBe('migrations');
   });
 });

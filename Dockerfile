@@ -78,4 +78,4 @@ COPY --from=build /home/node/app/package.json ./package.json
 
 USER node
 # CMD ["node", "dist/main.js"]
-CMD ["npm", "run", "start:prod"]
+CMD ["npm", "run", "start:prod_orm"]

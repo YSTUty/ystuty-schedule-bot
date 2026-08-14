@@ -244,6 +244,16 @@ export class UserService {
         }),
       );
 
+      if (socialType === SocialType.Telegram) {
+        await this.telegramService.syncPrivateChatCommands({
+          chatId: socialId,
+          isAuthorized: true,
+          isAdmin: this.telegramService.isAdmin(socialId, linkedUser.role),
+          hasGroup: !!userSocial.groupName,
+          teacherId: (session as TgISessionState | null)?.teacherId,
+        });
+      }
+
       if (
         linkedUser.groupName &&
         linkedUser.groupName !== userSocial.groupName

@@ -12,6 +12,7 @@ import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 
 import * as xEnv from '@my-environment';
 
+import { UserRole } from '@my-common/constants';
 import { IContext } from '@my-interfaces/telegram';
 
 import { RedisService } from '../redis/redis.service';
@@ -21,6 +22,14 @@ const CHAT_ADMINS_CACHE_TTL_SECONDS = 120;
 type CachedChatAdmin = {
   user: { id: ChatMember['user']['id'] };
   status: ChatMember['status'];
+};
+
+type PrivateChatCommandsParams = {
+  chatId: number;
+  isAuthorized: boolean;
+  isAdmin: boolean;
+  hasGroup?: boolean;
+  teacherId?: number;
 };
 
 @Injectable()
@@ -52,11 +61,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     });
 
     try {
-      await this.bot.telegram.setMyCommands([
-        { command: 'start', description: 'Start the bot' },
-        { command: 'day', description: 'Расписание на день' },
-        { command: 'week', description: 'Расписание на неделю' },
-      ]);
+      await this.bot.telegram.setMyCommands(this.baseCommands());
       this.bot
         .launch({
           allowedUpdates: [
@@ -75,6 +80,21 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     } catch (err) {
       this.logger.error(err);
     }
+  }
+
+  public baseCommands(type?: 'start' | 'end') {
+    const start = [
+      { command: 'start', description: 'Запустить бота' },
+      { command: 'day', description: 'Расписание на день' },
+      // { command: 'week', description: 'Расписание на неделю' },
+      { command: 'cancel', description: 'Отменить текущее действие' },
+    ];
+    const end = [
+      { command: 'institutes', description: 'Выбрать группу по институту' },
+      { command: 'tlist', description: 'Выбрать преподавателя из списка' },
+      { command: 'teacher', description: 'Выбрать преподавателя по ФИО' },
+    ];
+    return type === 'start' ? start : type === 'end' ? end : [...start, ...end];
   }
 
   public async shutdown(signal: string) {
@@ -108,6 +128,61 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
         ...extra,
       });
     }
+  }
+
+  /** Синхронизирует меню команд личного чата с доступными пользователю сценариями. */
+  public async syncPrivateChatCommands({
+    chatId,
+    isAuthorized,
+    isAdmin,
+    hasGroup = false,
+    teacherId,
+  }: PrivateChatCommandsParams) {
+    const commands = this.baseCommands('start');
+
+    if (!isAuthorized) {
+      commands.push({ command: 'auth', description: 'Авторизоваться' });
+    }
+
+    if (hasGroup) {
+      commands.push(
+        // { command: 'day', description: 'Расписание на сегодня' },
+        { command: 'week', description: 'Расписание на неделю' },
+      );
+    }
+
+    if (teacherId) {
+      commands.push(
+        { command: 'tday', description: 'Расписание преподавателя на сегодня' },
+        { command: 'tweek', description: 'Расписание преподавателя на неделю' },
+      );
+    }
+
+    commands.push(...this.baseCommands('end'));
+
+    if (isAdmin) {
+      commands.push({
+        command: 'broadcast',
+        description: 'Управление рассылками',
+      });
+    }
+
+    try {
+      await this.bot.telegram.setMyCommands(commands, {
+        scope: { type: 'chat', chat_id: chatId },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to update commands for Telegram chat ${chatId}`,
+        err,
+      );
+    }
+  }
+
+  public isAdmin(userId: number, role?: UserRole | null) {
+    return (
+      xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(userId) || role === UserRole.ADMIN
+    );
   }
 
   public async parseChatTitle(ctx: IContext, str: string, allowMessage = true) {

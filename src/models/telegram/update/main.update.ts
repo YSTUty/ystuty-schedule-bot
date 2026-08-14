@@ -23,7 +23,7 @@ import {
   TelegramAdminGuard,
   xs,
 } from '@my-common';
-import { TgHearsLocale } from '@my-common/decorator/tg';
+import { AllowedChatTypes, TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import {
   ICallbackQueryContext,
@@ -105,6 +105,16 @@ export class MainUpdate {
       return;
     }
 
+    if (ctx.chat.type === 'private') {
+      await this.telegramService.syncPrivateChatCommands({
+        chatId: ctx.chat.id,
+        isAuthorized: !!ctx.user,
+        isAdmin: this.telegramService.isAdmin(ctx.from.id, ctx.user?.role),
+        hasGroup: !!ctx.userSocial.groupName,
+        teacherId: ctx.session.teacherId,
+      });
+    }
+
     if ('text' in ctx.message) {
       const [, ...params] = ctx.message.text.split(' ');
       if (params.length > 0) {
@@ -152,6 +162,13 @@ export class MainUpdate {
       await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_InitBot), keyboard);
     }
   }
+
+  // /** Отвечает на /cancel, когда пользователь не находится в wizard-сцене. */
+  // @Command('cancel')
+  // async onCancel(@Ctx() ctx: IMessageContext) {
+  //   if (ctx.scene.current) return;
+  //   await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Common_Canceled));
+  // }
 
   @TgHearsLocale(LocalePhrase.Button_Profile)
   @Action(LocalePhrase.Button_Profile)
@@ -697,6 +714,15 @@ export class MainUpdate {
     }
 
     ctx.session.teacherId = teacherId;
+    if (ctx.chat?.type === 'private') {
+      await this.telegramService.syncPrivateChatCommands({
+        chatId: ctx.chat.id,
+        isAuthorized: !!ctx.user,
+        isAdmin: this.telegramService.isAdmin(ctx.from.id, ctx.user?.role),
+        hasGroup: !!ctx.userSocial.groupName,
+        teacherId,
+      });
+    }
     const safeTeacher = {
       ...teacher,
       name: allowerHtmlTags(teacher.name, ''),
@@ -722,5 +748,17 @@ export class MainUpdate {
       await ctx.tryAnswerCbQuery();
       await ctx.deleteMessage();
     }
+  }
+
+  /** Обрабатывает нераспознанное ФИО преподавателя только в личных сообщениях. */
+  @On('text')
+  @AllowedChatTypes('private')
+  async onTeacherNameFallback(@Ctx() ctx: IMessageContext, @Next() next) {
+    if (!('text' in ctx.message)) return next();
+
+    const query = ctx.message.text.trim();
+    if (!this.ystutyService.isTeacherSearchFallbackQuery(query)) return next();
+
+    await this.openTeachersList(ctx, query);
   }
 }

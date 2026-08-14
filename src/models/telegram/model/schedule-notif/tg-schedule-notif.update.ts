@@ -262,7 +262,10 @@ export class TgScheduleNotifUpdate {
     const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
       notif: notifView,
     });
-    const keyboard = this.keyboardFactory.getScheduleNotifSettings(ctx, notif);
+    const keyboard = this.keyboardFactory.getScheduleNotifSettings(
+      ctx,
+      notif ?? undefined,
+    );
     if (edit && ctx.updateType === 'callback_query') {
       await this.editStep(ctx, text, keyboard);
     } else {

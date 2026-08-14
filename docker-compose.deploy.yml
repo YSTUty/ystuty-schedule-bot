@@ -4,6 +4,7 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/ystuty/ystuty-schedule-bot}:${IMAGE_TAG:-latest}
     env_file:
       - .env
+    command: npm run start:prod_orm
     ports:
       # 8080 is the default port
       - ${EXTERNAL_PORT:-7574}:${SERVER_PORT:-8080}

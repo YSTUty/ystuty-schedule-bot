@@ -9,6 +9,7 @@ import { YSTUtyService } from '../../ystuty/ystuty.service';
 // import { UserService } from '../../user/user.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
+import { TelegramService } from '../telegram.service';
 import { MainUpdate } from '../update/main.update';
 
 import { BaseScene } from './base.scene';
@@ -18,6 +19,7 @@ export class SelectGroupScene extends BaseScene {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
     private readonly ystutyService: YSTUtyService,
+    private readonly telegramService: TelegramService,
     // private readonly userService: UserService,
     private readonly mainUpdate: MainUpdate,
   ) {
@@ -125,6 +127,7 @@ export class SelectGroupScene extends BaseScene {
         delete ctx.sessionConversation.selectedGroupName;
       } else {
         userSocial.groupName = null;
+        await this.syncPrivateChatCommands(ctx);
       }
 
       const keyboard = this.keyboardFactory.getStart(ctx);
@@ -148,6 +151,7 @@ export class SelectGroupScene extends BaseScene {
         }
       } else {
         userSocial.groupName = selectedGroupName;
+        await this.syncPrivateChatCommands(ctx);
         // await this.userService.saveUserSocial(ctx.userSocial);
       }
 
@@ -171,5 +175,18 @@ export class SelectGroupScene extends BaseScene {
       ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
       keyboard,
     );
+  }
+
+  /** Обновляет меню сразу после изменения выбранной группы в ЛС. */
+  private async syncPrivateChatCommands(ctx: IStepContext) {
+    if (ctx.chat?.type !== 'private') return;
+
+    await this.telegramService.syncPrivateChatCommands({
+      chatId: ctx.chat.id,
+      isAuthorized: !!ctx.user,
+      isAdmin: this.telegramService.isAdmin(ctx.from.id, ctx.user?.role),
+      hasGroup: !!ctx.userSocial.groupName,
+      teacherId: ctx.session.teacherId,
+    });
   }
 }

@@ -5,8 +5,8 @@ import {
   Entity,
   Index,
   JoinColumn,
-  ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -14,6 +14,7 @@ import {
 import { SocialType } from '@my-common/constants';
 
 import { Conversation } from '../../social/entity/conversation.entity';
+import { UserToConversation } from '../../social/entity/userToConversation.entity';
 
 import { User } from './user.entity';
 
@@ -78,8 +79,8 @@ export class UserSocial {
   @Column({ nullable: true })
   public userId: number | null;
 
-  @ManyToMany(() => Conversation, (conversation) => conversation.users)
-  public conversations: Conversation[];
+  @OneToMany(() => UserToConversation, (membership) => membership.userSocial)
+  public conversationMemberships: UserToConversation[];
 
   @Expose()
   @CreateDateColumn()

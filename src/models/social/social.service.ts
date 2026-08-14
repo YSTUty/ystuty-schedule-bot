@@ -29,7 +29,7 @@ export class SocialService implements OnModuleInit {
       this.metricsService.conversationCounter.remove('social');
       for (const social of Object.values(SocialType)) {
         const countConversation = await this.conversationRepository.count({
-          social,
+          where: { social },
         });
         this.metricsService.conversationCounter.set(
           { social },
@@ -47,13 +47,14 @@ export class SocialService implements OnModuleInit {
     conv: Partial<Conversation>,
     userSocial?: UserSocial,
   ) {
-    if (!conv.users?.length) {
-      conv.users = userSocial ? [userSocial] : [];
-    }
     conv.social = social;
     const conversation = new Conversation(
       await this.conversationRepository.save(conv),
     );
+
+    if (userSocial) {
+      await this.iAmInConversation(userSocial, conversation.id);
+    }
 
     this.metricsService.conversationCounter.inc({ social });
 
@@ -64,14 +65,12 @@ export class SocialService implements OnModuleInit {
     social: SocialType,
     conversationId: number,
   ) {
-    const userSocial = await this.conversationRepository.findOne(
-      { social, conversationId },
-      {
-        relations: [
-          /* 'users' */
-        ],
-      },
-    );
+    const userSocial = await this.conversationRepository.findOne({
+      where: { social, conversationId },
+      relations: [
+        /* 'users' */
+      ],
+    });
 
     return userSocial;
   }
@@ -85,8 +84,10 @@ export class SocialService implements OnModuleInit {
     conversationId: number,
   ) {
     const existPair = await this.userToConversationRepository.findOne({
-      userSocialId: userSocial.id,
-      conversationId,
+      where: {
+        userSocialId: userSocial.id,
+        conversationId,
+      },
     });
     if (!existPair) {
       await this.userToConversationRepository.save(
@@ -119,6 +120,6 @@ export class SocialService implements OnModuleInit {
     //   ),
     // );
 
-    await this.conversationRepository.update(conversation, { users });
+    await this.conversationRepository.save({ ...conversation, users });
   }
 }

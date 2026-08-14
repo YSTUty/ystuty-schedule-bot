@@ -1,0 +1,80 @@
+import { MainUpdate } from './main.update';
+
+describe('VK MainUpdate', () => {
+  const openTeachersList = jest.fn();
+  const isTeacherSearchFallbackQuery = jest.fn();
+  const update = new MainUpdate(
+    {} as any,
+    {} as any,
+    { isTeacherSearchFallbackQuery } as any,
+    {} as any,
+    {} as any,
+    {} as any,
+  );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (update as any).openTeachersList = openTeachersList;
+  });
+
+  it('opens a filtered teacher list for a matching fallback message in a DM', async () => {
+    isTeacherSearchFallbackQuery.mockReturnValue(true);
+    const ctx = { isDM: true, text: 'Шулев' } as any;
+
+    await update.onHearFallback(ctx);
+
+    expect(openTeachersList).toHaveBeenCalledWith(ctx, 'Шулев');
+  });
+
+  it('ignores fallback text in a VK group chat', async () => {
+    const ctx = { isDM: false, text: 'Шулев' } as any;
+
+    await update.onHearFallback(ctx);
+
+    expect(openTeachersList).not.toHaveBeenCalled();
+    expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
+  });
+
+  it('marks the conversation as left when the bot is kicked from a VK chat', async () => {
+    const conversation = { isLeaved: false };
+
+    await update.onChatKickUser({
+      $groupId: 42,
+      eventMemberId: -42,
+      state: { conversation },
+    } as any);
+
+    expect(conversation.isLeaved).toBe(true);
+  });
+
+  it('does not change isLeaved when another VK chat member is kicked', async () => {
+    const conversation = { isLeaved: false };
+
+    await update.onChatKickUser({
+      $groupId: 42,
+      eventMemberId: 7,
+      state: { conversation },
+    } as any);
+
+    expect(conversation.isLeaved).toBe(false);
+  });
+
+  it('restores the conversation when the bot is invited back to a VK chat', async () => {
+    const conversation = { isLeaved: true };
+    const ctx = {
+      $groupId: 42,
+      eventMemberId: -42,
+      senderId: 7,
+      peerId: 2_000_000_001,
+      state: { conversation, userSocial: { id: 3 } },
+      sessionConversation: { selectedGroupName: 'ЦИС-21' },
+      i18n: { t: jest.fn().mockReturnValue('start') },
+      send: jest.fn(),
+    } as any;
+    (update as any).keyboardFactory.getStart = jest.fn().mockReturnValue({});
+
+    await update.onChatInviteUser(ctx);
+
+    expect(conversation.isLeaved).toBe(false);
+  });
+});

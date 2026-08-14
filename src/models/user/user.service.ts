@@ -57,7 +57,7 @@ export class UserService {
   public async onModuleInit() {
     try {
       const countUsers = await this.userRepository.count({
-        isBanned: Not(true),
+        where: { isBanned: Not(true) },
       });
       this.metricsService.userCounter.remove();
       this.metricsService.userCounter.set(countUsers);
@@ -65,8 +65,10 @@ export class UserService {
       this.metricsService.userSocialCounter.remove('social');
       for (const social of Object.values(SocialType)) {
         const countSocial = await this.userSocialRepository.count({
-          social,
-          isBlockedBot: Not(true),
+          where: {
+            social,
+            isBlockedBot: Not(true),
+          },
         });
         this.metricsService.userSocialCounter.set({ social }, countSocial);
       }
@@ -87,7 +89,8 @@ export class UserService {
   }
 
   public async getUser(userId: number, lock = false) {
-    return await this.userRepository.findOne(userId, {
+    return await this.userRepository.findOne({
+      where: { id: userId },
       ...(lock && { lock: { mode: 'pessimistic_write' } }),
     });
   }
@@ -174,10 +177,10 @@ export class UserService {
   }
 
   public async findBySocialId(social: SocialType, socialId: number) {
-    const userSocial = await this.userSocialRepository.findOne(
-      { socialId, social },
-      { relations: ['user'] },
-    );
+    const userSocial = await this.userSocialRepository.findOne({
+      where: { socialId, social },
+      relations: ['user'],
+    });
 
     return userSocial;
   }
@@ -240,6 +243,16 @@ export class UserService {
           user: linkedUser,
         }),
       );
+
+      if (socialType === SocialType.Telegram) {
+        await this.telegramService.syncPrivateChatCommands({
+          chatId: socialId,
+          isAuthorized: true,
+          isAdmin: this.telegramService.isAdmin(socialId, linkedUser.role),
+          hasGroup: !!userSocial.groupName,
+          teacherId: (session as TgISessionState | null)?.teacherId,
+        });
+      }
 
       if (
         linkedUser.groupName &&

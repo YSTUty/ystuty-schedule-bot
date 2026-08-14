@@ -180,13 +180,28 @@ export class MainMiddleware {
           : id < 0
             ? MessageSource.GROUP
             : MessageSource.USER;
+      const defineGetter = <T extends object>(
+        target: T,
+        key: PropertyKey,
+        get: () => unknown,
+      ) => {
+        if (key in target) return;
 
-      ctx.peerType ??= getPeerType(ctx.peerId);
-      ctx.isDM ??= [MessageSource.USER, MessageSource.GROUP].includes(
-        ctx.peerType,
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: true,
+          get,
+        });
+      };
+
+      defineGetter(ctx, 'peerType', () => getPeerType(ctx.peerId));
+      defineGetter(ctx, 'isDM', () =>
+        [MessageSource.USER, MessageSource.GROUP].includes(ctx.peerType),
       );
-      ctx.isChat ??= MessageSource.CHAT == ctx.peerType;
-      ctx.chatId ??= ctx.isChat ? ctx.peerId - 2e9 : undefined;
+      defineGetter(ctx, 'isChat', () => ctx.peerType === MessageSource.CHAT);
+      defineGetter(ctx, 'chatId', () =>
+        ctx.isChat ? ctx.peerId - 2e9 : undefined,
+      );
 
       if (ctx.isMessageEventContext()) {
         const answer = ctx.answer.bind(ctx);

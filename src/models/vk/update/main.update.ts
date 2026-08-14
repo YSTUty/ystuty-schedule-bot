@@ -187,6 +187,7 @@ export class MainUpdate {
     );
     if (ctx.state.conversation && ctx.state.userSocial) {
       ctx.state.conversation.invitedByUserSocialId = ctx.state.userSocial.id;
+      ctx.state.conversation.isLeaved = false;
     }
 
     const keyboard = this.keyboardFactory.getStart(ctx);
@@ -199,6 +200,17 @@ export class MainUpdate {
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {
         keyboard,
       });
+    }
+  }
+
+  @On('chat_kick_user')
+  async onChatKickUser(@Ctx() ctx: IMessageContext) {
+    if (ctx.eventMemberId !== -ctx.$groupId!) {
+      return;
+    }
+
+    if (ctx.state.conversation) {
+      ctx.state.conversation.isLeaved = true;
     }
   }
 
@@ -615,6 +627,11 @@ export class MainUpdate {
 
   @HearFallback()
   async onHearFallback(@Ctx() ctx: IMessageContext) {
-    // ...
+    const query = ctx.text?.trim();
+    if (!ctx.isDM || !this.ystutyService.isTeacherSearchFallbackQuery(query)) {
+      return;
+    }
+
+    await this.openTeachersList(ctx, query!);
   }
 }

@@ -1,4 +1,6 @@
-import { ListenerDecorator } from 'nestjs-vk';
+import { ListenerDecorator, matchMessageEventPayload } from 'nestjs-vk';
+
+import { LocalePhrase } from '@my-interfaces';
 
 import { MainUpdate } from './main.update';
 
@@ -48,6 +50,49 @@ describe('VK MainUpdate', () => {
     ).toEqual({ groupAction: 'select' });
   });
 
+  it.each([
+    ['onNope', { nope: {} }, { teacherAction: 'list' }],
+    [
+      'onGroupInstitutes',
+      { groupAction: 'institutes' },
+      { groupAction: 'groups' },
+    ],
+    ['onGroupList', { groupAction: 'groups' }, { groupAction: 'select' }],
+    ['onGroupSelect', { groupAction: 'select' }, { groupAction: 'groups' }],
+    ['onTeacherList', { teacherAction: 'list' }, { teacherAction: 'select' }],
+    ['onTeacherSelect', { teacherAction: 'select' }, { teacherAction: 'list' }],
+    [
+      'onOpenTeachersList',
+      { phrase: LocalePhrase.Button_Schedule_Teacher },
+      { phrase: LocalePhrase.Button_SelectGroup },
+    ],
+    [
+      'onOpenGroupSelect',
+      { phrase: LocalePhrase.Button_SelectGroup },
+      { phrase: LocalePhrase.Button_Schedule_Teacher },
+    ],
+    [
+      'onAuthLink',
+      { phrase: LocalePhrase.Button_AuthLink },
+      { phrase: LocalePhrase.Button_Schedule_Teacher },
+    ],
+  ])(
+    'routes %s only to its matching message-event payload',
+    (methodName, matchingPayload, foreignPayload) => {
+      const condition = getMessageEventCondition(
+        MainUpdate.prototype,
+        methodName,
+      );
+
+      expect(
+        matchMessageEventPayload(matchingPayload, condition as any, {} as any),
+      ).toBe(true);
+      expect(
+        matchMessageEventPayload(foreignPayload, condition as any, {} as any),
+      ).toBe(false);
+    },
+  );
+
   it('opens a filtered teacher list for a matching fallback message in a DM', async () => {
     isTeacherSearchFallbackQuery.mockReturnValue(true);
     const ctx = { isDM: true, text: 'Шулев' } as any;
@@ -64,6 +109,16 @@ describe('VK MainUpdate', () => {
 
     expect(openTeachersList).not.toHaveBeenCalled();
     expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
+  });
+
+  it('does not open a VK teacher list for unrelated DM text', async () => {
+    isTeacherSearchFallbackQuery.mockReturnValue(false);
+    const ctx = { isDM: true, text: 'аудитория' } as any;
+
+    await update.onHearFallback(ctx);
+
+    expect(isTeacherSearchFallbackQuery).toHaveBeenCalledWith('аудитория');
+    expect(openTeachersList).not.toHaveBeenCalled();
   });
 
   it('marks the conversation as left when the bot is kicked from a VK chat', async () => {

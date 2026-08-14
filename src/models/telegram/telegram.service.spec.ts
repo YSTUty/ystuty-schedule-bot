@@ -16,8 +16,18 @@ describe('TelegramService', () => {
     expect(bot.telegram.setMyCommands).toHaveBeenCalledWith(
       [
         { command: 'start', description: 'Запустить бота' },
+        { command: 'day', description: 'Расписание на день' },
         { command: 'cancel', description: 'Отменить текущее действие' },
         { command: 'auth', description: 'Авторизоваться' },
+        {
+          command: 'institutes',
+          description: 'Выбрать группу по институту',
+        },
+        {
+          command: 'tlist',
+          description: 'Выбрать преподавателя из списка',
+        },
+        { command: 'teacher', description: 'Выбрать преподавателя по ФИО' },
       ],
       { scope: { type: 'chat', chat_id: 123 } },
     );
@@ -40,17 +50,26 @@ describe('TelegramService', () => {
     expect(bot.telegram.setMyCommands).toHaveBeenCalledWith(
       [
         { command: 'start', description: 'Запустить бота' },
+        { command: 'day', description: 'Расписание на день' },
         { command: 'cancel', description: 'Отменить текущее действие' },
-        { command: 'day', description: 'Расписание на сегодня' },
         { command: 'week', description: 'Расписание на неделю' },
         { command: 'tday', description: 'Расписание преподавателя на сегодня' },
         { command: 'tweek', description: 'Расписание преподавателя на неделю' },
+        {
+          command: 'institutes',
+          description: 'Выбрать группу по институту',
+        },
+        {
+          command: 'tlist',
+          description: 'Выбрать преподавателя из списка',
+        },
+        { command: 'teacher', description: 'Выбрать преподавателя по ФИО' },
       ],
       { scope: { type: 'chat', chat_id: 123 } },
     );
   });
 
-  it('adds broadcast command for an administrator', async () => {
+  it('adds the broadcast command only after the standard private-chat menu', async () => {
     const bot = {
       telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
     };
@@ -63,9 +82,21 @@ describe('TelegramService', () => {
     });
 
     expect(bot.telegram.setMyCommands).toHaveBeenCalledWith(
-      expect.arrayContaining([
+      [
+        { command: 'start', description: 'Запустить бота' },
+        { command: 'day', description: 'Расписание на день' },
+        { command: 'cancel', description: 'Отменить текущее действие' },
+        {
+          command: 'institutes',
+          description: 'Выбрать группу по институту',
+        },
+        {
+          command: 'tlist',
+          description: 'Выбрать преподавателя из списка',
+        },
+        { command: 'teacher', description: 'Выбрать преподавателя по ФИО' },
         { command: 'broadcast', description: 'Управление рассылками' },
-      ]),
+      ],
       { scope: { type: 'chat', chat_id: 123 } },
     );
   });

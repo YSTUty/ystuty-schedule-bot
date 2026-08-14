@@ -51,6 +51,16 @@ describe('Telegram MainUpdate', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('continues Telegram handlers when an update has no text message', async () => {
+    const next = jest.fn();
+
+    await update.onTeacherNameFallback({ message: { photo: [] } } as any, next);
+
+    expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
+    expect(openTeachersList).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
   it('registers the fallback only for private Telegram chats', () => {
     expect(
       Reflect.getMetadata(

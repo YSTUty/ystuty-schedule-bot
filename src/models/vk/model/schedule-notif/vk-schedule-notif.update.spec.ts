@@ -1,8 +1,28 @@
+import { VK_LISTENERS_METADATA } from 'nestjs-vk/dist/vk.constants';
+
 import { LocalePhrase } from '@my-interfaces';
 
 import { VkScheduleNotifUpdate } from './vk-schedule-notif.update';
 
 describe('VkScheduleNotifUpdate', () => {
+  it('only routes schedule-notification callbacks', () => {
+    const listener = Reflect.getMetadata(
+      VK_LISTENERS_METADATA,
+      VkScheduleNotifUpdate.prototype.onMessageEvent,
+    ).find(
+      (item: { handlerType: string }) => item.handlerType === 'message_event',
+    );
+
+    expect(listener.event({ scheduleNotifAction: 'settings' }, {})).toBe(true);
+    expect(
+      listener.event(
+        { phrase: LocalePhrase.Button_ScheduleNotif },
+        { scene: { current: {} } },
+      ),
+    ).toBe(true);
+    expect(listener.event({ teacherAction: 'list' }, {})).toBe(false);
+  });
+
   it('shows the notif group before confirming deletion', async () => {
     const notifService = {
       getFirstNotif: jest.fn().mockResolvedValue({
@@ -29,7 +49,7 @@ describe('VkScheduleNotifUpdate', () => {
       editMessage: jest.fn(),
     };
 
-    await update.onMessageEvent(ctx as any, jest.fn());
+    await update.onMessageEvent(ctx as any);
 
     expect(t).toHaveBeenCalledWith(
       LocalePhrase.Page_ScheduleNotif_ConfirmDelete,

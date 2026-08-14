@@ -1,4 +1,17 @@
+import { VK_LISTENERS_METADATA } from 'nestjs-vk/dist/vk.constants';
+
 import { MainUpdate } from './main.update';
+
+const getMessageEventCondition = (target: object, methodName: string) => {
+  const method = (target as Record<string, object>)[methodName];
+  const listeners = Reflect.getMetadata(VK_LISTENERS_METADATA, method) as {
+    handlerType: string;
+    event: unknown;
+  }[];
+
+  return listeners.find((listener) => listener.handlerType === 'message_event')
+    ?.event;
+};
 
 describe('VK MainUpdate', () => {
   const openTeachersList = jest.fn();
@@ -15,6 +28,24 @@ describe('VK MainUpdate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (update as any).openTeachersList = openTeachersList;
+  });
+
+  it('registers each main callback action with its own payload condition', () => {
+    expect(
+      getMessageEventCondition(MainUpdate.prototype, 'onTeacherList'),
+    ).toEqual({ teacherAction: 'list' });
+    expect(
+      getMessageEventCondition(MainUpdate.prototype, 'onTeacherSelect'),
+    ).toEqual({ teacherAction: 'select' });
+    expect(
+      getMessageEventCondition(MainUpdate.prototype, 'onGroupInstitutes'),
+    ).toEqual({ groupAction: 'institutes' });
+    expect(
+      getMessageEventCondition(MainUpdate.prototype, 'onGroupList'),
+    ).toEqual({ groupAction: 'groups' });
+    expect(
+      getMessageEventCondition(MainUpdate.prototype, 'onGroupSelect'),
+    ).toEqual({ groupAction: 'select' });
   });
 
   it('opens a filtered teacher list for a matching fallback message in a DM', async () => {

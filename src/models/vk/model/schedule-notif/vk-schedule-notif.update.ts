@@ -1,10 +1,9 @@
 import { UseFilters } from '@nestjs/common';
-import { Ctx, Next, Update } from 'nestjs-vk';
+import { Ctx, OnMessageEvent, Update } from 'nestjs-vk';
 
-import { NextMiddleware } from 'middleware-io';
 import { APIError } from 'vk-io';
 
-import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
+import { VkHearsLocale } from '@my-common/decorator/vk';
 import { VkExceptionFilter } from '@my-common/filter/vk-exception.filter';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
@@ -39,17 +38,15 @@ export class VkScheduleNotifUpdate {
     await this.openSettings(ctx);
   }
 
-  @OnMessageEvent()
-  async onMessageEvent(
-    @Ctx() ctx: IMessageEventContext,
-    @Next() next: NextMiddleware,
-  ) {
+  @OnMessageEvent(
+    (payload) =>
+      'scheduleNotifAction' in payload ||
+      payload.phrase === LocalePhrase.Button_ScheduleNotif,
+  )
+  async onMessageEvent(@Ctx() ctx: IMessageEventContext) {
     const action = (ctx.eventPayload.scheduleNotifAction ||
       (ctx.eventPayload.phrase === LocalePhrase.Button_ScheduleNotif &&
         'settings')) as string | undefined;
-    if (!action) {
-      return next();
-    }
     if (!(await this.canManage(ctx))) {
       await ctx.answer({
         type: 'show_snackbar',

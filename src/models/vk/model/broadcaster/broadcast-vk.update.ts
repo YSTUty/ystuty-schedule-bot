@@ -1,11 +1,9 @@
 import { UseFilters, UseGuards } from '@nestjs/common';
-import { Ctx, Hears, Next, Update } from 'nestjs-vk';
-
-import { NextMiddleware } from 'middleware-io';
+import { Ctx, Hears, OnMessageEvent, Update } from 'nestjs-vk';
 
 import { VkAdminGuard, VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
-import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
+import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
@@ -108,16 +106,22 @@ export class BroadcastVkUpdate {
     await ctx.send(ctx.i18n.t(LocalePhrase.Broadcast_Notification_Terminated));
   }
 
-  @OnMessageEvent()
-  async onQueueAction(
-    @Ctx() ctx: IMessageEventContext,
-    @Next() next: NextMiddleware,
-  ) {
+  @OnMessageEvent((payload) =>
+    [
+      'menuPanel',
+      'menuCreate',
+      'menuStatus',
+      'menuCurrent',
+      'menuList',
+      'detail',
+      'delete',
+      'pause',
+      'resume',
+      'terminate',
+    ].includes(payload.broadcastAction as string),
+  )
+  async onQueueAction(@Ctx() ctx: IMessageEventContext) {
     const action = ctx.eventPayload?.broadcastAction as string | undefined;
-
-    if (!action) {
-      return next();
-    }
 
     if (action === 'menuPanel') {
       await ctx.answer({
@@ -187,8 +191,6 @@ export class BroadcastVkUpdate {
       await this.deleteCampaign(ctx, Number(ctx.eventPayload.campaignId));
       return;
     }
-
-    if (!['pause', 'resume', 'terminate'].includes(action)) return next();
 
     if (action === 'pause') {
       await this.broadcastService.pauseQueue(SocialType.Vkontakte);

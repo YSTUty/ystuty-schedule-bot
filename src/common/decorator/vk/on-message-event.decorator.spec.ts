@@ -1,10 +1,8 @@
+import { matchMessageEventPayload, OnMessageEvent } from 'nestjs-vk';
 import { VK_LISTENERS_METADATA } from 'nestjs-vk/dist/vk.constants';
 
-import { ADMIN_GUARD_NEXT } from './admin-guard-next.decorator';
-import { OnMessageEvent } from './on-message-event.decorator';
-
 describe('OnMessageEvent', () => {
-  it('marks the handler for both message-event registration and guard continuation', () => {
+  it('marks the handler for message-event registration', () => {
     class TestUpdate {
       @OnMessageEvent()
       onMessageEvent() {}
@@ -12,13 +10,36 @@ describe('OnMessageEvent', () => {
 
     const handler = TestUpdate.prototype.onMessageEvent;
 
-    expect(Reflect.getMetadata(ADMIN_GUARD_NEXT, handler)).toBe(true);
     expect(Reflect.getMetadata(VK_LISTENERS_METADATA, handler)).toEqual([
       expect.objectContaining({
-        handlerType: 'vk_updates',
-        method: 'on',
-        event: 'message_event',
+        handlerType: 'message_event',
       }),
     ]);
+  });
+
+  it('stores a payload condition for listener routing', () => {
+    class TestUpdate {
+      @OnMessageEvent({ teacherAction: 'list' })
+      onTeacherList() {}
+    }
+
+    const handler = TestUpdate.prototype.onTeacherList;
+
+    expect(Reflect.getMetadata(VK_LISTENERS_METADATA, handler)).toEqual([
+      expect.objectContaining({
+        handlerType: 'message_event',
+        event: { teacherAction: 'list' },
+      }),
+    ]);
+  });
+
+  it('skips a listener when its payload condition does not match', () => {
+    expect(
+      matchMessageEventPayload(
+        { groupAction: 'select' },
+        { teacherAction: 'list' },
+        {} as never,
+      ),
+    ).toBe(false);
   });
 });

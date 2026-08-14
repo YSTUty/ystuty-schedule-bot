@@ -4,12 +4,11 @@ import {
   HearFallback,
   Hears,
   InjectVkApi,
-  Next,
   On,
+  OnMessageEvent,
   Update,
 } from 'nestjs-vk';
 
-import { NextMiddleware } from 'middleware-io';
 import { APIError, VK } from 'vk-io';
 
 import {
@@ -20,7 +19,7 @@ import {
   VkAdminGuard,
   VkExceptionFilter,
 } from '@my-common';
-import { OnMessageEvent, VkHearsLocale } from '@my-common/decorator/vk';
+import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
@@ -226,137 +225,123 @@ export class MainUpdate {
     await this.vkService.parseChatTitle(ctx, ctx.eventText);
   }
 
-  @OnMessageEvent()
-  // TODO: add event/action decorator
-  async onMessageEvent(
-    @Ctx() ctx: IMessageEventContext,
-    @Next() next: NextMiddleware,
-  ) {
-    if ('nope' in ctx.eventPayload && ctx.eventPayload.nope) {
-      const text = ctx.eventPayload.nope?.text;
+  @OnMessageEvent((payload) => 'nope' in payload)
+  async onNope(@Ctx() ctx: IMessageEventContext) {
+    const text = ctx.eventPayload.nope?.text;
+    await ctx.answer({
+      type: 'show_snackbar',
+      text: text ?? 'Nope ¯\\_(ツ)_/¯',
+    });
+  }
+
+  @OnMessageEvent({ groupAction: 'institutes' })
+  async onGroupInstitutes(@Ctx() ctx: IMessageEventContext) {
+    await ctx.scene.leave();
+    await this.renderInstitutesList(ctx, Number(ctx.eventPayload.page) || 1);
+  }
+
+  @OnMessageEvent({ groupAction: 'groups' })
+  async onGroupList(@Ctx() ctx: IMessageEventContext) {
+    await this.renderGroupsList(
+      ctx,
+      String(ctx.eventPayload.instituteHash || '') || undefined,
+      Number(ctx.eventPayload.page) || 1,
+    );
+  }
+
+  @OnMessageEvent({ groupAction: 'select' })
+  async onGroupSelect(@Ctx() ctx: IMessageEventContext) {
+    const groupName = String(ctx.eventPayload.groupName || '');
+    await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+  }
+
+  @OnMessageEvent({ teacherAction: 'list' })
+  async onTeacherList(@Ctx() ctx: IMessageEventContext) {
+    const state = await this.getTeacherListState(ctx);
+    if (!state) {
+      await this.openTeachersList(ctx, '');
       await ctx.answer({
         type: 'show_snackbar',
-        text: text ?? 'Nope ¯\\_(ツ)_/¯',
+        text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
       });
       return;
     }
 
-    const teacherAction = ctx.eventPayload.teacherAction as string | undefined;
-    const groupAction = ctx.eventPayload.groupAction as string | undefined;
-    if (groupAction === 'institutes') {
-      await ctx.scene.leave();
-      await this.renderInstitutesList(ctx, Number(ctx.eventPayload.page) || 1);
-      return;
-    }
+    await this.renderTeachersList(
+      ctx,
+      String(ctx.eventPayload.listId),
+      state.query,
+      state.pageSize,
+      Number(ctx.eventPayload.page) || 1,
+    );
+  }
 
-    if (groupAction === 'groups') {
-      await this.renderGroupsList(
-        ctx,
-        String(ctx.eventPayload.instituteHash || '') || undefined,
-        Number(ctx.eventPayload.page) || 1,
-      );
-      return;
-    }
-
-    if (groupAction === 'select') {
-      const groupName = String(ctx.eventPayload.groupName || '');
-      await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
-      return;
-    }
-
-    if (teacherAction === 'list') {
-      const state = await this.getTeacherListState(ctx);
-      if (!state) {
-        await this.openTeachersList(ctx, '');
-        await ctx.answer({
-          type: 'show_snackbar',
-          text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
-        });
-        return;
-      }
-
-      await this.renderTeachersList(
-        ctx,
-        String(ctx.eventPayload.listId),
-        state.query,
-        state.pageSize,
-        Number(ctx.eventPayload.page) || 1,
-      );
-      return;
-    }
-
-    if (teacherAction === 'select') {
-      const state = await this.getTeacherListState(ctx);
-      if (!state) {
-        await this.openTeachersList(ctx, '');
-        await ctx.answer({
-          type: 'show_snackbar',
-          text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
-        });
-        return;
-      }
-
-      const teacherId = Number(ctx.eventPayload.teacherId);
-      const teacher = this.ystutyService.getTeacher(teacherId);
-      if (!teacher) {
-        await ctx.answer({ type: 'show_snackbar', text: 'Not found' });
-        return;
-      }
-
-      ctx.session.teacherId = teacher.id;
-      await ctx.api.messages.edit({
-        peer_id: ctx.peerId,
-        cmid: ctx.conversationMessageId,
-        message: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
-          teacher,
-        }),
-        keyboard: this.keyboardFactory
-          .getSchedule(ctx, { type: 'teacher', id: teacher.id })
-          .inline(),
+  @OnMessageEvent({ teacherAction: 'select' })
+  async onTeacherSelect(@Ctx() ctx: IMessageEventContext) {
+    const state = await this.getTeacherListState(ctx);
+    if (!state) {
+      await this.openTeachersList(ctx, '');
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
       });
-      if (ctx.isDM) {
-        await ctx.send(
-          ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
-          { keyboard: this.keyboardFactory.getStart(ctx) },
-        );
-      }
       return;
     }
 
-    const phrase = ctx.eventPayload.phrase as LocalePhrase;
-    if (!phrase) return next();
-
-    switch (phrase) {
-      case LocalePhrase.Button_Schedule_Teacher: {
-        await this.openTeachersList(ctx, '');
-        return;
-      }
-      case LocalePhrase.Button_Cancel: {
-        return next();
-      }
-      case LocalePhrase.Button_SelectGroup: {
-        const groupName = ctx.eventPayload.groupName as string;
-        await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
-        await ctx.answer({ type: 'show_snackbar', text: 'Run' });
-        return;
-      }
-      case LocalePhrase.Button_AuthLink_SocialConnect:
-      case LocalePhrase.Button_AuthLink: {
-        const { socialConnectLink } = ctx.session;
-        if (socialConnectLink) {
-          // ...
-          await ctx.answer({ type: 'open_link', link: socialConnectLink });
-          delete ctx.session.socialConnectLink;
-        } else {
-          await ctx.scene.enter(AUTH_SCENE);
-          await ctx.answer({ type: 'show_snackbar', text: 'Enter' });
-        }
-        return;
-      }
+    const teacherId = Number(ctx.eventPayload.teacherId);
+    const teacher = this.ystutyService.getTeacher(teacherId);
+    if (!teacher) {
+      await ctx.answer({ type: 'show_snackbar', text: 'Not found' });
+      return;
     }
 
-    await ctx.answer({ type: 'show_snackbar', text: '🤔 ?..' });
-    // return next();
+    ctx.session.teacherId = teacher.id;
+    await ctx.api.messages.edit({
+      peer_id: ctx.peerId,
+      cmid: ctx.conversationMessageId,
+      message: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
+        teacher,
+      }),
+      keyboard: this.keyboardFactory
+        .getSchedule(ctx, { type: 'teacher', id: teacher.id })
+        .inline(),
+    });
+    if (ctx.isDM) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
+        { keyboard: this.keyboardFactory.getStart(ctx) },
+      );
+    }
+  }
+
+  @OnMessageEvent({ phrase: LocalePhrase.Button_Schedule_Teacher })
+  async onOpenTeachersList(@Ctx() ctx: IMessageEventContext) {
+    await this.openTeachersList(ctx, '');
+  }
+
+  @OnMessageEvent({ phrase: LocalePhrase.Button_SelectGroup })
+  async onOpenGroupSelect(@Ctx() ctx: IMessageEventContext) {
+    const groupName = ctx.eventPayload.groupName as string;
+    await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+    await ctx.answer({ type: 'show_snackbar', text: 'Run' });
+  }
+
+  @OnMessageEvent((payload) =>
+    [
+      LocalePhrase.Button_AuthLink_SocialConnect,
+      LocalePhrase.Button_AuthLink,
+    ].includes(payload.phrase as LocalePhrase),
+  )
+  async onAuthLink(@Ctx() ctx: IMessageEventContext) {
+    const { socialConnectLink } = ctx.session;
+    if (socialConnectLink) {
+      await ctx.answer({ type: 'open_link', link: socialConnectLink });
+      delete ctx.session.socialConnectLink;
+      return;
+    }
+
+    await ctx.scene.enter(AUTH_SCENE);
+    await ctx.answer({ type: 'show_snackbar', text: 'Enter' });
   }
 
   @Hears('/institutes')
@@ -577,7 +562,6 @@ export class MainUpdate {
       ) {
         try {
           const items = await this.vkService.getCachedConvMembers(peerId);
-          console.log(items);
           const member = items.find((e) => e.member_id === senderId);
           if (!member || !member.is_admin) {
             return ctx.i18n.t(LocalePhrase.Error_SelectGroup_OnlyAdminOrOwner);

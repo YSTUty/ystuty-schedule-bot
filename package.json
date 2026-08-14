@@ -66,7 +66,7 @@
     "dotenv-expand": "^10.0.0",
     "ioredis": "5.8.2",
     "moment": "^2.29.4",
-    "nestjs-vk": "^4.6.1",
+    "nestjs-vk": "^4.7.0",
     "oauth": "^0.10.0",
     "pg": "^8.23.0",
     "prom-client": "^15.1.3",

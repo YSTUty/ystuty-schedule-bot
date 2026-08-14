@@ -1,16 +1,7 @@
-import { VkException, VkExecutionContext } from 'nestjs-vk';
-import { Logger } from '@nestjs/common';
-
-import { VkExceptionFilter } from '../filter/vk-exception.filter';
 import { VkAdminGuard } from './vk-admin.guard';
 
 describe('VkAdminGuard', () => {
-  it('continues a non-admin message event marked for skipping', async () => {
-    const loggerError = jest
-      .spyOn(Logger.prototype, 'error')
-      .mockImplementation();
-    const next = jest.fn();
-    const handler = jest.fn();
+  it('rejects a non-admin callback handler', () => {
     const context = {
       getArgs: () => [
         {
@@ -19,30 +10,15 @@ describe('VkAdminGuard', () => {
           peerId: 1,
           state: {},
         },
-        next,
+        jest.fn(),
       ],
       getClass: () => class TestUpdate {},
-      getHandler: () => handler,
+      getHandler: jest.fn(),
       getType: () => 'vk-io',
-    } as unknown as VkExecutionContext;
-    const reflector = {
-      getAllAndOverride: jest.fn().mockReturnValue(true),
-    };
+    } as any;
     const Guard = VkAdminGuard(true);
-    const guard = new Guard(reflector as never);
+    const guard = new Guard();
 
-    try {
-      guard.canActivate(context);
-    } catch (exception) {
-      await new VkExceptionFilter().catch(
-        exception as Error,
-        context,
-      );
-    }
-
-    expect(next).toHaveBeenCalledTimes(1);
-    expect(loggerError).not.toHaveBeenCalled();
-
-    jest.restoreAllMocks();
+    expect(() => guard.canActivate(context)).toThrow('common.no_access');
   });
 });

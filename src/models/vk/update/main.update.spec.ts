@@ -34,4 +34,47 @@ describe('VK MainUpdate', () => {
     expect(openTeachersList).not.toHaveBeenCalled();
     expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
   });
+
+  it('marks the conversation as left when the bot is kicked from a VK chat', async () => {
+    const conversation = { isLeaved: false };
+
+    await update.onChatKickUser({
+      $groupId: 42,
+      eventMemberId: -42,
+      state: { conversation },
+    } as any);
+
+    expect(conversation.isLeaved).toBe(true);
+  });
+
+  it('does not change isLeaved when another VK chat member is kicked', async () => {
+    const conversation = { isLeaved: false };
+
+    await update.onChatKickUser({
+      $groupId: 42,
+      eventMemberId: 7,
+      state: { conversation },
+    } as any);
+
+    expect(conversation.isLeaved).toBe(false);
+  });
+
+  it('restores the conversation when the bot is invited back to a VK chat', async () => {
+    const conversation = { isLeaved: true };
+    const ctx = {
+      $groupId: 42,
+      eventMemberId: -42,
+      senderId: 7,
+      peerId: 2_000_000_001,
+      state: { conversation, userSocial: { id: 3 } },
+      sessionConversation: { selectedGroupName: 'ЦИС-21' },
+      i18n: { t: jest.fn().mockReturnValue('start') },
+      send: jest.fn(),
+    } as any;
+    (update as any).keyboardFactory.getStart = jest.fn().mockReturnValue({});
+
+    await update.onChatInviteUser(ctx);
+
+    expect(conversation.isLeaved).toBe(false);
+  });
 });

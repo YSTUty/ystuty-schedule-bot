@@ -59,4 +59,52 @@ describe('Telegram MainUpdate', () => {
       ),
     ).toEqual(['private']);
   });
+
+  it.each([
+    ['left', true],
+    ['kicked', true],
+    ['member', false],
+    ['administrator', false],
+  ])(
+    'updates isLeaved to %s for a bot membership status',
+    async (status, isLeaved) => {
+      const conversation = { isLeaved: !isLeaved };
+      const ctx = {
+        botInfo: { id: 42 },
+        userSocial: { id: 1 },
+        conversation,
+        myChatMember: {
+          chat: { type: 'group', title: 'Расписание' },
+          new_chat_member: { status, user: { id: 42 } },
+        },
+        replyWithHTML: jest.fn(),
+        i18n: { t: jest.fn().mockReturnValue('start') },
+        sessionConversation: {},
+      } as any;
+
+      (update as any).keyboardFactory.getStart = jest.fn();
+      (update as any).keyboardFactory.getSelectGroupInline = jest.fn();
+      (update as any).telegramService.parseChatTitle = jest.fn();
+
+      await update.onMyChatMember(ctx);
+
+      expect(conversation.isLeaved).toBe(isLeaved);
+    },
+  );
+
+  it('does not change isLeaved for another Telegram chat member', async () => {
+    const conversation = { isLeaved: false };
+    const ctx = {
+      botInfo: { id: 42 },
+      conversation,
+      myChatMember: {
+        chat: { type: 'group', title: 'Расписание' },
+        new_chat_member: { status: 'kicked', user: { id: 7 } },
+      },
+    } as any;
+
+    await update.onMyChatMember(ctx);
+
+    expect(conversation.isLeaved).toBe(false);
+  });
 });

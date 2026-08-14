@@ -1,5 +1,8 @@
-import { matchMessageEventPayload, OnMessageEvent } from 'nestjs-vk';
-import { VK_LISTENERS_METADATA } from 'nestjs-vk/dist/vk.constants';
+import {
+  ListenerDecorator,
+  matchMessageEventPayload,
+  OnMessageEvent,
+} from 'nestjs-vk';
 
 describe('OnMessageEvent', () => {
   it('marks the handler for message-event registration', () => {
@@ -10,7 +13,7 @@ describe('OnMessageEvent', () => {
 
     const handler = TestUpdate.prototype.onMessageEvent;
 
-    expect(Reflect.getMetadata(VK_LISTENERS_METADATA, handler)).toEqual([
+    expect(Reflect.getMetadata(ListenerDecorator.KEY, handler)).toEqual([
       expect.objectContaining({
         handlerType: 'message_event',
       }),
@@ -25,7 +28,7 @@ describe('OnMessageEvent', () => {
 
     const handler = TestUpdate.prototype.onTeacherList;
 
-    expect(Reflect.getMetadata(VK_LISTENERS_METADATA, handler)).toEqual([
+    expect(Reflect.getMetadata(ListenerDecorator.KEY, handler)).toEqual([
       expect.objectContaining({
         handlerType: 'message_event',
         event: { teacherAction: 'list' },
@@ -41,5 +44,14 @@ describe('OnMessageEvent', () => {
         {} as never,
       ),
     ).toBe(false);
+  });
+
+  it('matches a string payload and stores its match on the context', () => {
+    const context = {} as any;
+
+    expect(
+      matchMessageEventPayload('teacher:42', /^teacher:(\d+)$/, context),
+    ).toBe(true);
+    expect(context.$match?.[1]).toBe('42');
   });
 });

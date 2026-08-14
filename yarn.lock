@@ -5546,15 +5546,14 @@ neo-async@^2.6.2:
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.2.tgz#b4aafb93e3aeb2d8174ca53cf163ab7d7308305f"
   integrity sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
 
-nestjs-vk@^4.7.0:
-  version "4.7.0"
-  resolved "https://registry.yarnpkg.com/nestjs-vk/-/nestjs-vk-4.7.0.tgz#e06beb1cd46d3b90e6509ce358940a73ede32204"
-  integrity sha512-4INWeNu3XXpM7Rb7QD+fXrkqG8ZkuYlE9kS6sC9XP+qBw2AmAXmXio42JJLdACDjeHxkGPmgnt0jJPIrMWlFgQ==
+nestjs-vk@^4.8.0:
+  version "4.8.0"
+  resolved "https://registry.yarnpkg.com/nestjs-vk/-/nestjs-vk-4.8.0.tgz#f9e0661fbeb0dde0bdcbaed90c132cf492627307"
+  integrity sha512-iL2l3ejEP7wo8qI8LFamFJzzQ3yyuBOfVgI8YhBDXmTVy4sc1NJ5y1PK+92k7BwKWkt38z6OQAdpu6joaWriSQ==
   dependencies:
     "@vk-io/hear" "^1.1.0"
     "@vk-io/scenes" "^1.2.0"
     "@vk-io/session" "^2.2.0"
-    lodash "^4.17.21"
     rimraf "^6.1.2"
 
 node-abort-controller@^3.0.1:

@@ -33,11 +33,7 @@ export class VkModule {
       imports: [
         VkBroadcasterModule,
         VkScheduleNotifModule,
-        nestjsVk.VkModule.forManagers({
-          useSessionManager: false,
-          useSceneManager: false,
-          useHearManager: false,
-        }),
+        nestjsVk.VkModule.forManagers(false),
         nestjsVk.VkModule.forRootAsync({
           inject: [...middlewares],
           useFactory: async (mainMiddleware: MainMiddleware) => ({

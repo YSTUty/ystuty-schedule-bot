@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { VkException, VkExecutionContext, VkontextType } from 'nestjs-vk';
+import { VkContextType, VkException, VkExecutionContext } from 'nestjs-vk';
 import {
   TelegrafContextType,
   TelegrafException,
@@ -81,7 +81,7 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    if (context.getType<VkontextType>() === 'vk-io') {
+    if (context.getType<VkContextType>() === 'vk-io') {
       const eCtx = VkExecutionContext.create(context);
       const ctx = eCtx.getContext<VkIContext>();
       if (

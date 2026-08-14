@@ -1,4 +1,4 @@
-import { VK_LISTENERS_METADATA } from 'nestjs-vk/dist/vk.constants';
+import { ListenerDecorator } from 'nestjs-vk';
 
 import { LocalePhrase } from '@my-interfaces';
 
@@ -7,7 +7,7 @@ import { VkScheduleNotifUpdate } from './vk-schedule-notif.update';
 describe('VkScheduleNotifUpdate', () => {
   it('only routes schedule-notification callbacks', () => {
     const listener = Reflect.getMetadata(
-      VK_LISTENERS_METADATA,
+      ListenerDecorator.KEY,
       VkScheduleNotifUpdate.prototype.onMessageEvent,
     ).find(
       (item: { handlerType: string }) => item.handlerType === 'message_event',

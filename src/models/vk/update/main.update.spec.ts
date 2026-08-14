@@ -1,10 +1,10 @@
-import { VK_LISTENERS_METADATA } from 'nestjs-vk/dist/vk.constants';
+import { ListenerDecorator } from 'nestjs-vk';
 
 import { MainUpdate } from './main.update';
 
 const getMessageEventCondition = (target: object, methodName: string) => {
   const method = (target as Record<string, object>)[methodName];
-  const listeners = Reflect.getMetadata(VK_LISTENERS_METADATA, method) as {
+  const listeners = Reflect.getMetadata(ListenerDecorator.KEY, method) as {
     handlerType: string;
     event: unknown;
   }[];

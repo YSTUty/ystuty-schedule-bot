@@ -27,10 +27,7 @@ describe('ScheduleNotifScheduler', () => {
       dueNotif.id,
       new Date('2026-09-07T17:00:00.000Z'),
     );
-    expect(deliveryService.deliver).toHaveBeenCalledWith(
-      dueNotif,
-      delivery,
-    );
+    expect(deliveryService.deliver).toHaveBeenCalledWith(dueNotif, delivery);
   });
 
   it('does not deliver a notif that is already reserved', async () => {

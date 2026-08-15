@@ -38,7 +38,9 @@ export function VkAdminGuard(
                 })
                 .catch();
             } else {
-              ctx.reply && ctx.reply(input).catch();
+              if (ctx.reply) {
+                ctx.reply(input).catch();
+              }
             }
           } else if (input === true) {
             throw new VkException(LocalePhrase.Common_NoAccess);

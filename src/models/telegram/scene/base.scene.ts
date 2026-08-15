@@ -25,7 +25,7 @@ export class BaseScene {
   @Action('cancel')
   @Action(LocalePhrase.Button_Cancel)
   @TgHearsLocale(LocalePhrase.Button_Cancel)
-  async __onСancel(@Ctx() ctx: IContext, @Next() next: Function) {
+  async __onСancel(@Ctx() ctx: IContext, @Next() next: () => unknown) {
     if (!this.isCancelable) {
       next?.();
       return;
@@ -36,7 +36,7 @@ export class BaseScene {
     await this.leaveScene(ctx);
   }
 
-  async onСancel(ctx: IContext, next?: Function) {
+  async onСancel(ctx: IContext, _next?: () => unknown) {
     const msg = ctx.i18n.t(LocalePhrase.Common_Canceled);
     if (ctx.updateType === 'callback_query') {
       await ctx.tryAnswerCbQuery(msg);

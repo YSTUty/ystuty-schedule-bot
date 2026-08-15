@@ -52,7 +52,7 @@ export class MainUpdate {
   }
 
   @Hears('/broke')
-  onBroke(@Ctx() ctx: IMessageContext) {
+  onBroke() {
     throw new Error('Whoops');
   }
 

@@ -68,7 +68,7 @@ export class MainUpdate {
   }
 
   @Command('broke')
-  async onBroke(@Ctx() ctx: IMessageContext) {
+  async onBroke() {
     throw new Error('Whoops');
   }
 
@@ -333,7 +333,7 @@ export class MainUpdate {
 
   @On('inline_query')
   async onInlineQuery(
-    @Ctx() ctx: IContext<{}, TgUpdate.InlineQueryUpdate>,
+    @Ctx() _ctx: IContext<{}, TgUpdate.InlineQueryUpdate>,
     @Next() next,
   ) {
     return next();

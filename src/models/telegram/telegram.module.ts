@@ -53,7 +53,7 @@ export class TelegramModule {
               mainMiddleware.middlewareForkAll,
               mainMiddleware,
               metricsMiddleware,
-              // @ts-ignore
+              // @ts-expect-error RedisSession is typed against an older Telegraf middleware API.
               new RedisSession({
                 store: {
                   host: xEnv.REDIS_HOST,
@@ -69,7 +69,7 @@ export class TelegramModule {
                     (ctx.from && `${ctx.from.id}:${ctx.from.id}`)
                   }`,
               }) as RedisSession.default,
-              // @ts-ignore
+              // @ts-expect-error RedisSession is typed against an older Telegraf middleware API.
               new RedisSession({
                 store: {
                   host: xEnv.REDIS_HOST,

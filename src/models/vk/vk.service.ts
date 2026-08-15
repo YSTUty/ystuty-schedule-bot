@@ -80,7 +80,7 @@ export class VkService implements OnModuleInit {
         message,
         ...extra,
       });
-    } catch (err) {
+    } catch {
       return await this.sendMessage(peer_id, message, extra);
     }
   }

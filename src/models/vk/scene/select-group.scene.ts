@@ -1,5 +1,5 @@
 import { UseFilters } from '@nestjs/common';
-import { AddStep, Ctx, Next, Scene, SceneLeave } from 'nestjs-vk';
+import { AddStep, Ctx, Scene, SceneLeave } from 'nestjs-vk';
 
 import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
@@ -122,7 +122,7 @@ export class SelectGroupScene {
   }
 
   @SceneLeave()
-  onSceneLeave(@Ctx() ctx: IStepContext) {
+  onSceneLeave(@Ctx() _ctx: IStepContext) {
     // const keyboard = this.keyboardFactory
     //     .getClose(ctx)
     //     .inline(this.keyboardFactory.onlyInline(ctx));

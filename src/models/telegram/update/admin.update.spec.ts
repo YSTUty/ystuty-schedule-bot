@@ -5,11 +5,7 @@ describe('AdminUpdate', () => {
     const ystutyService = {
       groupNames: ['ЦИС-18', 'Не группа'],
     };
-    const update = new AdminUpdate(
-      {} as any,
-      {} as any,
-      ystutyService as any,
-    );
+    const update = new AdminUpdate({} as any, {} as any, ystutyService as any);
     const ctx = { replyWithHTML: jest.fn() } as any;
 
     await update.onCheckGroupPatterns(ctx);

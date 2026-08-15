@@ -1,10 +1,4 @@
-import {
-  forwardRef,
-  Inject,
-  Injectable,
-  Logger,
-  OnModuleInit,
-} from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
 
@@ -105,7 +99,7 @@ export class UserService {
       ));
     try {
       // let curUser = await this.userRepository.findOne(user);
-      let curUser = await this.userRepository.findOne({
+      const curUser = await this.userRepository.findOne({
         where: [{ id: user.id }, { externalId: user.externalId }],
       });
       if (curUser) {
@@ -115,7 +109,9 @@ export class UserService {
       }
       return await this.userRepository.save(new User(user));
     } finally {
-      lock && (await lock.unlock());
+      if (lock) {
+        await lock.unlock();
+      }
     }
   }
 
@@ -137,7 +133,9 @@ export class UserService {
       }
       return curUser;
     } finally {
-      lock && (await lock.unlock());
+      if (lock) {
+        await lock.unlock();
+      }
     }
   }
 

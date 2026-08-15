@@ -93,8 +93,8 @@ export class MetricsService {
     const jobName = 'schedule_bot_metrics';
     this.gateway
       .pushAdd({ jobName, groupings: { app: xEnv.INSTANCE_NAME } })
-      .then((response) => {
-        // console.log('Metrics pushed to the Pushgateway', response.body);
+      .then(() => {
+        // console.log('Metrics pushed to the Pushgateway');
       })
       .catch((err) => this.logger.error('[pushMetricsToGateway] Error', err));
   }

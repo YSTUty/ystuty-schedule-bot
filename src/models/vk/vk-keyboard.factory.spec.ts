@@ -19,16 +19,13 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('creates a schedule notif editor within VK inline keyboard limits', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(
-      ctx,
-      {
-        id: 1,
-        deliveryHour: 8,
-        deliveryMinute: 30,
-        targetDayOffset: 0,
-        weekdays: [1, 2, 3, 4, 5, 6, 7],
-      },
-    );
+    const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(ctx, {
+      id: 1,
+      deliveryHour: 8,
+      deliveryMinute: 30,
+      targetDayOffset: 0,
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+    });
 
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const buttonsCount = renderedKeyboard.buttons.flat().length;
@@ -38,27 +35,26 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('creates the editor weekday page within VK inline keyboard limits', () => {
-    const keyboard =
-      new VKKeyboardFactory().getScheduleNotifEditorWeekdays(ctx, {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifEditorWeekdays(
+      ctx,
+      {
         id: 1,
         weekdays: [1, 2, 3, 4, 5, 6, 7],
-      });
+      },
+    );
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
     expect(renderedKeyboard.buttons.flat()).toHaveLength(8);
   });
 
   it('opens hour selection before choosing minutes in the notif editor', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(
-      ctx,
-      {
-        id: 7,
-        deliveryHour: 8,
-        deliveryMinute: 30,
-        targetDayOffset: 0,
-        weekdays: [1],
-      },
-    );
+    const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(ctx, {
+      id: 7,
+      deliveryHour: 8,
+      deliveryMinute: 30,
+      targetDayOffset: 0,
+      weekdays: [1],
+    });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
     expect(
@@ -68,10 +64,10 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('asks for deletion confirmation instead of deleting immediately', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotifSettings(
-      ctx,
-      { id: 7, isEnabled: true },
-    );
+    const keyboard = new VKKeyboardFactory().getScheduleNotifSettings(ctx, {
+      id: 7,
+      isEnabled: true,
+    });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const deleteButton = renderedKeyboard.buttons
       .flat()
@@ -80,9 +76,9 @@ describe('VKKeyboardFactory', () => {
           button.action.label === 'button.schedule_notification.delete',
       );
 
-    expect(
-      JSON.parse(deleteButton.action.payload).scheduleNotifAction,
-    ).toBe('deleteConfirm');
+    expect(JSON.parse(deleteButton.action.payload).scheduleNotifAction).toBe(
+      'deleteConfirm',
+    );
   });
 
   it('uses a compact three-button pager for notif hours', () => {

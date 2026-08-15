@@ -13,7 +13,6 @@ import {
 
 import { SocialType } from '@my-common/constants';
 
-import { Conversation } from '../../social/entity/conversation.entity';
 import { UserToConversation } from '../../social/entity/userToConversation.entity';
 
 import { User } from './user.entity';

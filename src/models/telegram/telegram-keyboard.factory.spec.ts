@@ -21,14 +21,13 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('opens hour selection before choosing minutes in the notif editor', () => {
-    const keyboard =
-      new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
-        id: 7,
-        deliveryHour: 8,
-        deliveryMinute: 30,
-        targetDayOffset: 0,
-        weekdays: [1],
-      });
+    const keyboard = new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
+      id: 7,
+      deliveryHour: 8,
+      deliveryMinute: 30,
+      targetDayOffset: 0,
+      weekdays: [1],
+    });
 
     expect(keyboard.reply_markup.inline_keyboard[0][0]).toMatchObject({
       callback_data: 'scheduleNotif:editTime:7',

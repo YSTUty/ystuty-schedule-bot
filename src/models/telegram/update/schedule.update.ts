@@ -92,7 +92,7 @@ export class ScheduleUpdate {
       }
     }
 
-    let messageTomorrow =
+    const messageTomorrow =
       (
         await this.ystutyService.findNext({
           skipDays: 1,
@@ -101,7 +101,7 @@ export class ScheduleUpdate {
         })
       )[1] || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
 
-    let messageWeek =
+    const messageWeek =
       (
         await this.ystutyService.findNext({
           skipDays: 1,

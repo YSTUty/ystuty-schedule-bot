@@ -499,7 +499,10 @@ export class YSTUtyService implements OnModuleInit {
           msg += `✌ ${scheduleUtil.getTimez('11:40', 40)}. FREE TIME\n`;
         }
 
-        let auditoryName = [lesson.auditoryName, lesson.additionalAuditoryName]
+        const auditoryName = [
+          lesson.auditoryName,
+          lesson.additionalAuditoryName,
+        ]
           .filter(Boolean)
           .join('; ');
         const auditory = !auditoryName
@@ -518,7 +521,7 @@ export class YSTUtyService implements OnModuleInit {
             ? ' <b>(ONLINE)</b>'
             : ' (ONLINE)';
 
-        let targetStr = (
+        const targetStr = (
           targetType === 'group'
             ? [lesson.teacherName, lesson.additionalTeacherId]
             : lesson.groups || ['-']
@@ -526,7 +529,7 @@ export class YSTUtyService implements OnModuleInit {
           .filter(Boolean)
           .join('; ');
 
-        let targetsStrFmt = !targetStr
+        const targetsStrFmt = !targetStr
           ? ''
           : withTags
             ? ` (<i>${targetStr}</i>)`

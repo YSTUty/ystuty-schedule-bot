@@ -302,7 +302,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
   // ?? зачем этот метод, если можно юзать `import { i18n } from '@my-common/util/tg';`
   public get i18nMiddleware() {
-    return async (ctx: IContext, next: Function) => {
+    return async (ctx: IContext, next: () => Promise<unknown>) => {
       const session: IContext['session'] =
         i18n.config.useSession && ctx[i18n.config.sessionName];
       const languageCode =
@@ -340,6 +340,7 @@ const getThreadId = <U extends tg.Update>(ctx: Context<U>) => {
  * Returns character positions where the text can be sliced (text.slice(0, pos)).
  * Breakpoints are at line breaks and sentence endings, with minimum gap to avoid flicker.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- helper reserved for streaming drafts.
 function findStreamPositions(text: string, minGap = 30): number[] {
   const positions: number[] = [];
   let lastPos = 0;

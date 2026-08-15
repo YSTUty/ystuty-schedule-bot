@@ -21,12 +21,12 @@ describe('VkService', () => {
     };
     const service = new VkService(bot as any, redisService as any, {} as any);
 
-    await expect(
-      service.getCachedConvMembers(2000000001),
-    ).resolves.toEqual(items);
-    await expect(
-      service.getCachedConvMembers(2000000001),
-    ).resolves.toEqual(items);
+    await expect(service.getCachedConvMembers(2000000001)).resolves.toEqual(
+      items,
+    );
+    await expect(service.getCachedConvMembers(2000000001)).resolves.toEqual(
+      items,
+    );
 
     expect(bot.api.messages.getConversationMembers).toHaveBeenCalledTimes(1);
     expect(redisService.redis.set).toHaveBeenCalledWith(

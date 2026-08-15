@@ -72,7 +72,9 @@ export class TelegramKeyboardFactory {
           ]
         : []),
       ...(!isPrivate ? [[ctx.i18n.t(LocalePhrase.Button_ScheduleNotif)]] : []),
-      ...(isPrivate && isAdmin ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]] : []),
+      ...(isPrivate && isAdmin
+        ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]]
+        : []),
     ]).resize();
   }
 

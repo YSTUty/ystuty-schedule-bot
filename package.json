@@ -38,7 +38,7 @@
     "typeorm:run": "npm run typeorm migration:run",
     "typeorm:run:prod": "npm run typeorm:prod migration:run",
     "typeorm:revert": "npm run typeorm migration:revert",
-    "prepare": "husky install",
+    "prepare": "husky",
     "release": "standard-version",
     "release:major": "standard-version --release-as major",
     "release:minor": "standard-version --release-as minor",

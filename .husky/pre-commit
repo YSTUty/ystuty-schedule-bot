@@ -1,1 +1,2 @@
-# yarn test
+#!/usr/bin/env sh
+# npm run test

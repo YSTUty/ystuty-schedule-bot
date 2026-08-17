@@ -16,11 +16,15 @@
 - [ ] Перуейти на актуальную версию `telegraf` > `telegraf-hardened`.
       Обновить nest-адаптер для `@xtcry/nestjs-telegraf` до поддержки новой версии.
 
-- [ ] Проверить и исправить падение/некорректное поведение при Telegram `403: bot was kicked from the group chat`.
-      Ожидаемый результат: бот не падает, кейс корректно логируется и не ломает дальнейшую обработку.
+- [x] Проверить и исправить падение/некорректное поведение при Telegram `403: bot was kicked from the group chat`.
+      Статус: `TelegrafExceptionFilter` распознаёт недоступную беседу,
+      отмечает `Conversation.isLeaved` и завершает обработку без повторного
+      ответа в недоступный чат.
 
-- [ ] Проверить и стабилизировать обработку Telegram `429 Too Many Requests`.
-      Ожидаемый результат: при rate limit сервис не валится, а деградирует контролируемо.
+- [x] Проверить и стабилизировать обработку Telegram `429 Too Many Requests`.
+      Статус: transport filter распознаёт rate limit и не пытается отправить
+      пользователю ещё одно сообщение; streaming draft повторяется с
+      `retry_after`.
 
 - [ ] Проверить работу `redlock` после потери соединения и при всплеске апдейтов.
       Ожидаемый результат: ошибки блокировок не приводят к крашу процесса и не создают каскадных сбоев.
@@ -93,19 +97,20 @@
 
 - [ ] Подготовить безопасный production-переезд со старой версии приложения на текущую.
 
-- [ ] Ввести versioned database migrations и отказаться от `POSTGRES_SYNCHRONIZE` в production.
-      Контекст: проект пока на TypeORM `0.2`, миграций и CLI DataSource нет; сначала зафиксировать
-      baseline существующей production-схемы, затем применять новые schema changes только миграциями.
-      Обновление TypeORM до `0.3` и migration infrastructure планировать и проверять отдельной задачей.
+- [x] Ввести versioned database migrations и отказаться от `POSTGRES_SYNCHRONIZE` в production.
+      Статус: TypeORM `0.3` использует CLI DataSource с `synchronize: false`,
+      добавлены baseline и migration для старой схемы, а production startup
+      выполняет миграции перед запуском приложения. Конфигурация запрещает
+      `POSTGRES_SYNCHRONIZE=true` в production.
 
 - [x] Добавить GitHub Actions для сборки и публикации production Docker image в GHCR.
       Первый этап CI: `yarn install --frozen-lockfile`, `yarn build`, Docker build/push.
       Не включать lint и E2E до их отдельной стабилизации. Публиковать immutable tag по commit SHA,
       а `latest` использовать только как указатель на последний успешный образ основной ветки.
 
-- [ ] Перевести production compose на готовый Docker image вместо сборки на сервере.
-      Контекст: сервер должен выполнять только `docker compose pull` и restart `app_srv`; версии image
-      фиксировать SHA-тегом, чтобы rollback не требовал повторной сборки.
+- [x] Перевести production compose на готовый Docker image вместо сборки на сервере.
+      Статус: `docker-compose.deploy.yml` использует GHCR image, а Makefile
+      поддерживает pull/deploy и SHA-тег образа для rollback.
 
 - [ ] Нормально настроить инфраструктуру для unit/spec тестов.
       Контекст: сейчас проект не подготовлен для удобного запуска локальных `*.spec.ts` с корректной типизацией и предсказуемым test environment.

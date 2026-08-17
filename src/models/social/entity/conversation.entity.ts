@@ -42,7 +42,7 @@ export class Conversation {
 
   @Expose()
   @Column({ type: 'character varying', nullable: true })
-  public title?: string;
+  public title?: string | null;
 
   @Column({ type: 'boolean', default: false })
   public isLeaved: boolean;
@@ -52,21 +52,21 @@ export class Conversation {
   public groupName?: string | null;
 
   @Expose()
-  @ManyToOne(() => UserSocial /* , (userSocial) => userSocial.conversations */)
+  @ManyToOne(() => UserSocial, { nullable: true })
   @JoinColumn()
-  public invitedByUserSocial?: UserSocial;
+  public invitedByUserSocial?: UserSocial | null;
 
   @Expose()
   @Column({ nullable: true })
-  public invitedByUserSocialId: number;
+  public invitedByUserSocialId: number | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 64, nullable: true })
-  public chatStatus: string;
+  public chatStatus: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 64, nullable: true })
-  public chatType: string;
+  public chatType: string | null;
 
   @OneToMany(() => UserToConversation, (membership) => membership.conversation)
   public userMemberships: UserToConversation[];

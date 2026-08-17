@@ -70,7 +70,7 @@ export class UserSocial {
   public hasDM: boolean;
 
   @Expose()
-  @ManyToOne(() => User, (user) => user.socials)
+  @ManyToOne(() => User, (user) => user.socials, { nullable: true })
   @JoinColumn()
   public user?: User | null;
 

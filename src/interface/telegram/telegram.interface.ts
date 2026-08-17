@@ -31,11 +31,7 @@ export interface ISessionState extends Partial<TgSceneSession> {
   teacherId?: number;
 }
 
-interface ISessionConversationState extends Partial<TgSceneSession> {
-  // TODO: remove it. Use `conversation.groupName`
-  /** @deprecated Use `conversation.groupName` */
-  selectedGroupName?: string;
-}
+type ISessionConversationState = Partial<TgSceneSession>;
 
 type SceneSession = {
   state: any;

@@ -26,9 +26,6 @@ export interface ISessionState {
 }
 
 interface ISessionConversationState {
-  // TODO: remove it. Use `conversation.groupName`
-  /** @deprecated Use `conversation.groupName` */
-  selectedGroupName?: string;
   hideStaticKeyboard?: boolean;
 }
 

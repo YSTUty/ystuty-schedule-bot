@@ -307,11 +307,7 @@ export class MainUpdate {
         chat.type !== 'channel',
       );
 
-      if (
-        chat.type !== 'channel' &&
-        !ctx.sessionConversation.selectedGroupName &&
-        !ctx.conversation.groupName
-      ) {
+      if (chat.type !== 'channel' && !ctx.conversation.groupName) {
         const keyboard = this.keyboardFactory.getSelectGroupInline(ctx);
         await ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_InitBot),
@@ -591,7 +587,7 @@ export class MainUpdate {
     const selectedGroupName =
       ctx.chat.type === 'private'
         ? ctx.userSocial.groupName
-        : ctx.sessionConversation.selectedGroupName;
+        : ctx.conversation?.groupName;
 
     const groupNameFromMath = ctx.match?.groups?.groupName;
     const groupNameQuery = groupNameFromMath || selectedGroupName;

@@ -193,7 +193,7 @@ export class MainUpdate {
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
 
     // this.vkService.parseChatTitle(ctx, title);
-    if (!ctx.sessionConversation.selectedGroupName) {
+    if (!ctx.state.conversation?.groupName) {
       const keyboard = this.keyboardFactory.getSelectGroup(ctx).inline();
       const useInline = ctx.clientInfo.inline_keyboard;
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_InitBot, { useInline }), {

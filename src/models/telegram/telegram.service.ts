@@ -188,7 +188,6 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   public async parseChatTitle(ctx: IContext, str: string, allowMessage = true) {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
-      ctx.sessionConversation.selectedGroupName = groupName;
       if (ctx.conversation) {
         ctx.conversation.groupName = groupName;
       }

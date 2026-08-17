@@ -146,14 +146,14 @@ describe('VK MainUpdate', () => {
   });
 
   it('restores the conversation when the bot is invited back to a VK chat', async () => {
-    const conversation = { isLeaved: true };
+    const conversation = { isLeaved: true, groupName: 'ЦИС-21' };
     const ctx = {
       $groupId: 42,
       eventMemberId: -42,
       senderId: 7,
       peerId: 2_000_000_001,
       state: { conversation, userSocial: { id: 3 } },
-      sessionConversation: { selectedGroupName: 'ЦИС-21' },
+      sessionConversation: {},
       i18n: { t: jest.fn().mockReturnValue('start') },
       send: jest.fn(),
     } as any;

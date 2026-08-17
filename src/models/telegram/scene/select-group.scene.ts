@@ -124,7 +124,9 @@ export class SelectGroupScene extends BaseScene {
 
     if (groupName === '0') {
       if (isConv) {
-        delete ctx.sessionConversation.selectedGroupName;
+        if (ctx.conversation) {
+          ctx.conversation.groupName = null;
+        }
       } else {
         userSocial.groupName = null;
         await this.syncPrivateChatCommands(ctx);
@@ -145,7 +147,6 @@ export class SelectGroupScene extends BaseScene {
         this.ystutyService.parseGroupName(groupName));
     if (selectedGroupName) {
       if (isConv) {
-        ctx.sessionConversation.selectedGroupName = selectedGroupName;
         if (ctx.conversation) {
           ctx.conversation.groupName = selectedGroupName;
         }

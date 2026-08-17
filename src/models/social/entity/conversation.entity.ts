@@ -49,7 +49,7 @@ export class Conversation {
 
   @Expose()
   @Column({ type: 'character varying', length: 16, nullable: true })
-  public groupName?: string;
+  public groupName?: string | null;
 
   @Expose()
   @ManyToOne(() => UserSocial /* , (userSocial) => userSocial.conversations */)

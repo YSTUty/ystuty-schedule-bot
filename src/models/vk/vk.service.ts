@@ -99,7 +99,6 @@ export class VkService implements OnModuleInit {
   public async parseChatTitle(ctx: IMessageContext, str: string) {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
-      ctx.sessionConversation.selectedGroupName = groupName;
       if (ctx.state.conversation) {
         ctx.state.conversation.groupName = groupName;
       }

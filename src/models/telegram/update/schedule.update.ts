@@ -249,17 +249,9 @@ export class ScheduleUpdate {
         return;
       }
 
-      const selectedGroupName =
-        ctx.chat.type === 'private'
-          ? ctx.userSocial.groupName
-          : ctx.sessionConversation.selectedGroupName;
-
       const groupNameFromMath = ctx.match?.groups?.groupName;
-      const groupNameQuery = groupNameFromMath || selectedGroupName;
-      const groupName =
-        groupNameQuery &&
-        (this.ystutyService.getGroupByName(groupNameQuery) ||
-          this.ystutyService.parseGroupName(groupNameQuery));
+      const selectedGroupName = this.getSelectedGroupName(ctx);
+      const groupName = this.resolveGroupName(ctx, groupNameFromMath);
 
       if (!groupName) {
         if (selectedGroupName) {
@@ -418,17 +410,9 @@ export class ScheduleUpdate {
         return;
       }
 
-      const selectedGroupName =
-        ctx.chat.type === 'private'
-          ? ctx.userSocial.groupName
-          : ctx.sessionConversation.selectedGroupName;
-
       const groupNameFromMath = ctx.match?.groups?.groupName;
-      const groupNameQuery = groupNameFromMath || selectedGroupName;
-      const groupName =
-        groupNameQuery &&
-        (this.ystutyService.getGroupByName(groupNameQuery) ||
-          this.ystutyService.parseGroupName(groupNameQuery));
+      const selectedGroupName = this.getSelectedGroupName(ctx);
+      const groupName = this.resolveGroupName(ctx, groupNameFromMath);
 
       if (!groupName) {
         if (selectedGroupName) {
@@ -525,5 +509,22 @@ export class ScheduleUpdate {
       ctx.session.teacherId ??
       this.ystutyService.getTeacherByExactName(ctx.user?.fullname)?.id
     );
+  }
+
+  /** Находит группу из команды или постоянной настройки текущего чата. */
+  private resolveGroupName(ctx: IMessageContext, groupNameFromMatch?: string) {
+    const groupNameQuery = groupNameFromMatch || this.getSelectedGroupName(ctx);
+    return (
+      groupNameQuery &&
+      (this.ystutyService.getGroupByName(groupNameQuery) ||
+        this.ystutyService.parseGroupName(groupNameQuery))
+    );
+  }
+
+  /** Возвращает личную группу либо группу, сохранённую у conversation. */
+  private getSelectedGroupName(ctx: IMessageContext) {
+    return ctx.chat.type === 'private'
+      ? ctx.userSocial.groupName
+      : ctx.conversation?.groupName;
   }
 }

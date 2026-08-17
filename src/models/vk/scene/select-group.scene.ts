@@ -62,7 +62,9 @@ export class SelectGroupScene {
 
     if (groupName === '0') {
       if (isConv) {
-        ctx.sessionConversation.selectedGroupName = undefined;
+        if (ctx.state.conversation) {
+          ctx.state.conversation.groupName = null;
+        }
       } else {
         ctx.state.userSocial.groupName = null;
       }
@@ -82,7 +84,6 @@ export class SelectGroupScene {
         this.ystutyService.parseGroupName(groupName));
     if (selectedGroupName) {
       if (isConv) {
-        ctx.sessionConversation.selectedGroupName = selectedGroupName;
         if (ctx.state.conversation) {
           ctx.state.conversation.groupName = selectedGroupName;
         }

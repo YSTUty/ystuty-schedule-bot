@@ -1,14 +1,16 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+import { HttpService } from '@nestjs/axios';
+
 import axios from 'axios';
+import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
-import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 import { getLessonTypeStrArr, matchGroupName, md5 } from '@my-common';
+import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 
-import { RedisService } from '../redis/redis.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { RedisService } from '../redis/redis.service';
+
 import * as scheduleUtil from './util/schedule.util';
 
 @Injectable()
@@ -95,12 +97,35 @@ export class YSTUtyService implements OnModuleInit {
       return true;
     } catch (error) {
       console.log('[loadAllTeachers] Error', error.message);
+
+      if (axios.isAxiosError(error)) {
+        this.logger.error(error);
+        if (error.response?.status === 429) {
+          if (error.response.headers['retry-after']) {
+            // const _headers = {
+            //   'retry-after': '20',
+            //   'x-ratelimit-limit': '5',
+            //   'x-ratelimit-remaining': '0',
+            //   'x-ratelimit-reset': '18',
+            // };
+          }
+          // ...
+        } else {
+          console.error('Axios error details:');
+          console.error('Message:', error.message);
+          console.error('Status:', error.response?.status);
+          console.error('Headers:', error.response?.headers);
+          console.error('Data:', error.response?.data);
+        }
+      } else {
+        console.error('Non-axios error:', error);
+      }
     }
 
     return false;
   }
 
-  public getGroupByName(groupName?: string) {
+  public getGroupByName(groupName?: string | null) {
     const parse = (str: string) =>
       str
         .trim()
@@ -109,6 +134,13 @@ export class YSTUtyService implements OnModuleInit {
 
     return (
       groupName && this.groupNames.find((e) => parse(e) === parse(groupName))
+    );
+  }
+
+  /** Находит группу по короткому callback-идентификатору Telegram. */
+  public groupNameByHash(groupHash: string) {
+    return this.groupNames.find((groupName) =>
+      md5(groupName).startsWith(groupHash),
     );
   }
 
@@ -137,15 +169,16 @@ export class YSTUtyService implements OnModuleInit {
     return this.allGroupsList.flatMap((e) => e.groups);
   }
 
-  public instituteNameByMD5(nameMD5: string) {
-    const name = this.allGroupsList.find((e) => md5(e.name) === nameMD5)?.name;
+  public instituteNameByHash(instituteHash: string) {
+    const name = this.allGroupsList.find((e) =>
+      md5(e.name).startsWith(instituteHash),
+    )?.name;
     return name;
   }
 
-  public groupsList(page = 1, count = 20, instituteNameMD5?: string) {
-    // const { groupNames } = this;
+  public groupsList(page = 1, count = 20, instituteHash: string | null = null) {
     const groupNames = this.allGroupsList
-      .filter((e) => !instituteNameMD5 || md5(e.name) === instituteNameMD5)
+      .filter((e) => !instituteHash || md5(e.name).startsWith(instituteHash))
       .flatMap((e) => e.groups);
 
     const totalCount = groupNames.length;
@@ -178,21 +211,83 @@ export class YSTUtyService implements OnModuleInit {
     return this.allTeachersList.map((e) => e.name);
   }
 
-  public getTeacherName(id: number) {
-    return this.allTeachersList.find((e) => e.id === id)?.name;
+  public getTeacher(id: number) {
+    return this.allTeachersList.find((teacher) => teacher.id === id);
   }
 
-  public async teachersList(page = 1, count = 20) {
-    const teachers = this.allTeachersList;
+  public getTeacherName(id: number) {
+    return this.getTeacher(id)?.name;
+  }
+
+  public getTeacherByExactName(name?: string | null) {
+    if (!name) return undefined;
+
+    const normalizedName = this.normalizeTeacherName(name);
+    const teachers = this.allTeachersList.filter(
+      (teacher) => this.normalizeTeacherName(teacher.name) === normalizedName,
+    );
+
+    return teachers.length === 1 ? teachers[0] : undefined;
+  }
+
+  /** Проверяет, что текст содержит значимую часть ФИО одного преподавателя. */
+  public isTeacherSearchFallbackQuery(query?: string | null) {
+    const normalizedQuery = this.normalizeTeacherName(query || '');
+    if (normalizedQuery.length < 5) return false;
+
+    const queryTokens = normalizedQuery.split(' ').filter(Boolean);
+    return this.allTeachersList.some((teacher) => {
+      const teacherTokens = this.normalizeTeacherName(teacher.name)
+        .split(' ')
+        .filter(Boolean);
+
+      return queryTokens.every((queryToken) =>
+        teacherTokens.some((teacherToken) => teacherToken.includes(queryToken)),
+      );
+    });
+  }
+
+  public teachersList(page = 1, count = 20, query?: string | null) {
+    const normalizedQuery = this.normalizeTeacherName(query || '');
+    const searchTokens = normalizedQuery.split(' ').filter(Boolean);
+    const teachers = this.allTeachersList
+      .filter((teacher) => {
+        const normalizedName = this.normalizeTeacherName(teacher.name);
+        return searchTokens.every((token) => normalizedName.includes(token));
+      })
+      .sort((first, second) => {
+        const normalizedCompare = this.normalizeTeacherName(
+          first.name,
+        ).localeCompare(this.normalizeTeacherName(second.name), 'ru');
+        if (normalizedCompare !== 0) return normalizedCompare;
+
+        const originalCompare = first.name.localeCompare(second.name, 'ru');
+        return originalCompare || first.id - second.id;
+      });
     const totalCount = teachers.length;
-    const totalPageCount = page * count;
-    const items = teachers.slice(totalPageCount - count, totalPageCount);
+    const safeCount = Math.max(1, count);
+    const totalPages = Math.max(1, Math.ceil(totalCount / safeCount));
+    const currentPage = Math.max(1, Math.min(page, totalPages));
+    const offset = (currentPage - 1) * safeCount;
+    const items = teachers.slice(offset, offset + safeCount);
 
     return {
       items,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / count),
+      currentPage,
+      totalPages,
+      totalCount,
+      query: query?.trim() || '',
     };
+  }
+
+  private normalizeTeacherName(name: string) {
+    return name
+      .trim()
+      .toLocaleLowerCase('ru')
+      .replace(/ё/g, 'е')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   public async findNext({
@@ -229,11 +324,11 @@ export class YSTUtyService implements OnModuleInit {
     });
 
     const findDeep = async (
-      skipDays?: number,
-      weekNumber?: WeekNumberType,
+      skipDays: number,
+      weekNumber: WeekNumberType,
       isWeek?: boolean,
       next?: boolean,
-    ): Promise<[number, string | false]> => {
+    ): Promise<[number, string | false | null]> => {
       const responseSchedule = await this.getFormatedSchedule({
         targetType,
         targetId,
@@ -282,7 +377,7 @@ export class YSTUtyService implements OnModuleInit {
 
     const weekNumber =
       scheduleUtil.getWeekNumber(now) - scheduleUtil.getWeekOffsetByYear(now);
-    const dayNumber: WeekNumberType = isWeek
+    const dayNumber: WeekNumberType | null = isWeek
       ? null
       : ((day) => (day > 0 ? day - 1 : 6))(now.getDay());
 
@@ -293,7 +388,11 @@ export class YSTUtyService implements OnModuleInit {
       5e3,
     );
     try {
-      const { items } = await this.getSchedule(targetId, targetType);
+      const response = await this.getSchedule(targetId, targetType);
+      if (!response) {
+        return null;
+      }
+      const { items } = response;
 
       if (!Array.isArray(items)) {
         return null;
@@ -335,7 +434,7 @@ export class YSTUtyService implements OnModuleInit {
       return null;
     }
 
-    let message: string = null;
+    let message: string | null = null;
     for (let dayIndex = startDay; dayIndex < 7; ++dayIndex) {
       const day = week.days.find((e) => e.info.type === dayIndex);
       if (!day) {
@@ -381,7 +480,7 @@ export class YSTUtyService implements OnModuleInit {
       msg += ` ${weekNumber % 2 === 0 ? 'Ч' : 'Н'}`;
       msg += '\n';
 
-      let lastLesson: Lesson = null;
+      let lastLesson: Lesson | null = null;
       for (const index in lessons) {
         const lesson = lessons[index];
         const nextLesson = lessons[index + 1];
@@ -392,14 +491,18 @@ export class YSTUtyService implements OnModuleInit {
         const typeName = getLessonTypeStrArr(lesson.type).join(', ');
 
         if (
-          lastLesson?.number > 0 &&
-          lastLesson?.number < 3 &&
+          lastLesson &&
+          lastLesson.number > 0 &&
+          lastLesson.number < 3 &&
           /*lastNumber !== 2 &&*/ lesson.number === 3
         ) {
           msg += `✌ ${scheduleUtil.getTimez('11:40', 40)}. FREE TIME\n`;
         }
 
-        let auditoryName = [lesson.auditoryName, lesson.additionalAuditoryName]
+        const auditoryName = [
+          lesson.auditoryName,
+          lesson.additionalAuditoryName,
+        ]
           .filter(Boolean)
           .join('; ');
         const auditory = !auditoryName
@@ -418,7 +521,7 @@ export class YSTUtyService implements OnModuleInit {
             ? ' <b>(ONLINE)</b>'
             : ' (ONLINE)';
 
-        let targetStr = (
+        const targetStr = (
           targetType === 'group'
             ? [lesson.teacherName, lesson.additionalTeacherId]
             : lesson.groups || ['-']
@@ -426,7 +529,7 @@ export class YSTUtyService implements OnModuleInit {
           .filter(Boolean)
           .join('; ');
 
-        let targetsStrFmt = !targetStr
+        const targetsStrFmt = !targetStr
           ? ''
           : withTags
             ? ` (<i>${targetStr}</i>)`

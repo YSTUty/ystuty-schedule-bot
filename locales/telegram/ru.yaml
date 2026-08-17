@@ -14,18 +14,54 @@ button:
   profile: Профиль 👤
   select_group: Выбрать группу
   select_group_x: Выбрать группу "${groupName}"
+  broadcast:
+    title: Рассылки
+    create: Создать рассылку
+    status: Статус очереди
+    current: Текущая рассылка
+    list: Список рассылок
+    delete: Удалить
+    delete_confirm: Да, удалить
+    delete_cancel: Отмена
+    back_to_menu: Назад в меню
+    back_to_list: Назад к списку
+    create_queue: 🚀 Создать очередь
+    resume: ▶️ Запустить
+    pause: ⏸ Пауза
+    terminate: ⛔ Остановить
+    mode_toggle: 'Режим: ${mode}. Переключить на ${nextMode}'
+    select_recipients: Выбрать получателей
+    audience_all: Все по фильтру
+    audience_manual: Тестовая выборка
+    back: Назад
+    back_to_settings: Назад к настройкам
   schedule:
-    schedule: Расписание
+    schedule: Расписание группы
     for_today: На сегодня
     for_tomorrow: На завтра
     for_week: На неделю
     for_next_week: На следующую
+    teacher: Выбрать преподавателя
+    my_teacher: Расписание преподавателя
+  schedule_notification:
+    title: Настройки рассылки
+    create: Настроить рассылку
+    edit: Редактировать
+    change_group: Изменить группу
+    done: Готово
+    enable: Включить
+    disable: Выключить
+    delete: Удалить
+    delete_confirm: Да, удалить
+    delete_cancel: Отмена
+    back: Назад
+    previous_page: ◀
+    next_page: ▶
   groups:
     list_inst_and_groups: 🏫 Список институтов и групп 📚
     list_groups: 📚 Список групп 📚
     list_institutes: 🏫 Список институтов 🏫
     change_institute: 🏫 Сменить институт 🏫
-
 
 regexp:
   start: //?(start|старт|начать)( .*)?/i
@@ -47,10 +83,12 @@ page:
   start: |
     Привет! Это бот для расписания ЯГТУ
     ${ctx.userSocial.groupName ? '' : '\nНапиши <code>help</code> для получения списка команд'} \
+    ${ctx.chat?.type === 'private' ? '\nДля смены группы или преподавателя используй кнопки ниже.' : ''} \
     ${webViewLink ? ('\nПросмотр расписания в браузере — <a href="https://' + webViewLink + (ctx.userSocial.groupName ? ('/g/' + ctx.userSocial.groupName) : '') + '">View</a>') : ''}
 
   init_bot: |
-    Чтобы продолжить, необходимо <b>авторизироваться</b> или <i>выбрать учебную группу</i>.
+    Чтобы посмотреть расписание, можно <b>авторизироваться</b>, <i>выбрать учебную группу</i> или преподавателя.
+    Авторизация для просмотра расписания не обязательна.
 
   help: |
     Команды для обращения к боту:
@@ -99,16 +137,165 @@ page:
       ⚠️ Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
       ${content}
     not_found_today: Похоже, что на этот день нету расписания... 🐜
+    teachers_list: |
+      <b>Преподаватели</b>
+      <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+
+      ${query ? 'Поиск: <code>' + query + '</code>' : 'Выбери преподавателя или напиши <code>преподаватель Фамилия</code>'}
+    teacher_selected: |
+      Выбран преподаватель: <b>${teacher.name}</b>
+
+      Расписание: <code>/tday</code> или <code>расписание преподавателя</code>.
+      На неделю: <code>/tweek</code> или <code>расписание преподавателя на неделю</code>.
+    teacher_not_found: |
+      Преподаватель по запросу <code>${query}</code> не найден.
+    teacher_search_hint: |
+      Использование: <code>/teacher Фамилия</code> или <code>преподаватель Фамилия</code>
+      Например: <code>преподаватель Иванов</code>
+    teacher_list_expired: Список преподавателей устарел. Открой новый через /tlist.
+    teacher_keyboard_updated: Клавиатура расписания обновлена.
+    teacher_not_selected: |
+      Сначала выбери преподавателя через <code>преподаватель Фамилия</code> или <code>/tlist</code>.
+    week_title: |
+      Расписание на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
+    teacher_week_title: |
+      Расписание преподавателя на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
+  schedule_notification:
+    settings: |
+      <b>Рассылка расписания</b>
+      ${notif ? ('Группа: <code>' + notif.targetId + '</code>\nВремя: <code>' + String(notif.deliveryHour).padStart(2, '0') + ':' + String(notif.deliveryMinute).padStart(2, '0') + '</code>\nРасписание: <code>' + (notif.targetDayOffset ? 'на завтра' : 'на сегодня') + '</code>\nДни: <code>' + notif.weekdaysLabel + '</code>\nСтатус: <code>' + (notif.isEnabled ? 'включена' : 'выключена') + '</code>') : 'Рассылка пока не настроена.'}
+    select_hour: Выбери время отправки.
+    select_minute: Выбери минуты отправки.
+    select_target_day: Выбери, расписание на какой день получать в это время.
+    select_weekdays: Выбери дни недели. По умолчанию включены все дни.
+    need_group: Сначала выбери учебную группу, затем настрой рассылку.
+    saved: Настройки рассылки сохранены.
+    select_group: Выбери группу для этой рассылки.
+    confirm_delete: Удалить рассылку расписания для группы <code>${groupName}</code>? Это действие нельзя отменить.
 
   select_group:
     enter_name_with_example: |
       Напиши название нужной группы.\nНапример, <code>${randomGroupName}</code> \
       или <code>${randomGroupName2.toLowerCase()}</code>
+    institutes_list: |
+      Список институтов
+      Страница: ${currentPage}/${totalPages}
+    groups_list: |
+      Список групп${instituteName ? ': ' + instituteName : ''}
+      Страница: ${currentPage}/${totalPages}
     selected: |
       Выбрана группа: <code>${selectedGroupName}</code>
     not_found: |
       <b>Ошибка:</b> Группа <code>${groupName}</code> не найдена
+      Напиши другое название, <code>Отмена</code> или <code>/cancel</code>.
     reset: Группа сброшена
+
+  broadcast:
+    private_only: Broadcast wizard доступен только в личном чате
+    settings: |
+      <b>Настройки рассылки</b>
+      Получателей сейчас: <code>${recipientsCount}</code>
+      Выбрано вручную: <code>${selectedCount}</code>
+      Аудитория: <code>${audienceMode}</code>
+
+      Фильтры первой версии:
+      • social = telegram
+      • hasDM = ${filter.hasDM}
+      • isBlockedBot = ${filter.isBlockedBot}
+      • mode = ${mode}
+
+      Для продолжения отправь /next.
+    select_recipients: |
+      <b>Тестовая выборочная рассылка</b>
+      Выбрано: <code>${selectedCount}</code>
+      Страница: <code>${currentPage}/${totalPages}</code>
+
+      Нажми на пользователя, чтобы переключить выбор.
+    send_sample: Отправь сообщение-образец для рассылки. Оно будет разослано в выбранном режиме.
+    ready: |
+      <b>Рассылка готова к запуску</b>
+      Получателей: <code>${recipientsCount}</code>
+      Выбрано вручную: <code>${selectedCount}</code>
+      Режим: <code>${mode}</code>
+
+      Команды:
+      /send - создать очередь
+      /back - заменить сообщение
+      /cancel - отменить
+    queued: |
+      Рассылка №${campaignId} поставлена в очередь. Получателей: <code>${recipientsCount}</code>
+    canceled: Рассылка отменена
+    already_active: |
+      Уже есть активная рассылка${campaign ? ' №' + campaign.id : ''}.
+      Ее надо запустить, остановить или удалить перед созданием новой.
+    no_recipients: Для тестовой рассылки выбери хотя бы одного получателя.
+    message_not_found: Не удалось определить сообщение для рассылки. Отправь текст, стикер или вложение.
+    send_command_hint: Для запуска рассылки отправь /send.
+    settings_ready_hint: Настройки готовы. Для продолжения отправь /next.
+    source_required: Сначала отправь сообщение-образец.
+    new_sample: Отправь новое сообщение-образец.
+    queue_status: |
+      <b>Broadcast queue</b>
+      Active: <code>${status.active}</code>
+      Waiting: <code>${status.waiting}</code>
+      Delayed: <code>${status.delayed}</code>
+      Completed: <code>${status.completed}</code>
+      Failed: <code>${status.failed}</code>
+      Paused: <code>${status.paused}</code>
+    menu: |
+      <b>Панель рассылок</b>
+
+      Создание, просмотр статуса и управление последними рассылками доступны через кнопки ниже.
+    campaigns_list: |
+      <b>Последние рассылки</b>
+
+      ${items.length ? items.map((item) => '№' + item.id + ' • ' + item.status + ' • ' + item.sentCount + '/' + item.totalCount + ' • ' + item.createdAt.toLocaleString('ru-RU')).join('\n') : 'Рассылок пока нет'}
+
+      Для деталей выбери рассылку кнопкой ниже.
+    campaign_details: |
+      <b>Рассылка №${campaign.id}</b>
+      Статус: <code>${campaign.status}</code>
+      Режим: <code>${campaign.mode}</code>
+      Получателей: <code>${campaign.totalCount}</code>
+      Успешно: <code>${campaign.sentCount}</code>
+      Ошибки: <code>${campaign.failedCount}</code>
+      Пропущено: <code>${campaign.skippedCount}</code>
+      Создана: <code>${campaign.createdAt.toLocaleString('ru-RU')}</code>
+    campaign_deleted: |
+      Рассылка №${campaignId} удалена.
+      Удалено сообщений: <code>${deletedCount}</code>
+      Не удалось удалить: <code>${failedCount}</code>
+    campaign_delete_usage: |
+      Использование: <code>/broadcast_delete ID</code>
+    campaign_not_found: |
+      Рассылка №${campaignId} не найдена.
+    progress: |
+      <b>Рассылка №${campaignId}</b>
+      Готово: <code>${doneCount}/${totalCount}</code>
+      Успешно: <code>${sentCount}</code>
+      Ошибки: <code>${failedCount}</code>
+      Пропущено: <code>${skippedCount}</code>
+      Статус: <code>${status}</code>
+
+broadcast:
+  notification:
+    queue_created: Создание очереди
+    audience_all: |
+      Аудитория: все
+    settings: Настройки
+    recipients: Выбор получателей
+    menu: Рассылки
+    create: Создание рассылки
+    status: Статус очереди
+    current: Текущая рассылка
+    list: Список рассылок
+    campaign: Рассылка
+    deleted: Рассылка удалена
+    not_found: Рассылка не найдена
+    paused: Рассылка приостановлена
+    resumed: Рассылка продолжена
+    terminated: Рассылка остановлена
+    mode_changed: 'Режим: ${mode}'
 
   telegram:
     select_your_group: Выбрать свою группу

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
+
 import { MiddlewareObj } from 'telegraf/typings/middleware';
+
 import { IContext } from '@my-interfaces/telegram';
+
 import { MetricsService } from '../../metrics/metrics.service';
 
 @Injectable()

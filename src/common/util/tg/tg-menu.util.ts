@@ -1,10 +1,12 @@
+import { Context } from 'telegraf';
+
 import {
   patternGroupName,
   patternGroupName0,
   patternTeacherId,
 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
-import { INarrowedContext } from '@my-interfaces/telegram';
+import { IContext } from '@my-interfaces/telegram';
 
 const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
 
@@ -12,10 +14,13 @@ const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
 const templateData = { patternGroupName, patternGroupName0, patternTeacherId };
 
 export const checkLocaleCondition =
-  (phrases: LocalePhrase[]) => (value: string, ctx: INarrowedContext) => {
+  (
+    phrases: LocalePhrase[],
+  ): ((value: string, ctx: Context) => RegExpExecArray | null) =>
+  (value: string, ctx: IContext): RegExpExecArray | null => {
     if (!value || !ctx.i18n) return null;
 
-    let pass: RegExpExecArray = null;
+    let pass: RegExpExecArray | null = null;
 
     const wrapPhrase = (phrase: LocalePhrase) => {
       try {
@@ -42,7 +47,7 @@ export const checkLocaleCondition =
 
         if (key.split('.')[0] === 'regexp' && regExpByRegExp.test(phrase)) {
           const { regex_body, regex_flags } =
-            phrase.match(regExpByRegExp).groups;
+            phrase.match(regExpByRegExp)!.groups!;
           const regExp = new RegExp(regex_body, regex_flags);
 
           if (regExp.test(value)) {

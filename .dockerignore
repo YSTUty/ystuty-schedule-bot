@@ -12,5 +12,4 @@ npm-debug.log
 npm-debug.log.*
 
 /postgres-data
-/pgadmin-data
 /redis-data

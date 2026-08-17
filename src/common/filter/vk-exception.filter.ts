@@ -4,12 +4,14 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { VkArgumentsHost, VkExecutionContext } from 'nestjs-vk';
-import { APIError, MessageEventContext } from 'vk-io';
+import { VkArgumentsHost, VkException, VkExecutionContext } from 'nestjs-vk';
+
 import * as Redlock from 'redlock';
+import { APIError, MessageEventContext } from 'vk-io';
 
 import * as xEnv from '@my-environment';
-import { UserException } from '@my-common';
+
+import { UserException } from '@my-common/exception';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
@@ -26,6 +28,15 @@ export class VkExceptionFilter implements ExceptionFilter {
     const ctx = vkHost.getContext<
       IContext<MessageEventContext> | IMessageContext
     >();
+    const next = vkHost.getNext();
+
+    if (
+      exception instanceof VkException &&
+      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
+    ) {
+      await next?.();
+      return;
+    }
 
     if (
       exception.message !== LocalePhrase.Common_NoAccess &&
@@ -50,9 +61,15 @@ export class VkExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const isAdmin = xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId);
+    const isAdmin =
+      xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId || ctx.peerId) ||
+      ctx.state.user?.role === 'admin';
     let content = '';
     switch (true) {
+      case isAdmin:
+        content = `💢 Error: ${exception.message}`;
+        break;
+
       case exception instanceof UserException:
         content = `💢 Error: ${exception.message}`;
         break;
@@ -63,17 +80,13 @@ export class VkExceptionFilter implements ExceptionFilter {
         content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
         break;
 
-      case isAdmin:
-        content = `💢 Error: ${exception.message}`;
-        break;
-
       default:
         content = ctx.i18n.t(LocalePhrase.Common_Error);
         break;
     }
 
     try {
-      if (ctx.eventPayload && ctx.answer) {
+      if (ctx.eventPayload && ctx.answer && !ctx.state.eventAnswered) {
         await ctx.answer({
           type: 'show_snackbar',
           text: content,

@@ -1,5 +1,6 @@
 import { resolve } from 'path';
 import { I18n, pluralize } from 'vk-io-i18n';
+
 import * as xEnv from '@my-environment';
 
 export const i18n: I18n = new I18n({

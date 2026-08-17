@@ -1,18 +1,21 @@
+import { Expose, plainToClass } from 'class-transformer';
 import {
   Column,
   CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Expose, plainToClass } from 'class-transformer';
-import { UserSocial } from 'src/models/user/entity/user-social.entity';
-import { SocialType } from '@my-common';
+
+import { SocialType } from '@my-common/constants';
+
+import { UserSocial } from '../../user/entity/user-social.entity';
+
+import { UserToConversation } from './userToConversation.entity';
 
 @Entity()
 @Index(['social', 'conversationId'], { unique: true })
@@ -35,44 +38,38 @@ export class Conversation {
       },
     ],
   })
-  public conversationId: number;
+  public conversationId: number | bigint;
 
   @Expose()
   @Column({ type: 'character varying', nullable: true })
-  public title?: string;
+  public title?: string | null;
 
   @Column({ type: 'boolean', default: false })
   public isLeaved: boolean;
 
   @Expose()
   @Column({ type: 'character varying', length: 16, nullable: true })
-  public groupName?: string;
+  public groupName?: string | null;
 
   @Expose()
-  @ManyToOne(() => UserSocial /* , (userSocial) => userSocial.conversations */)
+  @ManyToOne(() => UserSocial, { nullable: true })
   @JoinColumn()
-  public invitedByUserSocial?: UserSocial;
+  public invitedByUserSocial?: UserSocial | null;
 
   @Expose()
   @Column({ nullable: true })
-  public invitedByUserSocialId: number;
+  public invitedByUserSocialId: number | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 64, nullable: true })
-  public chatStatus: string;
+  public chatStatus: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 64, nullable: true })
-  public chatType: string;
+  public chatType: string | null;
 
-  @Expose()
-  @ManyToMany(() => UserSocial, (userSocial) => userSocial.conversations)
-  @JoinTable({
-    name: 'user_to_conversation',
-    joinColumn: { name: 'conversationId' },
-    inverseJoinColumn: { name: 'userSocialId' },
-  })
-  public users: UserSocial[];
+  @OneToMany(() => UserToConversation, (membership) => membership.conversation)
+  public userMemberships: UserToConversation[];
 
   @Expose()
   @CreateDateColumn()

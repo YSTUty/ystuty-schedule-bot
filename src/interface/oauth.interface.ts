@@ -8,9 +8,10 @@ export interface IOAuthCheck_auth_info {
     patronymic: string;
     fullName: string;
     initials: string;
-    avatarUrl: string;
+    photoUrl: string;
     birthday: string;
     login: string;
+    email: string;
     groupName?: string;
   };
 }

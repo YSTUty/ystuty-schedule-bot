@@ -1,28 +1,40 @@
-import { Injectable } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Injectable, Logger } from '@nestjs/common';
+
 import * as Redlock from 'redlock';
-import {
-  REDIS_DATABASE,
-  REDIS_HOST,
-  REDIS_PASSWORD,
-  REDIS_PORT,
-  REDIS_PREFIX,
-  REDIS_USER,
-} from '@my-environment';
+import { Redis } from 'ioredis';
+
+import * as xEnv from '@my-environment';
 
 @Injectable()
 export class RedisService {
-  public readonly redis: Redis.Redis;
+  private readonly logger = new Logger(RedisService.name);
+
+  public readonly redis: Redis;
   public readonly redlock: Redlock;
 
   constructor() {
-    this.redis = new Redis(REDIS_PORT, REDIS_HOST, {
-      db: REDIS_DATABASE,
-      username: REDIS_USER,
-      password: REDIS_PASSWORD,
-      keyPrefix: REDIS_PREFIX,
+    this.redis = new Redis(xEnv.REDIS_PORT, xEnv.REDIS_HOST, {
+      db: xEnv.REDIS_DATABASE,
+      username: xEnv.REDIS_USER,
+      password: xEnv.REDIS_PASSWORD,
+      keyPrefix: xEnv.REDIS_PREFIX,
     });
 
-    this.redlock = new Redlock([this.redis]);
+    this.redis.on('error', (error) => {
+      this.logger.error(`Redis error: ${error.message}`, error.stack);
+    });
+    this.redis.on('connect', () => {
+      this.logger.log(`Redis → connected`);
+    });
+    this.redis.on('reconnecting', (delay: number) => {
+      this.logger.warn(
+        `Redis reconnecting in ${delay} ms (attempt ${this.redis.status})`,
+      );
+    });
+
+    this.redlock = new Redlock([this.redis as any]);
+    this.redlock.on('clientError', (error) => {
+      this.logger.error(`Redlock error: ${error.message}`, error.stack);
+    });
   }
 }

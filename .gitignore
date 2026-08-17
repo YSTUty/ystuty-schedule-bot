@@ -41,5 +41,4 @@ lerna-debug.log*
 !.env.example
 
 /postgres-data
-/pgadmin-data
 /redis-data

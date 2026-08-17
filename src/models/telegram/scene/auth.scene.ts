@@ -1,12 +1,14 @@
 import { Action, Ctx, Hears, Scene, SceneEnter } from '@xtcry/nestjs-telegraf';
-import { LocalePhrase } from '@my-interfaces';
-import { IStepContext } from '@my-interfaces/telegram';
+
 import { SocialType, UserException } from '@my-common';
 import { TgHearsLocale } from '@my-common/decorator/tg';
+import { LocalePhrase } from '@my-interfaces';
+import { IStepContext } from '@my-interfaces/telegram';
 
 import { SocialConnectService } from '../../social-connect/social-connect.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE } from '../telegram.constants';
+
 import { BaseScene } from './base.scene';
 
 @Scene(AUTH_SCENE)

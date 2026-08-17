@@ -1,0 +1,27 @@
+services:
+  app_srv:
+    hostname: ystuty-schedule-bot
+    image: ${IMAGE_NAME:-ghcr.io/ystuty/ystuty-schedule-bot}:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+    command: npm run start:prod_orm
+    ports:
+      # 8080 is the default port
+      - ${EXTERNAL_PORT:-7574}:${SERVER_PORT:-8080}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - ystuty-network
+    healthcheck:
+      test: curl --fail http://localhost:${SERVER_PORT:-8080}${HEALTH_PATH:-/uptime} || exit 1
+      interval: 2m
+      retries: 3
+      start_period: 40s
+      timeout: 10s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+networks:
+  ystuty-network:
+    external: true

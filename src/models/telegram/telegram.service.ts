@@ -1,18 +1,36 @@
 import {
   Injectable,
   Logger,
-  OnModuleInit,
   OnApplicationShutdown,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectBot } from '@xtcry/nestjs-telegraf';
+
 import { Telegraf } from 'telegraf';
+import { ChatMember } from 'telegraf/typings/core/types/typegram';
 import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 
-import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
+import * as xEnv from '@my-environment';
+
+import { UserRole } from '@my-common/constants';
 import { IContext } from '@my-interfaces/telegram';
 
-import { YSTUtyService } from '../ystuty/ystuty.service';
 import { RedisService } from '../redis/redis.service';
+import { YSTUtyService } from '../ystuty/ystuty.service';
+
+const CHAT_ADMINS_CACHE_TTL_SECONDS = 120;
+type CachedChatAdmin = {
+  user: { id: ChatMember['user']['id'] };
+  status: ChatMember['status'];
+};
+
+type PrivateChatCommandsParams = {
+  chatId: number;
+  isAuthorized: boolean;
+  isAdmin: boolean;
+  hasGroup?: boolean;
+  teacherId?: number;
+};
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnApplicationShutdown {
@@ -24,7 +42,12 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     private readonly ystutyService: YSTUtyService,
   ) {}
 
+  public get isActive(): boolean {
+    return !!xEnv.SOCIAL_TELEGRAM_BOT_TOKEN;
+  }
+
   async onModuleInit() {
+    if (!this.isActive) return;
     this.launch().catch((e) => this.logger.error(e));
   }
 
@@ -38,11 +61,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     });
 
     try {
-      await this.bot.telegram.setMyCommands([
-        { command: 'start', description: 'Start the bot' },
-        { command: 'day', description: 'Расписание на день' },
-        { command: 'week', description: 'Расписание на неделю' },
-      ]);
+      await this.bot.telegram.setMyCommands(this.baseCommands());
       this.bot
         .launch({
           allowedUpdates: [
@@ -63,6 +82,21 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
+  public baseCommands(type?: 'start' | 'end') {
+    const start = [
+      { command: 'start', description: 'Запустить бота' },
+      { command: 'day', description: 'Расписание на день' },
+      // { command: 'week', description: 'Расписание на неделю' },
+      { command: 'cancel', description: 'Отменить текущее действие' },
+    ];
+    const end = [
+      { command: 'institutes', description: 'Выбрать группу по институту' },
+      { command: 'tlist', description: 'Выбрать преподавателя из списка' },
+      { command: 'teacher', description: 'Выбрать преподавателя по ФИО' },
+    ];
+    return type === 'start' ? start : type === 'end' ? end : [...start, ...end];
+  }
+
   public async shutdown(signal: string) {
     await this.notifyAdmin(`⚠️ BotServer shutdown [${signal}]`);
   }
@@ -72,16 +106,21 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     text: string,
     extra: ExtraReplyMessage = {},
   ) {
+    if (!this.isActive) return false;
     try {
       return await this.bot.telegram.sendMessage(chatId, text, {
         parse_mode: 'HTML',
         ...extra,
       });
-    } catch (err) {}
+    } catch (err) {
+      this.logger.error(err);
+      return false;
+    }
   }
 
   public async notifyAdmin(message: string, extra: ExtraReplyMessage = {}) {
-    const adminIds = SOCIAL_TELEGRAM_ADMIN_IDS;
+    if (!this.isActive) return false;
+    const adminIds = xEnv.SOCIAL_TELEGRAM_ADMIN_IDS;
     // TODO: FIX BIG SPAM
     for (const uid of adminIds) {
       await this.sendMessage(uid, message, {
@@ -91,10 +130,64 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
+  /** Синхронизирует меню команд личного чата с доступными пользователю сценариями. */
+  public async syncPrivateChatCommands({
+    chatId,
+    isAuthorized,
+    isAdmin,
+    hasGroup = false,
+    teacherId,
+  }: PrivateChatCommandsParams) {
+    const commands = this.baseCommands('start');
+
+    if (!isAuthorized) {
+      commands.push({ command: 'auth', description: 'Авторизоваться' });
+    }
+
+    if (hasGroup) {
+      commands.push(
+        // { command: 'day', description: 'Расписание на сегодня' },
+        { command: 'week', description: 'Расписание на неделю' },
+      );
+    }
+
+    if (teacherId) {
+      commands.push(
+        { command: 'tday', description: 'Расписание преподавателя на сегодня' },
+        { command: 'tweek', description: 'Расписание преподавателя на неделю' },
+      );
+    }
+
+    commands.push(...this.baseCommands('end'));
+
+    if (isAdmin) {
+      commands.push({
+        command: 'broadcast',
+        description: 'Управление рассылками',
+      });
+    }
+
+    try {
+      await this.bot.telegram.setMyCommands(commands, {
+        scope: { type: 'chat', chat_id: chatId },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to update commands for Telegram chat ${chatId}`,
+        err,
+      );
+    }
+  }
+
+  public isAdmin(userId: number, role?: UserRole | null) {
+    return (
+      xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(userId) || role === UserRole.ADMIN
+    );
+  }
+
   public async parseChatTitle(ctx: IContext, str: string, allowMessage = true) {
     const groupName = this.ystutyService.parseGroupName(str);
     if (groupName) {
-      ctx.sessionConversation.selectedGroupName = groupName;
       if (ctx.conversation) {
         ctx.conversation.groupName = groupName;
       }
@@ -121,40 +214,62 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
 
   public async emulateSession(
     socialId: number,
-  ): Promise<[IContext['session'], () => Promise<void>]> {
+  ): Promise<[IContext['session'] | null, () => Promise<void>]> {
+    if (!this.isActive) return [null, async () => void 0];
     const lock = await this.redisService.redlock.lock(
       `emulateSession:telegram:${socialId}`,
       10e3,
     );
 
-    const sessionJson = await this.redisService.redis.get(
-      `tg:session:${socialId}:${socialId}`,
-    );
-    if (!sessionJson) {
-      return [null, async () => void 0];
+    try {
+      const key = `tg:session:${socialId}:${socialId}`;
+      const sessionJson = await this.redisService.redis.get(key);
+      if (!sessionJson) {
+        await lock.unlock();
+        return [null, async () => void 0];
+      }
+
+      let session: IContext['session'] = {};
+      try {
+        session = JSON.parse(sessionJson);
+      } catch {}
+
+      const close = async () => {
+        try {
+          if (Object.keys(session).length > 0) {
+            await this.redisService.redis.set(key, JSON.stringify(session));
+          } else {
+            await this.redisService.redis.del(key);
+          }
+        } finally {
+          await lock.unlock();
+        }
+      };
+      return [session, close];
+    } catch (err) {
+      await lock.unlock();
+      throw err;
+    }
+  }
+
+  public async getCachedChatAdmins(chatId: number) {
+    const cacheKey = `telegram:chat-admins:${chatId}`;
+    const cachedAdmins = await this.redisService.redis.get(cacheKey);
+    if (cachedAdmins) {
+      return JSON.parse(cachedAdmins) as CachedChatAdmin[];
     }
 
-    let session: IContext['session'] = {};
-    try {
-      session = JSON.parse(sessionJson);
-    } catch {}
-
-    const close = async () => {
-      try {
-        if (Object.keys(session).length > 0) {
-          await this.redisService.redis.set(
-            `tg:session:${socialId}:${socialId}`,
-            JSON.stringify(session),
-          );
-        } else {
-          await this.redisService.redis.del(
-            `tg:session:${socialId}:${socialId}`,
-          );
-        }
-      } finally {
-        await lock.unlock();
-      }
-    };
-    return [session, close];
+    const admins = await this.bot.telegram.getChatAdministrators(chatId);
+    const cachedValue: CachedChatAdmin[] = admins.map((admin) => ({
+      user: { id: admin.user.id },
+      status: admin.status,
+    }));
+    await this.redisService.redis.set(
+      cacheKey,
+      JSON.stringify(cachedValue),
+      'EX',
+      CHAT_ADMINS_CACHE_TTL_SECONDS,
+    );
+    return cachedValue;
   }
 }

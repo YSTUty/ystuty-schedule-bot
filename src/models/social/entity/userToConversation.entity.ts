@@ -1,7 +1,8 @@
-import { Entity, PrimaryColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Expose, plainToClass } from 'class-transformer';
+import { Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
 import { UserSocial } from '../../user/entity/user-social.entity';
+
 import { Conversation } from './conversation.entity';
 
 @Entity({ name: 'user_to_conversation' })
@@ -12,18 +13,21 @@ export class UserToConversation {
   public conversationId: number;
 
   @Expose()
-  @ManyToOne(() => Conversation, (conversation) => conversation.users)
+  @ManyToOne(() => Conversation, (conversation) => conversation.userMemberships)
   @JoinColumn({ name: 'conversationId' })
-  public conversations: Conversation[];
+  public conversation: Conversation;
 
   @Expose()
   @PrimaryColumn()
   public userSocialId: number;
 
   @Expose()
-  @ManyToOne(() => UserSocial, (userSocial) => userSocial.conversations)
+  @ManyToOne(
+    () => UserSocial,
+    (userSocial) => userSocial.conversationMemberships,
+  )
   @JoinColumn({ name: 'userSocialId' })
-  public userSocials: UserSocial[];
+  public userSocial: UserSocial;
 
   constructor(input?: Partial<UserToConversation>) {
     if (input) {

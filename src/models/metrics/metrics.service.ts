@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+
 import {
   CounterMetric,
   HistogramMetric,
@@ -19,7 +20,7 @@ export class MetricsService {
   private readonly logger = new Logger(MetricsService.name);
 
   public readonly prefix = 'ystuty_';
-  public readonly gateway: Pushgateway<PrometheusContentType>;
+  public readonly gateway: Pushgateway<PrometheusContentType> | null;
 
   public readonly userCounter: Gauge;
   public readonly userSocialCounter: Gauge;
@@ -92,8 +93,8 @@ export class MetricsService {
     const jobName = 'schedule_bot_metrics';
     this.gateway
       .pushAdd({ jobName, groupings: { app: xEnv.INSTANCE_NAME } })
-      .then((response) => {
-        // console.log('Metrics pushed to the Pushgateway', response.body);
+      .then(() => {
+        // console.log('Metrics pushed to the Pushgateway');
       })
       .catch((err) => this.logger.error('[pushMetricsToGateway] Error', err));
   }

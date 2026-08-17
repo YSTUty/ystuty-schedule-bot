@@ -1,7 +1,8 @@
-import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 
 import * as xEnv from '@my-environment';
+
 import { HttpExceptionFilter } from '@my-common';
 
 import { AppModule } from './models/app/app.module';
@@ -32,6 +33,17 @@ async function bootstrap() {
     );
   }
 }
+
+const logger = new Logger('GlobalErrorHandler');
+process.on('uncaughtException', (error: Error, _origin: string) => {
+  logger.error(`Uncaught Exception: ${error.message}`, error.stack);
+});
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  logger.error(
+    `Unhandled Rejection at: ${promise}, reason: ${reason?.message || reason}`,
+    reason?.stack,
+  );
+});
 
 bootstrap().catch((e) => {
   Logger.warn(`❌  Error starting server, ${e}`, 'Bootstrap');

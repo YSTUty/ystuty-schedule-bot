@@ -1,20 +1,21 @@
+import { Expose, plainToClass } from 'class-transformer';
 import {
   Column,
   CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
-  ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Expose, plainToClass } from 'class-transformer';
 
 import { SocialType } from '@my-common/constants';
 
+import { UserToConversation } from '../../social/entity/userToConversation.entity';
+
 import { User } from './user.entity';
-import { Conversation } from '../../social/entity/conversation.entity';
 
 @Entity()
 @Index(['social', 'socialId'], { unique: true })
@@ -33,7 +34,9 @@ export class UserSocial {
     transformer: [
       {
         to: (entityValue: bigint) => entityValue,
+        // TODO!: fix(db): replace BigInt transformers with numeric casting
         from: (databaseValue: string): bigint => BigInt(databaseValue),
+        // from: (databaseValue: string) => Number(databaseValue),
       },
     ],
   })
@@ -41,23 +44,23 @@ export class UserSocial {
 
   @Expose()
   @Column({ type: 'character varying', length: 32, nullable: true })
-  public username?: string;
+  public username: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 64, nullable: true })
-  public displayname?: string;
+  public displayname: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 120, nullable: true })
-  public profileUrl?: string;
+  public profileUrl: string | null;
 
   @Expose()
   @Column({ type: 'character varying', nullable: true })
-  public avatarUrl?: string;
+  public avatarUrl: string | null;
 
   @Expose()
   @Column({ type: 'character varying', length: 16, nullable: true })
-  public groupName?: string;
+  public groupName?: string | null;
 
   @Column({ type: 'boolean', default: false })
   public isBlockedBot: boolean;
@@ -67,16 +70,16 @@ export class UserSocial {
   public hasDM: boolean;
 
   @Expose()
-  @ManyToOne(() => User, (user) => user.socials)
+  @ManyToOne(() => User, (user) => user.socials, { nullable: true })
   @JoinColumn()
-  public user?: User;
+  public user?: User | null;
 
   @Expose()
   @Column({ nullable: true })
-  public userId: number;
+  public userId: number | null;
 
-  @ManyToMany(() => Conversation, (conversation) => conversation.users)
-  public conversations: Conversation[];
+  @OneToMany(() => UserToConversation, (membership) => membership.userSocial)
+  public conversationMemberships: UserToConversation[];
 
   @Expose()
   @CreateDateColumn()

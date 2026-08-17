@@ -1,22 +1,24 @@
 import { Global, Module } from '@nestjs/common';
 import { TelegrafModule } from '@xtcry/nestjs-telegraf';
+
 import * as RedisSession from 'telegraf-session-redis';
 
 import * as xEnv from '@my-environment';
 
-import { TelegramService } from './telegram.service';
-import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
-
 import { MainMiddleware } from './middleware/main.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { UserMiddleware } from './middleware/user.middleware';
-
-import { MainUpdate } from './update/main.update';
-import { AdminUpdate } from './update/admin.update';
-import { ScheduleUpdate } from './update/schedule.update';
+import { TelegramBroadcasterModule } from './model/broadcaster/telegram-broadcaster.module';
+import { TgScheduleNotifModule } from './model/schedule-notif/tg-schedule-notif.module';
 import { AuthScene } from './scene/auth.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
+import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
+import { TelegramService } from './telegram.service';
+import { AdminUpdate } from './update/admin.update';
+import { MainUpdate } from './update/main.update';
+import { ScheduleUpdate } from './update/schedule.update';
 
+const baseProviders = [TelegramService, TelegramKeyboardFactory];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
 const providers = [
   ...middlewares,
@@ -32,14 +34,13 @@ const providers = [
 @Module({})
 export class TelegramModule {
   static register() {
-    if (!xEnv.SOCIAL_TELEGRAM_BOT_TOKEN) {
-      return { module: TelegramModule };
-    }
-
     return {
       module: TelegramModule,
       imports: [
+        TelegramBroadcasterModule,
+        TgScheduleNotifModule,
         TelegrafModule.forRootAsync({
+          inject: [...middlewares],
           useFactory: async (
             mainMiddleware: MainMiddleware,
             metricsMiddleware: MetricsMiddleware,
@@ -47,12 +48,12 @@ export class TelegramModule {
           ) => ({
             token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
             launchOptions: false,
-
+            options: { telegram: { apiRoot: xEnv.SOCIAL_TELEGRAM_API_ROOT } },
             middlewares: [
               mainMiddleware.middlewareForkAll,
               mainMiddleware,
               metricsMiddleware,
-              // @ts-ignore
+              // @ts-expect-error RedisSession is typed against an older Telegraf middleware API.
               new RedisSession({
                 store: {
                   host: xEnv.REDIS_HOST,
@@ -68,7 +69,7 @@ export class TelegramModule {
                     (ctx.from && `${ctx.from.id}:${ctx.from.id}`)
                   }`,
               }) as RedisSession.default,
-              // @ts-ignore
+              // @ts-expect-error RedisSession is typed against an older Telegraf middleware API.
               new RedisSession({
                 store: {
                   host: xEnv.REDIS_HOST,
@@ -88,11 +89,10 @@ export class TelegramModule {
               mainMiddleware.middlewareCleaner(true),
             ],
           }),
-          inject: [...middlewares],
         }),
       ],
-      providers: [TelegramService, TelegramKeyboardFactory, ...providers],
-      exports: [TelegramService, TelegramKeyboardFactory, ...middlewares],
+      providers: [...baseProviders, ...providers],
+      exports: [...baseProviders, ...middlewares],
     };
   }
 }

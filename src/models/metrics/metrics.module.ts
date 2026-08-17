@@ -5,6 +5,7 @@ import {
   Module,
   NestModule,
 } from '@nestjs/common';
+
 import {
   InboundMiddleware,
   PromModule,
@@ -13,6 +14,7 @@ import {
 import { DEFAULT_PROM_OPTIONS } from '@khaledez/nestjs-prom/dist/prom.constants';
 
 import * as xEnv from '@my-environment';
+
 import { MetricsService } from './metrics.service';
 
 const METRIC_PATH = '/api/metrics';
@@ -40,9 +42,9 @@ export class MetricsModule implements NestModule {
         // prefix: 'ystuty_',
       };
 
-      moduleForRoot.imports.push(PromModule.forRoot(promOptions));
+      moduleForRoot.imports!.push(PromModule.forRoot(promOptions));
 
-      moduleForRoot.providers.push({
+      moduleForRoot.providers!.push({
         provide: DEFAULT_PROM_OPTIONS,
         useValue: promOptions,
       });

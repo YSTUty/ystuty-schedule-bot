@@ -1,9 +1,9 @@
-import { LocalePhrase } from '@my-interfaces';
 import {
   patternGroupName,
   patternGroupName0,
   patternTeacherId,
-} from '@my-common';
+} from '@my-common/util/ystuty.util';
+import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext } from '@my-interfaces/vk';
 
 const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
@@ -13,8 +13,8 @@ const templateData = { patternGroupName, patternGroupName0, patternTeacherId };
 
 export const checkLocaleCondition =
   (phrases: LocalePhrase[]) =>
-  (value: string = undefined, ctx: IMessageContext) => {
-    if (!value || !ctx.i18n) return null;
+  (value: string | undefined = undefined, ctx: IMessageContext) => {
+    if (!value || !ctx.i18n) return false;
 
     // let pass: RegExpExecArray = null;
 
@@ -35,19 +35,19 @@ export const checkLocaleCondition =
           return false;
         }
 
-        // By keyboard button
-        if (value /* ctx.state?.phrase */ === phrase) {
-          // pass = value.match(phrase) as RegExpExecArray;
+        // By keyboard button (значение `phrase` устанавливается в `payload` кнопки)
+        if (ctx.messagePayload?.phrase === key) {
+          ctx.$match = /* pass = */ value.match(phrase) as RegExpExecArray;
           return true;
         }
 
         if (key.split('.')[0] === 'regexp' && regExpByRegExp.test(phrase)) {
           const { regex_body, regex_flags } =
-            phrase.match(regExpByRegExp).groups;
+            phrase.match(regExpByRegExp)!.groups!;
           const regExp = new RegExp(regex_body, regex_flags);
 
           if (regExp.test(value)) {
-            ctx.$match = value.match(regExp);
+            ctx.$match = /* pass = */ value.match(regExp)!;
             return true;
           }
         }

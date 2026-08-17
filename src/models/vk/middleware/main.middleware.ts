@@ -1,29 +1,36 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { VK_HEAR_MANAGER, VK_SCENE_MANAGER } from 'nestjs-vk';
-import {
-  MessageContext,
-  Context,
-  Composer,
-  IMessageContextSendOptions,
-  getRandomId,
-} from 'vk-io';
-import { HearManager } from '@vk-io/hear';
-import { SessionManager } from '@vk-io/session';
-import { SceneManager } from '@vk-io/scenes';
-import { RedisStorage } from 'vk-io-redis-storage';
-import { NextMiddleware, MiddlewareReturn } from 'middleware-io';
 
-import { SocialType } from '@my-common';
+import { HearManager } from '@vk-io/hear';
+import { SceneManager } from '@vk-io/scenes';
+import { SessionManager } from '@vk-io/session';
+import { Middleware, MiddlewareReturn, NextMiddleware } from 'middleware-io';
+import {
+  Composer,
+  Context,
+  getRandomId,
+  IMessageContextSendOptions,
+  MessageContext,
+  MessageEventAction,
+  MessageSource,
+} from 'vk-io';
+import { RedisStorage } from 'vk-io-redis-storage';
+import { MessagesDeleteParams } from 'vk-io/lib/api/schemas/params';
+
+import { SocialType } from '@my-common/constants';
+import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
-import { IContext, IMessageContext } from '@my-interfaces/vk';
-import { checkLocaleCondition, i18n } from '@my-common/util/vk';
+import {
+  IContext,
+  IMessageContext,
+  IMessageEventContext,
+} from '@my-interfaces/vk';
 
 import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
-import { YSTUtyService } from '../../ystuty/ystuty.service';
-import { UserService } from '../../user/user.service';
 import { SocialService } from '../../social/social.service';
-
+import { UserService } from '../../user/user.service';
+import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -68,7 +75,7 @@ export class MainMiddleware {
     });
   }
 
-  get middlewaresBefore() {
+  get middlewaresBefore(): Middleware<Context> {
     const composer = Composer.builder<Context>();
 
     composer.use(this.featureMiddleware);
@@ -85,9 +92,10 @@ export class MainMiddleware {
     return composer.compose();
   }
 
-  get middlewaresAfter() {
+  get middlewaresAfter(): Middleware<Context> {
     const composer = Composer.builder<Context>();
 
+    composer.use(this.unhandledMessageEventMiddleware);
     composer.use(this.sceneInterceptMiddleware());
     composer.use(this.hearManagerProvider.middleware);
 
@@ -136,14 +144,103 @@ export class MainMiddleware {
       }
 
       if (!ctx.peerId) {
-        console.log(
-          '[VK] Empty ctx.peerId from ctx',
-          { type: ctx.type },
-          ctx.toJSON(),
-        );
+        this.logger.warn(`[VK] Empty ctx.peerId from ctx type(${ctx.type})`);
+        this.logger.debug(JSON.stringify(ctx.toJSON()));
+        // ! Прерываем выполнение, если нет peerId, так как это может привести к ошибкам при сохранении сессии и другим проблемам.
+        return;
       }
 
-      if (ctx.is(['message'])) {
+      ctx.isMessageEventContext = function (
+        this: IContext,
+      ): this is IMessageEventContext {
+        // 'eventPayload' in ctx && 'answer' in ctx
+        return this.is(['message_event']);
+      };
+      ctx.isMessageContext = function (
+        this: IContext,
+      ): this is IMessageContext {
+        return this.is(['message_new', 'message_edit', 'message_reply']);
+      };
+      ctx.editMessage = async ({ message, keyboard }) => {
+        if (!ctx.isMessageEventContext()) {
+          return;
+        }
+        return ctx.api.messages.edit({
+          peer_id: ctx.peerId,
+          cmid: ctx.conversationMessageId,
+          message,
+          keyboard,
+        });
+      };
+
+      // * redefine vk-io ctx features
+      const getPeerType = (id: number) =>
+        2e9 < id
+          ? MessageSource.CHAT
+          : id < 0
+            ? MessageSource.GROUP
+            : MessageSource.USER;
+      const defineGetter = <T extends object>(
+        target: T,
+        key: PropertyKey,
+        get: () => unknown,
+      ) => {
+        if (key in target) return;
+
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: true,
+          get,
+        });
+      };
+
+      defineGetter(ctx, 'peerType', () => getPeerType(ctx.peerId));
+      defineGetter(ctx, 'isDM', () =>
+        [MessageSource.USER, MessageSource.GROUP].includes(ctx.peerType),
+      );
+      defineGetter(ctx, 'isChat', () => ctx.peerType === MessageSource.CHAT);
+      defineGetter(ctx, 'chatId', () =>
+        ctx.isChat ? ctx.peerId - 2e9 : undefined,
+      );
+
+      if (ctx.isMessageEventContext()) {
+        const answer = ctx.answer.bind(ctx);
+        ctx.answer = async (eventData: MessageEventAction) => {
+          const res = await answer(eventData);
+          ctx.state.eventAnswered = true;
+          return res;
+        };
+        ctx.reply = async (
+          text: string | IMessageContextSendOptions,
+          params?: IMessageContextSendOptions,
+        ) => {
+          const forwardOptions = ctx.conversationMessageId
+            ? { conversation_message_ids: ctx.conversationMessageId }
+            : { message_ids: ctx.id };
+          return ctx.send({
+            forward: JSON.stringify({
+              ...forwardOptions,
+              peer_id: ctx.peerId,
+              is_reply: true,
+            }),
+            ...(typeof text !== 'object' ? { message: text, ...params } : text),
+          });
+        };
+
+        ctx.deleteMessage = async (
+          options: Partial<MessagesDeleteParams> = {},
+        ) => {
+          const convMid = ctx.conversationMessageId;
+          const target = !!convMid
+            ? { peer_id: ctx.peerId, cmids: convMid }
+            : { message_ids: ctx.id };
+          const messageIds = await ctx.api.messages.delete({
+            ...options,
+            ...target,
+          });
+          return messageIds;
+        };
+      } else if (ctx.is(['message'])) {
         // ...
       } else {
         // * safe `send` method for all context events
@@ -170,6 +267,22 @@ export class MainMiddleware {
     };
   }
 
+  /** Подтверждает callback, который не обработал ни один VK handler. */
+  private get unhandledMessageEventMiddleware() {
+    return async (ctx: IContext, next: NextMiddleware) => {
+      await next?.();
+
+      if (!ctx.isMessageEventContext() || ctx.state.eventAnswered) {
+        return;
+      }
+
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: 'Nope ¯\\_(ツ)_/¯',
+      });
+    };
+  }
+
   public get middlewareCleaner() {
     return async (ctx: IContext, next: NextMiddleware) => {
       await next?.();
@@ -179,9 +292,10 @@ export class MainMiddleware {
 
   private cleanSession(ctx: IContext) {
     const { session } = ctx;
+    if (!session) return;
 
     // i18n
-    if (session?.__language_code === 'ru') {
+    if (session['__language_code'] === 'ru') {
       delete session['__language_code'];
     }
   }
@@ -194,29 +308,59 @@ export class MainMiddleware {
       );
       ctx.state.appeal = false;
 
-      if (ctx.text && triggerRegexp.test(ctx.text)) {
-        const triggerMsg = ctx.text.match(triggerRegexp);
-        ctx.text = ctx.text.slice(triggerMsg[0].length);
-        ctx.state.appeal = true;
+      if (ctx.isMessageContext()) {
+        if (ctx.replyMessage?.$groupId === ctx.$groupId) {
+          ctx.state.appeal = true;
+        }
+
+        if (ctx.text) {
+          const triggerMsg = ctx.text.match(triggerRegexp);
+          if (triggerMsg) {
+            ctx.text = ctx.text.slice(triggerMsg[0].length);
+            ctx.state.appeal = true;
+          }
+        }
       }
       return next();
     };
   }
 
   private sceneInterceptMiddleware() {
-    return async (ctx: IMessageContext, next: NextMiddleware) => {
+    return async (
+      ctx: IMessageContext | IMessageEventContext,
+      next: NextMiddleware,
+    ) => {
+      // * Тут доработали логику `this.sceneManager.middlewareIntercept`, что перед входом в сцену проверяем команду "Отмены". Этого можно не делать, если в каждой сцене наследовать класс с обработкой команд выхода из сцены
       if (!ctx.scene.current) {
         return next();
       }
 
-      if (
-        checkLocaleCondition([LocalePhrase.Button_Cancel])(ctx.text, ctx) ||
-        ['cancel', '/cancel', '/exit'].includes(ctx.text.toLowerCase())
-      ) {
-        const keyboard = this.keyboardFactory.getClose(ctx);
+      const payloadPhrase = ctx.eventPayload?.phrase as
+        | LocalePhrase
+        | undefined;
+
+      const phraseKey = LocalePhrase.Button_Cancel;
+      const normalizedText = (payloadPhrase || ctx.text)
+        ?.trim()
+        .toLocaleLowerCase('ru');
+      const cancelButtonText = ctx.i18n
+        .t(phraseKey)
+        .trim()
+        .toLocaleLowerCase('ru');
+      const isCancel =
+        payloadPhrase === phraseKey ||
+        normalizedText === cancelButtonText ||
+        ['cancel', '/cancel', 'exit', '/exit'].includes(normalizedText || '');
+
+      if (isCancel) {
+        const keyboard = this.keyboardFactory.getStart(ctx); // getClose(ctx);
         await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
           keyboard,
         });
+        if ('eventPayload' in ctx) {
+          ctx.deleteMessage({ delete_for_all: true }).catch();
+          // ctx.answer({ type: 'show_snackbar', text: 'Отменено' }).catch();
+        }
         return ctx.scene.leave({ canceled: true });
       }
 
@@ -257,6 +401,11 @@ export class MainMiddleware {
         }
       }
 
+      if (!userSocial) {
+        await ctx.send(ctx.i18n.t(LocalePhrase.Common_Error));
+        return;
+      }
+
       ctx.state.userSocial = userSocial;
       ctx.state.user = userSocial.user;
 
@@ -274,7 +423,7 @@ export class MainMiddleware {
         return;
       }
 
-      if (ctx.isChat) {
+      if (ctx.isChat && ctx.chatId) {
         try {
           let conversation = await this.socialService.findConversationById(
             SocialType.Vkontakte,
@@ -292,17 +441,28 @@ export class MainMiddleware {
             // Link user to conversation
             this.socialService
               .iAmInConversation(ctx.state.userSocial, conversation.id)
-              .catch((err) =>
-                console.error(
-                  '[VK][socialService=>iAmInConversation] Error: ',
-                  err,
-                ),
-              );
+              .catch((err) => {
+                if (err instanceof Error) {
+                  this.logger.error(
+                    '[VK][socialService=>iAmInConversation] Error',
+                    err.stack,
+                  );
+                  return;
+                }
+
+                this.logger.error(
+                  `[VK][socialService=>iAmInConversation] Error: ${String(err)}`,
+                );
+              });
           }
 
           ctx.state.conversation = conversation;
         } catch (err) {
-          console.error('[VK][socialService] Error: ', err);
+          if (err instanceof Error) {
+            this.logger.error('[VK][socialService] Error', err.stack);
+          } else {
+            this.logger.error(`[VK][socialService] Error: ${String(err)}`);
+          }
         }
       }
 
@@ -326,7 +486,7 @@ export class MainMiddleware {
   private middlewareRefValue() {
     return async (ctx: IMessageContext, next: NextMiddleware) => {
       const msgPayload = ctx.referralValue?.split('_');
-      if (msgPayload?.length > 1) {
+      if (msgPayload && msgPayload.length > 1) {
         if (msgPayload[0] === 'g') {
           const groupNameTest = msgPayload.slice(1).join('_');
 

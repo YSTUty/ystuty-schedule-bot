@@ -1,11 +1,13 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
-import axios from 'axios';
+
 import * as rxjs from 'rxjs';
+import axios from 'axios';
 
 import * as xEnv from '@my-environment';
-import { SocialType } from '@my-common';
+
+import { SocialType } from '@my-common/constants';
 
 import { UserService } from '../user/user.service';
 
@@ -82,7 +84,7 @@ export class SocialConnectService {
           message: err.message,
         });
       } else {
-        this.logger.error(err);
+        this.logger.error('[requestAuth]', err);
       }
     }
 
@@ -123,7 +125,7 @@ export class SocialConnectService {
           message: err.message,
         });
       } else {
-        this.logger.error(err);
+        this.logger.error('[unAuth]', err);
       }
     }
 
@@ -139,6 +141,11 @@ export class SocialConnectService {
       return;
     }
     this.checkAuthProcess = Date.now();
+
+    // TODO: переделать на LongPoll?
+    // TODO: делать запросы чуть реже, если сейчас не ждем никаких проверок.
+    // ? Можно в сервисе в переменной хранить инфу - При первом запуске сделали проверку, и если результатов не было, то сбавляем интервал опросов.
+    // ? Как только появился запрос от нашего севриса, то начинаем опрашивать чаще (и в переменную пометить, что сейчас ожидается +n ответов). После получения ответов делать -n.
 
     try {
       const { data } = await rxjs.firstValueFrom(
@@ -164,7 +171,7 @@ export class SocialConnectService {
         return;
       }
 
-      // console.log('checkAuth', data);
+      // console.log('[checkAuth]', data);
       const { result } = data;
       for (const item of result) {
         try {
@@ -180,20 +187,27 @@ export class SocialConnectService {
             `Auth [${item.socialType}](${item.socialId}): ${result}`,
           );
         } catch (err) {
-          this.logger.error(err);
+          this.logger.error('[checkAuth] auth error', err);
         }
       }
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.data) {
-        const data = err.response.data as {
-          error: { code: number; message: string; error: string };
-        };
-        if (typeof data === 'object' && 'error' in data) {
-          this.logger.error(data.error);
-          return;
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data) {
+          const data = err.response.data as {
+            error: { code: number; message: string; error: string };
+          };
+          if (typeof data === 'object' && 'error' in data) {
+            this.logger.debug('[checkAuth] error', data);
+            return;
+          }
         }
+        this.logger.error('[checkAuth] Axios error', {
+          code: err.code,
+          message: err.message,
+        });
+      } else {
+        this.logger.error('[checkAuth]', err);
       }
-      this.logger.error(err);
     } finally {
       this.checkAuthProcess = 0;
     }

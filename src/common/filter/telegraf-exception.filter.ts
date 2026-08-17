@@ -1,15 +1,32 @@
 import { Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import {
   TelegrafArgumentsHost,
+  TelegrafException,
   TelegrafExecutionContext,
 } from '@xtcry/nestjs-telegraf';
-import { TelegramError } from 'telegraf';
+
 import * as Redlock from 'redlock';
+import { TelegramError } from 'telegraf';
 
 import * as xEnv from '@my-environment';
-import { UserException, escapeHTMLCodeChars } from '@my-common';
+
+import { escapeHTMLCodeChars, UserException } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
+
+export const isTelegramUserUnavailableError = (exception: TelegramError) =>
+  exception.description.includes('bot was blocked by the user') ||
+  exception.description.includes('user is deactivated') ||
+  exception.description.includes('chat not found');
+
+export const isTelegramConversationUnavailableError = (
+  exception: TelegramError,
+) =>
+  exception.description.includes('bot was kicked from the group chat') ||
+  exception.description.includes('bot is not a member of the supergroup chat');
+
+export const isTelegramRateLimitError = (exception: TelegramError) =>
+  exception.code === 429 || exception.description.includes('Too Many Requests');
 
 @Catch()
 export class TelegrafExceptionFilter implements ExceptionFilter {
@@ -22,6 +39,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
 
     const telegrafHost = TelegrafArgumentsHost.create(host);
     const ctx = telegrafHost.getContext<IContext>();
+    const next = telegrafHost.getNext();
 
     if (
       exception.message !== LocalePhrase.Common_NoAccess &&
@@ -37,9 +55,29 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const isAdmin = xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
+    if (
+      exception instanceof TelegrafException &&
+      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
+    ) {
+      await next?.();
+      return;
+    }
+
+    const isAdmin =
+      ctx.from && xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
     let content = '';
     switch (true) {
+      case isAdmin:
+        content =
+          ctx.callbackQuery || !exception.stack
+            ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
+            : `💢 Error: <b>${escapeHTMLCodeChars(
+                exception.message,
+              )}</b>\n<code>${escapeHTMLCodeChars(
+                exception.stack.split('\n').slice(0, 5).join('\n'),
+              )}</code>`;
+        break;
+
       case exception instanceof UserException:
         content = ctx.callbackQuery
           ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
@@ -52,32 +90,53 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
         content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
         break;
 
-      case isAdmin:
-        content = ctx.callbackQuery
-          ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
-          : `💢 Error: <b>${escapeHTMLCodeChars(
-              exception.message,
-            )}</b>\n<code>${escapeHTMLCodeChars(
-              exception.stack.split('\n').slice(0, 5).join('\n'),
-            )}</code>`;
-        break;
-
       default:
         content = ctx.i18n.t(LocalePhrase.Common_Error);
         break;
     }
 
     if (exception instanceof TelegramError) {
-      if (
-        exception.description.includes('bot was blocked by the user') ||
-        exception.description.includes('user is deactivated') ||
-        exception.description.includes('chat not found')
-      ) {
+      if (isTelegramUserUnavailableError(exception)) {
         try {
           ctx.userSocial.isBlockedBot = true;
+          // ctx.session.isBlockedBot = true;
         } catch (err) {
-          console.error(err);
+          if (err instanceof Error) {
+            this.logger.error(
+              '[UserUnavailable] Failed to mark userSocial as blocked',
+              err.stack,
+            );
+          } else {
+            this.logger.error(
+              `[UserUnavailable] Failed to mark userSocial as blocked: ${String(err)}`,
+            );
+          }
         }
+        return;
+      }
+
+      if (isTelegramConversationUnavailableError(exception)) {
+        try {
+          if (ctx.conversation) {
+            ctx.conversation.isLeaved = true;
+            ctx.conversation.chatStatus = 'kicked';
+          }
+        } catch (err) {
+          if (err instanceof Error) {
+            this.logger.error(
+              '[ConversationUnavailable] Failed to mark conversation as leaved',
+              err.stack,
+            );
+          } else {
+            this.logger.error(
+              `[ConversationUnavailable] Failed to mark conversation as leaved: ${String(err)}`,
+            );
+          }
+        }
+        return;
+      }
+
+      if (isTelegramRateLimitError(exception)) {
         return;
       }
     }

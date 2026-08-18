@@ -28,7 +28,7 @@ describe('ScheduleNotifService', () => {
       create: jest.fn((value) => value),
       save: jest.fn(async (value) => ({ id: 1, ...value })),
     };
-    const ystutyService = {
+    const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
     };
 
@@ -38,7 +38,7 @@ describe('ScheduleNotifService', () => {
       service: new ScheduleNotifService(
         notifRepository as any,
         deliveryRepository as any,
-        ystutyService as any,
+        scheduleService as any,
       ),
     };
   };

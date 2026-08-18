@@ -12,7 +12,7 @@ import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext } from '@my-interfaces/vk';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { ScheduleService } from '../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -20,7 +20,7 @@ import { SELECT_GROUP_SCENE } from '../vk.constants';
 @UseFilters(VkExceptionFilter)
 export class ScheduleUpdate {
   constructor(
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
 
@@ -58,13 +58,13 @@ export class ScheduleUpdate {
     let days: number = 0;
     if (isTomorrow) {
       skipDays = 1;
-      [days, message] = await this.ystutyService.findNext({
+      [days, message] = await this.scheduleService.findNext({
         skipDays,
         targetId: target.id,
         targetType: target.type,
       });
     } else if (_skipDays !== null) {
-      message = await this.ystutyService.getFormatedSchedule({
+      message = await this.scheduleService.getFormatedSchedule({
         skipDays,
         targetId: target.id,
         targetType: target.type,
@@ -73,7 +73,7 @@ export class ScheduleUpdate {
         message = ctx.i18n.t(LocalePhrase.Common_Error);
       }
     } else {
-      [days, message] = await this.ystutyService.findNext({
+      [days, message] = await this.scheduleService.findNext({
         targetId: target.id,
         targetType: target.type,
       });
@@ -127,7 +127,7 @@ export class ScheduleUpdate {
 
     await ctx.setActivity();
 
-    const [days, scheduleMessage] = await this.ystutyService.findNext({
+    const [days, scheduleMessage] = await this.scheduleService.findNext({
       skipDays,
       targetId: target.id,
       targetType: target.type,
@@ -175,7 +175,7 @@ export class ScheduleUpdate {
     | undefined
   > {
     if (teacherId) {
-      const teacher = this.ystutyService.getTeacher(teacherId);
+      const teacher = this.scheduleService.getTeacher(teacherId);
       if (teacher) {
         return { id: teacher.id, type: 'teacher', name: teacher.name };
       }
@@ -201,8 +201,8 @@ export class ScheduleUpdate {
       groupNameFromMatch || ctx.messagePayload?.groupName || selectedGroupName;
     const groupName =
       groupNameQuery &&
-      (this.ystutyService.getGroupByName(groupNameQuery) ||
-        this.ystutyService.parseGroupName(groupNameQuery));
+      (this.scheduleService.getGroupByName(groupNameQuery) ||
+        this.scheduleService.parseGroupName(groupNameQuery));
 
     if (groupName) {
       return { id: groupName, type: 'group', name: groupName };
@@ -225,7 +225,7 @@ export class ScheduleUpdate {
   private getPersonalTeacherId(ctx: IMessageContext) {
     return (
       ctx.session.teacherId ??
-      this.ystutyService.getTeacherByExactName(ctx.state.user?.fullname)?.id
+      this.scheduleService.getTeacherByExactName(ctx.state.user?.fullname)?.id
     );
   }
 }

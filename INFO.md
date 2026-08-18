@@ -35,7 +35,7 @@
 1. `src/models/app/app.module.ts` - карта основных модулей.
 2. `src/models/telegram` и `src/models/vk` - входные точки по мессенджерам.
 3. `src/models/user` - пользователи, соцпрофили, привязка аккаунта.
-4. `src/models/ystuty` - работа с данными расписания.
+4. `src/models/schedule` - работа с данными расписания.
 5. `src/models/social-connect` - интеграция с сервисом авторизации связки аккаунтов.
 6. `src/common` - общие декораторы, фильтры, guards, util-функции.
 
@@ -98,7 +98,7 @@
 - периодически проверяет завершение авторизации
 - после подтверждения делегирует завершение привязки в `UserService`
 
-### `src/models/ystuty` (schedule-service)
+### `src/models/schedule`
 
 Слой работы с данными расписания.
 

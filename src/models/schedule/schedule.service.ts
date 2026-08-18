@@ -14,8 +14,8 @@ import { RedisService } from '../redis/redis.service';
 import * as scheduleUtil from './util/schedule.util';
 
 @Injectable()
-export class YSTUtyService implements OnModuleInit {
-  private readonly logger = new Logger(YSTUtyService.name);
+export class ScheduleService implements OnModuleInit {
+  private readonly logger = new Logger(ScheduleService.name);
   protected allowCaching = true;
 
   constructor(

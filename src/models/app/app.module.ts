@@ -11,12 +11,12 @@ import { BroadcastModule } from '../broadcast/broadcast.module';
 import { MetricsModule } from '../metrics/metrics.module';
 import { RedisModule } from '../redis/redis.module';
 import { ScheduleNotifModule } from '../schedule-notif/schedule-notif.module';
+import { ScheduleModule } from '../schedule/schedule.module';
 import { SocialConnectModule } from '../social-connect/social-connect.module';
 import { SocialModule } from '../social/social.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { UserModule } from '../user/user.module';
 import { VkModule } from '../vk/vk.module';
-import { YSTUtyModule } from '../ystuty/ystuty.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -47,7 +47,7 @@ import { AppService } from './app.service';
     BroadcastModule,
     ScheduleNotifModule,
     MetricsModule.forRoot(),
-    YSTUtyModule,
+    ScheduleModule,
     RedisModule,
     VkModule.register(),
     TelegramModule.register(),

@@ -4,7 +4,7 @@ import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { ScheduleService } from '../../schedule/schedule.service';
 import { VKKeyboardFactory, VKPaginationOptions } from '../vk-keyboard.factory';
 
 type VkPickerButtons = VKPaginationOptions['additionalButtons'];
@@ -19,7 +19,7 @@ type VkPickerOptions = {
 @Injectable()
 export class VkGroupPicker {
   constructor(
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
 
@@ -30,7 +30,7 @@ export class VkGroupPicker {
     count = 4,
   ) {
     const { items, currentPage, totalPages } =
-      this.ystutyService.groupsInstitutesList(page, count);
+      this.scheduleService.groupsInstitutesList(page, count);
     return {
       text: ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, {
         currentPage,
@@ -58,7 +58,7 @@ export class VkGroupPicker {
     options: VkPickerOptions,
     count = 4,
   ) {
-    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
+    const { items, currentPage, totalPages } = this.scheduleService.groupsList(
       page,
       count,
       instituteHash,
@@ -73,7 +73,7 @@ export class VkGroupPicker {
     );
     return {
       text: ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
-        instituteName: this.ystutyService.instituteNameByHash(instituteHash),
+        instituteName: this.scheduleService.instituteNameByHash(instituteHash),
         currentPage,
         totalPages,
       }),

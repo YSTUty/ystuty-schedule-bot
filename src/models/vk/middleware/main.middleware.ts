@@ -28,9 +28,9 @@ import {
 
 import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
+import { ScheduleService } from '../../schedule/schedule.service';
 import { SocialService } from '../../social/social.service';
 import { UserService } from '../../user/user.service';
-import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -53,7 +53,7 @@ export class MainMiddleware {
     private readonly keyboardFactory: VKKeyboardFactory,
     private readonly redisService: RedisService,
     private readonly metricsService: MetricsService,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly userService: UserService,
     private readonly socialService: SocialService,
   ) {
@@ -491,8 +491,8 @@ export class MainMiddleware {
           const groupNameTest = msgPayload.slice(1).join('_');
 
           const groupName =
-            this.ystutyService.parseGroupName(groupNameTest) ||
-            this.ystutyService.parseGroupName(
+            this.scheduleService.parseGroupName(groupNameTest) ||
+            this.scheduleService.parseGroupName(
               Buffer.from(groupNameTest, 'base64').toString(),
             );
           if (groupName) {

@@ -37,7 +37,7 @@ describe('ScheduleNotifDeliveryService', () => {
   const createService = () => {
     const notifRepository = { save: jest.fn(async (value) => value) };
     const deliveryRepository = { save: jest.fn(async (value) => value) };
-    const ystutyService = {
+    const scheduleService = {
       getGroupByName: jest.fn(),
       getTeacher: jest.fn(),
       findNext: jest.fn(),
@@ -51,12 +51,12 @@ describe('ScheduleNotifDeliveryService', () => {
     return {
       notifRepository,
       deliveryRepository,
-      ystutyService,
+      scheduleService,
       transport,
       service: new ScheduleNotifDeliveryService(
         notifRepository as any,
         deliveryRepository as any,
-        ystutyService as any,
+        scheduleService as any,
         transportRegistry as any,
       ),
     };
@@ -82,9 +82,9 @@ describe('ScheduleNotifDeliveryService', () => {
   });
 
   it('skips a notif whose group is absent from the current Schedule API list', async () => {
-    const { service, ystutyService, transport, deliveryRepository } =
+    const { service, scheduleService, transport, deliveryRepository } =
       createService();
-    ystutyService.getGroupByName.mockReturnValue(undefined);
+    scheduleService.getGroupByName.mockReturnValue(undefined);
 
     await service.deliver(notif, delivery);
 
@@ -98,14 +98,14 @@ describe('ScheduleNotifDeliveryService', () => {
   });
 
   it('sends tomorrow schedule and records the returned message id', async () => {
-    const { service, ystutyService, transport } = createService();
-    ystutyService.getGroupByName.mockReturnValue('ЦИС-11');
-    ystutyService.findNext.mockResolvedValue([1, '<b>Schedule</b>']);
+    const { service, scheduleService, transport } = createService();
+    scheduleService.getGroupByName.mockReturnValue('ЦИС-11');
+    scheduleService.findNext.mockResolvedValue([1, '<b>Schedule</b>']);
     transport.sendScheduleNotif.mockResolvedValue({ messageId: '42' });
 
     await service.deliver(notif, delivery);
 
-    expect(ystutyService.findNext).toHaveBeenCalledWith({
+    expect(scheduleService.findNext).toHaveBeenCalledWith({
       groupName: 'ЦИС-11',
       skipDays: 1,
     });
@@ -114,13 +114,13 @@ describe('ScheduleNotifDeliveryService', () => {
   });
 
   it('delivers a conversation notif to its persistent messenger conversation id', async () => {
-    const { service, ystutyService, transport } = createService();
+    const { service, scheduleService, transport } = createService();
     Object.assign(notif, {
       userSocial: null,
       conversation: { conversationId: -100123 },
     });
-    ystutyService.getGroupByName.mockReturnValue('ЦИС-11');
-    ystutyService.findNext.mockResolvedValue([1, '<b>Schedule</b>']);
+    scheduleService.getGroupByName.mockReturnValue('ЦИС-11');
+    scheduleService.findNext.mockResolvedValue([1, '<b>Schedule</b>']);
     transport.sendScheduleNotif.mockResolvedValue({ messageId: '43' });
 
     await service.deliver(notif, delivery);
@@ -133,10 +133,10 @@ describe('ScheduleNotifDeliveryService', () => {
   });
 
   it('disables a notif and informs the recipient after the seventh missing target during the academic year', async () => {
-    const { service, ystutyService, transport, notifRepository } =
+    const { service, scheduleService, transport, notifRepository } =
       createService();
     notif.missingTargetAttempts = 6;
-    ystutyService.getGroupByName.mockReturnValue(undefined);
+    scheduleService.getGroupByName.mockReturnValue(undefined);
 
     await service.deliver(notif, delivery, new Date('2026-09-01'));
 
@@ -155,9 +155,9 @@ describe('ScheduleNotifDeliveryService', () => {
   });
 
   it('does not increase missing target attempts during summer', async () => {
-    const { service, ystutyService, transport } = createService();
+    const { service, scheduleService, transport } = createService();
     notif.missingTargetAttempts = 6;
-    ystutyService.getGroupByName.mockReturnValue(undefined);
+    scheduleService.getGroupByName.mockReturnValue(undefined);
 
     await service.deliver(notif, delivery, new Date('2026-07-01'));
 
@@ -169,16 +169,16 @@ describe('ScheduleNotifDeliveryService', () => {
   });
 
   it('checks a teacher target by identifier before delivery', async () => {
-    const { service, ystutyService, transport } = createService();
+    const { service, scheduleService, transport } = createService();
     Object.assign(notif, {
       targetType: ScheduleNotifTargetType.Teacher,
       targetId: '17',
     });
-    ystutyService.getTeacher.mockReturnValue(undefined);
+    scheduleService.getTeacher.mockReturnValue(undefined);
 
     await service.deliver(notif, delivery, new Date('2026-09-01'));
 
-    expect(ystutyService.getTeacher).toHaveBeenCalledWith(17);
+    expect(scheduleService.getTeacher).toHaveBeenCalledWith(17);
     expect(transport.sendScheduleNotif).not.toHaveBeenCalled();
     expect(notif.lastError).toBe('Teacher is absent from Schedule API');
   });

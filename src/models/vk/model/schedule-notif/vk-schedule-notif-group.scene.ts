@@ -9,7 +9,7 @@ import { IStepContext } from '@my-interfaces/vk';
 
 import { getWeekdaysLabel } from '../../../schedule-notif/schedule-notif-ui.util';
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
-import { YSTUtyService } from '../../../ystuty/ystuty.service';
+import { ScheduleService } from '../../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { VkGroupPicker } from '../vk-group-picker';
 
@@ -29,7 +29,7 @@ export class VkScheduleNotifGroupScene {
   constructor(
     private readonly notifService: ScheduleNotifService,
     private readonly groupPicker: VkGroupPicker,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
 
@@ -152,8 +152,8 @@ export class VkScheduleNotifGroupScene {
     groupName: string,
   ) {
     const selectedGroupName =
-      this.ystutyService.getGroupByName(groupName) ||
-      this.ystutyService.parseGroupName(groupName);
+      this.scheduleService.getGroupByName(groupName) ||
+      this.scheduleService.parseGroupName(groupName);
     if (!selectedGroupName) {
       await this.renderNotFound(ctx, notifId, groupName);
       return;

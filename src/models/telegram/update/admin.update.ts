@@ -12,8 +12,8 @@ import {
   IMessageContext,
 } from '@my-interfaces/telegram';
 
+import { ScheduleService } from '../../schedule/schedule.service';
 import { UserService } from '../../user/user.service';
-import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 
 @Update()
@@ -25,13 +25,13 @@ export class AdminUpdate {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
     private readonly userService: UserService,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
   ) {}
 
   /** Проверяет, распознаёт ли patternGroupName все группы из текущего API-кэша. */
   @Command('check_group_patterns')
   async onCheckGroupPatterns(@Ctx() ctx: IMessageContext) {
-    const invalidGroups = this.ystutyService.groupNames.filter(
+    const invalidGroups = this.scheduleService.groupNames.filter(
       (groupName) => !matchGroupName(groupName),
     );
     const details = invalidGroups.length
@@ -39,7 +39,7 @@ export class AdminUpdate {
       : '';
 
     await ctx.replyWithHTML(
-      `Проверено групп: <b>${this.ystutyService.groupNames.length}</b>\n` +
+      `Проверено групп: <b>${this.scheduleService.groupNames.length}</b>\n` +
         `Не распознано: <b>${invalidGroups.length}</b>${details}`,
     );
   }

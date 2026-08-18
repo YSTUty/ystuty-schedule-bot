@@ -2,10 +2,14 @@ import { AdminUpdate } from './admin.update';
 
 describe('AdminUpdate', () => {
   it('reports every loaded group that does not match the group-name pattern', async () => {
-    const ystutyService = {
+    const scheduleService = {
       groupNames: ['ЦИС-18', 'Не группа'],
     };
-    const update = new AdminUpdate({} as any, {} as any, ystutyService as any);
+    const update = new AdminUpdate(
+      {} as any,
+      {} as any,
+      scheduleService as any,
+    );
     const ctx = { replyWithHTML: jest.fn() } as any;
 
     await update.onCheckGroupPatterns(ctx);

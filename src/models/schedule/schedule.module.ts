@@ -1,16 +1,16 @@
 import { Global, Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
+import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 import { HttpModule } from '@nestjs/axios';
 
 import * as xEnv from '@my-environment';
 
+import { ScheduleService } from './schedule.service';
 import { TeacherListStateService } from './teacher-list-state.service';
-import { YSTUtyService } from './ystuty.service';
 
 @Global()
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
+    NestScheduleModule.forRoot(),
     HttpModule.register({
       baseURL: xEnv.SCHEDULE_API_URL,
       timeout: 60e3,
@@ -21,7 +21,7 @@ import { YSTUtyService } from './ystuty.service';
       },
     }),
   ],
-  providers: [YSTUtyService, TeacherListStateService],
-  exports: [YSTUtyService, TeacherListStateService],
+  providers: [ScheduleService, TeacherListStateService],
+  exports: [ScheduleService, TeacherListStateService],
 })
-export class YSTUtyModule {}
+export class ScheduleModule {}

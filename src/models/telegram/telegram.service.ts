@@ -16,7 +16,7 @@ import { UserRole } from '@my-common/constants';
 import { IContext } from '@my-interfaces/telegram';
 
 import { RedisService } from '../redis/redis.service';
-import { YSTUtyService } from '../ystuty/ystuty.service';
+import { ScheduleService } from '../schedule/schedule.service';
 
 const CHAT_ADMINS_CACHE_TTL_SECONDS = 120;
 type CachedChatAdmin = {
@@ -39,7 +39,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   constructor(
     @InjectBot() public readonly bot: Telegraf,
     private readonly redisService: RedisService,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
   ) {}
 
   public get isActive(): boolean {
@@ -186,7 +186,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   }
 
   public async parseChatTitle(ctx: IContext, str: string, allowMessage = true) {
-    const groupName = this.ystutyService.parseGroupName(str);
+    const groupName = this.scheduleService.parseGroupName(str);
     if (groupName) {
       if (ctx.conversation) {
         ctx.conversation.groupName = groupName;

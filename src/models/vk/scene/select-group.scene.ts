@@ -5,7 +5,7 @@ import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { ScheduleService } from '../../schedule/schedule.service';
 import { MainUpdate } from '../update/main.update';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
@@ -14,7 +14,7 @@ import { SELECT_GROUP_SCENE } from '../vk.constants';
 @UseFilters(VkExceptionFilter)
 export class SelectGroupScene {
   constructor(
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: VKKeyboardFactory,
     private readonly mainUpdate: MainUpdate,
   ) {}
@@ -45,8 +45,8 @@ export class SelectGroupScene {
       await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
           randomGroupName:
-            ctx.state.user?.groupName || this.ystutyService.randomGroupName,
-          randomGroupName2: this.ystutyService.randomGroupName,
+            ctx.state.user?.groupName || this.scheduleService.randomGroupName,
+          randomGroupName2: this.scheduleService.randomGroupName,
         }),
         { keyboard },
       );
@@ -80,8 +80,8 @@ export class SelectGroupScene {
 
     const selectedGroupName =
       groupName &&
-      (this.ystutyService.getGroupByName(groupName) ||
-        this.ystutyService.parseGroupName(groupName));
+      (this.scheduleService.getGroupByName(groupName) ||
+        this.scheduleService.parseGroupName(groupName));
     if (selectedGroupName) {
       if (isConv) {
         if (ctx.state.conversation) {

@@ -23,9 +23,9 @@ import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
+import { ScheduleService } from '../../schedule/schedule.service';
+import { TeacherListStateService } from '../../schedule/teacher-list-state.service';
 import { UserService } from '../../user/user.service';
-import { TeacherListStateService } from '../../ystuty/teacher-list-state.service';
-import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../vk.constants';
 import { VkService } from '../vk.service';
@@ -39,7 +39,7 @@ export class MainUpdate {
     @InjectVkApi()
     private readonly vk: VK,
     private readonly vkService: VkService,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly teacherListStateService: TeacherListStateService,
     private readonly userService: UserService,
     private readonly keyboardFactory: VKKeyboardFactory,
@@ -67,8 +67,8 @@ export class MainUpdate {
       if (msgPayload[0] === 'g') {
         const groupNameTest = msgPayload.slice(1).join('_');
         const groupName =
-          this.ystutyService.parseGroupName(groupNameTest) ||
-          this.ystutyService.parseGroupName(
+          this.scheduleService.parseGroupName(groupNameTest) ||
+          this.scheduleService.parseGroupName(
             Buffer.from(groupNameTest, 'base64').toString(),
           );
 
@@ -289,7 +289,7 @@ export class MainUpdate {
     }
 
     const teacherId = Number(ctx.eventPayload.teacherId);
-    const teacher = this.ystutyService.getTeacher(teacherId);
+    const teacher = this.scheduleService.getTeacher(teacherId);
     if (!teacher) {
       await ctx.answer({ type: 'show_snackbar', text: 'Not found' });
       return;
@@ -361,7 +361,7 @@ export class MainUpdate {
     page = 1,
   ) {
     const { items, currentPage, totalPages } =
-      this.ystutyService.groupsInstitutesList(page, 5);
+      this.scheduleService.groupsInstitutesList(page, 5);
     const keyboard = this.keyboardFactory.getPagination({
       currentPage,
       totalPages,
@@ -388,13 +388,13 @@ export class MainUpdate {
     const columnsCount = 2;
     const pageSize = instituteHash ? 4 : 5;
     // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
-    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
+    const { items, currentPage, totalPages } = this.scheduleService.groupsList(
       page,
       pageSize,
       instituteHash || null,
     );
     const instituteName = instituteHash
-      ? this.ystutyService.instituteNameByHash(instituteHash)
+      ? this.scheduleService.instituteNameByHash(instituteHash)
       : undefined;
     const keyboard = this.keyboardFactory.getPagination({
       currentPage,
@@ -465,7 +465,7 @@ export class MainUpdate {
       return;
     }
 
-    const { totalCount } = this.ystutyService.teachersList(1, 20, query);
+    const { totalCount } = this.scheduleService.teachersList(1, 20, query);
     if (totalCount === 0) {
       await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, { query }),
@@ -501,11 +501,8 @@ export class MainUpdate {
     pageSize: number,
     page = 1,
   ) {
-    const { items, currentPage, totalPages } = this.ystutyService.teachersList(
-      page,
-      pageSize,
-      query,
-    );
+    const { items, currentPage, totalPages } =
+      this.scheduleService.teachersList(page, pageSize, query);
     const message = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
       currentPage,
       totalPages,
@@ -612,7 +609,10 @@ export class MainUpdate {
   @HearFallback()
   async onHearFallback(@Ctx() ctx: IMessageContext) {
     const query = ctx.text?.trim();
-    if (!ctx.isDM || !this.ystutyService.isTeacherSearchFallbackQuery(query)) {
+    if (
+      !ctx.isDM ||
+      !this.scheduleService.isTeacherSearchFallbackQuery(query)
+    ) {
       return;
     }
 

@@ -2,19 +2,19 @@ import { ScheduleUpdate } from './schedule.update';
 
 describe('Telegram ScheduleUpdate', () => {
   const createUpdate = () => {
-    const ystutyService = {
+    const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
     };
 
     return {
-      update: new ScheduleUpdate({} as any, ystutyService as any),
-      ystutyService,
+      update: new ScheduleUpdate({} as any, scheduleService as any),
+      scheduleService,
     };
   };
 
   it('uses the persistent conversation group for a group chat schedule', async () => {
-    const { update, ystutyService } = createUpdate();
+    const { update, scheduleService } = createUpdate();
     const ctx = {
       chat: { type: 'group' },
       conversation: { groupName: 'ЦИС-21' },
@@ -27,7 +27,7 @@ describe('Telegram ScheduleUpdate', () => {
 
     await (update as any).resolveGroupName(ctx);
 
-    expect(ystutyService.getGroupByName).toHaveBeenCalledWith('ЦИС-21');
+    expect(scheduleService.getGroupByName).toHaveBeenCalledWith('ЦИС-21');
     expect(ctx.scene.enter).not.toHaveBeenCalled();
   });
 });

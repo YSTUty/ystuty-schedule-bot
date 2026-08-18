@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { YSTUtyService } from '../ystuty/ystuty.service';
+import { ScheduleService } from '../schedule/schedule.service';
 
 import { ScheduleNotifDelivery } from './entity/schedule-notif-delivery.entity';
 import { ScheduleNotif } from './entity/schedule-notif.entity';
@@ -20,7 +20,7 @@ export class ScheduleNotifDeliveryService {
     private readonly notifRepository: Repository<ScheduleNotif>,
     @InjectRepository(ScheduleNotifDelivery)
     private readonly deliveryRepository: Repository<ScheduleNotifDelivery>,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly transportRegistry: ScheduleNotifTransportRegistry,
   ) {}
 
@@ -66,7 +66,7 @@ export class ScheduleNotifDeliveryService {
         );
       }
 
-      const [, schedule] = await this.ystutyService.findNext({
+      const [, schedule] = await this.scheduleService.findNext({
         ...target.scheduleTarget,
         skipDays: notif.targetDayOffset,
       });
@@ -157,13 +157,13 @@ export class ScheduleNotifDeliveryService {
   /** Находит и нормализует цель рассылки для единого вызова Schedule API. */
   private getTarget(notif: ScheduleNotif) {
     if (notif.targetType === ScheduleNotifTargetType.Group) {
-      const groupName = this.ystutyService.getGroupByName(notif.targetId);
+      const groupName = this.scheduleService.getGroupByName(notif.targetId);
       return groupName
         ? { name: groupName, scheduleTarget: { groupName } }
         : undefined;
     }
     if (notif.targetType === ScheduleNotifTargetType.Teacher) {
-      const teacher = this.ystutyService.getTeacher(Number(notif.targetId));
+      const teacher = this.scheduleService.getTeacher(Number(notif.targetId));
       return teacher
         ? {
             name: teacher.name,

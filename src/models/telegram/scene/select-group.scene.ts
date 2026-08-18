@@ -5,7 +5,7 @@ import { Markup } from 'telegraf';
 import { LocalePhrase } from '@my-interfaces';
 import { ICbQOrMsg, IContext, IStepContext } from '@my-interfaces/telegram';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { ScheduleService } from '../../schedule/schedule.service';
 // import { UserService } from '../../user/user.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
@@ -18,7 +18,7 @@ import { BaseScene } from './base.scene';
 export class SelectGroupScene extends BaseScene {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly telegramService: TelegramService,
     // private readonly userService: UserService,
     private readonly mainUpdate: MainUpdate,
@@ -83,8 +83,8 @@ export class SelectGroupScene extends BaseScene {
         LocalePhrase.Page_SelectGroup_EnterNameWithExample,
         {
           randomGroupName:
-            ctx.user?.groupName || this.ystutyService.randomGroupName,
-          randomGroupName2: this.ystutyService.randomGroupName,
+            ctx.user?.groupName || this.scheduleService.randomGroupName,
+          randomGroupName2: this.scheduleService.randomGroupName,
         },
       );
       if (ctx.callbackQuery) {
@@ -143,8 +143,8 @@ export class SelectGroupScene extends BaseScene {
 
     const selectedGroupName =
       groupName &&
-      (this.ystutyService.getGroupByName(groupName) ||
-        this.ystutyService.parseGroupName(groupName));
+      (this.scheduleService.getGroupByName(groupName) ||
+        this.scheduleService.parseGroupName(groupName));
     if (selectedGroupName) {
       if (isConv) {
         if (ctx.conversation) {

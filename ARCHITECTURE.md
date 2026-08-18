@@ -47,7 +47,7 @@
 - `src/models/user/user.service.ts`
 - `src/models/social/social.service.ts`
 - `src/models/social-connect/social-connect.service.ts`
-- `src/models/ystuty/ystuty.service.ts`
+- `src/models/schedule/schedule.service.ts`
 
 Этот слой связывает транспорт, БД, Redis и внешние API.
 
@@ -81,13 +81,13 @@ AppModule
  ├─ UserModule
  ├─ SocialModule
  ├─ SocialConnectModule
- ├─ YSTUtyModule
+ ├─ ScheduleModule
  ├─ RedisModule
  └─ MetricsModule
 
 Telegram/VK updates & scenes
  ├─ используют UserService
- ├─ используют YSTUtyService
+ ├─ используют ScheduleService
  ├─ используют keyboard factories
  └─ работают через middleware, guards, filters
 
@@ -102,7 +102,7 @@ SocialConnectService
  ├─ вызывает внешний social-connect
  └─ завершает auth через UserService
 
-YSTUtyService
+ScheduleService
  ├─ вызывает Schedule API
  ├─ кэширует списки групп/преподавателей
  └─ отдает данные update-слою
@@ -119,7 +119,7 @@ YSTUtyService
 4. Nest listener routing отправляет апдейт в нужный `update` или `scene`.
 5. При необходимости срабатывает `RolesGuard`.
 6. В случае ошибок работает `TelegrafExceptionFilter`.
-7. Handler обращается к `UserService`, `YSTUtyService`, `SocialService` и т.д.
+7. Handler обращается к `UserService`, `ScheduleService`, `SocialService` и т.д.
 8. Ответ уходит через `ctx.reply*` или через `TelegramService`.
 
 Особенности:
@@ -186,7 +186,7 @@ YSTUtyService
 
 ### In-memory cache
 
-`YSTUtyService` хранит в памяти процесса:
+`ScheduleService` хранит в памяти процесса:
 
 - список групп
 - список преподавателей

@@ -4,7 +4,7 @@ import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { ScheduleService } from '../../schedule/schedule.service';
 import {
   TelegramKeyboardFactory,
   TelegramPaginationOptions,
@@ -23,7 +23,7 @@ type TgPickerOptions = {
 @Injectable()
 export class TgGroupPicker {
   constructor(
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {}
 
@@ -34,7 +34,7 @@ export class TgGroupPicker {
     count = 10,
   ) {
     const { items, currentPage, totalPages } =
-      this.ystutyService.groupsInstitutesList(page, count);
+      this.scheduleService.groupsInstitutesList(page, count);
     return {
       text: ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, {
         currentPage,
@@ -67,14 +67,14 @@ export class TgGroupPicker {
     options: TgPickerOptions,
     count = 26,
   ) {
-    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
+    const { items, currentPage, totalPages } = this.scheduleService.groupsList(
       page,
       count,
       instituteHash,
     );
     return {
       text: ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
-        instituteName: this.ystutyService.instituteNameByHash(instituteHash),
+        instituteName: this.scheduleService.instituteNameByHash(instituteHash),
         currentPage,
         totalPages,
       }),

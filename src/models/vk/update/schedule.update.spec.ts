@@ -2,11 +2,11 @@ import { ScheduleUpdate } from './schedule.update';
 
 describe('VK ScheduleUpdate', () => {
   it('uses the persistent conversation group for a chat schedule', async () => {
-    const ystutyService = {
+    const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
     };
-    const update = new ScheduleUpdate(ystutyService as any, {} as any);
+    const update = new ScheduleUpdate(scheduleService as any, {} as any);
     const ctx = {
       isChat: true,
       state: {
@@ -26,7 +26,7 @@ describe('VK ScheduleUpdate', () => {
     );
 
     expect(target).toEqual({ id: 'ЦИС-21', type: 'group', name: 'ЦИС-21' });
-    expect(ystutyService.getGroupByName).toHaveBeenCalledWith('ЦИС-21');
+    expect(scheduleService.getGroupByName).toHaveBeenCalledWith('ЦИС-21');
     expect(ctx.scene.enter).not.toHaveBeenCalled();
   });
 });

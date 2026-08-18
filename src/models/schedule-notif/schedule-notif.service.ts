@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 
+import { ScheduleService } from '../schedule/schedule.service';
 import { Conversation } from '../social/entity/conversation.entity';
 import { UserSocial } from '../user/entity/user-social.entity';
-import { YSTUtyService } from '../ystuty/ystuty.service';
 
 import { ScheduleNotifDelivery } from './entity/schedule-notif-delivery.entity';
 import { ScheduleNotif } from './entity/schedule-notif.entity';
@@ -22,7 +22,7 @@ export class ScheduleNotifService {
     private readonly notifRepository: Repository<ScheduleNotif>,
     @InjectRepository(ScheduleNotifDelivery)
     private readonly deliveryRepository: Repository<ScheduleNotifDelivery>,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
   ) {}
 
   /** Создаёт подписку на группу, выбранную в личном профиле пользователя. */
@@ -32,7 +32,7 @@ export class ScheduleNotifService {
   ) {
     this.assertEligibleUserSocial(userSocial);
     assertScheduleNotifSettings(settings);
-    const groupName = this.ystutyService.getGroupByName(userSocial.groupName);
+    const groupName = this.scheduleService.getGroupByName(userSocial.groupName);
     if (!groupName) {
       throw new Error('Selected group is absent from Schedule API');
     }
@@ -60,7 +60,7 @@ export class ScheduleNotifService {
   ) {
     this.assertEligibleUserSocial(userSocial);
     assertScheduleNotifSettings(settings);
-    const groupName = this.ystutyService.getGroupByName(userSocial.groupName);
+    const groupName = this.scheduleService.getGroupByName(userSocial.groupName);
     if (!groupName) {
       throw new Error('Selected group is absent from Schedule API');
     }
@@ -90,7 +90,9 @@ export class ScheduleNotifService {
     settings: ScheduleNotifSettings,
   ) {
     assertScheduleNotifSettings(settings);
-    const groupName = this.ystutyService.getGroupByName(conversation.groupName);
+    const groupName = this.scheduleService.getGroupByName(
+      conversation.groupName,
+    );
     if (!groupName) {
       throw new Error(
         'Select a group for the conversation before configuring notifs',
@@ -180,7 +182,7 @@ export class ScheduleNotifService {
     notifId: number,
     groupName: string,
   ) {
-    const selectedGroupName = this.ystutyService.getGroupByName(groupName);
+    const selectedGroupName = this.scheduleService.getGroupByName(groupName);
     if (!selectedGroupName) {
       throw new Error('Selected group is absent from Schedule API');
     }
@@ -239,7 +241,7 @@ export class ScheduleNotifService {
     notifId: number,
     groupName: string,
   ) {
-    const selectedGroupName = this.ystutyService.getGroupByName(groupName);
+    const selectedGroupName = this.scheduleService.getGroupByName(groupName);
     if (!selectedGroupName) {
       throw new Error('Selected group is absent from Schedule API');
     }

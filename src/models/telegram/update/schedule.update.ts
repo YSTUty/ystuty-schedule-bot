@@ -25,7 +25,7 @@ import { TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/telegram';
 
-import { YSTUtyService } from '../../ystuty/ystuty.service';
+import { ScheduleService } from '../../schedule/schedule.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
 
@@ -34,7 +34,7 @@ import { SELECT_GROUP_SCENE } from '../telegram.constants';
 export class ScheduleUpdate {
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
   ) {}
 
   @On('inline_query')
@@ -45,8 +45,8 @@ export class ScheduleUpdate {
       ctx.inlineQuery.query.trim() || ctx.userSocial?.groupName;
     const groupName =
       groupNameQuery &&
-      (this.ystutyService.getGroupByName(groupNameQuery) ||
-        this.ystutyService.parseGroupName(groupNameQuery));
+      (this.scheduleService.getGroupByName(groupNameQuery) ||
+        this.scheduleService.parseGroupName(groupNameQuery));
     if (!groupName) {
       if (ctx.userSocial?.groupName) {
         await ctx.answerInlineQuery(
@@ -79,7 +79,7 @@ export class ScheduleUpdate {
       return;
     }
 
-    let messageDay = await this.ystutyService.getFormatedSchedule({
+    let messageDay = await this.scheduleService.getFormatedSchedule({
       targetId: groupName,
       targetType: 'group',
       withTags: true,
@@ -94,7 +94,7 @@ export class ScheduleUpdate {
 
     const messageTomorrow =
       (
-        await this.ystutyService.findNext({
+        await this.scheduleService.findNext({
           skipDays: 1,
           groupName,
           withTags: true,
@@ -103,7 +103,7 @@ export class ScheduleUpdate {
 
     const messageWeek =
       (
-        await this.ystutyService.findNext({
+        await this.scheduleService.findNext({
           skipDays: 1,
           groupName,
           isWeek: true,
@@ -284,14 +284,14 @@ export class ScheduleUpdate {
     let days: number = 0;
     if (isTomorrow) {
       skipDays = 1;
-      [days, message] = await this.ystutyService.findNext({
+      [days, message] = await this.scheduleService.findNext({
         skipDays,
         targetId,
         targetType,
         withTags: true,
       });
     } else if (_skipDays !== null) {
-      message = await this.ystutyService.getFormatedSchedule({
+      message = await this.scheduleService.getFormatedSchedule({
         skipDays,
         targetId,
         targetType,
@@ -301,7 +301,7 @@ export class ScheduleUpdate {
         message = `${ctx.i18n.t(LocalePhrase.Common_Error)}\n`;
       }
     } else {
-      [days, message] = await this.ystutyService.findNext({
+      [days, message] = await this.scheduleService.findNext({
         targetId,
         targetType,
         withTags: true,
@@ -322,7 +322,7 @@ export class ScheduleUpdate {
     const targetName = allowerHtmlTags(
       targetType === 'group'
         ? String(targetId)
-        : this.ystutyService.getTeacherName(+targetId) || '',
+        : this.scheduleService.getTeacherName(+targetId) || '',
       '',
     );
 
@@ -440,7 +440,7 @@ export class ScheduleUpdate {
       await ctx.sendChatAction('typing');
     }
 
-    const [days, scheduleMessage] = await this.ystutyService.findNext({
+    const [days, scheduleMessage] = await this.scheduleService.findNext({
       targetId,
       targetType,
       skipDays,
@@ -470,7 +470,7 @@ export class ScheduleUpdate {
     const targetName = allowerHtmlTags(
       targetType === 'group'
         ? String(targetId)
-        : this.ystutyService.getTeacherName(+targetId) || '',
+        : this.scheduleService.getTeacherName(+targetId) || '',
       '',
     );
 
@@ -507,7 +507,7 @@ export class ScheduleUpdate {
   private getPersonalTeacherId(ctx: IMessageContext) {
     return (
       ctx.session.teacherId ??
-      this.ystutyService.getTeacherByExactName(ctx.user?.fullname)?.id
+      this.scheduleService.getTeacherByExactName(ctx.user?.fullname)?.id
     );
   }
 
@@ -516,8 +516,8 @@ export class ScheduleUpdate {
     const groupNameQuery = groupNameFromMatch || this.getSelectedGroupName(ctx);
     return (
       groupNameQuery &&
-      (this.ystutyService.getGroupByName(groupNameQuery) ||
-        this.ystutyService.parseGroupName(groupNameQuery))
+      (this.scheduleService.getGroupByName(groupNameQuery) ||
+        this.scheduleService.parseGroupName(groupNameQuery))
     );
   }
 

@@ -15,7 +15,7 @@ export * from './util/oauth.util';
 export * from './util/other.util';
 export * from './util/scheduler.util';
 export * from './util/text.util';
-export * from './util/ystuty.util';
+export * from './util/schedule.util';
 
 export * from './constants';
 export * from './exception';

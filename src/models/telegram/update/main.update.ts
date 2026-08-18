@@ -32,9 +32,9 @@ import {
   IMessageContext,
 } from '@my-interfaces/telegram';
 
+import { ScheduleService } from '../../schedule/schedule.service';
+import { TeacherListStateService } from '../../schedule/teacher-list-state.service';
 import { UserService } from '../../user/user.service';
-import { TeacherListStateService } from '../../ystuty/teacher-list-state.service';
-import { YSTUtyService } from '../../ystuty/ystuty.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
 import { TelegramService } from '../telegram.service';
@@ -46,7 +46,7 @@ export class MainUpdate {
 
   constructor(
     private readonly keyboardFactory: TelegramKeyboardFactory,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly teacherListStateService: TeacherListStateService,
     private readonly userService: UserService,
     private readonly telegramService: TelegramService,
@@ -132,8 +132,8 @@ export class MainUpdate {
       if (msgPayload[0] === 'g') {
         const groupNameTest = msgPayload.slice(1).join('_');
         const groupName =
-          this.ystutyService.parseGroupName(groupNameTest) ||
-          this.ystutyService.parseGroupName(
+          this.scheduleService.parseGroupName(groupNameTest) ||
+          this.scheduleService.parseGroupName(
             Buffer.from(groupNameTest, 'base64').toString(),
           );
 
@@ -363,7 +363,7 @@ export class MainUpdate {
     count = count || 26;
 
     const { items, currentPage, totalPages } =
-      this.ystutyService.groupsInstitutesList(page, count);
+      this.scheduleService.groupsInstitutesList(page, count);
 
     const keyboard = this.keyboardFactory.getPagination({
       name: `inst-list-${count}`,
@@ -418,7 +418,7 @@ export class MainUpdate {
     count = count || 26;
 
     // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
-    const { items, currentPage, totalPages } = this.ystutyService.groupsList(
+    const { items, currentPage, totalPages } = this.scheduleService.groupsList(
       page,
       count,
       instituteHash,
@@ -444,7 +444,7 @@ export class MainUpdate {
     });
 
     const instituteName = instituteHash
-      ? this.ystutyService.instituteNameByHash(instituteHash)
+      ? this.scheduleService.instituteNameByHash(instituteHash)
       : null;
     const content = xs`
         <b>Список групп${instituteName ? ` <i>(${instituteName})</i>` : ''}</b>
@@ -512,7 +512,7 @@ export class MainUpdate {
       return;
     }
 
-    const { totalCount } = this.ystutyService.teachersList(1, 10, query);
+    const { totalCount } = this.scheduleService.teachersList(1, 10, query);
     if (totalCount === 0) {
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
@@ -549,11 +549,8 @@ export class MainUpdate {
     pageSize: number,
     page = 1,
   ) {
-    const { items, currentPage, totalPages } = this.ystutyService.teachersList(
-      page,
-      pageSize,
-      query,
-    );
+    const { items, currentPage, totalPages } =
+      this.scheduleService.teachersList(page, pageSize, query);
     const keyboard = this.keyboardFactory.getTeachersListPagination(ctx, {
       listId,
       items,
@@ -593,8 +590,8 @@ export class MainUpdate {
     const groupNameQuery = groupNameFromMath || selectedGroupName;
     const groupName =
       groupNameQuery &&
-      (this.ystutyService.getGroupByName(groupNameQuery) ||
-        this.ystutyService.parseGroupName(groupNameQuery));
+      (this.scheduleService.getGroupByName(groupNameQuery) ||
+        this.scheduleService.parseGroupName(groupNameQuery));
 
     if (!groupName) {
       if (selectedGroupName) {
@@ -699,7 +696,7 @@ export class MainUpdate {
       return;
     }
 
-    const teacher = this.ystutyService.getTeacher(teacherId);
+    const teacher = this.scheduleService.getTeacher(teacherId);
     if (!teacher) {
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
@@ -753,7 +750,8 @@ export class MainUpdate {
     if (!('text' in ctx.message)) return next();
 
     const query = ctx.message.text.trim();
-    if (!this.ystutyService.isTeacherSearchFallbackQuery(query)) return next();
+    if (!this.scheduleService.isTeacherSearchFallbackQuery(query))
+      return next();
 
     await this.openTeachersList(ctx, query);
   }

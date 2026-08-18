@@ -89,14 +89,14 @@ describe('VkScheduleNotifGroupScene', () => {
       changeGroup: jest.fn().mockResolvedValue(true),
       getFirstNotif: jest.fn().mockResolvedValue(null),
     };
-    const ystutyService = {
+    const scheduleService = {
       getGroupByName: jest.fn().mockReturnValue(undefined),
       parseGroupName: jest.fn().mockReturnValue('ЦИС-18'),
     };
     const scene = new VkScheduleNotifGroupScene(
       notifService as any,
       {} as any,
-      ystutyService as any,
+      scheduleService as any,
       { getScheduleNotifEditor: jest.fn() } as any,
     );
     const ctx = {
@@ -114,7 +114,9 @@ describe('VkScheduleNotifGroupScene', () => {
 
     await scene.step(ctx);
 
-    expect(ystutyService.parseGroupName).toHaveBeenCalledWith('группа цис-18');
+    expect(scheduleService.parseGroupName).toHaveBeenCalledWith(
+      'группа цис-18',
+    );
     expect(notifService.changeGroup).toHaveBeenCalledWith(1, 7, 'ЦИС-18');
   });
 
@@ -127,14 +129,14 @@ describe('VkScheduleNotifGroupScene', () => {
       }),
       getFirstNotif: jest.fn().mockResolvedValue(null),
     };
-    const ystutyService = {
+    const scheduleService = {
       getGroupByName: jest.fn().mockReturnValue('ЦИС-11'),
       parseGroupName: jest.fn(),
     };
     const scene = new VkScheduleNotifGroupScene(
       notifService as any,
       {} as any,
-      ystutyService as any,
+      scheduleService as any,
       {
         getScheduleNotifEditor: jest
           .fn()

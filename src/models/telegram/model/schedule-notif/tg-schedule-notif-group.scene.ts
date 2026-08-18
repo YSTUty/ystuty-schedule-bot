@@ -8,7 +8,7 @@ import { IStepContext } from '@my-interfaces/telegram';
 
 import { getWeekdaysLabel } from '../../../schedule-notif/schedule-notif-ui.util';
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
-import { YSTUtyService } from '../../../ystuty/ystuty.service';
+import { ScheduleService } from '../../../schedule/schedule.service';
 import { BaseScene } from '../../scene/base.scene';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TgGroupPicker } from '../tg-group-picker';
@@ -26,7 +26,7 @@ export class TgScheduleNotifGroupScene extends BaseScene {
   constructor(
     private readonly notifService: ScheduleNotifService,
     private readonly groupPicker: TgGroupPicker,
-    private readonly ystutyService: YSTUtyService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {
     super();
@@ -93,7 +93,7 @@ export class TgScheduleNotifGroupScene extends BaseScene {
       await this.selectGroup(
         ctx,
         notifId,
-        this.ystutyService.groupNameByHash(firstParam) || '',
+        this.scheduleService.groupNameByHash(firstParam) || '',
       );
       return;
     }
@@ -162,8 +162,8 @@ export class TgScheduleNotifGroupScene extends BaseScene {
     groupName: string,
   ) {
     const selectedGroupName =
-      this.ystutyService.getGroupByName(groupName) ||
-      this.ystutyService.parseGroupName(groupName);
+      this.scheduleService.getGroupByName(groupName) ||
+      this.scheduleService.parseGroupName(groupName);
     if (!selectedGroupName) {
       await this.renderNotFound(ctx, groupName);
       return;

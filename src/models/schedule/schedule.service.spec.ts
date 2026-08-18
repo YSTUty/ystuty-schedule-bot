@@ -1,10 +1,10 @@
-import { YSTUtyService } from './ystuty.service';
+import { ScheduleService } from './schedule.service';
 
-describe('YSTUtyService', () => {
-  let service: YSTUtyService;
+describe('ScheduleService', () => {
+  let service: ScheduleService;
 
   beforeEach(() => {
-    service = new YSTUtyService({} as any, {} as any, {} as any);
+    service = new ScheduleService({} as any, {} as any, {} as any);
     (service as any).allTeachersList = [
       { id: 1, name: 'Шулева Анна Ивановна' },
       { id: 2, name: 'Петров Иван Сергеевич' },

@@ -10,7 +10,7 @@ import * as xEnv from '@my-environment';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
 import { RedisService } from '../redis/redis.service';
-import { YSTUtyService } from '../ystuty/ystuty.service';
+import { ScheduleService } from '../schedule/schedule.service';
 
 const CONVERSATION_MEMBERS_CACHE_TTL_SECONDS = 120;
 type CachedConversationMember = Pick<
@@ -25,7 +25,7 @@ export class VkService implements OnModuleInit {
   constructor(
     @InjectVkApi() public readonly bot: VK,
     private readonly redisService: RedisService,
-    public readonly ystutyService: YSTUtyService,
+    public readonly scheduleService: ScheduleService,
   ) {}
 
   public get isActive(): boolean {
@@ -97,7 +97,7 @@ export class VkService implements OnModuleInit {
   }
 
   public async parseChatTitle(ctx: IMessageContext, str: string) {
-    const groupName = this.ystutyService.parseGroupName(str);
+    const groupName = this.scheduleService.parseGroupName(str);
     if (groupName) {
       if (ctx.state.conversation) {
         ctx.state.conversation.groupName = groupName;

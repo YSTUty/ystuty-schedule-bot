@@ -10,7 +10,7 @@ describe('TgScheduleNotifGroupScene', () => {
       }),
       getFirstNotif: jest.fn().mockResolvedValue(null),
     };
-    const ystutyService = {
+    const scheduleService = {
       groupNameByHash: jest.fn().mockReturnValue('ЦИС-11'),
       getGroupByName: jest.fn().mockReturnValue('ЦИС-11'),
       parseGroupName: jest.fn(),
@@ -21,7 +21,7 @@ describe('TgScheduleNotifGroupScene', () => {
     const scene = new TgScheduleNotifGroupScene(
       notifService as any,
       {} as any,
-      ystutyService as any,
+      scheduleService as any,
       keyboardFactory as any,
     );
     const ctx = {

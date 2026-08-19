@@ -118,7 +118,9 @@ export class SelectGroupScene extends BaseScene {
       return;
     }
 
-    if ((isConv && !ctx.state.appeal) || false /* !ctx.message */) {
+    // Право на inline callback проверено до входа в сцену. Для текста в
+    // беседе по-прежнему требуется явное обращение к боту.
+    if (isConv && !ctx.callbackQuery && !ctx.state.appeal) {
       return;
     }
 

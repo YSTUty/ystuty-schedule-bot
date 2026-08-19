@@ -259,10 +259,9 @@ export class MainUpdate {
 
   @On('my_chat_member')
   async onMyChatMember(@Ctx() ctx: IContext<{}, TgUpdate.MyChatMemberUpdate>) {
-    const {
-      chat,
-      new_chat_member: { status, user },
-    } = ctx.myChatMember;
+    const { chat, new_chat_member } = ctx.myChatMember;
+    const { status, user } = new_chat_member;
+    const oldStatus = ctx.myChatMember.old_chat_member?.status ?? 'unknown';
 
     // * Skip check other user|bot
     if (user.id !== ctx.botInfo.id) {
@@ -277,18 +276,26 @@ export class MainUpdate {
     }
 
     const { title, type } = chat;
-    this.logger.log(`New chat bot status: "${status}" in "${title}" ${type}`);
+    this.logger.debug(
+      `[TG][conversation] my_chat_member chat=${chat.id} title="${title}" type=${type} bot=${user.id} status=${oldStatus}->${status}`,
+    );
 
     if (!ctx.conversation) {
       this.logger.error(`Empty conversation in ctx`);
       return;
     }
 
+    const previousIsLeaved = ctx.conversation.isLeaved;
     ctx.conversation.invitedByUserSocialId = ctx.userSocial.id;
     ctx.conversation.chatStatus = status;
     ctx.conversation.title = title;
     ctx.conversation.chatType = type;
     ctx.conversation.isLeaved = status === 'kicked' || status === 'left';
+    (ctx.state ??= { appeal: false }).conversationDebugEvent =
+      `my_chat_member:${oldStatus}->${status}`;
+    this.logger.debug(
+      `[TG][conversation] state chat=${chat.id} isLeaved=${previousIsLeaved}->${ctx.conversation.isLeaved} status=${ctx.conversation.chatStatus} invitedBy=${ctx.conversation.invitedByUserSocialId}`,
+    );
 
     if (
       status === 'creator' ||

@@ -132,6 +132,26 @@ describe('ScheduleNotifDeliveryService', () => {
     );
   });
 
+  it('skips a notification for a conversation that the bot has left', async () => {
+    const { service, scheduleService, transport, deliveryRepository } =
+      createService();
+    Object.assign(notif, {
+      userSocial: null,
+      conversation: { conversationId: 1, isLeaved: true },
+    });
+
+    await service.deliver(notif, delivery);
+
+    expect(scheduleService.getGroupByName).not.toHaveBeenCalled();
+    expect(transport.sendScheduleNotif).not.toHaveBeenCalled();
+    expect(deliveryRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: ScheduleNotifDeliveryStatus.Skipped,
+        error: 'Notification recipient is unavailable',
+      }),
+    );
+  });
+
   it('disables a notif and informs the recipient after the seventh missing target during the academic year', async () => {
     const { service, scheduleService, transport, notifRepository } =
       createService();

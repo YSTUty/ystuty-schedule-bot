@@ -59,6 +59,7 @@ export class RolesGuard implements CanActivate {
       ),
     );
 
+    // TODO?: add check chat type for vk
     if (context.getType<TelegrafContextType>() === 'telegraf') {
       const eCtx = TelegrafExecutionContext.create(context);
       const ctx = eCtx.getContext<TgIContext>();

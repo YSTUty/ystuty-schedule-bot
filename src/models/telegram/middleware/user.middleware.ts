@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { MiddlewareObj } from 'telegraf/typings/middleware';
 
@@ -12,6 +12,8 @@ import { UserService } from '../../user/user.service';
 
 @Injectable()
 export class UserMiddleware implements MiddlewareObj<IContext> {
+  private readonly logger = new Logger(UserMiddleware.name);
+
   constructor(
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
@@ -115,7 +117,14 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
           await this.userService.saveUserSocial(ctx.userSocial);
         }
         if (ctx.conversation) {
-          await this.socialService.saveConversation(ctx.conversation);
+          const conversation = await this.socialService.saveConversation(
+            ctx.conversation,
+          );
+          if (ctx.state.conversationDebugEvent) {
+            this.logger.debug(
+              `[TG][conversation] persisted event=${ctx.state.conversationDebugEvent} id=${String(conversation.conversationId)} dbId=${conversation.id} isLeaved=${conversation.isLeaved} status=${conversation.chatStatus ?? '-'} type=${conversation.chatType ?? '-'} invitedBy=${conversation.invitedByUserSocialId ?? '-'}`,
+            );
+          }
         }
       }
     };

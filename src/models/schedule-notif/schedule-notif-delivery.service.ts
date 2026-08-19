@@ -42,6 +42,7 @@ export class ScheduleNotifDeliveryService {
       if (
         !notif.isEnabled ||
         !recipient ||
+        notif.conversation?.isLeaved ||
         (recipient.type === 'user' &&
           (!recipient.userSocial.hasDM || recipient.userSocial.isBlockedBot))
       ) {

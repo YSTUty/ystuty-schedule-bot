@@ -1,18 +1,22 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectVkApi } from 'nestjs-vk';
 
-import { getRandomId, VK } from 'vk-io';
+import { APIError, getRandomId, VK } from 'vk-io';
 import { MessagesConversationMember } from 'vk-io/lib/api/schemas/objects';
 import { MessagesSendParams } from 'vk-io/lib/api/schemas/params';
 
 import * as xEnv from '@my-environment';
 
+import { SocialType } from '@my-common/constants';
+import { isVkConversationUnavailableError } from '@my-common/filter/vk-exception.filter';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
 import { RedisService } from '../redis/redis.service';
 import { ScheduleService } from '../schedule/schedule.service';
+import { SocialService } from '../social/social.service';
 
 const CONVERSATION_MEMBERS_CACHE_TTL_SECONDS = 120;
+
 type CachedConversationMember = Pick<
   MessagesConversationMember,
   'member_id' | 'is_admin' | 'is_owner'
@@ -26,6 +30,7 @@ export class VkService implements OnModuleInit {
     @InjectVkApi() public readonly bot: VK,
     private readonly redisService: RedisService,
     public readonly scheduleService: ScheduleService,
+    private readonly socialService: SocialService,
   ) {}
 
   public get isActive(): boolean {
@@ -61,7 +66,9 @@ export class VkService implements OnModuleInit {
         ...extra,
       });
     } catch (err) {
-      this.logger.error(err);
+      if (!(await this.handleSendError(peer_id, err))) {
+        this.logger.error(err);
+      }
       return false;
     }
   }
@@ -177,5 +184,34 @@ export class VkService implements OnModuleInit {
       CONVERSATION_MEMBERS_CACHE_TTL_SECONDS,
     );
     return cachedValue;
+  }
+
+  /** Обрабатывает ошибки отправки, по которым можно подтвердить состояние беседы. */
+  private async handleSendError(peerId: number, error: unknown) {
+    if (
+      peerId <= 2e9 ||
+      !(error instanceof APIError) ||
+      !isVkConversationUnavailableError(error)
+    ) {
+      return false;
+    }
+
+    const conversationId = peerId - 2e9;
+    try {
+      const result = await this.socialService.markConversationAsLeaved(
+        SocialType.Vkontakte,
+        conversationId,
+      );
+      this.logger.warn(
+        `[VK][conversation] messages.send peer=${peerId} unavailable; marked chat=${conversationId} isLeaved=true affected=${result.affected ?? 0}`,
+      );
+      return true;
+    } catch (markError) {
+      this.logger.error(
+        `[VK][conversation] failed to persist bot removal for peer=${peerId}`,
+        markError instanceof Error ? markError.stack : String(markError),
+      );
+    }
+    return null;
   }
 }

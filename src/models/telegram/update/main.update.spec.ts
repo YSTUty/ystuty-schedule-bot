@@ -85,6 +85,7 @@ describe('Telegram MainUpdate', () => {
         conversation,
         myChatMember: {
           chat: { type: 'group', title: 'Расписание' },
+          old_chat_member: { status: 'member' },
           new_chat_member: { status, user: { id: 42 } },
         },
         replyWithHTML: jest.fn(),
@@ -109,6 +110,7 @@ describe('Telegram MainUpdate', () => {
       conversation,
       myChatMember: {
         chat: { type: 'group', title: 'Расписание' },
+        old_chat_member: { status: 'member' },
         new_chat_member: { status: 'kicked', user: { id: 7 } },
       },
     } as any;

@@ -42,6 +42,14 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
     const next = telegrafHost.getNext();
 
     if (
+      exception instanceof TelegrafException &&
+      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
+    ) {
+      await next?.();
+      return;
+    }
+
+    if (
       exception.message !== LocalePhrase.Common_NoAccess &&
       !(exception instanceof Redlock.LockError)
     ) {
@@ -52,14 +60,6 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
     }
 
     if (!(exception instanceof Error) || !ctx) {
-      return;
-    }
-
-    if (
-      exception instanceof TelegrafException &&
-      (exception.message === 'SKIP_FULL' || exception.message === 'SKIP')
-    ) {
-      await next?.();
       return;
     }
 

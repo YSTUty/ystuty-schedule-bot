@@ -79,6 +79,17 @@ export class SocialService implements OnModuleInit {
     return await this.conversationRepository.save(conversation);
   }
 
+  /** Помечает беседу недоступной, когда транспорт подтверждает исключение бота. */
+  public async markConversationAsLeaved(
+    social: SocialType,
+    conversationId: number,
+  ) {
+    return await this.conversationRepository.update(
+      { social, conversationId },
+      { isLeaved: true, chatStatus: 'kicked' },
+    );
+  }
+
   public async iAmInConversation(
     userSocial: UserSocial,
     conversationId: number,

@@ -41,6 +41,8 @@ type ContextState = {
 
   rejectRefGroupName?: boolean;
   foundGroupName?: string;
+  /** Событие жизненного цикла беседы для отладочного лога после сохранения. */
+  conversationDebugEvent?: string;
 
   // [key: string]: any;
 };

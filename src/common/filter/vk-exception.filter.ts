@@ -7,13 +7,42 @@ import {
 import { VkArgumentsHost, VkException, VkExecutionContext } from 'nestjs-vk';
 
 import * as Redlock from 'redlock';
-import { APIError, MessageEventContext } from 'vk-io';
+import { APIError, APIErrorCode, MessageEventContext } from 'vk-io';
 
 import * as xEnv from '@my-environment';
 
 import { UserException } from '@my-common/exception';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
+
+export const isVkUserUnavailableError = (error: APIError) =>
+  // error.code === APIErrorCode.PERMISSION ||
+  // TODO: need valid this codes
+  // error.code === APIErrorCode.ACCESS ||
+  // error.code === APIErrorCode.ACTION_FAILED ||
+  error.code === APIErrorCode.MESSAGES_USER_BLOCKED ||
+  error.code === APIErrorCode.MESSAGES_DENY_SEND ||
+  error.code === APIErrorCode.MESSAGES_PRIVACY ||
+  // error.code === APIErrorCode.USER_BANNED ||
+  // error.code === APIErrorCode.USER_DEACTIVATED ||
+  // error.code === APIErrorCode.USER_DELETED ||
+  // TODO: need valid this messages
+  /bot was blocked by the user/i.test(error.message) ||
+  /user is deactivated/i.test(error.message);
+
+export const isVkConversationUnavailableError = (error: APIError) =>
+  // error.code === APIErrorCode.PERMISSION ||
+  // TODO: need valid this codes
+  error.code === APIErrorCode.MESSAGES_CHAT_DISABLED ||
+  error.code === APIErrorCode.MESSAGES_CHAT_NOT_EXIST ||
+  error.code === APIErrorCode.MESSAGES_CHAT_USER_LEFT ||
+  error.code === APIErrorCode.MESSAGES_CHAT_USER_NO_ACCESS ||
+  // Permission to perform this action is denied: the user was kicked out of the conversation
+  /kicked out of the conversation/i.test(error.message);
+
+export const isVkRateLimitError = (error: APIError) =>
+  error.code === APIErrorCode.RATE_LIMIT ||
+  error.message.includes('Too Many Requests');
 
 @Catch()
 export class VkExceptionFilter implements ExceptionFilter {
@@ -56,7 +85,7 @@ export class VkExceptionFilter implements ExceptionFilter {
       !(ctx.answer || ctx.reply) ||
       exception instanceof ForbiddenException ||
       // * One of the parameters specified was missing or invalid
-      (exception instanceof APIError && exception.code == 100)
+      (exception instanceof APIError && exception.code == APIErrorCode.PARAM)
     ) {
       return;
     }
@@ -83,6 +112,55 @@ export class VkExceptionFilter implements ExceptionFilter {
       default:
         content = ctx.i18n.t(LocalePhrase.Common_Error);
         break;
+    }
+
+    if (exception instanceof APIError) {
+      if (isVkRateLimitError(exception)) {
+        // ?.. set to session ratelimit info?
+        return;
+      }
+
+      if (ctx.isChat && isVkConversationUnavailableError(exception)) {
+        try {
+          if (ctx.state.conversation) {
+            ctx.state.conversation.isLeaved = true;
+            if (/kicked out of the conversation/i.test(exception.message)) {
+              ctx.state.conversation.chatStatus = 'kicked';
+            }
+          }
+        } catch (err) {
+          if (err instanceof Error) {
+            this.logger.error(
+              '[ConversationUnavailable] Failed to mark conversation as leaved',
+              err.stack,
+            );
+          } else {
+            this.logger.error(
+              `[ConversationUnavailable] Failed to mark conversation as leaved: ${String(err)}`,
+            );
+          }
+        }
+        return;
+      }
+
+      if (ctx.isDM && isVkUserUnavailableError(exception)) {
+        try {
+          ctx.state.userSocial.isBlockedBot = true;
+          // ctx.session.isBlockedBot = true;
+        } catch (err) {
+          if (err instanceof Error) {
+            this.logger.error(
+              '[UserUnavailable] Failed to mark userSocial as blocked',
+              err.stack,
+            );
+          } else {
+            this.logger.error(
+              `[UserUnavailable] Failed to mark userSocial as blocked: ${String(err)}`,
+            );
+          }
+        }
+        return;
+      }
     }
 
     try {

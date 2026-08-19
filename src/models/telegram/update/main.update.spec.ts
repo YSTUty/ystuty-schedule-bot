@@ -70,6 +70,30 @@ describe('Telegram MainUpdate', () => {
     ).toEqual(['private']);
   });
 
+  it('opens group selection from a group-chat callback made by the bot inviter', async () => {
+    const scene = { enter: jest.fn() };
+    const ctx = {
+      from: { id: 7 },
+      chat: { id: -1001, type: 'group' },
+      state: { appeal: false },
+      conversation: { invitedByUserSocialId: 3 },
+      userSocial: { id: 3 },
+      match: { groups: { groupName: 'ЦИС-17' } },
+      callbackQuery: { data: 'selectGroup:ЦИС-17' },
+      scene,
+      tryAnswerCbQuery: jest.fn(),
+      deleteMessage: jest.fn(),
+    } as any;
+
+    await update.hearSelectGroup(ctx);
+
+    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
+      groupName: 'ЦИС-17',
+    });
+    expect(ctx.tryAnswerCbQuery).toHaveBeenCalledTimes(1);
+    expect(ctx.deleteMessage).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ['left', true],
     ['kicked', true],
@@ -118,5 +142,39 @@ describe('Telegram MainUpdate', () => {
     await update.onMyChatMember(ctx);
 
     expect(conversation.isLeaved).toBe(false);
+  });
+
+  it('welcomes the bot only when it joins or returns to a Telegram chat', async () => {
+    const createContext = (oldStatus: string, status: string) => ({
+      botInfo: { id: 42 },
+      userSocial: { id: 1 },
+      conversation: { isLeaved: oldStatus === 'left' },
+      myChatMember: {
+        chat: { id: -1001, type: 'group', title: 'Расписание' },
+        old_chat_member: { status: oldStatus },
+        new_chat_member: { status, user: { id: 42 } },
+      },
+      replyWithHTML: jest.fn(),
+      i18n: { t: jest.fn().mockReturnValue('start') },
+      sessionConversation: {},
+      state: { appeal: false },
+    });
+    const getStart = jest.fn();
+    const parseChatTitle = jest.fn();
+    (update as any).keyboardFactory.getStart = getStart;
+    (update as any).keyboardFactory.getSelectGroupInline = jest.fn();
+    (update as any).telegramService.parseChatTitle = parseChatTitle;
+
+    await update.onMyChatMember(
+      createContext('member', 'administrator') as any,
+    );
+
+    expect(getStart).not.toHaveBeenCalled();
+    expect(parseChatTitle).not.toHaveBeenCalled();
+
+    await update.onMyChatMember(createContext('left', 'member') as any);
+
+    expect(getStart).toHaveBeenCalledTimes(1);
+    expect(parseChatTitle).toHaveBeenCalledTimes(1);
   });
 });

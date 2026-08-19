@@ -297,12 +297,15 @@ export class MainUpdate {
       `[TG][conversation] state chat=${chat.id} isLeaved=${previousIsLeaved}->${ctx.conversation.isLeaved} status=${ctx.conversation.chatStatus} invitedBy=${ctx.conversation.invitedByUserSocialId}`,
     );
 
-    if (
-      status === 'creator' ||
-      status === 'administrator' ||
-      status === 'member' ||
-      status === 'restricted'
-    ) {
+    const activeStatuses: (typeof status)[] = [
+      'creator',
+      'administrator',
+      'member',
+      'restricted',
+    ];
+    const hasJoinedChat =
+      activeStatuses.includes(status) && !activeStatuses.includes(oldStatus);
+    if (hasJoinedChat) {
       if (chat.type !== 'channel') {
         const keyboard = this.keyboardFactory.getStart(ctx);
         await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
@@ -645,7 +648,9 @@ export class MainUpdate {
     const withTrigger = !!ctx.match?.groups?.trigger;
 
     if (!chat || chat.type !== 'private') {
-      if (!withTrigger && !state.appeal) {
+      // Для текстовых команд в беседе требуется обращение к боту. Inline
+      // callback уже является явным действием пользователя по кнопке.
+      if (!ctx.callbackQuery && !withTrigger && !state.appeal) {
         await ctx.tryAnswerCbQuery();
         return;
       }

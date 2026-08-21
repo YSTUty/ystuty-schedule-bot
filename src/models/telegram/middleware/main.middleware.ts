@@ -94,10 +94,25 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         return;
       }
 
-      ctx.tryAnswerCbQuery = async (...args) =>
-        (ctx.updateType === 'callback_query' &&
-          (await ctx.answerCbQuery?.(...args))) ||
-        null;
+      ctx.tryAnswerCbQuery = async (...args) => {
+        if (ctx.updateType !== 'callback_query') {
+          return null;
+        }
+
+        try {
+          return await ctx.answerCbQuery(...args);
+        } catch (err) {
+          if (
+            err instanceof TelegramError &&
+            err.code === 400 &&
+            err.description.includes('query is too old')
+          ) {
+            // Callback уже истёк: пользователь мог получить результат через edit/reply.
+            return null;
+          }
+          throw err;
+        }
+      };
 
       ctx.sendMessage = async (
         text: string | FmtString,

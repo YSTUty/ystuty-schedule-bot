@@ -94,6 +94,29 @@ describe('Telegram MainUpdate', () => {
     expect(ctx.deleteMessage).toHaveBeenCalledTimes(1);
   });
 
+  it('acknowledges an institute-list callback before editing its message', async () => {
+    const calls: string[] = [];
+    (update as any).scheduleService.groupsInstitutesList = jest.fn(() => ({
+      items: ['Институт'],
+      currentPage: 1,
+      totalPages: 1,
+    }));
+    (update as any).keyboardFactory.getPagination = jest
+      .fn()
+      .mockReturnValue({});
+    const ctx = {
+      updateType: 'callback_query',
+      callbackQuery: { data: 'pager:inst-list' },
+      match: { groups: {} },
+      tryAnswerCbQuery: jest.fn(async () => calls.push('answer')),
+      editMessageText: jest.fn(async () => calls.push('edit')),
+    } as any;
+
+    await update.onInstitutesList(ctx);
+
+    expect(calls).toEqual(['answer', 'edit']);
+  });
+
   it.each([
     ['left', true],
     ['kicked', true],

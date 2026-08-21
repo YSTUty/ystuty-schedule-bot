@@ -392,13 +392,13 @@ export class MainUpdate {
     `;
 
     if (ctx.callbackQuery) {
+      await ctx.tryAnswerCbQuery();
       try {
         await ctx.editMessageText(content, {
           ...keyboard,
           parse_mode: 'HTML',
         });
       } catch {}
-      await ctx.tryAnswerCbQuery();
     } else {
       await ctx.replyWithHTML(content, keyboard);
     }
@@ -461,13 +461,13 @@ export class MainUpdate {
     `;
 
     if (ctx.callbackQuery) {
+      await ctx.tryAnswerCbQuery();
       try {
         await ctx.editMessageText(content, {
           ...keyboard,
           parse_mode: 'HTML',
         });
       } catch {}
-      await ctx.tryAnswerCbQuery();
     } else {
       await ctx.replyWithHTML(content, keyboard);
     }
@@ -573,13 +573,13 @@ export class MainUpdate {
     });
 
     if (ctx.callbackQuery) {
+      await ctx.tryAnswerCbQuery();
       try {
         await ctx.editMessageText(content, {
           ...keyboard,
           parse_mode: 'HTML',
         });
       } catch {}
-      await ctx.tryAnswerCbQuery();
       return;
     }
 

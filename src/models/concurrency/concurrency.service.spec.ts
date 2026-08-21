@@ -3,6 +3,7 @@ import { LockBusyError } from '@my-common/exception';
 import { ConcurrencyService } from './concurrency.service';
 
 jest.mock('redlock-universal', () => {
+  class MockLockAcquisitionError extends Error {}
   const acquire = jest.fn();
   const release = jest.fn();
 
@@ -13,12 +14,27 @@ jest.mock('redlock-universal', () => {
     },
     createLock: jest.fn(() => ({ acquire, release })),
     createRedlock: jest.fn(() => ({ acquire, release })),
+    LockAcquisitionError: MockLockAcquisitionError,
     __mock: { acquire, release },
   };
 });
 
 describe('ConcurrencyService', () => {
   const createService = () => new ConcurrencyService({ redis: {} } as any);
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('buildKey normalizes optional key parts', () => {
+    const service = createService();
+
+    expect(
+      service.buildKey('schedule:request', 'teacher name', null, undefined, 42),
+    ).toBe('schedule_request:teacher_name:42');
+
+    service.onApplicationShutdown();
+  });
 
   test('exclusiveLocal serializes handlers by key', async () => {
     const service = createService();
@@ -101,5 +117,44 @@ describe('ConcurrencyService', () => {
     expect(__mock.acquire).toHaveBeenCalledTimes(1);
     expect(__mock.release).toHaveBeenCalledTimes(1);
     expect(__mock.release).toHaveBeenCalledWith({ id: 'h1' });
+
+    service.onApplicationShutdown();
+  });
+
+  test('exclusiveDistributed releases a lock after callback failure', async () => {
+    const { __mock } = jest.requireMock('redlock-universal');
+    __mock.acquire.mockResolvedValueOnce({ id: 'h2' });
+    __mock.release.mockResolvedValueOnce(true);
+
+    const service = createService();
+    const callbackError = new Error('Schedule API is unavailable');
+
+    await expect(
+      service.exclusiveDistributed('dist-key', async () => {
+        throw callbackError;
+      }),
+    ).rejects.toBe(callbackError);
+
+    expect(__mock.release).toHaveBeenCalledWith({ id: 'h2' });
+
+    service.onApplicationShutdown();
+  });
+
+  test('exclusiveDistributed maps a busy Redis lock to LockBusyError', async () => {
+    const { LockAcquisitionError, __mock } =
+      jest.requireMock('redlock-universal');
+    __mock.acquire.mockRejectedValueOnce(new LockAcquisitionError('busy'));
+
+    const service = createService();
+
+    await expect(
+      service.exclusiveDistributed('dist-key', async () => 'never'),
+    ).rejects.toMatchObject({
+      name: LockBusyError.name,
+      key: 'dist-key',
+    });
+    expect(__mock.release).not.toHaveBeenCalled();
+
+    service.onApplicationShutdown();
   });
 });

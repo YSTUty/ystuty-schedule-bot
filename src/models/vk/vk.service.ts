@@ -11,6 +11,7 @@ import { SocialType } from '@my-common/constants';
 import { isVkConversationUnavailableError } from '@my-common/filter/vk-exception.filter';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
+import { ConcurrencyService } from '../concurrency/concurrency.service';
 import { RedisService } from '../redis/redis.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { SocialService } from '../social/social.service';
@@ -33,6 +34,7 @@ export class VkService implements OnModuleInit {
 
   constructor(
     @InjectVkApi() public readonly bot: VK,
+    private readonly concurrencyService: ConcurrencyService,
     private readonly redisService: RedisService,
     public readonly scheduleService: ScheduleService,
     private readonly socialService: SocialService,
@@ -131,16 +133,16 @@ export class VkService implements OnModuleInit {
   > {
     if (!this.isActive) return [null, async () => void 0];
 
-    const lock = await this.redisService.redlock.lock(
-      `emulateSession:telegram:${socialId}`,
-      10e3,
+    const lock = await this.concurrencyService.acquireExclusiveLocal(
+      this.concurrencyService.buildKey('session:vk', socialId),
+      { timeoutMs: 10e3 },
     );
 
     try {
       const key = `vk:session:${socialId}:${socialId}`;
       const sessionJson = await this.redisService.redis.get(key);
       if (!sessionJson) {
-        await lock.unlock();
+        await lock.release();
         return [null, async () => void 0];
       }
 
@@ -157,12 +159,12 @@ export class VkService implements OnModuleInit {
             await this.redisService.redis.del(key);
           }
         } finally {
-          await lock.unlock();
+          await lock.release();
         }
       };
       return [session, close];
     } catch (err) {
-      await lock.unlock();
+      await lock.release();
       throw err;
     }
   }

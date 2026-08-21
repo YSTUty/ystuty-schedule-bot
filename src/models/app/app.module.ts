@@ -9,6 +9,7 @@ import * as xEnv from '@my-environment';
 import { RolesGuard } from '@my-common/guard/roles.guard';
 
 import { BroadcastModule } from '../broadcast/broadcast.module';
+import { ConcurrencyModule } from '../concurrency/concurrency.module';
 import { MetricsModule } from '../metrics/metrics.module';
 import { RedisModule } from '../redis/redis.module';
 import { ScheduleNotifModule } from '../schedule-notif/schedule-notif.module';
@@ -44,6 +45,7 @@ import { AppService } from './app.service';
       },
       prefix: `${xEnv.REDIS_PREFIX}bull`,
     }),
+    ConcurrencyModule,
     SocialConnectModule,
     SocialModule,
     BroadcastModule,

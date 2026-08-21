@@ -4,9 +4,15 @@ import { HttpService } from '@nestjs/axios';
 
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
-import { getLessonTypeStrArr, matchGroupName, md5 } from '@my-common';
+import {
+  getLessonTypeStrArr,
+  isConcurrencyControlError,
+  matchGroupName,
+  md5,
+} from '@my-common';
 import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
 
+import { ConcurrencyService } from '../concurrency/concurrency.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { RedisService } from '../redis/redis.service';
 
@@ -29,6 +35,7 @@ export class ScheduleService implements OnModuleInit {
 
   constructor(
     private readonly httpService: HttpService,
+    private readonly concurrencyService: ConcurrencyService,
     private readonly redisService: RedisService,
     private readonly metricsService: MetricsService,
   ) {}
@@ -403,11 +410,7 @@ export class ScheduleService implements OnModuleInit {
 
     const addHashTag = isWeek;
 
-    const lock = await this.redisService.redlock.lock(
-      `ystuty:schedule:${targetType}:${String(targetId).toLowerCase()}`,
-      5e3,
-    );
-    try {
+    const loadSchedule = async () => {
       const response = await this.getSchedule(targetId, targetType);
       if (!response) {
         return null;
@@ -430,13 +433,28 @@ export class ScheduleService implements OnModuleInit {
         withTags,
         targetType,
       );
-    } catch (error) {
-      console.log('[getFormatedSchedule] Error', error.message);
-    } finally {
-      await lock.unlock();
-    }
+    };
 
-    return false;
+    try {
+      return await this.concurrencyService.exclusiveDistributed(
+        this.concurrencyService.buildKey(
+          'ystuty:schedule',
+          targetType,
+          String(targetId).toLowerCase(),
+        ),
+        loadSchedule,
+        { ttlMs: 5e3 },
+      );
+    } catch (error) {
+      if (isConcurrencyControlError(error)) {
+        throw error;
+      }
+      this.logger.error(
+        'Failed to load formatted schedule',
+        error instanceof Error ? error.stack : String(error),
+      );
+      return false;
+    }
   }
 
   private formateWeekDays(

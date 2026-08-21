@@ -5,12 +5,15 @@ import {
   TelegrafExecutionContext,
 } from '@xtcry/nestjs-telegraf';
 
-import * as Redlock from 'redlock';
 import { TelegramError } from 'telegraf';
 
 import * as xEnv from '@my-environment';
 
-import { escapeHTMLCodeChars, UserException } from '@my-common';
+import {
+  escapeHTMLCodeChars,
+  isConcurrencyControlError,
+  UserException,
+} from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -40,6 +43,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
     const telegrafHost = TelegrafArgumentsHost.create(host);
     const ctx = telegrafHost.getContext<IContext>();
     const next = telegrafHost.getNext();
+    const isCCE = isConcurrencyControlError(exception);
 
     if (
       exception instanceof TelegrafException &&
@@ -49,10 +53,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    if (
-      exception.message !== LocalePhrase.Common_NoAccess &&
-      !(exception instanceof Redlock.LockError)
-    ) {
+    if (exception.message !== LocalePhrase.Common_NoAccess && !isCCE) {
       this.logger.error(
         `OnUpdateType(${ctx?.updateType}): ${exception?.message || exception}`,
         exception.stack,
@@ -67,6 +68,18 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       ctx.from && xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
     let content = '';
     switch (true) {
+      case exception instanceof UserException:
+        content = ctx.callbackQuery
+          ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
+          : `💢 Error: <b>${escapeHTMLCodeChars(exception.message)}</b>`;
+        break;
+      case exception.message === LocalePhrase.Common_NoAccess:
+        content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
+        break;
+      case isCCE:
+        content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
+        break;
+
       case isAdmin:
         content =
           ctx.callbackQuery || !exception.stack
@@ -76,18 +89,6 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
               )}</b>\n<code>${escapeHTMLCodeChars(
                 exception.stack.split('\n').slice(0, 5).join('\n'),
               )}</code>`;
-        break;
-
-      case exception instanceof UserException:
-        content = ctx.callbackQuery
-          ? `💢 Error: ${escapeHTMLCodeChars(exception.message)}`
-          : `💢 Error: <b>${escapeHTMLCodeChars(exception.message)}</b>`;
-        break;
-      case exception.message === LocalePhrase.Common_NoAccess:
-        content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
-        break;
-      case exception instanceof Redlock.LockError:
-        content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
         break;
 
       default:

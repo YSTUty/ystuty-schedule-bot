@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, UseFilters } from '@nestjs/common';
 import { VK_HEAR_MANAGER, VK_SCENE_MANAGER } from 'nestjs-vk';
 
 import { HearManager } from '@vk-io/hear';
@@ -17,7 +17,9 @@ import {
 import { RedisStorage } from 'vk-io-redis-storage';
 import { MessagesDeleteParams } from 'vk-io/lib/api/schemas/params';
 
+import { VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
+import { isConcurrencyControlError } from '@my-common/exception';
 import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
 import {
@@ -26,6 +28,8 @@ import {
   IMessageEventContext,
 } from '@my-interfaces/vk';
 
+import { ConcurrencyService } from '../../concurrency/concurrency.service';
+import { DebounceRegistryService } from '../../concurrency/debounce-registry.service';
 import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
 import { ScheduleService } from '../../schedule/schedule.service';
@@ -35,7 +39,9 @@ import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
 @Injectable()
+@UseFilters(VkExceptionFilter)
 export class MainMiddleware {
+  private static readonly COOLDOWN_MESSAGE_DEBOUNCE_MS = 3e3;
   private readonly logger = new Logger(MainMiddleware.name);
 
   private readonly sessionManager: SessionManager;
@@ -56,6 +62,8 @@ export class MainMiddleware {
     private readonly scheduleService: ScheduleService,
     private readonly userService: UserService,
     private readonly socialService: SocialService,
+    private readonly concurrencyService: ConcurrencyService,
+    private readonly debounceRegistryService: DebounceRegistryService,
   ) {
     this.redisStorage = new RedisStorage({
       redis: this.redisService.redis,
@@ -255,15 +263,25 @@ export class MainMiddleware {
           });
       }
 
-      try {
-        await next();
-      } catch (err: unknown) {
-        this.logger.error('Error (featureMiddleware):', err);
-        try {
-          await ctx.reply(ctx.i18n.t(LocalePhrase.Common_Error));
-        } catch {}
-        throw err;
-      }
+      const peerId = ctx.peerId;
+      await this.concurrencyService
+        .exclusiveLocal(
+          this.concurrencyService.buildKey('mw:update:vk', peerId),
+          async () => await next(),
+          { timeoutMs: 2e3 },
+        )
+        .catch(async (err: unknown) => {
+          if (await this.handleConcurrencyControlError(ctx, err)) {
+            return;
+          }
+
+          if (err instanceof Error) {
+            this.logger.error('[featureMiddleware] Error', err.stack);
+            return;
+          }
+          this.logger.error(`[featureMiddleware] Error: ${String(err)}`);
+          throw err;
+        });
     };
   }
 
@@ -298,6 +316,33 @@ export class MainMiddleware {
     if (session['__language_code'] === 'ru') {
       delete session['__language_code'];
     }
+  }
+
+  private async handleConcurrencyControlError(
+    ctx: IContext,
+    error: unknown,
+  ): Promise<boolean> {
+    if (!isConcurrencyControlError(error)) {
+      return false;
+    }
+
+    const content =
+      ctx.i18n?.t(LocalePhrase.Common_Cooldown) || LocalePhrase.Common_Cooldown;
+
+    try {
+      if (ctx.eventPayload && ctx.answer) {
+        await ctx.answer({ type: 'show_snackbar', text: content });
+      } else if (
+        this.debounceRegistryService.checkAndMark(
+          this.debounceRegistryService.buildKey(['vk', 'cooldown'], ctx.peerId),
+          MainMiddleware.COOLDOWN_MESSAGE_DEBOUNCE_MS,
+        )
+      ) {
+        await ctx.reply(content);
+      }
+    } catch {}
+
+    return true;
   }
 
   private get safeTextConverstionMiddleware() {

@@ -6,7 +6,7 @@ import { SocialType } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
-import { RedisService } from '../../redis/redis.service';
+import { ConcurrencyService } from '../../concurrency/concurrency.service';
 import { SocialService } from '../../social/social.service';
 import { UserService } from '../../user/user.service';
 
@@ -15,7 +15,7 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
   constructor(
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
-    private readonly redisService: RedisService,
+    private readonly concurrencyService: ConcurrencyService,
     private readonly socialService: SocialService,
   ) {}
 
@@ -25,41 +25,39 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
       // ??
       if (!ctx.from) return;
 
-      const telegramId = ctx.from.id;
-      const lock = await this.redisService.redlock.lock(
-        `middleware.user.${telegramId}`,
-        30e3,
-      );
-      try {
-        let userSocial = await this.userService.findBySocialId(
-          SocialType.Telegram,
-          telegramId,
-        );
-        if (!userSocial) {
-          userSocial = await this.userService.createUserSocial(
+      const from = ctx.from;
+      const telegramId = from.id;
+      await this.concurrencyService.queueLocal(
+        this.concurrencyService.buildKey('middleware:user', telegramId),
+        async () => {
+          let userSocial = await this.userService.findBySocialId(
             SocialType.Telegram,
-            {
-              username: ctx.from.username,
-              socialId: telegramId,
-              displayname:
-                `${ctx.from.first_name} ${ctx.from.last_name || ''}`
-                  .trim()
-                  .slice(0, 64) || null,
-              // avatarUrl: ctx.from.,
-              hasDM: ctx.chat?.type === 'private',
-            },
+            telegramId,
           );
-        }
+          if (!userSocial) {
+            userSocial = await this.userService.createUserSocial(
+              SocialType.Telegram,
+              {
+                username: from.username,
+                socialId: telegramId,
+                displayname:
+                  `${from.first_name} ${from.last_name || ''}`
+                    .trim()
+                    .slice(0, 64) || null,
+                // avatarUrl: ctx.from.,
+                hasDM: ctx.chat?.type === 'private',
+              },
+            );
+          }
 
-        ctx.userSocial = userSocial;
-        ctx.user = userSocial.user;
+          ctx.userSocial = userSocial;
+          ctx.user = userSocial.user;
 
-        if (!userSocial.hasDM && ctx.chat?.type === 'private') {
-          userSocial.hasDM = true;
-        }
-      } finally {
-        await lock.unlock();
-      }
+          if (!userSocial.hasDM && ctx.chat?.type === 'private') {
+            userSocial.hasDM = true;
+          }
+        },
+      );
 
       if (ctx.userSocial.isBlockedBot) {
         ctx.userSocial.isBlockedBot = false;

@@ -5,7 +5,12 @@ describe('TelegramService', () => {
     const bot = {
       telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
     };
-    const service = new TelegramService(bot as any, {} as any, {} as any);
+    const service = new TelegramService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await service.syncPrivateChatCommands({
       chatId: 123,
@@ -37,7 +42,12 @@ describe('TelegramService', () => {
     const bot = {
       telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
     };
-    const service = new TelegramService(bot as any, {} as any, {} as any);
+    const service = new TelegramService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await service.syncPrivateChatCommands({
       chatId: 123,
@@ -73,7 +83,12 @@ describe('TelegramService', () => {
     const bot = {
       telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
     };
-    const service = new TelegramService(bot as any, {} as any, {} as any);
+    const service = new TelegramService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await service.syncPrivateChatCommands({
       chatId: 123,
@@ -107,7 +122,12 @@ describe('TelegramService', () => {
         setMyCommands: jest.fn().mockRejectedValue(new Error('403')),
       },
     };
-    const service = new TelegramService(bot as any, {} as any, {} as any);
+    const service = new TelegramService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await expect(
       service.syncPrivateChatCommands({
@@ -136,6 +156,7 @@ describe('TelegramService', () => {
     };
     const service = new TelegramService(
       bot as any,
+      {} as any,
       redisService as any,
       {} as any,
     );
@@ -159,7 +180,12 @@ describe('TelegramService', () => {
         getChatMember: jest.fn().mockResolvedValue({ status: 'administrator' }),
       },
     };
-    const service = new TelegramService(bot as any, {} as any, {} as any);
+    const service = new TelegramService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await expect(service.getBotChatMembership(-1001)).resolves.toEqual({
       isLeaved: false,

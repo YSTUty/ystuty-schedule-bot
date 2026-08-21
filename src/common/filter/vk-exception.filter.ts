@@ -6,12 +6,11 @@ import {
 } from '@nestjs/common';
 import { VkArgumentsHost, VkException, VkExecutionContext } from 'nestjs-vk';
 
-import * as Redlock from 'redlock';
 import { APIError, APIErrorCode, MessageEventContext } from 'vk-io';
 
 import * as xEnv from '@my-environment';
 
-import { UserException } from '@my-common/exception';
+import { isConcurrencyControlError, UserException } from '@my-common/exception';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
@@ -58,6 +57,7 @@ export class VkExceptionFilter implements ExceptionFilter {
       IContext<MessageEventContext> | IMessageContext
     >();
     const next = vkHost.getNext();
+    const isCCE = isConcurrencyControlError(exception);
 
     if (
       exception instanceof VkException &&
@@ -72,7 +72,7 @@ export class VkExceptionFilter implements ExceptionFilter {
       // Не логировать `ForbiddenException`, т.к. ошибка доступа
       // проверяется по сообщению `LocalePhrase.Common_NoAccess`
       !(exception instanceof ForbiddenException) &&
-      !(exception instanceof Redlock.LockError)
+      !isCCE
     ) {
       this.logger.error(
         `OnUpdateType(${ctx?.type}): ${exception?.message || exception}`,
@@ -95,18 +95,18 @@ export class VkExceptionFilter implements ExceptionFilter {
       ctx.state.user?.role === 'admin';
     let content = '';
     switch (true) {
-      case isAdmin:
-        content = `💢 Error: ${exception.message}`;
-        break;
-
       case exception instanceof UserException:
         content = `💢 Error: ${exception.message}`;
         break;
       case exception.message === LocalePhrase.Common_NoAccess:
         content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
         break;
-      case exception instanceof Redlock.LockError:
+      case isCCE:
         content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
+        break;
+
+      case isAdmin:
+        content = `💢 Error: ${exception.message}`;
         break;
 
       default:

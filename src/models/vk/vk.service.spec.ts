@@ -25,6 +25,7 @@ describe('VkService', () => {
     };
     const service = new VkService(
       bot as any,
+      {} as any,
       redisService as any,
       {} as any,
       {} as any,
@@ -67,6 +68,7 @@ describe('VkService', () => {
       bot as any,
       {} as any,
       {} as any,
+      {} as any,
       socialService as any,
     );
     jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
@@ -93,7 +95,13 @@ describe('VkService', () => {
         },
       },
     };
-    const service = new VkService(bot as any, {} as any, {} as any, {} as any);
+    const service = new VkService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
 
     await expect(
       service.getBotConversationMembership(123, 42),

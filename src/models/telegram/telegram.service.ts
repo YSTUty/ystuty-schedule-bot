@@ -15,6 +15,7 @@ import * as xEnv from '@my-environment';
 import { UserRole } from '@my-common/constants';
 import { IContext } from '@my-interfaces/telegram';
 
+import { ConcurrencyService } from '../concurrency/concurrency.service';
 import { RedisService } from '../redis/redis.service';
 import { ScheduleService } from '../schedule/schedule.service';
 
@@ -43,6 +44,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
 
   constructor(
     @InjectBot() public readonly bot: Telegraf,
+    private readonly concurrencyService: ConcurrencyService,
     private readonly redisService: RedisService,
     private readonly scheduleService: ScheduleService,
   ) {}
@@ -221,16 +223,16 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     socialId: number,
   ): Promise<[IContext['session'] | null, () => Promise<void>]> {
     if (!this.isActive) return [null, async () => void 0];
-    const lock = await this.redisService.redlock.lock(
-      `emulateSession:telegram:${socialId}`,
-      10e3,
+    const lock = await this.concurrencyService.acquireExclusiveLocal(
+      this.concurrencyService.buildKey('session:telegram', socialId),
+      { timeoutMs: 10e3 },
     );
 
     try {
       const key = `tg:session:${socialId}:${socialId}`;
       const sessionJson = await this.redisService.redis.get(key);
       if (!sessionJson) {
-        await lock.unlock();
+        await lock.release();
         return [null, async () => void 0];
       }
 
@@ -247,12 +249,12 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
             await this.redisService.redis.del(key);
           }
         } finally {
-          await lock.unlock();
+          await lock.release();
         }
       };
       return [session, close];
     } catch (err) {
-      await lock.unlock();
+      await lock.release();
       throw err;
     }
   }

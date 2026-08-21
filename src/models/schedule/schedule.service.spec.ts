@@ -6,7 +6,7 @@ describe('ScheduleService', () => {
   let service: ScheduleService;
 
   beforeEach(() => {
-    service = new ScheduleService({} as any, {} as any, {} as any);
+    service = new ScheduleService({} as any, {} as any, {} as any, {} as any);
     (service as any).allTeachersList = [
       { id: 1, name: 'Шулева Анна Ивановна' },
       { id: 2, name: 'Петров Иван Сергеевич' },
@@ -58,7 +58,12 @@ describe('ScheduleService', () => {
             }),
           ),
       };
-      service = new ScheduleService(httpService as any, {} as any, {} as any);
+      service = new ScheduleService(
+        httpService as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
       const log = jest.spyOn((service as any).logger, 'log');
 
       await (service as any).loadAllGroups();
@@ -90,7 +95,12 @@ describe('ScheduleService', () => {
             of({ data: { items: [{ id: 2, name: 'Петров Пётр' }] } }),
           ),
       };
-      service = new ScheduleService(httpService as any, {} as any, {} as any);
+      service = new ScheduleService(
+        httpService as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
       const log = jest.spyOn((service as any).logger, 'log');
 
       await (service as any).loadAllTeachers();

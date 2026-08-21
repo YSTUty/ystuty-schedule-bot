@@ -50,7 +50,6 @@ export class TelegramModule {
             launchOptions: false,
             options: { telegram: { apiRoot: xEnv.SOCIAL_TELEGRAM_API_ROOT } },
             middlewares: [
-              mainMiddleware.middlewareForkAll,
               mainMiddleware,
               metricsMiddleware,
               // @ts-expect-error RedisSession is typed against an older Telegraf middleware API.

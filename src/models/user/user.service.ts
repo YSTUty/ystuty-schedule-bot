@@ -16,8 +16,8 @@ import { ISessionState as VkISessionState } from '@my-interfaces/vk';
 
 import * as tgConstants from '../telegram/telegram.constants';
 import * as vkConstants from '../vk/vk.constants';
+import { ConcurrencyService } from '../concurrency/concurrency.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { RedisService } from '../redis/redis.service';
 import { SocialConnectService } from '../social-connect/social-connect.service';
 import { TelegramKeyboardFactory } from '../telegram/telegram-keyboard.factory';
 import { TelegramService } from '../telegram/telegram.service';
@@ -39,7 +39,7 @@ export class UserService {
 
     @Inject(forwardRef(() => SocialConnectService))
     private readonly socialConnectService: SocialConnectService,
-    private readonly redisService: RedisService,
+    private readonly concurrencyService: ConcurrencyService,
     private readonly metricsService: MetricsService,
     private readonly telegramService: TelegramService,
     @Inject(forwardRef(() => VkService))
@@ -91,13 +91,7 @@ export class UserService {
 
   /** Create or Update user */
   public async save(user: Partial<User>, useLock = true) {
-    const lock =
-      useLock &&
-      (await this.redisService.redlock.lock(
-        `save.${user.id || user.externalId + 'x'}`,
-        30e3,
-      ));
-    try {
+    const saveUser = async () => {
       // let curUser = await this.userRepository.findOne(user);
       const curUser = await this.userRepository.findOne({
         where: [{ id: user.id }, { externalId: user.externalId }],
@@ -108,21 +102,23 @@ export class UserService {
         this.metricsService.userCounter.inc();
       }
       return await this.userRepository.save(new User(user));
-    } finally {
-      if (lock) {
-        await lock.unlock();
-      }
+    };
+
+    if (!useLock) {
+      return await saveUser();
     }
+
+    return await this.concurrencyService.exclusiveLocal(
+      this.concurrencyService.buildKey(
+        'user:save',
+        user.id || `${user.externalId}x`,
+      ),
+      saveUser,
+    );
   }
 
   public async getOrCreate(user: Partial<User>, useLock = true) {
-    const lock =
-      useLock &&
-      (await this.redisService.redlock.lock(
-        `getOrCreateUser.${user.id || user.externalId + 'x'}`,
-        30e3,
-      ));
-    try {
+    const getOrCreateUser = async () => {
       let curUser = await this.userRepository.findOne({
         where: [{ id: user.id }, { externalId: user.externalId }],
       });
@@ -132,11 +128,19 @@ export class UserService {
         this.metricsService.userCounter.inc();
       }
       return curUser;
-    } finally {
-      if (lock) {
-        await lock.unlock();
-      }
+    };
+
+    if (!useLock) {
+      return await getOrCreateUser();
     }
+
+    return await this.concurrencyService.exclusiveLocal(
+      this.concurrencyService.buildKey(
+        'user:getOrCreate',
+        user.id || `${user.externalId}x`,
+      ),
+      getOrCreateUser,
+    );
   }
 
   public async saveUserSocial(userSocial: UserSocial) {

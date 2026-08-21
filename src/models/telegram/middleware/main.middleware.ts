@@ -7,8 +7,10 @@ import Context from 'telegraf/typings/context';
 import { FmtString } from 'telegraf/typings/format';
 import { MiddlewareObj } from 'telegraf/typings/middleware';
 
+import * as xEnv from '@my-environment';
 import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
 
+import { isConcurrencyControlError } from '@my-common/exception';
 import {
   allowerHtmlTags,
   findSmartStreamPositions,
@@ -17,11 +19,22 @@ import {
   normalizePartialMarkdownV2,
 } from '@my-common/util/text.util';
 import { i18n } from '@my-common/util/tg';
+import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
+
+import { ConcurrencyService } from '../../concurrency/concurrency.service';
+import { DebounceRegistryService } from '../../concurrency/debounce-registry.service';
 
 @Injectable()
 export class MainMiddleware implements MiddlewareObj<IContext> {
+  private static readonly COOLDOWN_MESSAGE_DEBOUNCE_MS = 3e3;
+
   private readonly logger = new Logger(MainMiddleware.name);
+
+  constructor(
+    private readonly concurrencyService: ConcurrencyService,
+    private readonly debounceRegistryService: DebounceRegistryService,
+  ) {}
 
   public get middlewareForkAll() {
     return async (ctx: IContext, next: (...args: any[]) => Promise<any>) => {
@@ -225,16 +238,24 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
       this.checkInGroupAppeal(ctx);
 
-      try {
-        await next?.();
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          this.logger.error('[middleware] Error', err.stack);
-        } else {
+      const telegramId = ctx.from.id;
+      this.concurrencyService
+        .exclusiveLocal(
+          this.concurrencyService.buildKey('mw:update:tg', telegramId),
+          async () => await next?.(),
+          { timeoutMs: 2e3 },
+        )
+        .catch(async (err: unknown) => {
+          if (await this.handleConcurrencyControlError(ctx, err)) {
+            return;
+          }
+
+          if (err instanceof Error) {
+            this.logger.error('[middleware] Error', err.stack);
+            return;
+          }
           this.logger.error(`[middleware] Error: ${String(err)}`);
-        }
-        throw err;
-      }
+        });
     };
   }
 
@@ -298,6 +319,48 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
     if (session['__language_code'] === 'ru') {
       delete session['__language_code'];
     }
+  }
+
+  private async handleConcurrencyControlError(
+    ctx: IContext,
+    error: unknown,
+  ): Promise<boolean> {
+    if (!isConcurrencyControlError(error)) {
+      return false;
+    }
+
+    const isAdmin =
+      ctx.from && xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
+    const content =
+      ctx.i18n?.t(LocalePhrase.Common_Cooldown) || LocalePhrase.Common_Cooldown;
+
+    try {
+      if (await ctx.tryAnswerCbQuery?.(content, { show_alert: isAdmin })) {
+        return true;
+      }
+
+      const debounceKey = this.debounceRegistryService.buildKey(
+        ['tg', 'cooldown'],
+        ctx.from?.id,
+      );
+      if (
+        this.debounceRegistryService.checkAndMark(
+          debounceKey,
+          MainMiddleware.COOLDOWN_MESSAGE_DEBOUNCE_MS,
+        )
+      ) {
+        await ctx.replyWithHTML(content, {
+          ...(ctx.message?.message_id && {
+            reply_parameters: {
+              message_id: ctx.message.message_id,
+              allow_sending_without_reply: true,
+            },
+          }),
+        });
+      }
+    } catch {}
+
+    return true;
   }
 
   // ?? зачем этот метод, если можно юзать `import { i18n } from '@my-common/util/tg';`

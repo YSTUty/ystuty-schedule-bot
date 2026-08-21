@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
+import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 
 import * as xEnv from '@my-environment';
 
@@ -23,6 +24,7 @@ import { AppService } from './app.service';
 
 @Module({
   imports: [
+    NestScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       useFactory: async () => ({
         ...xEnv.TYPEORM_CONFIG,

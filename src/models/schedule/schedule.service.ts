@@ -2,7 +2,6 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 
-import axios from 'axios';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
 import { getLessonTypeStrArr, matchGroupName, md5 } from '@my-common';
@@ -12,6 +11,16 @@ import { MetricsService } from '../metrics/metrics.service';
 import { RedisService } from '../redis/redis.service';
 
 import * as scheduleUtil from './util/schedule.util';
+
+type GroupInstitute = {
+  name: string;
+  groups: string[];
+};
+
+type Teacher = {
+  id: number;
+  name: string;
+};
 
 @Injectable()
 export class ScheduleService implements OnModuleInit {
@@ -24,24 +33,19 @@ export class ScheduleService implements OnModuleInit {
     private readonly metricsService: MetricsService,
   ) {}
 
-  private allGroupsList: {
-    name: string;
-    groups: string[];
-  }[] = [];
-  private allTeachersList: {
-    id: number;
-    name: string;
-  }[] = [];
+  private allGroupsList: GroupInstitute[] = [];
+  private allTeachersList: Teacher[] = [];
+  private groupsChecksum?: string;
+  private teachersChecksum?: string;
 
   async onModuleInit() {
     this.logger.debug('Start load all groups & teachers');
     await Promise.all([this.loadAllGroups(), this.loadAllTeachers()]);
   }
 
-  @Cron(CronExpression.EVERY_10_MINUTES)
-  protected onLoadData() {
-    this.loadAllGroups().then();
-    this.loadAllTeachers().then();
+  @Cron(CronExpression.EVERY_10_MINUTES, { waitForCompletion: true })
+  protected async onLoadData() {
+    await Promise.all([this.loadAllGroups(), this.loadAllTeachers()]);
   }
 
   protected async loadAllGroups() {
@@ -49,10 +53,7 @@ export class ScheduleService implements OnModuleInit {
       const { data } = await firstValueFrom(
         this.httpService.get<{
           name: string;
-          items: {
-            name: string;
-            groups: string[];
-          }[];
+          items: GroupInstitute[];
         }>('/v1/schedule/actual_groups'),
       );
 
@@ -61,15 +62,24 @@ export class ScheduleService implements OnModuleInit {
         return null;
       }
 
-      this.allGroupsList = data.items.filter(Boolean);
-      this.logger.log(
-        `YSTU institutes&groups loaded: (${
-          data.items.length
-        }/${data.items.reduce((a, b) => a + b.groups.length, 0)})`,
-      );
+      const groups = data.items.filter(Boolean);
+      const checksum = this.getGroupsChecksum(groups);
+      const isInitialLoad = this.groupsChecksum === undefined;
+      const isChanged = this.groupsChecksum !== checksum;
+      this.allGroupsList = groups;
+      this.groupsChecksum = checksum;
+
+      if (isInitialLoad || isChanged) {
+        this.logger.log(
+          `YSTU institutes&groups ${isInitialLoad ? 'loaded' : 'updated'}: (${groups.length}&${groups.reduce((cnt, inst) => cnt + inst.groups.length, 0)})`,
+        );
+      }
       return true;
     } catch (error) {
-      console.log('[loadAllGroups] Error', error.message);
+      this.logger.error(
+        'Failed to load YSTU institutes&groups',
+        error instanceof Error ? error.stack : String(error),
+      );
     }
 
     return false;
@@ -80,10 +90,7 @@ export class ScheduleService implements OnModuleInit {
       const { data } = await firstValueFrom(
         this.httpService.get<{
           isCache: boolean;
-          items: {
-            id: number;
-            name: string;
-          }[];
+          items: Teacher[];
         }>('/v1/schedule/actual_teachers'),
       );
 
@@ -92,37 +99,50 @@ export class ScheduleService implements OnModuleInit {
         return null;
       }
 
-      this.allTeachersList = data.items.filter(Boolean);
-      this.logger.log(`YSTU teachers loaded: (${data.items.length})`);
+      const teachers = data.items.filter(Boolean);
+      const checksum = this.getTeachersChecksum(teachers);
+      const isInitialLoad = this.teachersChecksum === undefined;
+      const isChanged = this.teachersChecksum !== checksum;
+      this.allTeachersList = teachers;
+      this.teachersChecksum = checksum;
+
+      if (isInitialLoad || isChanged) {
+        this.logger.log(
+          `YSTU teachers ${isInitialLoad ? 'loaded' : 'updated'}: (${teachers.length})`,
+        );
+      }
       return true;
     } catch (error) {
-      console.log('[loadAllTeachers] Error', error.message);
-
-      if (axios.isAxiosError(error)) {
-        this.logger.error(error);
-        if (error.response?.status === 429) {
-          if (error.response.headers['retry-after']) {
-            // const _headers = {
-            //   'retry-after': '20',
-            //   'x-ratelimit-limit': '5',
-            //   'x-ratelimit-remaining': '0',
-            //   'x-ratelimit-reset': '18',
-            // };
-          }
-          // ...
-        } else {
-          console.error('Axios error details:');
-          console.error('Message:', error.message);
-          console.error('Status:', error.response?.status);
-          console.error('Headers:', error.response?.headers);
-          console.error('Data:', error.response?.data);
-        }
-      } else {
-        console.error('Non-axios error:', error);
-      }
+      this.logger.error(
+        'Failed to load YSTU teachers',
+        error instanceof Error ? error.stack : String(error),
+      );
     }
 
     return false;
+  }
+
+  /** Формирует order-independent checksum, чтобы не логировать перестановку API-элементов. */
+  private getGroupsChecksum(groups: GroupInstitute[]) {
+    return md5(
+      JSON.stringify(
+        groups
+          .map((institute) => ({
+            name: institute.name,
+            groups: [...institute.groups].sort(),
+          }))
+          .sort((first, second) => first.name.localeCompare(second.name, 'ru')),
+      ),
+    );
+  }
+
+  /** Формирует order-independent checksum по стабильным ID и ФИО преподавателей. */
+  private getTeachersChecksum(teachers: Teacher[]) {
+    return md5(
+      JSON.stringify(
+        [...teachers].sort((first, second) => first.id - second.id),
+      ),
+    );
   }
 
   public getGroupByName(groupName?: string | null) {

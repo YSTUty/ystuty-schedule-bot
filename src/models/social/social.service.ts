@@ -79,6 +79,32 @@ export class SocialService implements OnModuleInit {
     return await this.conversationRepository.save(conversation);
   }
 
+  /** Возвращает активные беседы в стабильном порядке для фоновой сверки. */
+  public async findActiveConversations() {
+    return await this.conversationRepository.find({
+      where: { isLeaved: false },
+      order: { id: 'ASC' },
+    });
+  }
+
+  /** Сохраняет подтверждённые транспортом присутствие и роль бота в беседе. */
+  public async syncConversationMembership(
+    conversation: Conversation,
+    membership: { isLeaved: boolean; chatStatus: string },
+  ) {
+    if (
+      conversation.isLeaved === membership.isLeaved &&
+      conversation.chatStatus === membership.chatStatus
+    ) {
+      return false;
+    }
+
+    conversation.isLeaved = membership.isLeaved;
+    conversation.chatStatus = membership.chatStatus;
+    await this.conversationRepository.save(conversation);
+    return true;
+  }
+
   /** Помечает беседу недоступной, когда транспорт подтверждает исключение бота. */
   public async markConversationAsLeaved(
     social: SocialType,

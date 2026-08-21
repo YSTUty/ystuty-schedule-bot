@@ -24,6 +24,11 @@ type CachedChatAdmin = {
   status: ChatMember['status'];
 };
 
+export type BotChatMembership = {
+  isLeaved: boolean;
+  chatStatus: ChatMember['status'];
+};
+
 type PrivateChatCommandsParams = {
   chatId: number;
   isAuthorized: boolean;
@@ -271,5 +276,17 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
       CHAT_ADMINS_CACHE_TTL_SECONDS,
     );
     return cachedValue;
+  }
+
+  /** Запрашивает у Telegram актуальное присутствие и роль бота в беседе. */
+  public async getBotChatMembership(
+    chatId: number,
+  ): Promise<BotChatMembership> {
+    const botInfo = this.bot.botInfo || (await this.bot.telegram.getMe());
+    const member = await this.bot.telegram.getChatMember(chatId, botInfo.id);
+    return {
+      isLeaved: member.status === 'left' || member.status === 'kicked',
+      chatStatus: member.status,
+    };
   }
 }

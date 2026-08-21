@@ -276,10 +276,6 @@ export class MainUpdate {
     }
 
     const { title, type } = chat;
-    this.logger.debug(
-      `[TG][conversation] my_chat_member chat=${chat.id} title="${title}" type=${type} bot=${user.id} status=${oldStatus}->${status}`,
-    );
-
     if (!ctx.conversation) {
       this.logger.error(`Empty conversation in ctx`);
       return;
@@ -291,11 +287,14 @@ export class MainUpdate {
     ctx.conversation.title = title;
     ctx.conversation.chatType = type;
     ctx.conversation.isLeaved = status === 'kicked' || status === 'left';
-    (ctx.state ??= { appeal: false }).conversationDebugEvent =
-      `my_chat_member:${oldStatus}->${status}`;
-    this.logger.debug(
-      `[TG][conversation] state chat=${chat.id} isLeaved=${previousIsLeaved}->${ctx.conversation.isLeaved} status=${ctx.conversation.chatStatus} invitedBy=${ctx.conversation.invitedByUserSocialId}`,
-    );
+    if (
+      oldStatus !== status ||
+      previousIsLeaved !== ctx.conversation.isLeaved
+    ) {
+      this.logger.debug(
+        `[TG][conversation] my_chat_member chat=${chat.id} title="${title}" status=${oldStatus}->${status} isLeaved=${previousIsLeaved}->${ctx.conversation.isLeaved}`,
+      );
+    }
 
     const activeStatuses: (typeof status)[] = [
       'creator',

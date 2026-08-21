@@ -22,6 +22,11 @@ type CachedConversationMember = Pick<
   'member_id' | 'is_admin' | 'is_owner'
 >;
 
+export type BotConversationMembership = {
+  isLeaved: boolean;
+  chatStatus: 'member' | 'administrator' | 'owner' | 'kicked';
+};
+
 @Injectable()
 export class VkService implements OnModuleInit {
   private readonly logger = new Logger(VkService.name);
@@ -184,6 +189,33 @@ export class VkService implements OnModuleInit {
       CONVERSATION_MEMBERS_CACHE_TTL_SECONDS,
     );
     return cachedValue;
+  }
+
+  /** Запрашивает актуальное присутствие и роль сообщества в VK-беседе без Redis cache. */
+  public async getBotConversationMembership(
+    conversationId: number,
+    groupId = xEnv.SOCIAL_VK_GROUP_ID,
+  ): Promise<BotConversationMembership> {
+    if (!groupId) {
+      throw new Error('VK group ID is not configured');
+    }
+
+    const { items } = await this.bot.api.messages.getConversationMembers({
+      peer_id: 2e9 + conversationId,
+      group_id: groupId,
+      count: 1_000,
+    });
+    const botMember = items.find((member) => member.member_id === -groupId);
+    if (!botMember) {
+      return { isLeaved: true, chatStatus: 'kicked' };
+    }
+    if (botMember.is_owner) {
+      return { isLeaved: false, chatStatus: 'owner' };
+    }
+    return {
+      isLeaved: false,
+      chatStatus: botMember.is_admin ? 'administrator' : 'member',
+    };
   }
 
   /** Обрабатывает ошибки отправки, по которым можно подтвердить состояние беседы. */

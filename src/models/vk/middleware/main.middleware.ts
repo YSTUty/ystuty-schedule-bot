@@ -477,14 +477,7 @@ export class MainMiddleware {
           await this.userService.saveUserSocial(ctx.state.userSocial);
         }
         if (ctx.state.conversation) {
-          const conversation = await this.socialService.saveConversation(
-            ctx.state.conversation,
-          );
-          if (ctx.state.conversationDebugEvent) {
-            this.logger.debug(
-              `[VK][conversation] persisted event=${ctx.state.conversationDebugEvent} id=${String(conversation.conversationId)} dbId=${conversation.id} isLeaved=${conversation.isLeaved} status=${conversation.chatStatus ?? '-'} type=${conversation.chatType ?? '-'} invitedBy=${conversation.invitedByUserSocialId ?? '-'}`,
-            );
-          }
+          await this.socialService.saveConversation(ctx.state.conversation);
         }
       }
     };

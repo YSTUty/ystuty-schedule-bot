@@ -44,8 +44,6 @@ type WizardSession = {
 type ContextState = {
   appeal: boolean;
   isLocalePhrase?: boolean;
-  /** Событие жизненного цикла беседы для отладочного лога после сохранения. */
-  conversationDebugEvent?: string;
   // TODO: move `user`, `userSocial` to here
   // user?: User | null;
 };

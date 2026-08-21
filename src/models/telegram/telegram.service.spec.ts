@@ -151,4 +151,21 @@ describe('TelegramService', () => {
       120,
     );
   });
+
+  it('reads the bot membership directly from Telegram', async () => {
+    const bot = {
+      botInfo: { id: 42 },
+      telegram: {
+        getChatMember: jest.fn().mockResolvedValue({ status: 'administrator' }),
+      },
+    };
+    const service = new TelegramService(bot as any, {} as any, {} as any);
+
+    await expect(service.getBotChatMembership(-1001)).resolves.toEqual({
+      isLeaved: false,
+      chatStatus: 'administrator',
+    });
+
+    expect(bot.telegram.getChatMember).toHaveBeenCalledWith(-1001, 42);
+  });
 });

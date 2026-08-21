@@ -181,16 +181,12 @@ export class MainUpdate {
       return;
     }
 
-    this.logger.log(
-      `Bot is invited by '${ctx.senderId}' to a new conversation: '${ctx.peerId}'`,
-    );
     const conv = ctx.state.conversation;
     if (conv && ctx.state.userSocial) {
       const previousIsLeaved = conv.isLeaved;
       conv.invitedByUserSocialId = ctx.state.userSocial.id;
       if (conv.chatStatus === 'kicked') conv.chatStatus = null;
       conv.isLeaved = false;
-      ctx.state.conversationDebugEvent = 'chat_invite_user';
       this.logger.debug(
         `[VK][conversation] chat_invite_user peer=${ctx.peerId} bot=${ctx.eventMemberId} invitedBy=${ctx.senderId} isLeaved=${previousIsLeaved}->false`,
       );
@@ -222,7 +218,6 @@ export class MainUpdate {
     if (ctx.state.conversation) {
       const previousIsLeaved = ctx.state.conversation.isLeaved;
       ctx.state.conversation.isLeaved = true;
-      ctx.state.conversationDebugEvent = 'chat_kick_user';
       this.logger.debug(
         `[VK][conversation] chat_kick_user peer=${ctx.peerId} bot=${ctx.eventMemberId} isLeaved=${previousIsLeaved}->true`,
       );

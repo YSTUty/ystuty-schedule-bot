@@ -82,4 +82,27 @@ describe('VkService', () => {
       1,
     );
   });
+
+  it('reads the bot role in a VK conversation without using cache', async () => {
+    const bot = {
+      api: {
+        messages: {
+          getConversationMembers: jest.fn().mockResolvedValue({
+            items: [{ member_id: -42, is_admin: true, is_owner: false }],
+          }),
+        },
+      },
+    };
+    const service = new VkService(bot as any, {} as any, {} as any, {} as any);
+
+    await expect(
+      service.getBotConversationMembership(123, 42),
+    ).resolves.toEqual({ isLeaved: false, chatStatus: 'administrator' });
+
+    expect(bot.api.messages.getConversationMembers).toHaveBeenCalledWith({
+      peer_id: 2_000_000_123,
+      group_id: expect.any(Number),
+      count: 1_000,
+    });
+  });
 });

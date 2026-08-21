@@ -10,6 +10,7 @@ import type {
   Context as VKContext,
   MessageContext as VKMessageContext,
   MessageEventContext as VKMessageEventContext,
+  MessageSubscriptionContext as VKMessageSubscriptionContext,
 } from 'vk-io';
 import type { I18nContext } from 'vk-io-i18n';
 
@@ -63,6 +64,8 @@ type CombinedContext = {
   /** Проверяет, является ли текущий update callback-событием VK. */
   isMessageEventContext: () => this is IMessageEventContext;
   isMessageContext: () => this is IMessageContext;
+  /** Проверяет, является ли текущий update изменением разрешения на сообщения. */
+  isMessageSubscriptionContext: () => this is IMessageSubscriptionContext;
   /** Редактирует исходное callback-сообщение или ничего не делает вне message_event. */
   editMessage: (
     params: Pick<IMessageContextSendOptions, 'keyboard' | 'message'>,
@@ -75,5 +78,7 @@ export type IContext<T = {}> = VKContext<{}, ContextState> &
 export type IMessageContext = VKMessageContext<ContextState> & CombinedContext;
 export type IMessageEventContext = VKMessageEventContext<ContextState> &
   CombinedContext & { $match: RegExpMatchArray };
+export type IMessageSubscriptionContext =
+  VKMessageSubscriptionContext<ContextState> & CombinedContext;
 export type IStepContext<S extends Record<string, unknown> = any> =
   IVKStepContext<S> & (IMessageContext | IMessageEventContext);

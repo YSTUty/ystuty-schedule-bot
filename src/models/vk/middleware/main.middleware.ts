@@ -26,6 +26,7 @@ import {
   IContext,
   IMessageContext,
   IMessageEventContext,
+  IMessageSubscriptionContext,
 } from '@my-interfaces/vk';
 
 import { ConcurrencyService } from '../../concurrency/concurrency.service';
@@ -151,13 +152,6 @@ export class MainMiddleware {
         return;
       }
 
-      if (!ctx.peerId) {
-        this.logger.warn(`[VK] Empty ctx.peerId from ctx type(${ctx.type})`);
-        this.logger.debug(JSON.stringify(ctx.toJSON()));
-        // ! Прерываем выполнение, если нет peerId, так как это может привести к ошибкам при сохранении сессии и другим проблемам.
-        return;
-      }
-
       ctx.isMessageEventContext = function (
         this: IContext,
       ): this is IMessageEventContext {
@@ -168,6 +162,11 @@ export class MainMiddleware {
         this: IContext,
       ): this is IMessageContext {
         return this.is(['message_new', 'message_edit', 'message_reply']);
+      };
+      ctx.isMessageSubscriptionContext = function (
+        this: IContext,
+      ): this is IMessageSubscriptionContext {
+        return this.type === 'message_subscription';
       };
       ctx.editMessage = async ({ message, keyboard }) => {
         if (!ctx.isMessageEventContext()) {
@@ -210,6 +209,14 @@ export class MainMiddleware {
       defineGetter(ctx, 'chatId', () =>
         ctx.isChat ? ctx.peerId - 2e9 : undefined,
       );
+      if (ctx.isMessageSubscriptionContext()) {
+        // В message_subscription VK не передаёт peerId, но userId — это peer ЛС.
+        Object.defineProperty(ctx, 'peerId', {
+          configurable: true,
+          enumerable: true,
+          value: ctx.userId,
+        });
+      }
 
       if (ctx.isMessageEventContext()) {
         const answer = ctx.answer.bind(ctx);
@@ -261,6 +268,13 @@ export class MainMiddleware {
             peer_ids: ctx.peerId,
             ...(typeof text === 'string' ? { message: text, ...params } : text),
           });
+      }
+
+      if (!ctx.peerId) {
+        this.logger.warn(`[VK] Empty ctx.peerId from ctx type(${ctx.type})`);
+        this.logger.debug(JSON.stringify(ctx.toJSON()));
+        // ! Прерываем выполнение, если нет peerId, так как это может привести к ошибкам при сохранении сессии и другим проблемам.
+        return;
       }
 
       const peerId = ctx.peerId;
@@ -419,42 +433,74 @@ export class MainMiddleware {
         return;
       }
 
+      const messageSubscriptionSubtype = ctx.isMessageSubscriptionContext()
+        ? ctx.isSubscribed
+          ? 'message_allow'
+          : ctx.isUnsubscribed
+            ? 'message_deny'
+            : null
+        : null;
       let userSocial = await this.userService.findBySocialId(
         SocialType.Vkontakte,
         ctx.senderId || ctx.userId,
       );
       if (!userSocial) {
-        if (ctx.is(['message'])) {
-          const [userInfo] = await ctx.api.users.get({
-            user_ids: [ctx.senderId.toString()],
-            fields: ['domain', 'photo_200'],
-          });
-
+        const isMessageWithProfile =
+          ctx.is(['message']) || messageSubscriptionSubtype === 'message_allow';
+        if (isMessageWithProfile) {
+          const socialId = ctx.senderId || ctx.userId;
           userSocial = await this.userService.createUserSocial(
             SocialType.Vkontakte,
             {
-              username: userInfo.domain,
-              socialId: userInfo.id,
-              avatarUrl: userInfo.photo_200,
-              displayname:
-                `${userInfo.first_name || ''} ${userInfo.last_name || ''}`
-                  .trim()
-                  .slice(0, 64) || null,
+              socialId,
               hasDM: ctx.isDM,
             },
           );
+
+          try {
+            const [userInfo] = await ctx.api.users.get({
+              user_ids: [socialId.toString()],
+              fields: ['domain', 'photo_200'],
+            });
+            if (userInfo) {
+              userSocial.username = userInfo.domain;
+              userSocial.avatarUrl = userInfo.photo_200;
+              userSocial.displayname =
+                `${userInfo.first_name || ''} ${userInfo.last_name || ''}`
+                  .trim()
+                  .slice(0, 64) || null;
+            }
+          } catch (err) {
+            // Событие уже подтверждает пользователя: сохраняем профиль и без API-данных.
+            if (err instanceof Error) {
+              this.logger.warn(
+                '[VK][users.get] Cannot load user profile',
+                err.stack,
+              );
+            } else {
+              this.logger.warn(
+                `[VK][users.get] Cannot load user profile: ${String(err)}`,
+              );
+            }
+          }
         }
       }
 
       if (!userSocial) {
-        await ctx.send(ctx.i18n.t(LocalePhrase.Common_Error));
+        // `message_deny` от неизвестного профиля не требует записи или ответа.
+        // await ctx.send(ctx.i18n.t(LocalePhrase.Common_Error));
         return;
       }
 
       ctx.state.userSocial = userSocial;
       ctx.state.user = userSocial.user;
 
-      if (!userSocial.hasDM && ctx.isDM) {
+      if (messageSubscriptionSubtype === 'message_deny') {
+        userSocial.hasDM = false;
+      } else if (
+        !userSocial.hasDM &&
+        (ctx.isDM || messageSubscriptionSubtype === 'message_allow')
+      ) {
         userSocial.hasDM = true;
       }
 

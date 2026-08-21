@@ -97,6 +97,7 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
             );
 
           ctx.conversation = conversation;
+          this.socialService.restoreConversationFromInboundUpdate(conversation);
         } catch (err) {
           console.error('[TG][socialService] Error: ', err);
         }

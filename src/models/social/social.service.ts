@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThanOrEqual, Repository } from 'typeorm';
 
 import { SocialType } from '@my-common';
 
@@ -85,6 +85,29 @@ export class SocialService implements OnModuleInit {
       where: { isLeaved: false },
       order: { id: 'ASC' },
     });
+  }
+
+  /** Возвращает недавно отключённые беседы для периодической проверки восстановления. */
+  public async findRecentlyLeavedConversations(updatedSince: Date) {
+    return await this.conversationRepository.find({
+      where: {
+        isLeaved: true,
+        updatedAt: MoreThanOrEqual(updatedSince),
+      },
+      order: { id: 'ASC' },
+    });
+  }
+
+  /** Входящий update из чата подтверждает, что бот снова в нём присутствует. */
+  public restoreConversationFromInboundUpdate(conversation: Conversation) {
+    if (!conversation.isLeaved) {
+      return false;
+    }
+
+    conversation.isLeaved = false;
+    // Роль бота неизвестна до следующей API-сверки.
+    conversation.chatStatus = null;
+    return true;
   }
 
   /** Сохраняет подтверждённые транспортом присутствие и роль бота в беседе. */

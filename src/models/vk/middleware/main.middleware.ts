@@ -548,6 +548,7 @@ export class MainMiddleware {
           }
 
           ctx.state.conversation = conversation;
+          this.socialService.restoreConversationFromInboundUpdate(conversation);
         } catch (err) {
           if (err instanceof Error) {
             this.logger.error('[VK][socialService] Error', err.stack);

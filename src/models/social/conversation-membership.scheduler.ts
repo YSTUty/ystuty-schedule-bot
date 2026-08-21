@@ -21,6 +21,8 @@ import { SocialService } from './social.service';
 
 @Injectable()
 export class ConversationMembershipScheduler {
+  private static readonly RECENTLY_LEAVED_MAX_AGE_DAYS = 183;
+
   private readonly logger = new Logger(ConversationMembershipScheduler.name);
   protected wait = delay;
 
@@ -46,9 +48,39 @@ export class ConversationMembershipScheduler {
     }
   }
 
+  @Cron('0 15 5 */3 * *', {
+    name: 'recently-left-conversation-membership-reconciliation',
+    timeZone: 'Europe/Moscow',
+    waitForCompletion: true,
+  })
+  protected async onRecentlyLeavedCron() {
+    try {
+      await this.runRecentlyLeaved();
+    } catch (error) {
+      this.logger.error(
+        'Recently left conversation membership reconciliation failed',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
   /** Последовательно сверяет активные беседы, не меняя их при временной API-ошибке. */
   public async run() {
     const conversations = await this.socialService.findActiveConversations();
+    for (const conversation of conversations) {
+      await this.reconcileConversation(conversation);
+    }
+  }
+
+  /** Проверяет отключённые менее полугода назад беседы на повторное добавление бота. */
+  public async runRecentlyLeaved(now = new Date()) {
+    const updatedSince = new Date(now);
+    updatedSince.setDate(
+      updatedSince.getDate() -
+        ConversationMembershipScheduler.RECENTLY_LEAVED_MAX_AGE_DAYS,
+    );
+    const conversations =
+      await this.socialService.findRecentlyLeavedConversations(updatedSince);
     for (const conversation of conversations) {
       await this.reconcileConversation(conversation);
     }

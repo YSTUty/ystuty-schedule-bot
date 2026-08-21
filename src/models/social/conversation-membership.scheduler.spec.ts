@@ -9,6 +9,7 @@ describe('ConversationMembershipScheduler', () => {
   const createScheduler = () => {
     const socialService = {
       findActiveConversations: jest.fn(),
+      findRecentlyLeavedConversations: jest.fn(),
       syncConversationMembership: jest.fn().mockResolvedValue(false),
     };
     const telegramService = { getBotChatMembership: jest.fn() };
@@ -148,5 +149,34 @@ describe('ConversationMembershipScheduler', () => {
 
     expect((scheduler as any).wait).toHaveBeenCalledWith(1_000);
     expect(vkService.getBotConversationMembership).toHaveBeenCalledTimes(2);
+  });
+
+  it('checks only recently left conversations for bot re-invites', async () => {
+    const { scheduler, socialService, telegramService } = createScheduler();
+    const conversation = {
+      id: 1,
+      social: SocialType.Telegram,
+      conversationId: -1001,
+      isLeaved: true,
+      chatStatus: 'kicked',
+    };
+    socialService.findRecentlyLeavedConversations.mockResolvedValue([
+      conversation,
+    ]);
+    telegramService.getBotChatMembership.mockResolvedValue({
+      isLeaved: false,
+      chatStatus: 'member',
+    });
+    const now = new Date('2026-08-21T12:00:00.000Z');
+
+    await scheduler.runRecentlyLeaved(now);
+
+    expect(socialService.findRecentlyLeavedConversations).toHaveBeenCalledWith(
+      new Date('2026-02-19T12:00:00.000Z'),
+    );
+    expect(socialService.syncConversationMembership).toHaveBeenCalledWith(
+      conversation,
+      { isLeaved: false, chatStatus: 'member' },
+    );
   });
 });

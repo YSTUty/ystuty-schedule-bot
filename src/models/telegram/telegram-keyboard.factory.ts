@@ -511,7 +511,12 @@ export class TelegramKeyboardFactory {
 
   public getBroadcastFilters(
     ctx: IContext,
-    params: { hasGroups: boolean; onlyAuthorized: boolean },
+    params: {
+      hasGroups: boolean;
+      onlyAuthorized: boolean;
+      hasActivityFilter: boolean;
+      hasExcludedCampaigns: boolean;
+    },
   ) {
     return Markup.inlineKeyboard([
       [
@@ -524,6 +529,19 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroups, params),
           'broadcast:wizard:filter:groups',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterActivity, params),
+          'broadcast:wizard:filter:activity',
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterExcludeCampaigns,
+            params,
+          ),
+          'broadcast:wizard:filter:exclude-campaigns',
         ),
       ],
       ...(params.hasGroups
@@ -585,6 +603,17 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsTextCancel),
           'broadcast:wizard:filter:groups:text:cancel',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastFilterTextPrompt(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterTextCancel),
+          'broadcast:wizard:filter:text:cancel',
         ),
       ],
     ]);

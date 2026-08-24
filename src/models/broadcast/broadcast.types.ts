@@ -30,6 +30,10 @@ export type BroadcastAudienceFilter = {
   groupName?: string | null;
   /** `undefined` — без ограничения по группе, пустой массив — намеренно пустая выборка. */
   groupNames?: string[];
+  /** Оставляет пользователей, взаимодействовавших с ботом не раньше указанной даты. */
+  lastInteractionAfter?: string | null;
+  /** Исключает пользователей, для которых создавалась delivery указанных кампаний. */
+  excludeCampaignIds?: number[];
   profileType?: string | null;
   userSocialIds?: number[];
 };

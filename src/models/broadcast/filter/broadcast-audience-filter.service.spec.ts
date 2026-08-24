@@ -93,4 +93,28 @@ describe('BroadcastAudienceFilterService', () => {
       },
     ]);
   });
+
+  it('passes activity and previous campaign exclusions to the audience query', async () => {
+    const repository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const service = new BroadcastAudienceFilterService(
+      repository as any,
+      {
+        getGroupInstitutes: jest.fn(),
+      } as any,
+    );
+
+    await service.getRecipients(SocialType.Telegram, {
+      lastInteractionAfter: '2026-08-01',
+      excludeCampaignIds: [11, 4, 11, 0],
+    });
+
+    const [{ where }] = repository.find.mock.calls[0];
+    expect(where.lastInteractionAt).toBeDefined();
+    expect(where.id).toBeDefined();
+    expect(where.id.objectLiteralParameters).toEqual({
+      excludeCampaignIds: [4, 11],
+    });
+  });
 });

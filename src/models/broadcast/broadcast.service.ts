@@ -143,6 +143,7 @@ export class BroadcastService {
         mode: params.mode,
         sourceMessage: params.sourceMessage,
         audienceFilter,
+        contentPreview: this.createContentPreview(params.sourceMessage),
         createdBySocialId:
           params.createdBySocialId == null
             ? null
@@ -150,8 +151,6 @@ export class BroadcastService {
         totalCount: recipients.length,
       }),
     );
-
-    await this.pruneHistory();
 
     const deliveries = await this.deliveryRepository.save(
       recipients.map((recipient) =>
@@ -227,10 +226,7 @@ export class BroadcastService {
     });
   }
 
-  public async deleteCampaignDeliveries(
-    campaignId: number,
-    social?: SocialType,
-  ) {
+  public async deleteCampaignMessages(campaignId: number, social?: SocialType) {
     const campaign = social
       ? await this.getCampaignForSocial(campaignId, social)
       : await this.campaignRepository.findOne({
@@ -256,18 +252,28 @@ export class BroadcastService {
 
     for (const delivery of deliveries) {
       if (!delivery.sentMessageId) continue;
+      if (delivery.messageDeletedAt) continue;
       const deleted = await transport.deleteCampaignDelivery({
         targetSocialId: delivery.targetSocialId,
         messageId: delivery.sentMessageId,
       });
       if (deleted) {
         deletedCount += 1;
+        await this.deliveryRepository.update(delivery.id, {
+          messageDeletedAt: new Date(),
+          messageDeleteError: null,
+        });
       } else {
         failedCount += 1;
+        await this.deliveryRepository.update(delivery.id, {
+          messageDeleteError: 'Transport did not delete the message',
+        });
       }
     }
 
-    await this.campaignRepository.remove(campaign);
+    await this.campaignRepository.update(campaign.id, {
+      messagesDeletedAt: new Date(),
+    });
     return { campaignId, deletedCount, failedCount };
   }
 
@@ -413,6 +419,14 @@ export class BroadcastService {
     return social === SocialType.Telegram
       ? this.telegramBroadcastQueue
       : this.vkBroadcastQueue;
+  }
+
+  private createContentPreview(sourceMessage: BroadcastSourceMessage) {
+    const text = sourceMessage.text?.replace(/\s+/g, ' ').trim();
+    if (text) return text.slice(0, 500);
+    if (sourceMessage.stickerId) return `Стикер #${sourceMessage.stickerId}`;
+    if (sourceMessage.attachment) return 'Сообщение с вложением';
+    return 'Сообщение без текстового содержимого';
   }
 
   private async pruneHistory() {

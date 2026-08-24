@@ -56,6 +56,9 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
           if (!userSocial.hasDM && ctx.chat?.type === 'private') {
             userSocial.hasDM = true;
           }
+          if (ctx.chat?.type === 'private') {
+            userSocial.lastInteractionAt = new Date();
+          }
         },
       );
 

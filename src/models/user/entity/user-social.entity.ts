@@ -69,6 +69,10 @@ export class UserSocial {
   @Column({ type: 'boolean', default: false })
   public hasDM: boolean;
 
+  /** Последнее входящее действие пользователя в личном диалоге с ботом. */
+  @Column({ type: 'timestamp', nullable: true })
+  public lastInteractionAt: Date | null;
+
   @Expose()
   @ManyToOne(() => User, (user) => user.socials, { nullable: true })
   @JoinColumn()

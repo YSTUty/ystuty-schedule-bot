@@ -48,6 +48,12 @@ export class BroadcastDelivery {
   @Column({ type: 'text', nullable: true })
   public error: string | null;
 
+  @Column({ type: 'timestamp', nullable: true })
+  public messageDeletedAt: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  public messageDeleteError: string | null;
+
   @CreateDateColumn()
   public createdAt: Date;
 

@@ -692,7 +692,12 @@ export class VKKeyboardFactory {
 
   public getBroadcastFilters(
     ctx: IContext,
-    params: { hasGroups: boolean; onlyAuthorized: boolean },
+    params: {
+      hasGroups: boolean;
+      onlyAuthorized: boolean;
+      hasActivityFilter: boolean;
+      hasExcludedCampaigns: boolean;
+    },
   ) {
     return Keyboard.keyboard([
       [
@@ -702,6 +707,24 @@ export class VKKeyboardFactory {
             params,
           ),
           payload: { broadcastAction: 'filterAuthorized' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterActivity,
+            params,
+          ),
+          payload: { broadcastAction: 'filterActivity' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterExcludeCampaigns,
+            params,
+          ),
+          payload: { broadcastAction: 'filterExcludeCampaigns' },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],
@@ -786,6 +809,18 @@ export class VKKeyboardFactory {
             LocalePhrase.Button_Broadcast_FilterGroupsTextCancel,
           ),
           payload: { broadcastAction: 'filterGroupsTextCancel' },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastFilterTextPrompt(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterTextCancel),
+          payload: { broadcastAction: 'filterTextCancel' },
           color: Keyboard.NEGATIVE_COLOR,
         }),
       ],

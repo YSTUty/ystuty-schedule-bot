@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, In, IsNull, Not, Repository } from 'typeorm';
+import {
+  And,
+  FindOptionsWhere,
+  In,
+  IsNull,
+  MoreThanOrEqual,
+  Not,
+  Raw,
+  Repository,
+} from 'typeorm';
 
 import { SocialType } from '@my-common/constants';
 
@@ -31,11 +40,21 @@ export class BroadcastAudienceFilterService {
         ? [filter.groupName]
         : undefined;
 
+    const excludeCampaignIds = filter.excludeCampaignIds
+      ?.filter((campaignId) => Number.isInteger(campaignId) && campaignId > 0)
+      .filter((campaignId, index, ids) => ids.indexOf(campaignId) === index)
+      .sort((first, second) => first - second);
+    const lastInteractionAfter = this.normalizeDate(
+      filter.lastInteractionAfter,
+    );
+
     return {
       hasDM: true,
       isBlockedBot: false,
       ...filter,
       ...(groupNames && { groupNames }),
+      ...(lastInteractionAfter && { lastInteractionAfter }),
+      ...(excludeCampaignIds?.length && { excludeCampaignIds }),
       ...(social === SocialType.Vkontakte && { hasDM: filter.hasDM ?? true }),
     };
   }
@@ -151,10 +170,34 @@ export class BroadcastAudienceFilterService {
     } else if (filter.groupName) {
       where.groupName = filter.groupName;
     }
-    if (filter.userSocialIds?.length) {
-      where.id = In(filter.userSocialIds);
+    const userSocialIdsFilter = filter.userSocialIds?.length
+      ? In(filter.userSocialIds)
+      : undefined;
+    const excludedCampaignsFilter = filter.excludeCampaignIds?.length
+      ? Raw(
+          (alias) =>
+            `${alias} NOT IN (SELECT "userSocialId" FROM "broadcast_delivery" WHERE "campaignId" IN (:...excludeCampaignIds) AND "userSocialId" IS NOT NULL)`,
+          { excludeCampaignIds: filter.excludeCampaignIds },
+        )
+      : undefined;
+    if (userSocialIdsFilter && excludedCampaignsFilter) {
+      where.id = And(userSocialIdsFilter, excludedCampaignsFilter);
+    } else if (userSocialIdsFilter || excludedCampaignsFilter) {
+      where.id = userSocialIdsFilter || excludedCampaignsFilter;
+    }
+    if (filter.lastInteractionAfter) {
+      where.lastInteractionAt = MoreThanOrEqual(
+        new Date(filter.lastInteractionAfter),
+      );
     }
 
     return where;
+  }
+
+  private normalizeDate(value?: string | null) {
+    if (!value) return undefined;
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   }
 }

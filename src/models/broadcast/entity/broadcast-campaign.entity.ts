@@ -40,6 +40,14 @@ export class BroadcastCampaign {
   @Column({ type: 'jsonb' })
   public audienceFilter: BroadcastAudienceFilter;
 
+  /** Короткое описание содержимого для истории кампаний. */
+  @Column({ type: 'text', nullable: true })
+  public contentPreview: string | null;
+
+  /** Момент завершения попытки удалить отправленные сообщения кампании. */
+  @Column({ type: 'timestamp', nullable: true })
+  public messagesDeletedAt: Date | null;
+
   @Column({ type: 'bigint', nullable: true })
   public createdBySocialId: string | null;
 

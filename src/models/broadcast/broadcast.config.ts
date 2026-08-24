@@ -1,10 +1,9 @@
 import * as xEnv from '@my-environment';
 
-import { DEFAULT_BROADCAST_HISTORY_LIMIT } from './broadcast.constants';
-
+/** Возвращает лимит истории только при явном включении автоочистки. */
 export function getBroadcastHistoryLimit(): number | null {
   const raw = xEnv.BROADCAST_HISTORY_LIMIT;
-  if (!raw) return DEFAULT_BROADCAST_HISTORY_LIMIT;
+  if (!raw) return null;
   if (raw === 'false' || raw === 'off' || raw === '0') return null;
 
   const value = Number(raw);

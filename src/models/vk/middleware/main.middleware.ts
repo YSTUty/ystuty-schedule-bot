@@ -504,6 +504,10 @@ export class MainMiddleware {
         userSocial.hasDM = true;
       }
 
+      if (ctx.isDM && !ctx.isMessageSubscriptionContext()) {
+        userSocial.lastInteractionAt = new Date();
+      }
+
       if (ctx.state.userSocial.isBlockedBot) {
         ctx.state.userSocial.isBlockedBot = false;
         await this.userService.saveUserSocial(ctx.state.userSocial);

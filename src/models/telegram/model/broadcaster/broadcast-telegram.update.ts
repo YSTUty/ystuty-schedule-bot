@@ -86,7 +86,7 @@ export class BroadcastTelegramUpdate {
       return;
     }
 
-    const result = await this.broadcastService.deleteCampaignDeliveries(
+    const result = await this.broadcastService.deleteCampaignMessages(
       campaignId,
       SocialType.Telegram,
     );
@@ -161,7 +161,7 @@ export class BroadcastTelegramUpdate {
   @Action(/broadcast:campaign:delete:(?<campaignId>\d+)/)
   async onBroadcastCampaignDelete(@Ctx() ctx: ICallbackQueryContext) {
     const campaignId = Number(ctx.match!.groups!.campaignId);
-    const result = await this.broadcastService.deleteCampaignDeliveries(
+    const result = await this.broadcastService.deleteCampaignMessages(
       campaignId,
       SocialType.Telegram,
     );

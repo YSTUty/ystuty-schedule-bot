@@ -82,7 +82,7 @@ export class BroadcastVkUpdate {
       return;
     }
 
-    const result = await this.broadcastService.deleteCampaignDeliveries(
+    const result = await this.broadcastService.deleteCampaignMessages(
       campaignId,
       SocialType.Vkontakte,
     );
@@ -307,7 +307,7 @@ export class BroadcastVkUpdate {
   }
 
   private async deleteCampaign(ctx: IMessageEventContext, campaignId: number) {
-    const result = await this.broadcastService.deleteCampaignDeliveries(
+    const result = await this.broadcastService.deleteCampaignMessages(
       campaignId,
       SocialType.Vkontakte,
     );

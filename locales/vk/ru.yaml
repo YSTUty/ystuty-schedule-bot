@@ -45,6 +45,9 @@ button:
     filter_groups_clear: Очистить группы
     filter_groups_done: Готово
     filter_institute_toggle: '${selected ? "Снять весь институт" : "Выбрать весь институт"}'
+    filter_activity: 'Активность: ${hasActivityFilter ? "выбрана" : "любая"}'
+    filter_exclude_campaigns: 'Исключить рассылки: ${hasExcludedCampaigns ? "да" : "нет"}'
+    filter_text_cancel: Отменить ввод
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -247,6 +250,8 @@ page:
       Авторизованные: ${filter.onlyAuthorized ? 'только' : 'все'}
       Группы: ${groupsCount ? groupsCount + ' выбрано' : 'все'}
       ${groupsText || ''}
+      Активность с: ${lastInteractionAfter ? new Date(lastInteractionAfter).toLocaleDateString('ru-RU') : 'не ограничена'}
+      Исключить кампании: ${excludeCampaignIds.length ? excludeCampaignIds.join(', ') : 'нет'}
     filter_institutes: |
       Институты с подходящими получателями
       Страница: ${currentPage}/${totalPages}
@@ -260,6 +265,12 @@ page:
     filter_groups_list: |
       Выбранные группы
       ${groupNames}
+    filter_activity_text: |
+      Отправь дату активности в формате ДД.ММ.ГГГГ или ГГГГ-ММ-ДД.
+      В рассылку войдут только пользователи, взаимодействовавшие с ботом в ЛС в эту дату или позднее.
+    filter_exclude_campaigns_text: |
+      Отправь ID рассылок через запятую или пробел.
+      Пользователи, для которых уже создавалась delivery этих кампаний, будут исключены.
     source_required: Сначала отправь сообщение-образец.
     new_sample: Отправь новое сообщение-образец.
     queue_status: |
@@ -283,13 +294,14 @@ page:
       Рассылка №${campaign.id}
       Статус: ${campaign.status}
       Режим: ${campaign.mode}
+      Содержимое: ${campaign.contentPreview || '-'}
       Получателей: ${campaign.totalCount}
       Успешно: ${campaign.sentCount}
       Ошибки: ${campaign.failedCount}
       Пропущено: ${campaign.skippedCount}
       Создана: ${campaign.createdAt.toLocaleString('ru-RU')}
     campaign_deleted: |
-      Рассылка №${campaignId} удалена.
+      Сообщения рассылки №${campaignId} удалены, история сохранена.
       Удалено сообщений: ${deletedCount}
       Не удалось удалить: ${failedCount}
     campaign_delete_usage: |

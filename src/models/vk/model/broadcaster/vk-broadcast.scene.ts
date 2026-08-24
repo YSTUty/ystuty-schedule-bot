@@ -26,7 +26,7 @@ type VkBroadcastState = {
   selectedRecipientIds: number[];
   recipientsPage: number;
   manualRecipients: boolean;
-  awaitingGroupFilter: boolean;
+  awaitingFilter?: 'groups' | 'activity' | 'excludeCampaigns';
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
   confirmMessage?: { chatId: number; messageId: number };
 };
@@ -53,7 +53,7 @@ export class VkBroadcastScene {
       ctx.scene.state.selectedRecipientIds = [];
       ctx.scene.state.recipientsPage = 1;
       ctx.scene.state.manualRecipients = false;
-      ctx.scene.state.awaitingGroupFilter = false;
+      ctx.scene.state.awaitingFilter = undefined;
       ctx.scene.state.recipientsCount =
         await this.broadcastService.countRecipients(
           SocialType.Vkontakte,
@@ -85,8 +85,8 @@ export class VkBroadcastScene {
       if (handled) return;
     }
 
-    if (ctx.scene.state.awaitingGroupFilter && ctx.text) {
-      await this.applyGroupFilter(ctx, ctx.text);
+    if (ctx.scene.state.awaitingFilter && ctx.text) {
+      await this.applyTextFilter(ctx, ctx.scene.state.awaitingFilter, ctx.text);
       return;
     }
 
@@ -244,6 +244,9 @@ export class VkBroadcastScene {
       | 'filterGroupsText'
       | 'filterGroupsTextShow'
       | 'filterGroupsTextCancel'
+      | 'filterActivity'
+      | 'filterExcludeCampaigns'
+      | 'filterTextCancel'
       | 'filterGroupsClear'
       | 'filterGroupsShow'
       | 'filterInstitutes'
@@ -343,7 +346,7 @@ export class VkBroadcastScene {
     }
 
     if (action === 'filterGroupsText') {
-      ctx.scene.state.awaitingGroupFilter = true;
+      ctx.scene.state.awaitingFilter = 'groups';
       await this.editCurrentVkMessage(
         ctx,
         ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroupsText),
@@ -371,7 +374,7 @@ export class VkBroadcastScene {
     }
 
     if (action === 'filterGroupsTextCancel') {
-      ctx.scene.state.awaitingGroupFilter = false;
+      ctx.scene.state.awaitingFilter = undefined;
       await this.renderFilters(ctx);
       return true;
     }
@@ -379,7 +382,7 @@ export class VkBroadcastScene {
     if (action === 'filterGroupsClear') {
       ctx.scene.state.filter.groupName = null;
       ctx.scene.state.filter.groupNames = undefined;
-      ctx.scene.state.awaitingGroupFilter = false;
+      ctx.scene.state.awaitingFilter = undefined;
       this.resetManualRecipients(ctx.scene.state);
       await this.renderFilters(ctx);
       return true;
@@ -391,6 +394,51 @@ export class VkBroadcastScene {
         text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
       });
       await this.sendSelectedGroups(ctx);
+      return true;
+    }
+
+    if (action === 'filterActivity' || action === 'filterExcludeCampaigns') {
+      if (
+        (action === 'filterActivity' &&
+          ctx.scene.state.filter.lastInteractionAfter) ||
+        (action === 'filterExcludeCampaigns' &&
+          ctx.scene.state.filter.excludeCampaignIds?.length)
+      ) {
+        if (action === 'filterActivity') {
+          ctx.scene.state.filter.lastInteractionAfter = undefined;
+        } else {
+          ctx.scene.state.filter.excludeCampaignIds = undefined;
+        }
+        this.resetManualRecipients(ctx.scene.state);
+        await this.renderFilters(ctx);
+        return true;
+      }
+      ctx.scene.state.awaitingFilter =
+        action === 'filterActivity' ? 'activity' : 'excludeCampaigns';
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(
+          action === 'filterActivity'
+            ? LocalePhrase.Page_Broadcast_FilterActivityText
+            : LocalePhrase.Page_Broadcast_FilterExcludeCampaignsText,
+        ),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastFilterTextPrompt(ctx)
+            .inline(),
+        },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'filterTextCancel') {
+      ctx.scene.state.awaitingFilter = undefined;
+      await this.renderFilters(ctx);
       return true;
     }
 
@@ -612,6 +660,63 @@ export class VkBroadcastScene {
     state.recipientsPage = 1;
   }
 
+  private async applyTextFilter(
+    ctx: IStepCtx,
+    awaitingFilter: NonNullable<VkBroadcastState['awaitingFilter']>,
+    text: string,
+  ) {
+    if (awaitingFilter === 'groups') {
+      const groupNames = this.scheduleService.parseGroupNames(text);
+      if (!groupNames.length) {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+            groupName: text,
+          }),
+        );
+        return;
+      }
+      ctx.scene.state.filter.groupName = null;
+      ctx.scene.state.filter.groupNames = groupNames;
+    } else if (awaitingFilter === 'activity') {
+      const date = this.parseFilterDate(text);
+      if (!date) {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityText),
+        );
+        return;
+      }
+      ctx.scene.state.filter.lastInteractionAfter = date.toISOString();
+    } else {
+      const campaignIds = this.parseCampaignIds(text);
+      if (!campaignIds.length) {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterExcludeCampaignsText),
+        );
+        return;
+      }
+      ctx.scene.state.filter.excludeCampaignIds = campaignIds;
+    }
+
+    ctx.scene.state.awaitingFilter = undefined;
+    this.resetManualRecipients(ctx.scene.state);
+    await this.renderFilters(ctx, false);
+  }
+
+  private parseFilterDate(text: string) {
+    const normalized = text.trim();
+    const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(normalized);
+    const date = match
+      ? new Date(`${match[3]}-${match[2]}-${match[1]}T00:00:00.000Z`)
+      : new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private parseCampaignIds(text: string) {
+    return [...new Set((text.match(/\d+/g) || []).map(Number))]
+      .filter((campaignId) => campaignId > 0)
+      .sort((first, second) => first - second);
+  }
+
   private async applyGroupFilter(ctx: IStepCtx, groupNamesText: string) {
     const groupNames = this.scheduleService.parseGroupNames(groupNamesText);
     if (!groupNames.length) {
@@ -625,7 +730,7 @@ export class VkBroadcastScene {
 
     ctx.scene.state.filter.groupName = null;
     ctx.scene.state.filter.groupNames = groupNames;
-    ctx.scene.state.awaitingGroupFilter = false;
+    ctx.scene.state.awaitingFilter = undefined;
     this.resetManualRecipients(ctx.scene.state);
     await this.renderFilters(ctx, false);
   }
@@ -661,11 +766,15 @@ export class VkBroadcastScene {
       recipientsCount: state.recipientsCount,
       groupsCount: state.filter.groupNames?.length || 0,
       groupsText,
+      lastInteractionAfter: state.filter.lastInteractionAfter,
+      excludeCampaignIds: state.filter.excludeCampaignIds || [],
     });
     const keyboard = this.keyboardFactory
       .getBroadcastFilters(ctx, {
         hasGroups: !!state.filter.groupNames?.length,
         onlyAuthorized: !!state.filter.onlyAuthorized,
+        hasActivityFilter: !!state.filter.lastInteractionAfter,
+        hasExcludedCampaigns: !!state.filter.excludeCampaignIds?.length,
       })
       .inline();
 

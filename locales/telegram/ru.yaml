@@ -36,6 +36,15 @@ button:
     filter_authorized: 'Авторизованные: ${onlyAuthorized ? "да" : "нет"}'
     filter_group: 'Группа: ${groupName}'
     filter_group_reset: Сбросить группу
+    edit_filters: Фильтры аудитории
+    filter_groups: 'Группы: ${hasGroups ? "выбраны" : "все"}'
+    filter_groups_institutes: Выбрать по институту
+    filter_groups_text: Ввести список групп
+    filter_groups_text_cancel: Отменить ввод
+    filter_groups_show: Показать группы
+    filter_groups_clear: Очистить группы
+    filter_groups_done: Готово
+    filter_institute_toggle: '${selected ? "Снять весь институт" : "Выбрать весь институт"}'
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -240,6 +249,24 @@ page:
     filter_group: |
       Отправь название учебной группы для фильтра рассылки.
       Сейчас: <code>${groupName || 'все группы'}</code>
+    filters: |
+      <b>Фильтры аудитории</b>
+      Получателей: <code>${recipientsCount}</code>
+      Авторизованные: <code>${filter.onlyAuthorized ? 'только' : 'все'}</code>
+      Группы: <code>${groupsCount ? groupsCount + ' выбрано' : 'все'}</code>
+    filter_institutes: |
+      <b>Институты с подходящими получателями</b>
+      Страница: <code>${currentPage}/${totalPages}</code>
+    filter_groups_menu: <b>Выбор групп</b>
+    filter_groups: |
+      <b>Группы${instituteName ? ': ' + instituteName : ''}</b>
+      Страница: <code>${currentPage}/${totalPages}</code>
+    filter_groups_text: |
+      Отправь список групп через запятую, точку с запятой или новую строку.
+      Список заменит текущий фильтр групп.
+    filter_groups_list: |
+      <b>Выбранные группы</b>
+      <code>${groupNames}</code>
     source_required: Сначала отправь сообщение-образец.
     new_sample: Отправь новое сообщение-образец.
     queue_status: |

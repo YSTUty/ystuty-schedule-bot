@@ -679,32 +679,115 @@ export class VKKeyboardFactory {
       ],
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterAuthorized, {
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_EditFilters, {
             onlyAuthorized,
+            groupName: groupName || '-',
           }),
+          payload: { broadcastAction: 'filters' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastFilters(
+    ctx: IContext,
+    params: { hasGroups: boolean; onlyAuthorized: boolean },
+  ) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterAuthorized,
+            params,
+          ),
           payload: { broadcastAction: 'filterAuthorized' },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroup, {
-            groupName: groupName || '-',
-          }),
-          payload: { broadcastAction: 'filterGroup' },
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroups, params),
+          payload: { broadcastAction: 'filterGroups' },
           color: Keyboard.SECONDARY_COLOR,
         }),
-        ...(groupName
-          ? [
+      ],
+      ...(params.hasGroups
+        ? [
+            [
               Keyboard.callbackButton({
                 label: ctx.i18n.t(
-                  LocalePhrase.Button_Broadcast_FilterGroupReset,
+                  LocalePhrase.Button_Broadcast_FilterGroupsShow,
                 ),
-                payload: { broadcastAction: 'filterGroupReset' },
+                payload: { broadcastAction: 'filterGroupsShow' },
                 color: Keyboard.SECONDARY_COLOR,
               }),
-            ]
-          : []),
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_FilterGroupsClear,
+                ),
+                payload: { broadcastAction: 'filterGroupsClear' },
+                color: Keyboard.NEGATIVE_COLOR,
+              }),
+            ],
+          ]
+        : []),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
+          payload: { broadcastAction: 'backToSettings' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastGroupFilterMenu(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterGroupsInstitutes,
+          ),
+          payload: { broadcastAction: 'filterInstitutes', page: 1 },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsText),
+          payload: { broadcastAction: 'filterGroupsText' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          payload: { broadcastAction: 'filters' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** Клавиатура остаётся рядом с подсказкой, пока администратор вводит список групп. */
+  public getBroadcastGroupFilterTextPrompt(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsShow),
+          payload: { broadcastAction: 'filterGroupsTextShow' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterGroupsTextCancel,
+          ),
+          payload: { broadcastAction: 'filterGroupsTextCancel' },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
       ],
     ]);
   }

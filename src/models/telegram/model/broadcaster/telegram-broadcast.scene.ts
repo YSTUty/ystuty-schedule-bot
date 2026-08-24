@@ -20,6 +20,7 @@ import {
   BroadcastMessageMode,
   BroadcastSourceMessage,
 } from '../../../broadcast/broadcast.types';
+import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/broadcast-audience-group-filter.service';
 import { ScheduleService } from '../../../schedule/schedule.service';
 import { BaseScene } from '../../scene/base.scene';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
@@ -32,6 +33,7 @@ type TelegramBroadcastState = {
   recipientsPage: number;
   manualRecipients: boolean;
   awaitingGroupFilter: boolean;
+  activeGroupFilter?: { institutesPage: number; instituteIndex: number };
   mode: BroadcastMessageMode.Copy | BroadcastMessageMode.Forward;
 };
 
@@ -41,6 +43,7 @@ type IStepCtx = IStepContext<TelegramBroadcastState>;
 export class TelegramBroadcastScene extends BaseScene {
   constructor(
     private readonly broadcastService: BroadcastService,
+    private readonly groupFilterService: BroadcastAudienceGroupFilterService,
     private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {
@@ -78,9 +81,7 @@ export class TelegramBroadcastScene extends BaseScene {
   async onNext(@Ctx() ctx: IStepCtx) {
     if (ctx.scene.state.awaitingGroupFilter) {
       await ctx.replyWithHTML(
-        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroup, {
-          groupName: ctx.scene.state.filter.groupName,
-        }),
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroupsText),
       );
       return;
     }
@@ -97,26 +98,23 @@ export class TelegramBroadcastScene extends BaseScene {
   async onStep2Hint(@Ctx() ctx: IStepCtx) {
     const state = ctx.scene.state;
     if (state.awaitingGroupFilter) {
-      const groupName =
+      const groupNamesText =
         ctx.message && 'text' in ctx.message ? ctx.message.text : '';
-      const selectedGroupName =
-        this.scheduleService.getGroupByName(groupName) ||
-        this.scheduleService.parseGroupName(groupName);
-      if (!selectedGroupName) {
+      const groupNames = this.scheduleService.parseGroupNames(groupNamesText);
+      if (!groupNames.length) {
         await ctx.replyWithHTML(
-          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
+          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+            groupName: groupNamesText,
+          }),
         );
         return;
       }
 
-      state.filter.groupName = selectedGroupName;
+      state.filter.groupNames = groupNames;
+      state.filter.groupName = null;
       state.awaitingGroupFilter = false;
       this.resetManualRecipients(state);
-      await this.refreshRecipientsCount(state);
-      await ctx.replyWithHTML(
-        this.renderSettings(ctx, state),
-        this.getSettingsKeyboard(ctx, state),
-      );
+      await this.renderFilters(ctx, false);
       return;
     }
 
@@ -139,6 +137,12 @@ export class TelegramBroadcastScene extends BaseScene {
   }
 
   @WizardStep(2)
+  @Action('broadcast:wizard:filters')
+  async onFilters(@Ctx() ctx: IStepCtx) {
+    await this.renderFilters(ctx);
+  }
+
+  @WizardStep(2)
   @Action('broadcast:wizard:filter:authorized')
   async onAuthorizedFilterToggle(@Ctx() ctx: IStepCtx) {
     const state = ctx.scene.state;
@@ -146,38 +150,148 @@ export class TelegramBroadcastScene extends BaseScene {
     this.resetManualRecipients(state);
     await this.refreshRecipientsCount(state);
     await ctx.tryAnswerCbQuery();
-    await ctx.editMessageText(this.renderSettings(ctx, state), {
-      parse_mode: 'HTML',
-      ...this.getSettingsKeyboard(ctx, state),
-    });
+    await this.renderFilters(ctx, false);
   }
 
   @WizardStep(2)
-  @Action('broadcast:wizard:filter:group')
+  @Action('broadcast:wizard:filter:groups')
   async onGroupFilter(@Ctx() ctx: IStepCtx) {
-    ctx.scene.state.awaitingGroupFilter = true;
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroup, {
-        groupName: ctx.scene.state.filter.groupName,
-      }),
-      { parse_mode: 'HTML' },
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroupsMenu),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastGroupFilterMenu(ctx),
+      },
     );
   }
 
   @WizardStep(2)
-  @Action('broadcast:wizard:filter:group:reset')
+  @Action('broadcast:wizard:filter:groups:text')
+  async onGroupFilterText(@Ctx() ctx: IStepCtx) {
+    ctx.scene.state.awaitingGroupFilter = true;
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroupsText),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastGroupFilterTextPrompt(ctx),
+      },
+    );
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:groups:text:show')
+  async onShowGroupFilterText(@Ctx() ctx: IStepCtx) {
+    await ctx.tryAnswerCbQuery();
+    await this.sendSelectedGroups(ctx);
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:groups:text:cancel')
+  async onGroupFilterTextCancel(@Ctx() ctx: IStepCtx) {
+    ctx.scene.state.awaitingGroupFilter = false;
+    await this.renderFilters(ctx);
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:groups:clear')
   async onGroupFilterReset(@Ctx() ctx: IStepCtx) {
     const state = ctx.scene.state;
     state.filter.groupName = null;
+    state.filter.groupNames = undefined;
     state.awaitingGroupFilter = false;
     this.resetManualRecipients(state);
-    await this.refreshRecipientsCount(state);
+    await this.renderFilters(ctx);
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:groups:show')
+  async onShowGroupFilter(@Ctx() ctx: IStepCtx) {
     await ctx.tryAnswerCbQuery();
-    await ctx.editMessageText(this.renderSettings(ctx, state), {
-      parse_mode: 'HTML',
-      ...this.getSettingsKeyboard(ctx, state),
-    });
+    await this.sendSelectedGroups(ctx);
+  }
+
+  @WizardStep(2)
+  @Action(/broadcast:wizard:filter:institutes:(?<page>[0-9]+)/)
+  @Action(/pager:broadcast-filter-institutes:(?<page>[0-9]+)/)
+  async onInstitutesPage(@Ctx() ctx: IStepCtx) {
+    await this.renderInstitutes(ctx, Number(ctx.match!.groups!.page));
+  }
+
+  @WizardStep(2)
+  @Action(/broadcast:wizard:filter:institute:(?<page>[0-9]+):(?<index>[0-9]+)/)
+  async onInstitute(@Ctx() ctx: IStepCtx) {
+    await this.renderInstituteGroups(
+      ctx,
+      Number(ctx.match!.groups!.page),
+      Number(ctx.match!.groups!.index),
+      1,
+    );
+  }
+
+  @WizardStep(2)
+  @Action(
+    /broadcast:wizard:filter:groups:(?<page>[0-9]+):(?<index>[0-9]+):(?<groupsPage>[0-9]+)/,
+  )
+  @Action(/pager:broadcast-filter-groups:(?<groupsPage>[0-9]+)/)
+  async onInstituteGroupsPage(@Ctx() ctx: IStepCtx) {
+    const { page, index, groupsPage } = ctx.match!.groups!;
+    const active = ctx.scene.state.activeGroupFilter;
+    await this.renderInstituteGroups(
+      ctx,
+      Number(page || active?.institutesPage),
+      Number(index || active?.instituteIndex),
+      Number(groupsPage),
+    );
+  }
+
+  @WizardStep(2)
+  @Action(
+    /broadcast:wizard:filter:group:(?<page>[0-9]+):(?<index>[0-9]+):(?<groupsPage>[0-9]+):(?<groupIndex>[0-9]+)/,
+  )
+  async onGroupToggle(@Ctx() ctx: IStepCtx) {
+    const { page, index, groupsPage, groupIndex } = ctx.match!.groups!;
+    const groupPage = await this.getInstituteGroupsPage(
+      ctx,
+      Number(page),
+      Number(index),
+      Number(groupsPage),
+    );
+    const group = groupPage.items[Number(groupIndex)];
+    if (group) this.toggleGroups(ctx.scene.state, [group.groupName]);
+    await this.renderInstituteGroups(
+      ctx,
+      Number(page),
+      Number(index),
+      Number(groupsPage),
+    );
+  }
+
+  @WizardStep(2)
+  @Action(
+    /broadcast:wizard:filter:institute:toggle:(?<page>[0-9]+):(?<index>[0-9]+):(?<groupsPage>[0-9]+)/,
+  )
+  async onInstituteToggle(@Ctx() ctx: IStepCtx) {
+    const { page, index, groupsPage } = ctx.match!.groups!;
+    const groupPage = await this.getInstituteGroupsPage(
+      ctx,
+      Number(page),
+      Number(index),
+      Number(groupsPage),
+    );
+    if (groupPage.institute) {
+      this.toggleGroups(
+        ctx.scene.state,
+        groupPage.institute.groups.map((group) => group.groupName),
+      );
+    }
+    await this.renderInstituteGroups(
+      ctx,
+      Number(page),
+      Number(index),
+      Number(groupsPage),
+    );
   }
 
   @WizardStep(2)
@@ -444,6 +558,201 @@ export class TelegramBroadcastScene extends BaseScene {
       }),
       { parse_mode: 'HTML', ...keyboard },
     );
+  }
+
+  private async renderFilters(ctx: IStepCtx, answerCallback = true) {
+    const state = ctx.scene.state;
+    const preview = await this.broadcastService.getGroupsPreview(
+      SocialType.Telegram,
+      state.filter,
+    );
+    state.recipientsCount = this.getEffectiveRecipientsCount(
+      state,
+      preview.selectedRecipientsCount,
+    );
+    const message = ctx.i18n.t(LocalePhrase.Page_Broadcast_Filters, {
+      filter: state.filter,
+      recipientsCount: state.recipientsCount,
+      groupsCount: state.filter.groupNames?.length || 0,
+    });
+    const keyboard = this.keyboardFactory.getBroadcastFilters(ctx, {
+      hasGroups: !!state.filter.groupNames?.length,
+      onlyAuthorized: !!state.filter.onlyAuthorized,
+    });
+
+    if (ctx.callbackQuery) {
+      if (answerCallback) await ctx.tryAnswerCbQuery();
+      await ctx.editMessageText(message, { parse_mode: 'HTML', ...keyboard });
+      return;
+    }
+
+    await ctx.replyWithHTML(message, keyboard);
+  }
+
+  private async renderInstitutes(ctx: IStepCtx, page = 1) {
+    const result = await this.groupFilterService.getInstitutesPage({
+      social: SocialType.Telegram,
+      filter: ctx.scene.state.filter,
+      page,
+      limit: 8,
+    });
+    const keyboard = this.keyboardFactory.getPagination({
+      name: 'broadcast-filter-institutes',
+      currentPage: result.currentPage,
+      totalPages: result.totalPages,
+      items: result.items.map((institute, index) => ({
+        title: `${institute.instituteName} — ${institute.recipientsCount}`,
+        payload: `${result.currentPage}:${index}`,
+      })),
+      actionPrefix: 'broadcast:wizard:filter:institute:',
+      additionalButtons: [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:filter:groups',
+        ),
+      ],
+      columnizer: false,
+      sortByLength: false,
+    });
+
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterInstitutes, {
+        currentPage: result.currentPage,
+        totalPages: result.totalPages,
+      }),
+      { parse_mode: 'HTML', ...keyboard },
+    );
+  }
+
+  private async getInstituteGroupsPage(
+    ctx: IStepCtx,
+    institutesPage: number,
+    instituteIndex: number,
+    groupsPage: number,
+  ) {
+    const institutes = await this.groupFilterService.getInstitutesPage({
+      social: SocialType.Telegram,
+      filter: ctx.scene.state.filter,
+      page: institutesPage,
+      limit: 8,
+    });
+    const institute = institutes.items[instituteIndex];
+    if (!institute) return { ...institutes, institute: undefined, items: [] };
+
+    return await this.groupFilterService.getGroupsPage({
+      social: SocialType.Telegram,
+      filter: ctx.scene.state.filter,
+      instituteName: institute.instituteName,
+      page: groupsPage,
+      limit: 8,
+    });
+  }
+
+  private async renderInstituteGroups(
+    ctx: IStepCtx,
+    institutesPage: number,
+    instituteIndex: number,
+    groupsPage: number,
+  ) {
+    ctx.scene.state.activeGroupFilter = {
+      institutesPage,
+      instituteIndex,
+    };
+    const result = await this.getInstituteGroupsPage(
+      ctx,
+      institutesPage,
+      instituteIndex,
+      groupsPage,
+    );
+    if (!result.institute) {
+      await this.renderInstitutes(ctx, institutesPage);
+      return;
+    }
+
+    const selected = new Set(ctx.scene.state.filter.groupNames || []);
+    const allSelected = result.institute.groups.every((group) =>
+      selected.has(group.groupName),
+    );
+    const keyboard = this.keyboardFactory.getPagination({
+      name: 'broadcast-filter-groups',
+      currentPage: result.currentPage,
+      totalPages: result.totalPages,
+      items: result.items.map((group, index) => ({
+        title: `${selected.has(group.groupName) ? '✅' : '⬜'} ${group.groupName} — ${group.recipientsCount}`,
+        payload: `${institutesPage}:${instituteIndex}:${result.currentPage}:${index}`,
+      })),
+      actionPrefix: 'broadcast:wizard:filter:group:',
+      additionalButtons: [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterInstituteToggle, {
+            selected: allSelected,
+          }),
+          `broadcast:wizard:filter:institute:toggle:${institutesPage}:${instituteIndex}:${result.currentPage}`,
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          `broadcast:wizard:filter:institutes:${institutesPage}`,
+        ),
+      ],
+      columnizer: false,
+      sortByLength: false,
+    });
+
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroups, {
+        instituteName: result.institute.instituteName,
+        currentPage: result.currentPage,
+        totalPages: result.totalPages,
+      }),
+      { parse_mode: 'HTML', ...keyboard },
+    );
+  }
+
+  private toggleGroups(state: TelegramBroadcastState, groupNames: string[]) {
+    const selected = new Set(state.filter.groupNames || []);
+    const allSelected = groupNames.every((groupName) =>
+      selected.has(groupName),
+    );
+    for (const groupName of groupNames) {
+      if (allSelected) selected.delete(groupName);
+      else selected.add(groupName);
+    }
+    const selectedGroupNames = [...selected].sort((first, second) =>
+      first.localeCompare(second, 'ru'),
+    );
+    state.filter.groupNames = selectedGroupNames.length
+      ? selectedGroupNames
+      : undefined;
+    state.filter.groupName = null;
+    this.resetManualRecipients(state);
+  }
+
+  private async sendSelectedGroups(ctx: IStepCtx) {
+    const groupNames = ctx.scene.state.filter.groupNames || [];
+    const chunks = this.splitText(groupNames.join(', '), 3500);
+    for (const chunk of chunks) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroupsList, {
+          groupNames: chunk,
+        }),
+      );
+    }
+  }
+
+  private splitText(text: string, limit: number) {
+    const chunks: string[] = [];
+    let chunk = '';
+    for (const item of text.split(', ')) {
+      const next = chunk ? `${chunk}, ${item}` : item;
+      if (chunk && next.length > limit) {
+        chunks.push(chunk);
+        chunk = item;
+      } else chunk = next;
+    }
+    if (chunk) chunks.push(chunk);
+    return chunks;
   }
 
   private renderReady(ctx: IStepCtx, state: TelegramBroadcastState) {

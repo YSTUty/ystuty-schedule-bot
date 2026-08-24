@@ -18,14 +18,14 @@ import { RedisService } from '../redis/redis.service';
 
 import * as scheduleUtil from './util/schedule.util';
 
-type GroupInstitute = {
-  name: string;
-  groups: string[];
-};
-
 type Teacher = {
   id: number;
   name: string;
+};
+
+export type GroupInstitute = {
+  name: string;
+  groups: string[];
 };
 
 @Injectable()
@@ -187,6 +187,21 @@ export class ScheduleService implements OnModuleInit {
     return false;
   }
 
+  /** Нормализует список групп из скопированного текста, сохраняя порядок ввода. */
+  public parseGroupNames(text: string): string[] {
+    const candidates = text
+      .split(/[,;\n]+/)
+      .flatMap((part) => [part, ...(matchGroupName(part, 'gi') || [])]);
+    const groupNames = new Set<string>();
+
+    for (const candidate of candidates) {
+      const groupName = this.getGroupByName(candidate);
+      if (groupName) groupNames.add(groupName);
+    }
+
+    return [...groupNames];
+  }
+
   public get randomGroupName() {
     const names = this.groupNames;
     return names[Math.floor(Math.random() * names.length)] || '-';
@@ -194,6 +209,22 @@ export class ScheduleService implements OnModuleInit {
 
   public get groupNames() {
     return this.allGroupsList.flatMap((e) => e.groups);
+  }
+
+  /** Возвращает институты с подмножеством групп, сохраняя порядок Schedule API. */
+  public getGroupInstitutes(groupNames?: readonly string[]): GroupInstitute[] {
+    const allowedGroupNames = groupNames && new Set(groupNames);
+
+    return this.allGroupsList
+      .map((institute) => ({
+        name: institute.name,
+        groups: allowedGroupNames
+          ? institute.groups.filter((groupName) =>
+              allowedGroupNames.has(groupName),
+            )
+          : [...institute.groups],
+      }))
+      .filter((institute) => institute.groups.length > 0);
   }
 
   public instituteNameByHash(instituteHash: string) {

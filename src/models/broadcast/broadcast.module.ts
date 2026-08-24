@@ -16,6 +16,7 @@ import { BroadcastService } from './broadcast.service';
 import { BroadcastCampaign } from './entity/broadcast-campaign.entity';
 import { BroadcastDelivery } from './entity/broadcast-delivery.entity';
 import { BroadcastAudienceFilterService } from './filter/broadcast-audience-filter.service';
+import { BroadcastAudienceGroupFilterService } from './filter/broadcast-audience-group-filter.service';
 import { BroadcastTransportRegistry } from './transport/broadcast-transport.registry';
 
 @Global()
@@ -36,11 +37,13 @@ import { BroadcastTransportRegistry } from './transport/broadcast-transport.regi
     TelegramBroadcastProcessor,
     VkBroadcastProcessor,
     BroadcastAudienceFilterService,
+    BroadcastAudienceGroupFilterService,
     BroadcastTransportRegistry,
   ],
   exports: [
     BroadcastService,
     BroadcastAudienceFilterService,
+    BroadcastAudienceGroupFilterService,
     BroadcastTransportRegistry,
   ],
 })

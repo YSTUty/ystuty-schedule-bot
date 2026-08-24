@@ -18,6 +18,7 @@ import {
 } from './broadcast.constants';
 import {
   BroadcastAudienceFilter,
+  BroadcastAudienceGroupsPreview,
   BroadcastCampaignStatus,
   BroadcastDeliveryStatus,
   BroadcastJobData,
@@ -102,6 +103,13 @@ export class BroadcastService {
       params.page,
       params.limit,
     );
+  }
+
+  public async getGroupsPreview(
+    social: SocialType,
+    filter: BroadcastAudienceFilter = {},
+  ): Promise<BroadcastAudienceGroupsPreview> {
+    return await this.audienceFilterService.getGroupsPreview(social, filter);
   }
 
   public async createAndQueueCampaign(params: {

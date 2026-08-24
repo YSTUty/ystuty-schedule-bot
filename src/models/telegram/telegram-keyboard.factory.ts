@@ -499,27 +499,93 @@ export class TelegramKeyboardFactory {
       ],
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterAuthorized, {
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_EditFilters, {
             onlyAuthorized,
+            groupName: groupName || '-',
           }),
+          'broadcast:wizard:filters',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastFilters(
+    ctx: IContext,
+    params: { hasGroups: boolean; onlyAuthorized: boolean },
+  ) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterAuthorized, params),
           'broadcast:wizard:filter:authorized',
         ),
       ],
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroup, {
-            groupName: groupName || '-',
-          }),
-          'broadcast:wizard:filter:group',
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroups, params),
+          'broadcast:wizard:filter:groups',
         ),
-        ...(groupName
-          ? [
+      ],
+      ...(params.hasGroups
+        ? [
+            [
               Markup.button.callback(
-                ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupReset),
-                'broadcast:wizard:filter:group:reset',
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsShow),
+                'broadcast:wizard:filter:groups:show',
               ),
-            ]
-          : []),
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsClear),
+                'broadcast:wizard:filter:groups:clear',
+              ),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
+          'broadcast:wizard:settings',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastGroupFilterMenu(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsInstitutes),
+          'broadcast:wizard:filter:institutes:1',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsText),
+          'broadcast:wizard:filter:groups:text',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:filters',
+        ),
+      ],
+    ]);
+  }
+
+  /** Клавиатура остаётся рядом с подсказкой, пока администратор вводит список групп. */
+  public getBroadcastGroupFilterTextPrompt(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsShow),
+          'broadcast:wizard:filter:groups:text:show',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsTextCancel),
+          'broadcast:wizard:filter:groups:text:cancel',
+        ),
       ],
     ]);
   }

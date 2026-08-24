@@ -7,7 +7,12 @@ describe('BroadcastAudienceFilterService', () => {
     const repository = {
       find: jest.fn().mockResolvedValue([]),
     };
-    const service = new BroadcastAudienceFilterService(repository as any);
+    const service = new BroadcastAudienceFilterService(
+      repository as any,
+      {
+        getGroupInstitutes: jest.fn(),
+      } as any,
+    );
 
     await service.getRecipients(SocialType.Telegram, {
       onlyAuthorized: true,
@@ -19,8 +24,73 @@ describe('BroadcastAudienceFilterService', () => {
       social: SocialType.Telegram,
       hasDM: true,
       isBlockedBot: false,
-      groupName: 'ЦИС-21',
     });
+    expect(where.groupName._value).toEqual(['ЦИС-21']);
     expect(where.userId).toBeDefined();
+  });
+
+  it('uses a single IN condition for selected groups', async () => {
+    const repository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const service = new BroadcastAudienceFilterService(
+      repository as any,
+      {
+        getGroupInstitutes: jest.fn(),
+      } as any,
+    );
+
+    await service.getRecipients(SocialType.Vkontakte, {
+      groupNames: ['ЦПИ-22', 'ЦИС-21', 'ЦИС-21'],
+    });
+
+    const [{ where }] = repository.find.mock.calls[0];
+    expect(where.groupName).toBeDefined();
+    expect(where.groupName._value).toEqual(['ЦИС-21', 'ЦПИ-22']);
+  });
+
+  it('builds preview only from groups with eligible recipients', async () => {
+    const repository = {
+      find: jest
+        .fn()
+        .mockResolvedValue([
+          { groupName: 'ЦИС-21' },
+          { groupName: 'ЦИС-21' },
+          { groupName: 'ЦПИ-22' },
+          { groupName: null },
+        ]),
+    };
+    const scheduleService = {
+      getGroupInstitutes: jest.fn().mockReturnValue([
+        { name: 'Институт 1', groups: ['ЦИС-21'] },
+        { name: 'Институт 2', groups: ['ЦПИ-22'] },
+      ]),
+    };
+    const service = new BroadcastAudienceFilterService(
+      repository as any,
+      scheduleService as any,
+    );
+
+    const preview = await service.getGroupsPreview(SocialType.Telegram, {
+      groupNames: ['ЦИС-21'],
+    });
+
+    expect(scheduleService.getGroupInstitutes).toHaveBeenCalledWith([
+      'ЦИС-21',
+      'ЦПИ-22',
+    ]);
+    expect(preview.selectedRecipientsCount).toBe(2);
+    expect(preview.institutes).toEqual([
+      {
+        instituteName: 'Институт 1',
+        recipientsCount: 2,
+        groups: [{ groupName: 'ЦИС-21', recipientsCount: 2 }],
+      },
+      {
+        instituteName: 'Институт 2',
+        recipientsCount: 1,
+        groups: [{ groupName: 'ЦПИ-22', recipientsCount: 1 }],
+      },
+    ]);
   });
 });

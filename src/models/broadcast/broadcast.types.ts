@@ -26,9 +26,29 @@ export type BroadcastAudienceFilter = {
   hasDM?: boolean;
   isBlockedBot?: boolean;
   onlyAuthorized?: boolean;
+  /** @deprecated Используется только для чтения кампаний, созданных до группового фильтра. */
   groupName?: string | null;
+  /** `undefined` — без ограничения по группе, пустой массив — намеренно пустая выборка. */
+  groupNames?: string[];
   profileType?: string | null;
   userSocialIds?: number[];
+};
+
+export type BroadcastAudienceGroup = {
+  groupName: string;
+  recipientsCount: number;
+};
+
+export type BroadcastAudienceInstitute = {
+  instituteName: string;
+  recipientsCount: number;
+  groups: BroadcastAudienceGroup[];
+};
+
+export type BroadcastAudienceGroupsPreview = {
+  recipientsCount: number;
+  selectedRecipientsCount: number;
+  institutes: BroadcastAudienceInstitute[];
 };
 
 export type BroadcastSourceMessage = {

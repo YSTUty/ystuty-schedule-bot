@@ -90,7 +90,7 @@ describe('VKKeyboardFactory', () => {
     expect(renderedKeyboard.buttons[2][1].action.label).toBe('-1-');
   });
 
-  it('adds audience filter controls to broadcast settings', () => {
+  it('opens the audience filters editor from broadcast settings', () => {
     const keyboard = new VKKeyboardFactory().getBroadcastSettings(ctx, {
       onlyAuthorized: true,
       groupName: 'ЦИС-21',
@@ -100,12 +100,6 @@ describe('VKKeyboardFactory', () => {
       .flat()
       .map((button: any) => JSON.parse(button.action.payload).broadcastAction);
 
-    expect(actions).toEqual(
-      expect.arrayContaining([
-        'filterAuthorized',
-        'filterGroup',
-        'filterGroupReset',
-      ]),
-    );
+    expect(actions).toEqual(expect.arrayContaining(['filters']));
   });
 });

@@ -34,7 +34,7 @@ describe('TelegramKeyboardFactory', () => {
     });
   });
 
-  it('adds audience filter controls to broadcast settings', () => {
+  it('opens the audience filters editor from broadcast settings', () => {
     const keyboard = new TelegramKeyboardFactory().getBroadcastSettings(ctx, {
       onlyAuthorized: true,
       groupName: 'ЦИС-21',
@@ -44,11 +44,7 @@ describe('TelegramKeyboardFactory', () => {
       .map((button) => ('callback_data' in button ? button.callback_data : ''));
 
     expect(callbacks).toEqual(
-      expect.arrayContaining([
-        'broadcast:wizard:filter:authorized',
-        'broadcast:wizard:filter:group',
-        'broadcast:wizard:filter:group:reset',
-      ]),
+      expect.arrayContaining(['broadcast:wizard:filters']),
     );
   });
 });

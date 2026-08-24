@@ -51,7 +51,7 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
           }
 
           ctx.userSocial = userSocial;
-          ctx.user = userSocial.user;
+          ctx.user = userSocial.user ?? undefined;
 
           if (!userSocial.hasDM && ctx.chat?.type === 'private') {
             userSocial.hasDM = true;
@@ -107,10 +107,6 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
         await next();
       } finally {
         if (ctx.userSocial && !ctx.noUpdateUserSocial) {
-          // * Фикс вызова перезаписи при пустом юезре
-          if (ctx.userSocial.user === null) {
-            delete ctx.userSocial.user;
-          }
           await this.userService.saveUserSocial(ctx.userSocial);
         }
         if (ctx.conversation) {

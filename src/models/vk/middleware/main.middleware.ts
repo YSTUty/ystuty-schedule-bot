@@ -493,7 +493,7 @@ export class MainMiddleware {
       }
 
       ctx.state.userSocial = userSocial;
-      ctx.state.user = userSocial.user;
+      ctx.state.user = userSocial.user ?? undefined;
 
       if (messageSubscriptionSubtype === 'message_deny') {
         userSocial.hasDM = false;
@@ -562,10 +562,6 @@ export class MainMiddleware {
         await next();
       } finally {
         if (ctx.state.userSocial && !ctx.state.noUpdateUserSocial) {
-          // * Фикс вызова перезаписи при пустом юезре
-          if (ctx.state.userSocial.user === null) {
-            delete ctx.state.userSocial.user;
-          }
           await this.userService.saveUserSocial(ctx.state.userSocial);
         }
         if (ctx.state.conversation) {

@@ -20,6 +20,7 @@ import {
   BroadcastMessageMode,
   BroadcastSourceMessage,
 } from '../../../broadcast/broadcast.types';
+import { ScheduleService } from '../../../schedule/schedule.service';
 import { BaseScene } from '../../scene/base.scene';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 
@@ -30,6 +31,7 @@ type TelegramBroadcastState = {
   selectedRecipientIds: number[];
   recipientsPage: number;
   manualRecipients: boolean;
+  awaitingGroupFilter: boolean;
   mode: BroadcastMessageMode.Copy | BroadcastMessageMode.Forward;
 };
 
@@ -39,6 +41,7 @@ type IStepCtx = IStepContext<TelegramBroadcastState>;
 export class TelegramBroadcastScene extends BaseScene {
   constructor(
     private readonly broadcastService: BroadcastService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {
     super();
@@ -55,6 +58,7 @@ export class TelegramBroadcastScene extends BaseScene {
     state.selectedRecipientIds = [];
     state.recipientsPage = 1;
     state.manualRecipients = false;
+    state.awaitingGroupFilter = false;
 
     const count = await this.broadcastService.countRecipients(
       SocialType.Telegram,
@@ -72,6 +76,15 @@ export class TelegramBroadcastScene extends BaseScene {
   @WizardStep(2)
   @Command('next')
   async onNext(@Ctx() ctx: IStepCtx) {
+    if (ctx.scene.state.awaitingGroupFilter) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroup, {
+          groupName: ctx.scene.state.filter.groupName,
+        }),
+      );
+      return;
+    }
+
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_SendSample),
       Markup.keyboard([['/cancel']]).resize(),
@@ -82,6 +95,31 @@ export class TelegramBroadcastScene extends BaseScene {
   @WizardStep(2)
   @Hears(/.+/)
   async onStep2Hint(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    if (state.awaitingGroupFilter) {
+      const groupName =
+        ctx.message && 'text' in ctx.message ? ctx.message.text : '';
+      const selectedGroupName =
+        this.scheduleService.getGroupByName(groupName) ||
+        this.scheduleService.parseGroupName(groupName);
+      if (!selectedGroupName) {
+        await ctx.replyWithHTML(
+          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
+        );
+        return;
+      }
+
+      state.filter.groupName = selectedGroupName;
+      state.awaitingGroupFilter = false;
+      this.resetManualRecipients(state);
+      await this.refreshRecipientsCount(state);
+      await ctx.replyWithHTML(
+        this.renderSettings(ctx, state),
+        this.getSettingsKeyboard(ctx, state),
+      );
+      return;
+    }
+
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_SettingsReadyHint),
     );
@@ -92,6 +130,48 @@ export class TelegramBroadcastScene extends BaseScene {
   async onAudienceMode(@Ctx() ctx: IStepCtx) {
     const state = ctx.scene.state;
     state.manualRecipients = ctx.match!.groups!.mode === 'manual';
+    await this.refreshRecipientsCount(state);
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(this.renderSettings(ctx, state), {
+      parse_mode: 'HTML',
+      ...this.getSettingsKeyboard(ctx, state),
+    });
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:authorized')
+  async onAuthorizedFilterToggle(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.filter.onlyAuthorized = !state.filter.onlyAuthorized;
+    this.resetManualRecipients(state);
+    await this.refreshRecipientsCount(state);
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(this.renderSettings(ctx, state), {
+      parse_mode: 'HTML',
+      ...this.getSettingsKeyboard(ctx, state),
+    });
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:group')
+  async onGroupFilter(@Ctx() ctx: IStepCtx) {
+    ctx.scene.state.awaitingGroupFilter = true;
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroup, {
+        groupName: ctx.scene.state.filter.groupName,
+      }),
+      { parse_mode: 'HTML' },
+    );
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:group:reset')
+  async onGroupFilterReset(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.filter.groupName = null;
+    state.awaitingGroupFilter = false;
+    this.resetManualRecipients(state);
     await this.refreshRecipientsCount(state);
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(this.renderSettings(ctx, state), {
@@ -260,10 +340,11 @@ export class TelegramBroadcastScene extends BaseScene {
   }
 
   private getSettingsKeyboard(ctx: IStepCtx, state: TelegramBroadcastState) {
-    return this.keyboardFactory.getBroadcastSettings(
-      ctx,
-      state.manualRecipients,
-    );
+    return this.keyboardFactory.getBroadcastSettings(ctx, {
+      manualMode: state.manualRecipients,
+      onlyAuthorized: !!state.filter.onlyAuthorized,
+      groupName: state.filter.groupName,
+    });
   }
 
   private getConfirmKeyboard(ctx: IStepCtx, state: TelegramBroadcastState) {
@@ -379,6 +460,13 @@ export class TelegramBroadcastScene extends BaseScene {
       state.filter,
     );
     state.recipientsCount = this.getEffectiveRecipientsCount(state, count);
+  }
+
+  /** Ручный список не должен обходить обновлённые фильтры аудитории. */
+  private resetManualRecipients(state: TelegramBroadcastState) {
+    state.selectedRecipientIds = [];
+    state.manualRecipients = false;
+    state.recipientsPage = 1;
   }
 
   private getEffectiveRecipientsCount(

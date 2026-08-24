@@ -33,6 +33,9 @@ button:
     select_recipients: Выбрать получателей
     audience_all: Все по фильтру
     audience_manual: Тестовая выборка
+    filter_authorized: 'Авторизованные: ${onlyAuthorized ? "да" : "нет"}'
+    filter_group: 'Группа: ${groupName}'
+    filter_group_reset: Сбросить группу
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -198,6 +201,8 @@ page:
       Получателей сейчас: ${recipientsCount}
       Выбрано вручную: ${selectedCount}
       Аудитория: ${audienceMode}
+      Авторизованные: ${filter.onlyAuthorized ? 'только' : 'все'}
+      Группа: ${filter.groupName || 'все'}
 
       Отправь текст, стикер или сообщение с вложением следующим сообщением.
       Для отмены: /cancel
@@ -224,6 +229,9 @@ page:
     message_not_found: Не удалось определить сообщение для рассылки. Отправь текст, стикер или вложение.
     send_command_hint: Для запуска отправь /send, для отмены - /cancel.
     settings_ready_hint: Настройки готовы. Для продолжения отправь /next.
+    filter_group: |
+      Отправь название учебной группы для фильтра рассылки.
+      Сейчас: ${groupName || 'все группы'}
     source_required: Сначала отправь сообщение-образец.
     new_sample: Отправь новое сообщение-образец.
     queue_status: |

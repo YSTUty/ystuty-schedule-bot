@@ -33,4 +33,22 @@ describe('TelegramKeyboardFactory', () => {
       callback_data: 'scheduleNotif:editTime:7',
     });
   });
+
+  it('adds audience filter controls to broadcast settings', () => {
+    const keyboard = new TelegramKeyboardFactory().getBroadcastSettings(ctx, {
+      onlyAuthorized: true,
+      groupName: 'ЦИС-21',
+    });
+    const callbacks = keyboard.reply_markup.inline_keyboard
+      .flat()
+      .map((button) => ('callback_data' in button ? button.callback_data : ''));
+
+    expect(callbacks).toEqual(
+      expect.arrayContaining([
+        'broadcast:wizard:filter:authorized',
+        'broadcast:wizard:filter:group',
+        'broadcast:wizard:filter:group:reset',
+      ]),
+    );
+  });
 });

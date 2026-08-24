@@ -33,6 +33,9 @@ button:
     select_recipients: Выбрать получателей
     audience_all: Все по фильтру
     audience_manual: Тестовая выборка
+    filter_authorized: 'Авторизованные: ${onlyAuthorized ? "да" : "нет"}'
+    filter_group: 'Группа: ${groupName}'
+    filter_group_reset: Сбросить группу
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -202,6 +205,8 @@ page:
       • social = telegram
       • hasDM = ${filter.hasDM}
       • isBlockedBot = ${filter.isBlockedBot}
+      • onlyAuthorized = ${filter.onlyAuthorized ? 'да' : 'нет'}
+      • groupName = ${filter.groupName || '-'}
       • mode = ${mode}
 
       Для продолжения отправь /next.
@@ -232,6 +237,9 @@ page:
     message_not_found: Не удалось определить сообщение для рассылки. Отправь текст, стикер или вложение.
     send_command_hint: Для запуска рассылки отправь /send.
     settings_ready_hint: Настройки готовы. Для продолжения отправь /next.
+    filter_group: |
+      Отправь название учебной группы для фильтра рассылки.
+      Сейчас: <code>${groupName || 'все группы'}</code>
     source_required: Сначала отправь сообщение-образец.
     new_sample: Отправь новое сообщение-образец.
     queue_status: |

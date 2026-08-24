@@ -466,7 +466,20 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getBroadcastSettings(ctx: IContext, manualMode = false) {
+  public getBroadcastSettings(
+    ctx: IContext,
+    options: {
+      manualMode?: boolean;
+      onlyAuthorized?: boolean;
+      groupName?: string | null;
+    } = {},
+  ) {
+    const {
+      manualMode = false,
+      onlyAuthorized = false,
+      groupName = null,
+    } = options;
+
     return Markup.inlineKeyboard([
       [
         Markup.button.callback(
@@ -483,6 +496,30 @@ export class TelegramKeyboardFactory {
           ctx.i18n.t(LocalePhrase.Button_Broadcast_SelectRecipients),
           'broadcast:wizard:recipients:1',
         ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterAuthorized, {
+            onlyAuthorized,
+          }),
+          'broadcast:wizard:filter:authorized',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroup, {
+            groupName: groupName || '-',
+          }),
+          'broadcast:wizard:filter:group',
+        ),
+        ...(groupName
+          ? [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupReset),
+                'broadcast:wizard:filter:group:reset',
+              ),
+            ]
+          : []),
       ],
     ]);
   }

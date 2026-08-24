@@ -642,7 +642,20 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getBroadcastSettings(ctx: IContext, manualMode = false) {
+  public getBroadcastSettings(
+    ctx: IContext,
+    options: {
+      manualMode?: boolean;
+      onlyAuthorized?: boolean;
+      groupName?: string | null;
+    } = {},
+  ) {
+    const {
+      manualMode = false,
+      onlyAuthorized = false,
+      groupName = null,
+    } = options;
+
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
@@ -663,6 +676,35 @@ export class VKKeyboardFactory {
           payload: { broadcastAction: 'recipients', page: 1 },
           color: Keyboard.SECONDARY_COLOR,
         }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterAuthorized, {
+            onlyAuthorized,
+          }),
+          payload: { broadcastAction: 'filterAuthorized' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroup, {
+            groupName: groupName || '-',
+          }),
+          payload: { broadcastAction: 'filterGroup' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+        ...(groupName
+          ? [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_FilterGroupReset,
+                ),
+                payload: { broadcastAction: 'filterGroupReset' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ]
+          : []),
       ],
     ]);
   }

@@ -15,6 +15,7 @@ import {
   BroadcastMessageMode,
   BroadcastSourceMessage,
 } from '../../../broadcast/broadcast.types';
+import { ScheduleService } from '../../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
 type VkBroadcastState = {
@@ -24,6 +25,7 @@ type VkBroadcastState = {
   selectedRecipientIds: number[];
   recipientsPage: number;
   manualRecipients: boolean;
+  awaitingGroupFilter: boolean;
   confirmMessage?: { chatId: number; messageId: number };
 };
 
@@ -34,6 +36,7 @@ type IStepCtx = IStepContext<VkBroadcastState>;
 export class VkBroadcastScene {
   constructor(
     private readonly broadcastService: BroadcastService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
 
@@ -47,6 +50,7 @@ export class VkBroadcastScene {
       ctx.scene.state.selectedRecipientIds = [];
       ctx.scene.state.recipientsPage = 1;
       ctx.scene.state.manualRecipients = false;
+      ctx.scene.state.awaitingGroupFilter = false;
       ctx.scene.state.recipientsCount =
         await this.broadcastService.countRecipients(
           SocialType.Vkontakte,
@@ -54,7 +58,7 @@ export class VkBroadcastScene {
         );
 
       await ctx.send(this.renderSettings(ctx), {
-        keyboard: this.keyboardFactory.getBroadcastSettings(ctx).inline(),
+        keyboard: this.getSettingsKeyboard(ctx).inline(),
       });
     }
 
@@ -76,6 +80,11 @@ export class VkBroadcastScene {
     if ('eventPayload' in ctx) {
       const handled = await this.handleSettingsAction(ctx);
       if (handled) return;
+    }
+
+    if (ctx.scene.state.awaitingGroupFilter && ctx.text) {
+      await this.applyGroupFilter(ctx, ctx.text);
+      return;
     }
 
     const sourceMessage = this.getSourceMessage(ctx);
@@ -226,6 +235,9 @@ export class VkBroadcastScene {
       | 'recipients'
       | 'toggleRecipient'
       | 'backToSettings'
+      | 'filterAuthorized'
+      | 'filterGroup'
+      | 'filterGroupReset'
       | undefined;
     if (!action) return false;
 
@@ -234,9 +246,7 @@ export class VkBroadcastScene {
       await this.refreshRecipientsCount(ctx.scene.state);
       await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
         keep_forward_messages: true,
-        keyboard: this.keyboardFactory
-          .getBroadcastSettings(ctx, false)
-          .inline(),
+        keyboard: this.getSettingsKeyboard(ctx).inline(),
       });
       await ctx.answer({
         type: 'show_snackbar',
@@ -278,9 +288,55 @@ export class VkBroadcastScene {
       await this.refreshRecipientsCount(ctx.scene.state);
       await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
         keep_forward_messages: true,
-        keyboard: this.keyboardFactory
-          .getBroadcastSettings(ctx, ctx.scene.state.manualRecipients)
-          .inline(),
+        keyboard: this.getSettingsKeyboard(ctx).inline(),
+      });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'filterAuthorized') {
+      ctx.scene.state.filter.onlyAuthorized =
+        !ctx.scene.state.filter.onlyAuthorized;
+      this.resetManualRecipients(ctx.scene.state);
+      await this.refreshRecipientsCount(ctx.scene.state);
+      await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
+        keep_forward_messages: true,
+        keyboard: this.getSettingsKeyboard(ctx).inline(),
+      });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'filterGroup') {
+      ctx.scene.state.awaitingGroupFilter = true;
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroup, {
+          groupName: ctx.scene.state.filter.groupName,
+        }),
+        { keep_forward_messages: true },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'filterGroupReset') {
+      ctx.scene.state.filter.groupName = null;
+      ctx.scene.state.awaitingGroupFilter = false;
+      this.resetManualRecipients(ctx.scene.state);
+      await this.refreshRecipientsCount(ctx.scene.state);
+      await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
+        keep_forward_messages: true,
+        keyboard: this.getSettingsKeyboard(ctx).inline(),
       });
       await ctx.answer({
         type: 'show_snackbar',
@@ -403,15 +459,14 @@ export class VkBroadcastScene {
     }
 
     await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
-      keyboard: this.keyboardFactory
-        .getBroadcastSettings(ctx, ctx.scene.state.manualRecipients)
-        .inline(),
+      keyboard: this.getSettingsKeyboard(ctx).inline(),
     });
     return ctx.scene.step.previous({ silent: true });
   }
 
   private renderSettings(ctx: IStepCtx) {
     return ctx.i18n.t(LocalePhrase.Page_Broadcast_Settings, {
+      filter: ctx.scene.state.filter,
       recipientsCount: ctx.scene.state.recipientsCount ?? 0,
       selectedCount: ctx.scene.state.selectedRecipientIds.length,
       audienceMode: ctx.scene.state.manualRecipients ? 'manual' : 'all',
@@ -433,6 +488,41 @@ export class VkBroadcastScene {
     state.recipientsCount = state.manualRecipients
       ? state.selectedRecipientIds.length
       : count;
+  }
+
+  /** Ручный список не должен обходить обновлённые фильтры аудитории. */
+  private resetManualRecipients(state: VkBroadcastState) {
+    state.selectedRecipientIds = [];
+    state.manualRecipients = false;
+    state.recipientsPage = 1;
+  }
+
+  private async applyGroupFilter(ctx: IStepCtx, groupName: string) {
+    const selectedGroupName =
+      this.scheduleService.getGroupByName(groupName) ||
+      this.scheduleService.parseGroupName(groupName);
+    if (!selectedGroupName) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
+      );
+      return;
+    }
+
+    ctx.scene.state.filter.groupName = selectedGroupName;
+    ctx.scene.state.awaitingGroupFilter = false;
+    this.resetManualRecipients(ctx.scene.state);
+    await this.refreshRecipientsCount(ctx.scene.state);
+    await ctx.send(this.renderSettings(ctx), {
+      keyboard: this.getSettingsKeyboard(ctx).inline(),
+    });
+  }
+
+  private getSettingsKeyboard(ctx: IStepCtx) {
+    return this.keyboardFactory.getBroadcastSettings(ctx, {
+      manualMode: ctx.scene.state.manualRecipients,
+      onlyAuthorized: !!ctx.scene.state.filter.onlyAuthorized,
+      groupName: ctx.scene.state.filter.groupName,
+    });
   }
 
   private renderRecipientTitle(recipient: {

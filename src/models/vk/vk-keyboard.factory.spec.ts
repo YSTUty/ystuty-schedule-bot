@@ -89,4 +89,23 @@ describe('VKKeyboardFactory', () => {
     expect(renderedKeyboard.buttons[2]).toHaveLength(3);
     expect(renderedKeyboard.buttons[2][1].action.label).toBe('-1-');
   });
+
+  it('adds audience filter controls to broadcast settings', () => {
+    const keyboard = new VKKeyboardFactory().getBroadcastSettings(ctx, {
+      onlyAuthorized: true,
+      groupName: 'ЦИС-21',
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+    const actions = renderedKeyboard.buttons
+      .flat()
+      .map((button: any) => JSON.parse(button.action.payload).broadcastAction);
+
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        'filterAuthorized',
+        'filterGroup',
+        'filterGroupReset',
+      ]),
+    );
+  });
 });

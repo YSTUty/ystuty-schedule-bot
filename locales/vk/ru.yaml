@@ -29,11 +29,12 @@ button:
     back_to_menu: Назад в меню
     back_to_list: Назад к списку
     create_queue: 🚀 Создать очередь
+    continue: Далее
     resume: ▶️ Запустить
     pause: ⏸ Пауза
     terminate: ⛔ Остановить
     mode_toggle: 'Режим: ${mode}. Переключить на ${nextMode}'
-    select_recipients: Выбрать получателей
+    select_recipients: Тестовая выборка получателей
     audience_all: Все по фильтру
     audience_manual: Тестовая выборка
     filter_authorized: 'Авторизованные: ${onlyAuthorized ? "да" : "нет"}'
@@ -49,13 +50,15 @@ button:
     filter_groups_done: Готово
     filter_institute_toggle: '${selected ? "Снять весь институт" : "Выбрать весь институт"}'
     filter_activity: 'Активность: ${hasActivityFilter ? "выбрана" : "любая"}'
-    filter_exclude_campaigns: 'Исключить рассылки: ${hasExcludedCampaigns ? "да" : "нет"}'
+    filter_exclude_campaigns: 'Исключить рассылки: ${hasExcludedCampaigns ? "выбраны" : "нет"}'
+    filter_exclude_campaigns_done: 'Готово (${selectedCount})'
     filter_text_cancel: Отменить ввод
-    feedback_toggle: 'Feedback: ${feedbackButton ? feedbackButton.text : "выкл"}'
-    feedback_text: Настроить текст feedback
-    feedback_response: 'Ответ: ${feedbackResponseText || "стандартный"}'
-    feedback_after_toggle: 'После клика: ${feedbackAfterClickText || "убрать кнопку"}'
-    feedback_after_text: Настроить кнопку после клика
+    feedback_toggle: 'Fallback btn: ${feedbackButton ? feedbackButton.text : "-"}'
+    feedback_settings: Настроить fallback
+    feedback_text: Текст кнопки
+    feedback_response: Изменить ответ
+    feedback_after_toggle: 'Кнопка после клика: ${feedbackAfterClickText ? "вкл" : "выкл"}'
+    feedback_after_text: Текст кнопки после клика
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -219,13 +222,14 @@ page:
     settings: |
       Настройки рассылки
       Получателей сейчас: ${recipientsCount}
-      Выбрано вручную: ${selectedCount}
-      Аудитория: ${audienceMode}
+      Режим аудитории: ${audienceMode === 'manual' ? 'тестовая выборка' : 'все по фильтру'}
+      Тестовая выборка: ${selectedCount ? selectedCount + ' ID: ' + selectedRecipientIds.join(', ') : '-'}
       Авторизованные: ${filter.onlyAuthorized ? 'только' : 'все'}
-      Группа: ${filter.groupName || 'все'}
+      Группы: ${filter.groupNames?.length ? filter.groupNames.length + ' выбрано' : '-'}
+      Fallback-кнопка: ${feedbackButton?.text || '-'}
+      ${feedbackButton ? ('Ответ после клика: ' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '\nКнопка после клика: ' + (feedbackButton.afterClickText || 'удаляется')) : ''}
 
-      Отправь текст, стикер или сообщение с вложением следующим сообщением.
-      Для отмены: /cancel
+      Нажми «Далее» или отправь /next для выбора сообщения.
     select_recipients: |
       Тестовая выборочная рассылка
       Выбрано: ${selectedCount}
@@ -236,9 +240,9 @@ page:
     ready: |
       Рассылка готова к запуску.
       Получателей: ${recipientsCount}
-      Выбрано вручную: ${selectedCount}
+      Тестовая выборка: ${selectedCount}
 
-      Отправь /send или нажми кнопку для создания очереди. Очередь будет создана на паузе.
+      Нажми кнопку для создания очереди. Очередь будет создана на паузе.
     queued: |
       Рассылка №${campaignId} поставлена в очередь. Получателей: ${recipientsCount}
     canceled: Рассылка отменена
@@ -247,8 +251,8 @@ page:
       Ее надо запустить, остановить или удалить перед созданием новой.
     no_recipients: Для тестовой рассылки выбери хотя бы одного получателя.
     message_not_found: Не удалось определить сообщение для рассылки. Отправь текст, стикер или вложение.
-    send_command_hint: Для запуска отправь /send, для отмены - /cancel.
-    settings_ready_hint: Настройки готовы. Для продолжения отправь /next.
+    send_command_hint: Для запуска нажми «Создать очередь».
+    settings_ready_hint: Настройки готовы. Нажми «Далее» или отправь /next.
     filter_group: |
       Отправь название учебной группы для фильтра рассылки.
       Сейчас: ${groupName || 'все группы'}
@@ -277,8 +281,14 @@ page:
       Отправь дату активности в формате ДД.ММ.ГГГГ или ГГГГ-ММ-ДД.
       В рассылку войдут только пользователи, взаимодействовавшие с ботом в ЛС в эту дату или позднее.
     filter_exclude_campaigns_text: |
-      Отправь ID рассылок через запятую или пробел.
-      Пользователи, для которых уже создавалась delivery этих кампаний, будут исключены.
+      Выбери рассылки галочками в списке. Пользователи, для которых уже
+      создавалась delivery выбранных кампаний, будут исключены.
+    filter_exclude_campaigns: |
+      Исключить получателей прошлых рассылок
+      Выбрано ID: ${selectedCampaignIds.length ? selectedCampaignIds.join(', ') : '-'}
+      Страница: ${currentPage}/${totalPages}
+
+      Нажми на рассылку, чтобы включить или выключить её из исключения.
     feedback_text: |
       Отправь текст для кнопки feedback. Максимум 40 символов.
       По умолчанию используется 🫡.
@@ -333,6 +343,13 @@ page:
     feedback_response_text_invalid: Ответ должен быть от 1 до 200 символов.
     feedback_after_text: Введи текст кнопки, которая появится после первого клика (до 40 символов).
     feedback_required: Сначала включи feedback-кнопку.
+    feedback_settings: |
+      Fallback-кнопка
+      Исходная кнопка: ${feedbackButton.text}
+      Ответ после первого клика: ${feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»'}
+      После первого клика: ${feedbackButton.afterClickText || 'кнопка удаляется'}
+    filter_groups_empty: Сначала выбери хотя бы одну группу.
+    done: Готово. Основное меню бота снова доступно.
     campaign_not_found: |
       Рассылка №${campaignId} не найдена.
     progress: |

@@ -548,8 +548,6 @@ export class TelegramKeyboardFactory {
       onlyAuthorized?: boolean;
       groupName?: string | null;
       feedbackButton?: { text: string } | null;
-      feedbackResponseText?: string | null;
-      feedbackAfterClickText?: string | null;
     } = {},
   ) {
     const {
@@ -557,8 +555,6 @@ export class TelegramKeyboardFactory {
       onlyAuthorized = false,
       groupName = null,
       feedbackButton = null,
-      feedbackResponseText = null,
-      feedbackAfterClickText = null,
     } = options;
 
     return Markup.inlineKeyboard([
@@ -572,32 +568,16 @@ export class TelegramKeyboardFactory {
             : 'broadcast:wizard:audience:manual',
         ),
       ],
-      [
-        Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackResponse, {
-            feedbackResponseText,
-          }),
-          'broadcast:wizard:feedback:response',
-        ),
-      ],
-      [
-        Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterToggle, {
-            feedbackAfterClickText,
-          }),
-          'broadcast:wizard:feedback:after-toggle',
-        ),
-        Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterText),
-          'broadcast:wizard:feedback:after-text',
-        ),
-      ],
-      [
-        Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_SelectRecipients),
-          'broadcast:wizard:recipients:1',
-        ),
-      ],
+      ...(manualMode
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_SelectRecipients),
+                'broadcast:wizard:recipients:1',
+              ),
+            ],
+          ]
+        : []),
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_EditFilters, {
@@ -612,14 +592,106 @@ export class TelegramKeyboardFactory {
           ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackToggle, {
             feedbackButton,
           }),
-          'broadcast:wizard:feedback:toggle',
+          'broadcast:wizard:feedback:settings',
         ),
+      ],
+      [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackText),
-          'broadcast:wizard:feedback:text',
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Continue),
+          'broadcast:wizard:continue',
         ),
       ],
     ]);
+  }
+
+  /** Экран настройки fallback не перегружает основное меню рассылки. */
+  public getBroadcastFeedbackSettings(
+    ctx: IContext,
+    feedbackButton?: {
+      text: string;
+      afterClickText?: string | null;
+    } | null,
+  ) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackToggle, {
+            feedbackButton,
+          }),
+          'broadcast:wizard:feedback:toggle',
+        ),
+      ],
+      ...(feedbackButton
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackText),
+                'broadcast:wizard:feedback:text',
+              ),
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackResponse),
+                'broadcast:wizard:feedback:response',
+              ),
+            ],
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterToggle, {
+                  feedbackAfterClickText: feedbackButton.afterClickText,
+                }),
+                'broadcast:wizard:feedback:after-toggle',
+              ),
+            ],
+            ...(feedbackButton.afterClickText
+              ? [
+                  [
+                    Markup.button.callback(
+                      ctx.i18n.t(
+                        LocalePhrase.Button_Broadcast_FeedbackAfterText,
+                      ),
+                      'broadcast:wizard:feedback:after-text',
+                    ),
+                  ],
+                ]
+              : []),
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
+          'broadcast:wizard:feedback:back',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastExcludeCampaignsSelector(params: {
+    ctx: IContext;
+    items: { id: number; title: string; selected: boolean }[];
+    currentPage: number;
+    totalPages: number;
+    selectedCount: number;
+  }) {
+    return this.getPagination({
+      name: 'broadcast-filter-exclude-campaigns',
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((item) => ({
+        title: `${item.selected ? '✅' : '⬜'} ${item.title}`,
+        payload: String(item.id),
+      })),
+      actionPrefix: `broadcast:wizard:filter:exclude-campaigns:toggle:${params.currentPage}:`,
+      additionalButtons: [
+        Markup.button.callback(
+          params.ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterExcludeCampaignsDone,
+            { selectedCount: params.selectedCount },
+          ),
+          'broadcast:wizard:filter:exclude-campaigns:done',
+        ),
+      ],
+      columnizer: false,
+      sortByLength: false,
+    });
   }
 
   public getBroadcastFilters(
@@ -727,6 +799,17 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterTextCancel),
           'broadcast:wizard:filter:text:cancel',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastFeedbackTextPrompt(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:feedback:settings',
         ),
       ],
     ]);

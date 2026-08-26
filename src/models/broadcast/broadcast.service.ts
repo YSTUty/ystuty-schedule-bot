@@ -232,6 +232,28 @@ export class BroadcastService {
     });
   }
 
+  /** Возвращает страницу истории кампаний для интерактивного выбора фильтра. */
+  public async getCampaignsPage(params: {
+    social: SocialType;
+    page?: number;
+    limit?: number;
+  }) {
+    const safeLimit = Math.max(1, Math.min(params.limit || 8, 20));
+    const total = await this.campaignRepository.count({
+      where: { social: params.social },
+    });
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+    const currentPage = Math.min(Math.max(1, params.page || 1), totalPages);
+    const items = await this.campaignRepository.find({
+      where: { social: params.social },
+      order: { createdAt: 'DESC' },
+      skip: (currentPage - 1) * safeLimit,
+      take: safeLimit,
+    });
+
+    return { items, total, currentPage, totalPages, limit: safeLimit };
+  }
+
   public async getCampaignMessageDeliveriesPage(params: {
     campaignId: number;
     social: SocialType;

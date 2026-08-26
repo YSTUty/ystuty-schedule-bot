@@ -9,6 +9,8 @@ import {
 describe('BroadcastService', () => {
   const createService = () => {
     const campaignRepository = {
+      count: jest.fn(),
+      find: jest.fn(),
       findOne: jest.fn().mockResolvedValue({
         id: 7,
         social: SocialType.Telegram,
@@ -106,6 +108,30 @@ describe('BroadcastService', () => {
       deletedCount: 0,
       failedCount: 0,
       remainingCount: 1,
+    });
+  });
+
+  it('paginates campaigns for the audience exclusion selector', async () => {
+    const { service, campaignRepository } = createService();
+    campaignRepository.count.mockResolvedValue(9);
+    campaignRepository.find.mockResolvedValue([{ id: 8 }, { id: 7 }]);
+
+    const result = await service.getCampaignsPage({
+      social: SocialType.Telegram,
+      page: 2,
+      limit: 8,
+    });
+
+    expect(campaignRepository.find).toHaveBeenCalledWith({
+      where: { social: SocialType.Telegram },
+      order: { createdAt: 'DESC' },
+      skip: 8,
+      take: 8,
+    });
+    expect(result).toMatchObject({
+      currentPage: 2,
+      total: 9,
+      totalPages: 2,
     });
   });
 

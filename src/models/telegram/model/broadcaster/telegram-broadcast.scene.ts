@@ -33,7 +33,7 @@ type TelegramBroadcastState = {
   selectedRecipientIds: number[];
   recipientsPage: number;
   manualRecipients: boolean;
-  awaitingFilter?: 'groups' | 'activity' | 'excludeCampaigns';
+  awaitingFilter?: 'groups' | 'activity';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
   feedbackButton?: BroadcastFeedbackButton | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
@@ -91,11 +91,14 @@ export class TelegramBroadcastScene extends BaseScene {
       return;
     }
 
-    await ctx.replyWithHTML(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_SendSample),
-      Markup.keyboard([['/cancel']]).resize(),
-    );
-    ctx.wizard.next();
+    await this.continueToSource(ctx);
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:continue')
+  async onContinue(@Ctx() ctx: IStepCtx) {
+    await ctx.tryAnswerCbQuery();
+    await this.continueToSource(ctx);
   }
 
   @WizardStep(2)
@@ -125,10 +128,28 @@ export class TelegramBroadcastScene extends BaseScene {
     state.awaitingFeedbackText = undefined;
     state.feedbackButton = state.feedbackButton ? null : { text: '🫡' };
     await ctx.tryAnswerCbQuery();
-    await ctx.editMessageText(this.renderSettings(ctx, state), {
+    await ctx.editMessageText(this.renderFeedbackSettings(ctx, state), {
       parse_mode: 'HTML',
-      ...this.getSettingsKeyboard(ctx, state),
+      ...this.getFeedbackSettingsKeyboard(ctx, state),
     });
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:feedback:settings')
+  async onFeedbackSettings(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.awaitingFeedbackText = undefined;
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(this.renderFeedbackSettings(ctx, state), {
+      parse_mode: 'HTML',
+      ...this.getFeedbackSettingsKeyboard(ctx, state),
+    });
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:feedback:back')
+  async onFeedbackSettingsBack(@Ctx() ctx: IStepCtx) {
+    await this.renderSettingsScreen(ctx);
   }
 
   @WizardStep(2)
@@ -140,7 +161,7 @@ export class TelegramBroadcastScene extends BaseScene {
       ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackText),
       {
         parse_mode: 'HTML',
-        ...this.keyboardFactory.getBroadcastFilterTextPrompt(ctx),
+        ...this.keyboardFactory.getBroadcastFeedbackTextPrompt(ctx),
       },
     );
   }
@@ -160,7 +181,7 @@ export class TelegramBroadcastScene extends BaseScene {
       ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackResponseText),
       {
         parse_mode: 'HTML',
-        ...this.keyboardFactory.getBroadcastFilterTextPrompt(ctx),
+        ...this.keyboardFactory.getBroadcastFeedbackTextPrompt(ctx),
       },
     );
   }
@@ -180,9 +201,9 @@ export class TelegramBroadcastScene extends BaseScene {
       ? null
       : '✅';
     await ctx.tryAnswerCbQuery();
-    await ctx.editMessageText(this.renderSettings(ctx, state), {
+    await ctx.editMessageText(this.renderFeedbackSettings(ctx, state), {
       parse_mode: 'HTML',
-      ...this.getSettingsKeyboard(ctx, state),
+      ...this.getFeedbackSettingsKeyboard(ctx, state),
     });
   }
 
@@ -201,7 +222,7 @@ export class TelegramBroadcastScene extends BaseScene {
       ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackAfterText),
       {
         parse_mode: 'HTML',
-        ...this.keyboardFactory.getBroadcastFilterTextPrompt(ctx),
+        ...this.keyboardFactory.getBroadcastFeedbackTextPrompt(ctx),
       },
     );
   }
@@ -324,15 +345,43 @@ export class TelegramBroadcastScene extends BaseScene {
       await this.renderFilters(ctx);
       return;
     }
-    ctx.scene.state.awaitingFilter = 'excludeCampaigns';
-    await ctx.tryAnswerCbQuery();
-    await ctx.editMessageText(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterExcludeCampaignsText),
-      {
-        parse_mode: 'HTML',
-        ...this.keyboardFactory.getBroadcastFilterTextPrompt(ctx),
-      },
+    await this.renderExcludeCampaignsSelector(ctx, 1);
+  }
+
+  @WizardStep(2)
+  @Action(/broadcast:wizard:filter:exclude-campaigns:(?<page>[0-9]+)/)
+  @Action(/pager:broadcast-filter-exclude-campaigns:(?<page>[0-9]+)/)
+  async onExcludeCampaignsPage(@Ctx() ctx: IStepCtx) {
+    await this.renderExcludeCampaignsSelector(
+      ctx,
+      Number(ctx.match!.groups!.page) || 1,
     );
+  }
+
+  @WizardStep(2)
+  @Action(
+    /broadcast:wizard:filter:exclude-campaigns:toggle:(?<page>[0-9]+):(?<campaignId>[0-9]+)/,
+  )
+  async onExcludeCampaignToggle(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    const campaignId = Number(ctx.match!.groups!.campaignId);
+    const selected = new Set(state.filter.excludeCampaignIds || []);
+    if (selected.has(campaignId)) selected.delete(campaignId);
+    else selected.add(campaignId);
+    state.filter.excludeCampaignIds = [...selected].sort(
+      (first, second) => first - second,
+    );
+    this.resetManualRecipients(state);
+    await this.renderExcludeCampaignsSelector(
+      ctx,
+      Number(ctx.match!.groups!.page) || 1,
+    );
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:exclude-campaigns:done')
+  async onExcludeCampaignsDone(@Ctx() ctx: IStepCtx) {
+    await this.renderFilters(ctx);
   }
 
   @WizardStep(2)
@@ -547,6 +596,10 @@ export class TelegramBroadcastScene extends BaseScene {
       },
     });
     await this.leaveScene(ctx);
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_Done),
+      this.keyboardFactory.getStart(ctx),
+    );
   }
 
   @WizardStep(4)
@@ -583,6 +636,7 @@ export class TelegramBroadcastScene extends BaseScene {
       selectedCount: state.selectedRecipientIds.length,
       audienceMode: state.manualRecipients ? 'manual' : 'all',
       mode: state.mode ?? BroadcastMessageMode.Copy,
+      feedbackButton: state.feedbackButton,
     });
   }
 
@@ -592,8 +646,30 @@ export class TelegramBroadcastScene extends BaseScene {
       onlyAuthorized: !!state.filter.onlyAuthorized,
       groupName: state.filter.groupName,
       feedbackButton: state.feedbackButton,
-      feedbackResponseText: state.feedbackButton?.responseText,
-      feedbackAfterClickText: state.feedbackButton?.afterClickText,
+    });
+  }
+
+  private renderFeedbackSettings(ctx: IStepCtx, state: TelegramBroadcastState) {
+    return ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackSettings, {
+      feedbackButton: state.feedbackButton || { text: '-' },
+    });
+  }
+
+  private getFeedbackSettingsKeyboard(
+    ctx: IStepCtx,
+    state: TelegramBroadcastState,
+  ) {
+    return this.keyboardFactory.getBroadcastFeedbackSettings(
+      ctx,
+      state.feedbackButton,
+    );
+  }
+
+  private async renderSettingsScreen(ctx: IStepCtx) {
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(this.renderSettings(ctx, ctx.scene.state), {
+      parse_mode: 'HTML',
+      ...this.getSettingsKeyboard(ctx, ctx.scene.state),
     });
   }
 
@@ -610,6 +686,14 @@ export class TelegramBroadcastScene extends BaseScene {
       this.renderSettings(ctx, state),
       this.getSettingsKeyboard(ctx, state),
     );
+  }
+
+  private async continueToSource(ctx: IStepCtx) {
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_SendSample),
+      this.keyboardFactory.getClear(false),
+    );
+    ctx.wizard.next();
   }
 
   private async createCampaignOrReplyActive(
@@ -757,15 +841,6 @@ export class TelegramBroadcastScene extends BaseScene {
         return;
       }
       state.filter.lastInteractionAfter = date.toISOString();
-    } else {
-      const campaignIds = this.parseCampaignIds(text);
-      if (!campaignIds.length) {
-        await ctx.replyWithHTML(
-          ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterExcludeCampaignsText),
-        );
-        return;
-      }
-      state.filter.excludeCampaignIds = campaignIds;
     }
 
     state.awaitingFilter = undefined;
@@ -782,10 +857,37 @@ export class TelegramBroadcastScene extends BaseScene {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  private parseCampaignIds(text: string) {
-    return [...new Set((text.match(/\d+/g) || []).map(Number))]
-      .filter((campaignId) => campaignId > 0)
-      .sort((first, second) => first - second);
+  private async renderExcludeCampaignsSelector(ctx: IStepCtx, page: number) {
+    const campaigns = await this.broadcastService.getCampaignsPage({
+      social: SocialType.Telegram,
+      page,
+      limit: 8,
+    });
+    const selected = new Set(ctx.scene.state.filter.excludeCampaignIds || []);
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterExcludeCampaigns, {
+        selectedCampaignIds: [...selected].sort(
+          (first, second) => first - second,
+        ),
+        currentPage: campaigns.currentPage,
+        totalPages: campaigns.totalPages,
+      }),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastExcludeCampaignsSelector({
+          ctx,
+          currentPage: campaigns.currentPage,
+          totalPages: campaigns.totalPages,
+          selectedCount: selected.size,
+          items: campaigns.items.map((campaign) => ({
+            id: campaign.id,
+            selected: selected.has(campaign.id),
+            title: `№${campaign.id} • ${campaign.status}`,
+          })),
+        }),
+      },
+    );
   }
 
   private async renderInstitutes(ctx: IStepCtx, page = 1) {
@@ -930,6 +1032,12 @@ export class TelegramBroadcastScene extends BaseScene {
 
   private async sendSelectedGroups(ctx: IStepCtx) {
     const groupNames = ctx.scene.state.filter.groupNames || [];
+    if (!groupNames.length) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroupsEmpty),
+      );
+      return;
+    }
     const chunks = this.splitText(groupNames.join(', '), 3500);
     for (const chunk of chunks) {
       await ctx.replyWithHTML(
@@ -1016,8 +1124,8 @@ export class TelegramBroadcastScene extends BaseScene {
     ctx.scene.state.awaitingFeedbackText = undefined;
     await this.refreshRecipientsCount(ctx.scene.state);
     await ctx.replyWithHTML(
-      this.renderSettings(ctx, ctx.scene.state),
-      this.getSettingsKeyboard(ctx, ctx.scene.state),
+      this.renderFeedbackSettings(ctx, ctx.scene.state),
+      this.getFeedbackSettingsKeyboard(ctx, ctx.scene.state),
     );
   }
 
@@ -1035,5 +1143,12 @@ export class TelegramBroadcastScene extends BaseScene {
       .filter(Boolean)
       .join(' ')
       .slice(0, 50);
+  }
+
+  override async onСancel(ctx: IStepCtx) {
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_Canceled),
+      this.keyboardFactory.getStart(ctx),
+    );
   }
 }

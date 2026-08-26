@@ -33,20 +33,12 @@ export class BroadcastVkFeedbackUpdate {
       userSocialId: ctx.state.userSocial?.id,
       action,
     });
-    if (result?.created && action === 'initial') {
-      await ctx.api.messages.edit({
-        peer_id: ctx.peerId,
-        cmid: ctx.conversationMessageId,
-        keyboard: result.feedbackButton.afterClickText
-          ? this.keyboardFactory
-              .getBroadcastFeedbackButton(
-                result.feedbackButton.afterClickText,
-                Number(ctx.eventPayload.deliveryId),
-                'repeat',
-              )
-              .inline()
-          : Keyboard.keyboard([]).inline(),
-      });
+    if (result && action === 'initial') {
+      await this.replaceInitialFeedbackButton(
+        ctx,
+        Number(ctx.eventPayload.deliveryId),
+        result.feedbackButton.afterClickText,
+      );
     }
     const responseText = !result
       ? ctx.i18n.t(LocalePhrase.Broadcast_Notification_FeedbackUnavailable)
@@ -59,6 +51,36 @@ export class BroadcastVkFeedbackUpdate {
     await ctx.answer({
       type: 'show_snackbar',
       text: responseText,
+    });
+  }
+
+  /**
+   * VK API требует передавать текст или attachment даже при смене клавиатуры.
+   * Поэтому сначала читаем исходное сообщение и сохраняем его текст.
+   */
+  private async replaceInitialFeedbackButton(
+    ctx: IMessageEventContext,
+    deliveryId: number,
+    afterClickText?: string | null,
+  ) {
+    const source = await ctx.api.messages.getByConversationMessageId({
+      peer_id: ctx.peerId,
+      conversation_message_ids: ctx.conversationMessageId,
+    });
+    const message = source.items[0]?.text;
+    if (!message) {
+      throw new Error('VK feedback message is empty or unavailable');
+    }
+
+    await ctx.api.messages.edit({
+      peer_id: ctx.peerId,
+      cmid: ctx.conversationMessageId,
+      message,
+      keyboard: afterClickText
+        ? this.keyboardFactory
+            .getBroadcastFeedbackButton(afterClickText, deliveryId, 'repeat')
+            .inline()
+        : Keyboard.keyboard([]).inline(),
     });
   }
 }

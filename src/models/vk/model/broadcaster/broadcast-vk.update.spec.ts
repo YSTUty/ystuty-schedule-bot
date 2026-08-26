@@ -1,5 +1,6 @@
 import { ListenerDecorator } from 'nestjs-vk';
 
+import { BroadcastVkFeedbackUpdate } from './broadcast-vk-feedback.update';
 import { BroadcastVkUpdate } from './broadcast-vk.update';
 
 describe('BroadcastVkUpdate', () => {
@@ -15,5 +16,74 @@ describe('BroadcastVkUpdate', () => {
     expect(listener.event({ broadcastAction: 'deleteSelect' }, {})).toBe(true);
     expect(listener.event({ broadcastAction: 'create' }, {})).toBe(false);
     expect(listener.event({ groupAction: 'select' }, {})).toBe(false);
+  });
+
+  it('routes only current broadcast feedback callbacks', () => {
+    const listener = Reflect.getMetadata(
+      ListenerDecorator.KEY,
+      BroadcastVkFeedbackUpdate.prototype.onBroadcastFeedback,
+    ).find(
+      (item: { handlerType: string }) => item.handlerType === 'message_event',
+    );
+
+    expect(
+      listener.event(
+        { broadcastFeedbackAction: 'initial', deliveryId: 15 },
+        {},
+      ),
+    ).toBe(true);
+    expect(
+      listener.event({ broadcastFeedback: true, deliveryId: 15 }, {}),
+    ).toBe(false);
+    expect(listener.event({ broadcastFeedbackAction: 'invalid' }, {})).toBe(
+      false,
+    );
+  });
+
+  it('synchronizes an old initial feedback button after a duplicate click', async () => {
+    const broadcastService = {
+      recordCampaignFeedback: jest.fn().mockResolvedValue({
+        created: false,
+        feedbackButton: { afterClickText: 'Готово' },
+      }),
+    };
+    const keyboard = { inline: jest.fn().mockReturnValue('new keyboard') };
+    const keyboardFactory = {
+      getBroadcastFeedbackButton: jest.fn().mockReturnValue(keyboard),
+    };
+    const update = new BroadcastVkFeedbackUpdate(
+      broadcastService as any,
+      keyboardFactory as any,
+    );
+    const ctx = {
+      eventPayload: { broadcastFeedbackAction: 'initial', deliveryId: 15 },
+      peerId: 123,
+      conversationMessageId: 456,
+      state: { userSocial: { id: 7 } },
+      api: {
+        messages: {
+          getByConversationMessageId: jest.fn().mockResolvedValue({
+            items: [{ text: 'Исходный текст рассылки' }],
+          }),
+          edit: jest.fn(),
+        },
+      },
+      i18n: { t: jest.fn().mockReturnValue('already received') },
+      answer: jest.fn(),
+    };
+
+    await update.onBroadcastFeedback(ctx as any);
+
+    expect(keyboardFactory.getBroadcastFeedbackButton).toHaveBeenCalledWith(
+      'Готово',
+      15,
+      'repeat',
+    );
+    expect(ctx.api.messages.edit).toHaveBeenCalledWith({
+      peer_id: 123,
+      cmid: 456,
+      message: 'Исходный текст рассылки',
+      keyboard: 'new keyboard',
+    });
   });
 });

@@ -754,8 +754,6 @@ export class VKKeyboardFactory {
       onlyAuthorized?: boolean;
       groupName?: string | null;
       feedbackButton?: { text: string } | null;
-      feedbackResponseText?: string | null;
-      feedbackAfterClickText?: string | null;
     } = {},
   ) {
     const {
@@ -763,8 +761,6 @@ export class VKKeyboardFactory {
       onlyAuthorized = false,
       groupName = null,
       feedbackButton = null,
-      feedbackResponseText = null,
-      feedbackAfterClickText = null,
     } = options;
 
     return Keyboard.keyboard([
@@ -781,36 +777,19 @@ export class VKKeyboardFactory {
           color: Keyboard.PRIMARY_COLOR,
         }),
       ],
-      [
-        Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackResponse, {
-            feedbackResponseText,
-          }),
-          payload: { broadcastAction: 'feedbackResponse' },
-          color: Keyboard.SECONDARY_COLOR,
-        }),
-      ],
-      [
-        Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterToggle, {
-            feedbackAfterClickText,
-          }),
-          payload: { broadcastAction: 'feedbackAfterToggle' },
-          color: Keyboard.SECONDARY_COLOR,
-        }),
-        Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterText),
-          payload: { broadcastAction: 'feedbackAfterText' },
-          color: Keyboard.SECONDARY_COLOR,
-        }),
-      ],
-      [
-        Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_SelectRecipients),
-          payload: { broadcastAction: 'recipients', page: 1 },
-          color: Keyboard.SECONDARY_COLOR,
-        }),
-      ],
+      ...(manualMode
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_SelectRecipients,
+                ),
+                payload: { broadcastAction: 'recipients', page: 1 },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ],
+          ]
+        : []),
       [
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_EditFilters, {
@@ -826,16 +805,127 @@ export class VKKeyboardFactory {
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackToggle, {
             feedbackButton,
           }),
-          payload: { broadcastAction: 'feedbackToggle' },
-          color: Keyboard.SECONDARY_COLOR,
-        }),
-        Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackText),
-          payload: { broadcastAction: 'feedbackText' },
+          payload: { broadcastAction: 'feedbackSettings' },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Continue),
+          payload: { broadcastAction: 'continue' },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ],
     ]);
+  }
+
+  /** Экран настройки fallback не перегружает основное меню рассылки. */
+  public getBroadcastFeedbackSettings(
+    ctx: IContext,
+    feedbackButton?: {
+      text: string;
+      afterClickText?: string | null;
+    } | null,
+  ) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackToggle, {
+            feedbackButton,
+          }),
+          payload: { broadcastAction: 'feedbackToggle' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      ...(feedbackButton
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackText),
+                payload: { broadcastAction: 'feedbackText' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_FeedbackResponse,
+                ),
+                payload: { broadcastAction: 'feedbackResponse' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ],
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_FeedbackAfterToggle,
+                  { feedbackAfterClickText: feedbackButton.afterClickText },
+                ),
+                payload: { broadcastAction: 'feedbackAfterToggle' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ],
+            ...(feedbackButton.afterClickText
+              ? [
+                  [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_Broadcast_FeedbackAfterText,
+                      ),
+                      payload: { broadcastAction: 'feedbackAfterText' },
+                      color: Keyboard.SECONDARY_COLOR,
+                    }),
+                  ],
+                ]
+              : []),
+          ]
+        : []),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
+          payload: { broadcastAction: 'feedbackBack' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** VK: четыре кампании, pager и кнопка «Готово» укладываются в лимит 10 кнопок. */
+  public getBroadcastExcludeCampaignsSelector(params: {
+    ctx: IContext;
+    items: { id: number; title: string; selected: boolean }[];
+    currentPage: number;
+    totalPages: number;
+    selectedCount: number;
+  }) {
+    return this.getPagination({
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((item) => ({
+        title: item.title,
+        payload: {
+          broadcastAction: 'filterExcludeCampaignToggle',
+          campaignId: item.id,
+          page: params.currentPage,
+        },
+        selected: item.selected,
+      })),
+      getPagePayload: (page) => ({
+        broadcastAction: 'filterExcludeCampaigns',
+        page,
+      }),
+      additionalButtons: [
+        [
+          Keyboard.callbackButton({
+            label: params.ctx.i18n.t(
+              LocalePhrase.Button_Broadcast_FilterExcludeCampaignsDone,
+              { selectedCount: params.selectedCount },
+            ),
+            payload: { broadcastAction: 'filterExcludeCampaignDone' },
+            color: Keyboard.POSITIVE_COLOR,
+          }),
+        ],
+      ],
+      pagerMode: 'compact',
+    });
   }
 
   public getBroadcastFilters(
@@ -970,6 +1060,18 @@ export class VKKeyboardFactory {
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterTextCancel),
           payload: { broadcastAction: 'filterTextCancel' },
           color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastFeedbackTextPrompt(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          payload: { broadcastAction: 'feedbackSettings' },
+          color: Keyboard.PRIMARY_COLOR,
         }),
       ],
     ]);

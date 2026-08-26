@@ -12,6 +12,7 @@ import { VK_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants';
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import {
   BroadcastAudienceFilter,
+  BroadcastFeedbackButton,
   BroadcastMessageMode,
   BroadcastSourceMessage,
 } from '../../../broadcast/broadcast.types';
@@ -27,6 +28,8 @@ type VkBroadcastState = {
   recipientsPage: number;
   manualRecipients: boolean;
   awaitingFilter?: 'groups' | 'activity' | 'excludeCampaigns';
+  awaitingFeedbackText?: 'button' | 'response' | 'after';
+  feedbackButton?: BroadcastFeedbackButton | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
   confirmMessage?: { chatId: number; messageId: number };
 };
@@ -54,6 +57,8 @@ export class VkBroadcastScene {
       ctx.scene.state.recipientsPage = 1;
       ctx.scene.state.manualRecipients = false;
       ctx.scene.state.awaitingFilter = undefined;
+      ctx.scene.state.awaitingFeedbackText = undefined;
+      ctx.scene.state.feedbackButton = null;
       ctx.scene.state.recipientsCount =
         await this.broadcastService.countRecipients(
           SocialType.Vkontakte,
@@ -83,6 +88,15 @@ export class VkBroadcastScene {
     if ('eventPayload' in ctx) {
       const handled = await this.handleSettingsAction(ctx);
       if (handled) return;
+    }
+
+    if (ctx.scene.state.awaitingFeedbackText && ctx.text) {
+      await this.applyFeedbackText(
+        ctx,
+        ctx.scene.state.awaitingFeedbackText,
+        ctx.text,
+      );
+      return;
     }
 
     if (ctx.scene.state.awaitingFilter && ctx.text) {
@@ -254,8 +268,124 @@ export class VkBroadcastScene {
       | 'filterGroupsPage'
       | 'filterGroupToggle'
       | 'filterInstituteToggle'
+      | 'feedbackToggle'
+      | 'feedbackText'
+      | 'feedbackResponse'
+      | 'feedbackAfterToggle'
+      | 'feedbackAfterText'
       | undefined;
     if (!action) return false;
+
+    if (action === 'feedbackToggle') {
+      ctx.scene.state.awaitingFeedbackText = undefined;
+      ctx.scene.state.feedbackButton = ctx.scene.state.feedbackButton
+        ? null
+        : { text: '🫡' };
+      await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
+        keep_forward_messages: true,
+        keyboard: this.getSettingsKeyboard(ctx).inline(),
+      });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'feedbackText') {
+      ctx.scene.state.awaitingFeedbackText = 'button';
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackText),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastFilterTextPrompt(ctx)
+            .inline(),
+        },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'feedbackResponse') {
+      if (!ctx.scene.state.feedbackButton) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackRequired),
+        });
+        return true;
+      }
+      ctx.scene.state.awaitingFeedbackText = 'response';
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackResponseText),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastFilterTextPrompt(ctx)
+            .inline(),
+        },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'feedbackAfterToggle') {
+      const feedbackButton = ctx.scene.state.feedbackButton;
+      if (!feedbackButton) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackRequired),
+        });
+        return true;
+      }
+      ctx.scene.state.awaitingFeedbackText = undefined;
+      feedbackButton.afterClickText = feedbackButton.afterClickText
+        ? null
+        : '✅';
+      await this.editCurrentVkMessage(ctx, this.renderSettings(ctx), {
+        keep_forward_messages: true,
+        keyboard: this.getSettingsKeyboard(ctx).inline(),
+      });
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'feedbackAfterText') {
+      if (!ctx.scene.state.feedbackButton) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackRequired),
+        });
+        return true;
+      }
+      ctx.scene.state.awaitingFeedbackText = 'after';
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackAfterText),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastFilterTextPrompt(ctx)
+            .inline(),
+        },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
 
     if (action === 'audienceAll') {
       ctx.scene.state.manualRecipients = false;
@@ -579,6 +709,7 @@ export class VkBroadcastScene {
         recipientUserSocialIds: ctx.scene.state.manualRecipients
           ? ctx.scene.state.selectedRecipientIds
           : undefined,
+        feedbackButton: ctx.scene.state.feedbackButton,
         createdBySocialId: ctx.senderId,
       });
     } catch (err) {
@@ -702,6 +833,40 @@ export class VkBroadcastScene {
     await this.renderFilters(ctx, false);
   }
 
+  private async applyFeedbackText(
+    ctx: IStepCtx,
+    target: NonNullable<VkBroadcastState['awaitingFeedbackText']>,
+    text: string,
+  ) {
+    const value = text.trim();
+    const maxLength = target === 'response' ? 200 : 40;
+    if (!value || value.length > maxLength) {
+      await ctx.send(
+        ctx.i18n.t(
+          target === 'response'
+            ? LocalePhrase.Page_Broadcast_FeedbackResponseTextInvalid
+            : LocalePhrase.Page_Broadcast_FeedbackTextInvalid,
+        ),
+      );
+      return;
+    }
+
+    if (target === 'button') {
+      ctx.scene.state.feedbackButton = { text: value };
+    } else if (ctx.scene.state.feedbackButton) {
+      if (target === 'response') {
+        ctx.scene.state.feedbackButton.responseText = value;
+      } else {
+        ctx.scene.state.feedbackButton.afterClickText = value;
+      }
+    }
+    ctx.scene.state.awaitingFeedbackText = undefined;
+    await this.refreshRecipientsCount(ctx.scene.state);
+    await ctx.send(this.renderSettings(ctx), {
+      keyboard: this.getSettingsKeyboard(ctx).inline(),
+    });
+  }
+
   private parseFilterDate(text: string) {
     const normalized = text.trim();
     const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(normalized);
@@ -740,6 +905,9 @@ export class VkBroadcastScene {
       manualMode: ctx.scene.state.manualRecipients,
       onlyAuthorized: !!ctx.scene.state.filter.onlyAuthorized,
       groupName: ctx.scene.state.filter.groupNames?.join(', ') || null,
+      feedbackButton: ctx.scene.state.feedbackButton,
+      feedbackResponseText: ctx.scene.state.feedbackButton?.responseText,
+      feedbackAfterClickText: ctx.scene.state.feedbackButton?.afterClickText,
     });
   }
 

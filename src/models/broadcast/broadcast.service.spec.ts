@@ -1,0 +1,196 @@
+import { SocialType } from '@my-common/constants';
+
+import { BroadcastService } from './broadcast.service';
+import {
+  BroadcastCampaignStatus,
+  BroadcastDeliveryStatus,
+} from './broadcast.types';
+
+describe('BroadcastService', () => {
+  const createService = () => {
+    const campaignRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 7,
+        social: SocialType.Telegram,
+        status: BroadcastCampaignStatus.Completed,
+      }),
+      update: jest.fn(),
+    };
+    const deliveryRepository = {
+      count: jest.fn().mockResolvedValue(1),
+      find: jest.fn().mockResolvedValue([
+        {
+          id: 14,
+          campaignId: 7,
+          targetSocialId: '42',
+          sentMessageId: '99',
+          status: BroadcastDeliveryStatus.Sent,
+          messageDeletedAt: null,
+        },
+      ]),
+      findOne: jest.fn().mockResolvedValue({
+        id: 14,
+        campaignId: 7,
+        userSocialId: 12,
+        campaign: {
+          id: 7,
+          social: SocialType.Telegram,
+          feedbackButton: { text: '🫡' },
+        },
+      }),
+      update: jest.fn(),
+    };
+    const transport = {
+      deleteCampaignDelivery: jest.fn().mockResolvedValue(true),
+    };
+    const feedbackRepository = {
+      findOne: jest.fn(),
+      create: jest.fn((input) => input),
+      save: jest.fn(),
+    };
+    const service = new BroadcastService(
+      campaignRepository as any,
+      deliveryRepository as any,
+      feedbackRepository as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { get: jest.fn().mockReturnValue(transport) } as any,
+    );
+
+    return {
+      service,
+      campaignRepository,
+      deliveryRepository,
+      feedbackRepository,
+      transport,
+    };
+  };
+
+  it('deletes only the selected deliveries of a campaign', async () => {
+    const { service, deliveryRepository, transport } = createService();
+
+    const result = await service.deleteCampaignMessages(7, {
+      social: SocialType.Telegram,
+      deliveryIds: [14],
+    });
+
+    expect(transport.deleteCampaignDelivery).toHaveBeenCalledWith({
+      targetSocialId: '42',
+      messageId: '99',
+    });
+    expect(deliveryRepository.update).toHaveBeenCalledWith(
+      14,
+      expect.objectContaining({ messageDeleteError: null }),
+    );
+    expect(result).toEqual({
+      campaignId: 7,
+      deletedCount: 1,
+      failedCount: 0,
+      remainingCount: 1,
+    });
+  });
+
+  it('does not treat an empty selected list as a request to delete all', async () => {
+    const { service, deliveryRepository, transport } = createService();
+
+    const result = await service.deleteCampaignMessages(7, {
+      social: SocialType.Telegram,
+      deliveryIds: [],
+    });
+
+    expect(transport.deleteCampaignDelivery).not.toHaveBeenCalled();
+    expect(deliveryRepository.find).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      campaignId: 7,
+      deletedCount: 0,
+      failedCount: 0,
+      remainingCount: 1,
+    });
+  });
+
+  it('does not save feedback submitted by a different recipient', async () => {
+    const { service, deliveryRepository, feedbackRepository } = createService();
+
+    const result = await service.recordCampaignFeedback({
+      deliveryId: 14,
+      social: SocialType.Telegram,
+      userSocialId: 15,
+      action: 'initial',
+    });
+
+    expect(result).toBeNull();
+    expect(feedbackRepository.findOne).not.toHaveBeenCalled();
+    expect(feedbackRepository.save).not.toHaveBeenCalled();
+    expect(deliveryRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 14 },
+      relations: { campaign: true },
+    });
+  });
+
+  it('records repeat feedback only after the initial click', async () => {
+    const { service, deliveryRepository, feedbackRepository } = createService();
+    deliveryRepository.findOne.mockResolvedValueOnce({
+      id: 14,
+      campaignId: 7,
+      userSocialId: 12,
+      campaign: {
+        id: 7,
+        social: SocialType.Telegram,
+        feedbackButton: { text: '🫡', afterClickText: '✅' },
+      },
+    });
+    feedbackRepository.findOne.mockResolvedValueOnce({ id: 88 });
+    feedbackRepository.save.mockResolvedValue({ id: 89 });
+
+    const result = await service.recordCampaignFeedback({
+      deliveryId: 14,
+      social: SocialType.Telegram,
+      userSocialId: 12,
+      action: 'repeat',
+    });
+
+    expect(result).toMatchObject({ created: true });
+    expect(feedbackRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 7,
+        deliveryId: 14,
+        action: 'repeat',
+      }),
+    );
+  });
+
+  it('does not record repeat feedback when the campaign removes the button', async () => {
+    const { service, feedbackRepository } = createService();
+
+    const result = await service.recordCampaignFeedback({
+      deliveryId: 14,
+      social: SocialType.Telegram,
+      userSocialId: 12,
+      action: 'repeat',
+    });
+
+    expect(result).toBeNull();
+    expect(feedbackRepository.findOne).not.toHaveBeenCalled();
+    expect(feedbackRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('returns the existing initial feedback on a concurrent duplicate click', async () => {
+    const { service, feedbackRepository } = createService();
+    feedbackRepository.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 90 });
+    feedbackRepository.save.mockRejectedValue({
+      driverError: { code: '23505' },
+    });
+
+    const result = await service.recordCampaignFeedback({
+      deliveryId: 14,
+      social: SocialType.Telegram,
+      userSocialId: 12,
+      action: 'initial',
+    });
+
+    expect(result).toMatchObject({ feedback: { id: 90 }, created: false });
+  });
+});

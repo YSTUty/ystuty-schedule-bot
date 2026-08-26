@@ -13,11 +13,13 @@ import { SocialType } from '@my-common/constants';
 import {
   BroadcastAudienceFilter,
   BroadcastCampaignStatus,
+  BroadcastFeedbackButton,
   BroadcastMessageMode,
   BroadcastSourceMessage,
 } from '../broadcast.types';
 
 import { BroadcastDelivery } from './broadcast-delivery.entity';
+import { BroadcastFeedback } from './broadcast-feedback.entity';
 
 @Entity()
 @Index(['social', 'status'])
@@ -48,6 +50,10 @@ export class BroadcastCampaign {
   @Column({ type: 'timestamp', nullable: true })
   public messagesDeletedAt: Date | null;
 
+  /** Необязательная кнопка feedback под каждым отправленным сообщением. */
+  @Column({ type: 'jsonb', nullable: true })
+  public feedbackButton: BroadcastFeedbackButton | null;
+
   @Column({ type: 'bigint', nullable: true })
   public createdBySocialId: string | null;
 
@@ -70,6 +76,9 @@ export class BroadcastCampaign {
     cascade: ['remove'],
   })
   public deliveries: BroadcastDelivery[];
+
+  @OneToMany(() => BroadcastFeedback, (feedback) => feedback.campaign)
+  public feedbacks: BroadcastFeedback[];
 
   @CreateDateColumn()
   public createdAt: Date;

@@ -43,9 +43,12 @@ export class BroadcastProcessorBase {
     try {
       const transport = this.transportRegistry.get(job.data.social);
       const result = await transport.sendCampaignDelivery({
+        campaignId: campaign.id,
+        deliveryId: job.data.deliveryId,
         targetSocialId: job.data.targetSocialId,
         mode: campaign.mode,
         sourceMessage: campaign.sourceMessage,
+        feedbackButton: campaign.feedbackButton,
       });
 
       await this.broadcastService.markDeliverySent(

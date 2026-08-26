@@ -29,6 +29,8 @@ export interface ISessionState extends Partial<TgSceneSession> {
   __language_code?: string;
 
   teacherId?: number;
+  /** Временный выбор доставок для удаления сообщений рассылки. */
+  broadcastDeleteSelections?: Record<string, number[]>;
 }
 
 type ISessionConversationState = Partial<TgSceneSession>;

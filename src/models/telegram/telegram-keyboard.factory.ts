@@ -438,6 +438,81 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  public getBroadcastCampaignDeleteConfirmation(
+    ctx: IContext,
+    campaignId: number,
+  ) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_DeleteAll),
+          `broadcast:campaign:delete:all:${campaignId}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_DeleteSelect),
+          `broadcast:campaign:delete:select:${campaignId}:1`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          `broadcast:campaign:detail:${campaignId}`,
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastFeedbackButton(
+    text: string,
+    deliveryId: number,
+    action: 'initial' | 'repeat' = 'initial',
+  ) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          text,
+          `broadcast:feedback:${deliveryId}:${action}`,
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastCampaignDeleteSelector(params: {
+    ctx: IContext;
+    campaignId: number;
+    items: { id: number; title: string; selected: boolean }[];
+    currentPage: number;
+    totalPages: number;
+    selectedCount: number;
+  }) {
+    return this.getPagination({
+      name: `broadcast-delete:${params.campaignId}`,
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((item) => ({
+        title: `${item.selected ? '✅' : '⬜'} ${item.title}`,
+        payload: String(item.id),
+      })),
+      actionPrefix: `broadcast:campaign:delete:toggle:${params.campaignId}:${params.currentPage}:`,
+      additionalButtons: [
+        Markup.button.callback(
+          params.ctx.i18n.t(LocalePhrase.Button_Broadcast_DeleteSelected, {
+            selectedCount: params.selectedCount,
+          }),
+          `broadcast:campaign:delete:selected:${params.campaignId}:${params.currentPage}`,
+        ),
+        Markup.button.callback(
+          params.ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          `broadcast:campaign:detail:${params.campaignId}`,
+        ),
+      ],
+      columnizer: false,
+      sortByLength: false,
+    });
+  }
+
   public getBroadcastConfirm(ctx: IContext, mode: 'copy' | 'forward') {
     const nextMode = mode === 'copy' ? 'forward' : 'copy';
 
@@ -472,12 +547,18 @@ export class TelegramKeyboardFactory {
       manualMode?: boolean;
       onlyAuthorized?: boolean;
       groupName?: string | null;
+      feedbackButton?: { text: string } | null;
+      feedbackResponseText?: string | null;
+      feedbackAfterClickText?: string | null;
     } = {},
   ) {
     const {
       manualMode = false,
       onlyAuthorized = false,
       groupName = null,
+      feedbackButton = null,
+      feedbackResponseText = null,
+      feedbackAfterClickText = null,
     } = options;
 
     return Markup.inlineKeyboard([
@@ -493,6 +574,26 @@ export class TelegramKeyboardFactory {
       ],
       [
         Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackResponse, {
+            feedbackResponseText,
+          }),
+          'broadcast:wizard:feedback:response',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterToggle, {
+            feedbackAfterClickText,
+          }),
+          'broadcast:wizard:feedback:after-toggle',
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterText),
+          'broadcast:wizard:feedback:after-text',
+        ),
+      ],
+      [
+        Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_SelectRecipients),
           'broadcast:wizard:recipients:1',
         ),
@@ -504,6 +605,18 @@ export class TelegramKeyboardFactory {
             groupName: groupName || '-',
           }),
           'broadcast:wizard:filters',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackToggle, {
+            feedbackButton,
+          }),
+          'broadcast:wizard:feedback:toggle',
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackText),
+          'broadcast:wizard:feedback:text',
         ),
       ],
     ]);

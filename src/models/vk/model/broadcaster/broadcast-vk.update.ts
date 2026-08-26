@@ -82,11 +82,11 @@ export class BroadcastVkUpdate {
       return;
     }
 
-    const result = await this.broadcastService.deleteCampaignMessages(
+    const campaign = await this.broadcastService.getCampaignForSocial(
       campaignId,
       SocialType.Vkontakte,
     );
-    if (!result) {
+    if (!campaign) {
       await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignNotFound, {
           campaignId,
@@ -96,7 +96,14 @@ export class BroadcastVkUpdate {
     }
 
     await ctx.send(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleted, result),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteConfirm, {
+        campaignId,
+      }),
+      {
+        keyboard: this.keyboardFactory
+          .getBroadcastCampaignDeleteConfirmation(ctx, campaignId)
+          .inline(),
+      },
     );
   }
 
@@ -115,6 +122,10 @@ export class BroadcastVkUpdate {
       'menuList',
       'detail',
       'delete',
+      'deleteAll',
+      'deleteSelect',
+      'deleteToggle',
+      'deleteSelected',
       'pause',
       'resume',
       'terminate',
@@ -188,7 +199,62 @@ export class BroadcastVkUpdate {
     }
 
     if (action === 'delete') {
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Campaign),
+      });
+      await this.renderDeleteConfirmation(
+        ctx,
+        Number(ctx.eventPayload.campaignId),
+      );
+      return;
+    }
+
+    if (action === 'deleteAll') {
       await this.deleteCampaign(ctx, Number(ctx.eventPayload.campaignId));
+      return;
+    }
+
+    if (action === 'deleteSelect') {
+      await ctx.answer({ type: 'show_snackbar', text: '' });
+      await this.renderDeleteSelector(
+        ctx,
+        Number(ctx.eventPayload.campaignId),
+        Number(ctx.eventPayload.page) || 1,
+      );
+      return;
+    }
+
+    if (action === 'deleteToggle') {
+      const campaignId = String(ctx.eventPayload.campaignId);
+      const selected = new Set(
+        ctx.session.broadcastDeleteSelections?.[campaignId] || [],
+      );
+      const deliveryId = Number(ctx.eventPayload.deliveryId);
+      if (selected.has(deliveryId)) {
+        selected.delete(deliveryId);
+      } else {
+        selected.add(deliveryId);
+      }
+      ctx.session.broadcastDeleteSelections = {
+        ...ctx.session.broadcastDeleteSelections,
+        [campaignId]: [...selected],
+      };
+      await ctx.answer({ type: 'show_snackbar', text: '' });
+      await this.renderDeleteSelector(
+        ctx,
+        Number(campaignId),
+        Number(ctx.eventPayload.page) || 1,
+      );
+      return;
+    }
+
+    if (action === 'deleteSelected') {
+      await this.deleteSelectedCampaignMessages(
+        ctx,
+        Number(ctx.eventPayload.campaignId),
+        Number(ctx.eventPayload.page) || 1,
+      );
       return;
     }
 
@@ -332,6 +398,158 @@ export class BroadcastVkUpdate {
         .getBroadcastMenu(ctx, await this.hasCurrentCampaign())
         .inline(),
     });
+  }
+
+  private async renderDeleteConfirmation(
+    ctx: IMessageEventContext,
+    campaignId: number,
+  ) {
+    const campaign = await this.broadcastService.getCampaignForSocial(
+      campaignId,
+      SocialType.Vkontakte,
+    );
+    if (!campaign) {
+      await this.editCampaignDetails(ctx, campaignId);
+      return;
+    }
+
+    await ctx.api.messages.edit({
+      peer_id: ctx.peerId,
+      cmid: ctx.conversationMessageId,
+      message: ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteConfirm, {
+        campaignId,
+      }),
+      keyboard: this.keyboardFactory
+        .getBroadcastCampaignDeleteConfirmation(ctx, campaignId)
+        .inline(),
+    });
+  }
+
+  private async renderDeleteSelector(
+    ctx: IMessageEventContext,
+    campaignId: number,
+    page: number,
+  ) {
+    const result = await this.broadcastService.getCampaignMessageDeliveriesPage(
+      {
+        campaignId,
+        social: SocialType.Vkontakte,
+        page,
+        limit: 3,
+      },
+    );
+    if (!result) {
+      await this.editCampaignDetails(ctx, campaignId);
+      return;
+    }
+    if (!result.total) {
+      await ctx.api.messages.edit({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        message: ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteEmpty),
+        keyboard: this.keyboardFactory
+          .getBroadcastCampaignDeleteConfirmation(ctx, campaignId)
+          .inline(),
+      });
+      return;
+    }
+
+    const selected = new Set(
+      ctx.session.broadcastDeleteSelections?.[String(campaignId)] || [],
+    );
+    await ctx.api.messages.edit({
+      peer_id: ctx.peerId,
+      cmid: ctx.conversationMessageId,
+      message: ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteSelector, {
+        campaignId,
+        selectedCount: selected.size,
+        currentPage: result.currentPage,
+        totalPages: result.totalPages,
+      }),
+      keyboard: this.keyboardFactory
+        .getBroadcastCampaignDeleteSelector({
+          ctx,
+          campaignId,
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          selectedCount: selected.size,
+          items: result.items.map((delivery) => ({
+            id: delivery.id,
+            selected: selected.has(delivery.id),
+            title: this.renderDeliveryTitle(delivery),
+          })),
+        })
+        .inline(),
+    });
+  }
+
+  private async deleteSelectedCampaignMessages(
+    ctx: IMessageEventContext,
+    campaignId: number,
+    page: number,
+  ) {
+    const selectedIds =
+      ctx.session.broadcastDeleteSelections?.[String(campaignId)] || [];
+    if (!selectedIds.length) {
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteNoSelection),
+      });
+      return;
+    }
+
+    const result = await this.broadcastService.deleteCampaignMessages(
+      campaignId,
+      { social: SocialType.Vkontakte, deliveryIds: selectedIds },
+    );
+    await ctx.answer({
+      type: 'show_snackbar',
+      text: ctx.i18n.t(
+        result
+          ? LocalePhrase.Broadcast_Notification_Deleted
+          : LocalePhrase.Broadcast_Notification_NotFound,
+      ),
+    });
+    if (!result) {
+      await this.renderDeleteConfirmation(ctx, campaignId);
+      return;
+    }
+
+    delete ctx.session.broadcastDeleteSelections?.[String(campaignId)];
+    if (result.remainingCount) {
+      await this.renderDeleteSelector(ctx, campaignId, page);
+      return;
+    }
+
+    await ctx.api.messages.edit({
+      peer_id: ctx.peerId,
+      cmid: ctx.conversationMessageId,
+      message: ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleted, result),
+      keyboard: this.keyboardFactory
+        .getBroadcastMenu(ctx, await this.hasCurrentCampaign())
+        .inline(),
+    });
+  }
+
+  private renderDeliveryTitle(delivery: {
+    targetSocialId: string;
+    userSocial?: {
+      socialId: number;
+      username?: string | null;
+      displayname?: string | null;
+      groupName?: string | null;
+    } | null;
+  }) {
+    const userSocial = delivery.userSocial;
+    return [
+      userSocial?.displayname ||
+        userSocial?.username ||
+        `id${delivery.targetSocialId}`,
+      userSocial?.groupName ? `(${userSocial.groupName})` : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .slice(0, 50);
   }
 
   private async editQueueStatus(ctx: IMessageEventContext) {

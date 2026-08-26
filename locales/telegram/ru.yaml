@@ -20,7 +20,10 @@ button:
     status: Статус очереди
     current: Текущая рассылка
     list: Список рассылок
-    delete: Удалить
+    delete: Удалить сообщения
+    delete_all: Удалить все
+    delete_select: Выбрать сообщения
+    delete_selected: 'Удалить выбранные (${selectedCount})'
     delete_confirm: Да, удалить
     delete_cancel: Отмена
     back_to_menu: Назад в меню
@@ -48,6 +51,11 @@ button:
     filter_activity: 'Активность: ${hasActivityFilter ? "выбрана" : "любая"}'
     filter_exclude_campaigns: 'Исключить рассылки: ${hasExcludedCampaigns ? "да" : "нет"}'
     filter_text_cancel: Отменить ввод
+    feedback_toggle: 'Feedback: ${feedbackButton ? feedbackButton.text : "выкл"}'
+    feedback_text: Настроить текст feedback
+    feedback_response: 'Ответ: ${feedbackResponseText || "стандартный"}'
+    feedback_after_toggle: 'После клика: ${feedbackAfterClickText || "убрать кнопку"}'
+    feedback_after_text: Настроить кнопку после клика
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -278,6 +286,10 @@ page:
     filter_exclude_campaigns_text: |
       Отправь ID рассылок через запятую или пробел.
       Пользователи, для которых уже создавалась delivery этих кампаний, будут исключены.
+    feedback_text: |
+      Отправь текст для кнопки feedback. Максимум 40 символов.
+      По умолчанию используется 🫡.
+    feedback_text_invalid: Текст кнопки должен содержать от 1 до 40 символов.
     source_required: Сначала отправь сообщение-образец.
     new_sample: Отправь новое сообщение-образец.
     queue_status: |
@@ -312,8 +324,23 @@ page:
       Сообщения рассылки №${campaignId} удалены, история сохранена.
       Удалено сообщений: <code>${deletedCount}</code>
       Не удалось удалить: <code>${failedCount}</code>
+      Осталось: <code>${remainingCount}</code>
+    campaign_delete_confirm: |
+      Удалить сообщения рассылки №${campaignId}?
+
+      Можно удалить все сообщения сразу или выбрать конкретных получателей.
+    campaign_delete_selector: |
+      Выбери сообщения рассылки №${campaignId} для удаления.
+      Выбрано: <code>${selectedCount}</code>
+      Страница: <code>${currentPage}/${totalPages}</code>
+    campaign_delete_empty: В этой рассылке нет сообщений, доступных для удаления.
+    campaign_delete_no_selection: Сначала выбери хотя бы одно сообщение.
     campaign_delete_usage: |
       Использование: <code>/broadcast_delete ID</code>
+    feedback_response_text: Введи ответ после клика (до 200 символов).
+    feedback_response_text_invalid: Ответ должен быть от 1 до 200 символов.
+    feedback_after_text: Введи текст кнопки, которая появится после первого клика (до 40 символов).
+    feedback_required: Сначала включи feedback-кнопку.
     campaign_not_found: |
       Рассылка №${campaignId} не найдена.
     progress: |
@@ -343,6 +370,9 @@ broadcast:
     resumed: Рассылка продолжена
     terminated: Рассылка остановлена
     mode_changed: 'Режим: ${mode}'
+    feedback_received: Спасибо за feedback!
+    feedback_already_received: Feedback уже учтён.
+    feedback_unavailable: Эта кнопка больше недоступна.
 
   telegram:
     select_your_group: Выбрать свою группу

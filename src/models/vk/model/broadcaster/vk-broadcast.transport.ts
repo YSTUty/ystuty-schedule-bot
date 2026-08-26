@@ -8,6 +8,7 @@ import { IContext } from '@my-interfaces/vk';
 
 import {
   BroadcastCampaignStatus,
+  BroadcastFeedbackButton,
   BroadcastMessageMode,
   BroadcastTransport,
   BroadcastTransportResult,
@@ -34,9 +35,12 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
   }
 
   public async sendCampaignDelivery(params: {
+    campaignId: number;
+    deliveryId: number;
     targetSocialId: string;
     mode: BroadcastMessageMode;
     sourceMessage: { text?: string; attachment?: string; stickerId?: number };
+    feedbackButton?: BroadcastFeedbackButton | null;
   }): Promise<BroadcastTransportResult> {
     if (params.mode !== BroadcastMessageMode.Text) {
       throw new Error('VK broadcast supports text mode');
@@ -46,7 +50,10 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
       const result = await this.vkService.sendMessage(
         Number(params.targetSocialId),
         '',
-        { sticker_id: params.sourceMessage.stickerId },
+        {
+          sticker_id: params.sourceMessage.stickerId,
+          ...this.getFeedbackExtra(params),
+        },
       );
 
       return { messageId: result ? String(result) : null };
@@ -56,8 +63,11 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
       Number(params.targetSocialId),
       params.sourceMessage.text || '',
       params.sourceMessage.attachment
-        ? { attachment: params.sourceMessage.attachment }
-        : {},
+        ? {
+            attachment: params.sourceMessage.attachment,
+            ...this.getFeedbackExtra(params),
+          }
+        : this.getFeedbackExtra(params),
     );
 
     return {
@@ -80,6 +90,22 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
       if (err instanceof APIError) return false;
       throw err;
     }
+  }
+
+  private getFeedbackExtra(params: {
+    campaignId: number;
+    deliveryId: number;
+    feedbackButton?: BroadcastFeedbackButton | null;
+  }) {
+    if (!params.feedbackButton) return {};
+    return {
+      keyboard: this.keyboardFactory
+        .getBroadcastFeedbackButton(
+          params.feedbackButton.text,
+          params.deliveryId,
+        )
+        .inline(),
+    };
   }
 
   public async updateCampaignProgress(params: {

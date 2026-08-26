@@ -70,6 +70,18 @@ export type BroadcastSourceMessage = {
   };
 };
 
+/** Настройка одной кнопки обратной связи под сообщением рассылки. */
+export type BroadcastFeedbackButton = {
+  text: string;
+  /** Текст snackbar/notification после нажатия; без него используется стандартный ответ. */
+  responseText?: string | null;
+  /** Если задан, заменяет кнопку после первого клика вместо её удаления. */
+  afterClickText?: string | null;
+};
+
+/** Состояние callback-кнопки feedback. */
+export type BroadcastFeedbackAction = 'initial' | 'repeat';
+
 export type BroadcastJobData = {
   campaignId: number;
   deliveryId: number;
@@ -85,9 +97,12 @@ export interface BroadcastTransport {
   readonly social: SocialType;
 
   sendCampaignDelivery(params: {
+    campaignId: number;
+    deliveryId: number;
     targetSocialId: string;
     mode: BroadcastMessageMode;
     sourceMessage: BroadcastSourceMessage;
+    feedbackButton?: BroadcastFeedbackButton | null;
   }): Promise<BroadcastTransportResult>;
 
   deleteCampaignDelivery(params: {

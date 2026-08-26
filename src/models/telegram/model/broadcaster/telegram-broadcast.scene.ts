@@ -17,6 +17,7 @@ import { TELEGRAM_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import {
   BroadcastAudienceFilter,
+  BroadcastFeedbackButton,
   BroadcastMessageMode,
   BroadcastSourceMessage,
 } from '../../../broadcast/broadcast.types';
@@ -33,6 +34,8 @@ type TelegramBroadcastState = {
   recipientsPage: number;
   manualRecipients: boolean;
   awaitingFilter?: 'groups' | 'activity' | 'excludeCampaigns';
+  awaitingFeedbackText?: 'button' | 'response' | 'after';
+  feedbackButton?: BroadcastFeedbackButton | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
   mode: BroadcastMessageMode.Copy | BroadcastMessageMode.Forward;
 };
@@ -62,6 +65,8 @@ export class TelegramBroadcastScene extends BaseScene {
     state.recipientsPage = 1;
     state.manualRecipients = false;
     state.awaitingFilter = undefined;
+    state.awaitingFeedbackText = undefined;
+    state.feedbackButton = null;
 
     const count = await this.broadcastService.countRecipients(
       SocialType.Telegram,
@@ -97,6 +102,11 @@ export class TelegramBroadcastScene extends BaseScene {
   @Hears(/.+/)
   async onStep2Hint(@Ctx() ctx: IStepCtx) {
     const state = ctx.scene.state;
+    if (state.awaitingFeedbackText) {
+      const text = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
+      await this.applyFeedbackText(ctx, state.awaitingFeedbackText, text);
+      return;
+    }
     if (state.awaitingFilter) {
       const text = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
       await this.applyTextFilter(ctx, state.awaitingFilter, text);
@@ -105,6 +115,94 @@ export class TelegramBroadcastScene extends BaseScene {
 
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_SettingsReadyHint),
+    );
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:feedback:toggle')
+  async onFeedbackToggle(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.awaitingFeedbackText = undefined;
+    state.feedbackButton = state.feedbackButton ? null : { text: '🫡' };
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(this.renderSettings(ctx, state), {
+      parse_mode: 'HTML',
+      ...this.getSettingsKeyboard(ctx, state),
+    });
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:feedback:text')
+  async onFeedbackText(@Ctx() ctx: IStepCtx) {
+    ctx.scene.state.awaitingFeedbackText = 'button';
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackText),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastFilterTextPrompt(ctx),
+      },
+    );
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:feedback:response')
+  async onFeedbackResponse(@Ctx() ctx: IStepCtx) {
+    if (!ctx.scene.state.feedbackButton) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackRequired),
+      );
+      return;
+    }
+    ctx.scene.state.awaitingFeedbackText = 'response';
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackResponseText),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastFilterTextPrompt(ctx),
+      },
+    );
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:feedback:after-toggle')
+  async onFeedbackAfterToggle(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.awaitingFeedbackText = undefined;
+    if (!state.feedbackButton) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackRequired),
+      );
+      return;
+    }
+    state.feedbackButton.afterClickText = state.feedbackButton.afterClickText
+      ? null
+      : '✅';
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(this.renderSettings(ctx, state), {
+      parse_mode: 'HTML',
+      ...this.getSettingsKeyboard(ctx, state),
+    });
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:feedback:after-text')
+  async onFeedbackAfterText(@Ctx() ctx: IStepCtx) {
+    if (!ctx.scene.state.feedbackButton) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackRequired),
+      );
+      return;
+    }
+    ctx.scene.state.awaitingFeedbackText = 'after';
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackAfterText),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastFilterTextPrompt(ctx),
+      },
     );
   }
 
@@ -493,6 +591,9 @@ export class TelegramBroadcastScene extends BaseScene {
       manualMode: state.manualRecipients,
       onlyAuthorized: !!state.filter.onlyAuthorized,
       groupName: state.filter.groupName,
+      feedbackButton: state.feedbackButton,
+      feedbackResponseText: state.feedbackButton?.responseText,
+      feedbackAfterClickText: state.feedbackButton?.afterClickText,
     });
   }
 
@@ -524,6 +625,7 @@ export class TelegramBroadcastScene extends BaseScene {
         recipientUserSocialIds: state.manualRecipients
           ? state.selectedRecipientIds
           : undefined,
+        feedbackButton: state.feedbackButton,
         createdBySocialId: ctx.from?.id,
       });
     } catch (err) {
@@ -882,6 +984,41 @@ export class TelegramBroadcastScene extends BaseScene {
     return state.manualRecipients
       ? state.selectedRecipientIds.length
       : filteredCount;
+  }
+
+  private async applyFeedbackText(
+    ctx: IStepCtx,
+    target: NonNullable<TelegramBroadcastState['awaitingFeedbackText']>,
+    text: string,
+  ) {
+    const value = text.trim();
+    const maxLength = target === 'response' ? 200 : 40;
+    if (!value || value.length > maxLength) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(
+          target === 'response'
+            ? LocalePhrase.Page_Broadcast_FeedbackResponseTextInvalid
+            : LocalePhrase.Page_Broadcast_FeedbackTextInvalid,
+        ),
+      );
+      return;
+    }
+
+    if (target === 'button') {
+      ctx.scene.state.feedbackButton = { text: value };
+    } else if (ctx.scene.state.feedbackButton) {
+      if (target === 'response') {
+        ctx.scene.state.feedbackButton.responseText = value;
+      } else {
+        ctx.scene.state.feedbackButton.afterClickText = value;
+      }
+    }
+    ctx.scene.state.awaitingFeedbackText = undefined;
+    await this.refreshRecipientsCount(ctx.scene.state);
+    await ctx.replyWithHTML(
+      this.renderSettings(ctx, ctx.scene.state),
+      this.getSettingsKeyboard(ctx, ctx.scene.state),
+    );
   }
 
   private renderRecipientTitle(recipient: {

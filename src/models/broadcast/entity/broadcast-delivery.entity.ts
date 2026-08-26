@@ -5,6 +5,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -13,6 +14,7 @@ import { UserSocial } from '../../user/entity/user-social.entity';
 import { BroadcastDeliveryStatus } from '../broadcast.types';
 
 import { BroadcastCampaign } from './broadcast-campaign.entity';
+import { BroadcastFeedback } from './broadcast-feedback.entity';
 
 @Entity()
 @Index(['campaignId', 'status'])
@@ -53,6 +55,9 @@ export class BroadcastDelivery {
 
   @Column({ type: 'text', nullable: true })
   public messageDeleteError: string | null;
+
+  @OneToMany(() => BroadcastFeedback, (feedback) => feedback.delivery)
+  public feedbacks: BroadcastFeedback[];
 
   @CreateDateColumn()
   public createdAt: Date;

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bull';
-import { Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 
 import { Queue } from 'bull';
 
@@ -21,12 +21,14 @@ import {
   BroadcastAudienceGroupsPreview,
   BroadcastCampaignStatus,
   BroadcastDeliveryStatus,
+  BroadcastFeedbackAction,
   BroadcastJobData,
   BroadcastMessageMode,
   BroadcastSourceMessage,
 } from './broadcast.types';
 import { BroadcastCampaign } from './entity/broadcast-campaign.entity';
 import { BroadcastDelivery } from './entity/broadcast-delivery.entity';
+import { BroadcastFeedback } from './entity/broadcast-feedback.entity';
 import { BroadcastAudienceFilterService } from './filter/broadcast-audience-filter.service';
 import { BroadcastTransportRegistry } from './transport/broadcast-transport.registry';
 
@@ -39,6 +41,8 @@ export class BroadcastService {
     private readonly campaignRepository: Repository<BroadcastCampaign>,
     @InjectRepository(BroadcastDelivery)
     private readonly deliveryRepository: Repository<BroadcastDelivery>,
+    @InjectRepository(BroadcastFeedback)
+    private readonly feedbackRepository: Repository<BroadcastFeedback>,
     @InjectQueue(BROADCAST_TELEGRAM_QUEUE_NAME)
     private readonly telegramBroadcastQueue: Queue<BroadcastJobData>,
     @InjectQueue(BROADCAST_VK_QUEUE_NAME)
@@ -118,6 +122,7 @@ export class BroadcastService {
     sourceMessage: BroadcastSourceMessage;
     audienceFilter?: BroadcastAudienceFilter;
     recipientUserSocialIds?: number[];
+    feedbackButton?: { text: string } | null;
     createdBySocialId?: string | number | null;
   }) {
     await this.assertCanStartCampaign(params.social);
@@ -144,6 +149,7 @@ export class BroadcastService {
         sourceMessage: params.sourceMessage,
         audienceFilter,
         contentPreview: this.createContentPreview(params.sourceMessage),
+        feedbackButton: params.feedbackButton || null,
         createdBySocialId:
           params.createdBySocialId == null
             ? null
@@ -226,9 +232,51 @@ export class BroadcastService {
     });
   }
 
-  public async deleteCampaignMessages(campaignId: number, social?: SocialType) {
-    const campaign = social
-      ? await this.getCampaignForSocial(campaignId, social)
+  public async getCampaignMessageDeliveriesPage(params: {
+    campaignId: number;
+    social: SocialType;
+    page?: number;
+    limit?: number;
+  }) {
+    const campaign = await this.getCampaignForSocial(
+      params.campaignId,
+      params.social,
+    );
+    if (!campaign) return null;
+
+    const safeLimit = Math.max(1, Math.min(params.limit || 8, 20));
+    const requestedPage = Math.max(1, params.page || 1);
+    const where = {
+      campaignId: campaign.id,
+      sentMessageId: Not(IsNull()),
+      messageDeletedAt: IsNull(),
+    };
+    const total = await this.deliveryRepository.count({ where });
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+    const currentPage = Math.min(requestedPage, totalPages);
+    const items = await this.deliveryRepository.find({
+      where,
+      relations: { userSocial: true },
+      order: { id: 'ASC' },
+      skip: (currentPage - 1) * safeLimit,
+      take: safeLimit,
+    });
+
+    return { items, total, currentPage, totalPages, limit: safeLimit };
+  }
+
+  public async deleteCampaignMessages(
+    campaignId: number,
+    socialOrOptions?:
+      | SocialType
+      | { social?: SocialType; deliveryIds?: number[] },
+  ) {
+    const options =
+      typeof socialOrOptions === 'string'
+        ? { social: socialOrOptions }
+        : socialOrOptions || {};
+    const campaign = options.social
+      ? await this.getCampaignForSocial(campaignId, options.social)
       : await this.campaignRepository.findOne({
           where: { id: campaignId },
         });
@@ -243,38 +291,70 @@ export class BroadcastService {
       await this.terminateActiveCampaigns(campaign.social);
     }
 
-    const deliveries = await this.deliveryRepository.find({
-      where: { campaignId },
-    });
+    const hasDeliverySelection = Array.isArray(options.deliveryIds);
+    const deliveryIds = options.deliveryIds?.filter(
+      (deliveryId) => Number.isInteger(deliveryId) && deliveryId > 0,
+    );
+    const deliveries =
+      hasDeliverySelection && !deliveryIds?.length
+        ? []
+        : await this.deliveryRepository.find({
+            where: {
+              campaignId,
+              sentMessageId: Not(IsNull()),
+              messageDeletedAt: IsNull(),
+              ...(hasDeliverySelection ? { id: In(deliveryIds!) } : {}),
+            },
+          });
     const transport = this.transportRegistry.get(campaign.social);
     let deletedCount = 0;
     let failedCount = 0;
 
     for (const delivery of deliveries) {
-      if (!delivery.sentMessageId) continue;
-      if (delivery.messageDeletedAt) continue;
-      const deleted = await transport.deleteCampaignDelivery({
-        targetSocialId: delivery.targetSocialId,
-        messageId: delivery.sentMessageId,
-      });
-      if (deleted) {
-        deletedCount += 1;
-        await this.deliveryRepository.update(delivery.id, {
-          messageDeletedAt: new Date(),
-          messageDeleteError: null,
+      try {
+        const deleted = await transport.deleteCampaignDelivery({
+          targetSocialId: delivery.targetSocialId,
+          messageId: delivery.sentMessageId!,
         });
-      } else {
+        if (deleted) {
+          deletedCount += 1;
+          await this.deliveryRepository.update(delivery.id, {
+            messageDeletedAt: new Date(),
+            messageDeleteError: null,
+          });
+          continue;
+        }
+
         failedCount += 1;
         await this.deliveryRepository.update(delivery.id, {
           messageDeleteError: 'Transport did not delete the message',
         });
+      } catch (err) {
+        failedCount += 1;
+        const message = err instanceof Error ? err.message : String(err);
+        await this.deliveryRepository.update(delivery.id, {
+          messageDeleteError: message.slice(0, 2000),
+        });
+        this.logger.warn(
+          `Could not delete broadcast delivery #${delivery.id}: ${message}`,
+        );
       }
     }
 
-    await this.campaignRepository.update(campaign.id, {
-      messagesDeletedAt: new Date(),
+    const remainingCount = await this.deliveryRepository.count({
+      where: {
+        campaignId: campaign.id,
+        sentMessageId: Not(IsNull()),
+        messageDeletedAt: IsNull(),
+      },
     });
-    return { campaignId, deletedCount, failedCount };
+    if (remainingCount === 0) {
+      await this.campaignRepository.update(campaign.id, {
+        messagesDeletedAt: new Date(),
+      });
+    }
+
+    return { campaignId, deletedCount, failedCount, remainingCount };
   }
 
   public async updateCampaignSourceMessage(
@@ -282,6 +362,90 @@ export class BroadcastService {
     sourceMessage: BroadcastSourceMessage,
   ) {
     await this.campaignRepository.update(campaignId, { sourceMessage });
+  }
+
+  /** Сохраняет feedback только от получателя конкретной доставки. */
+  public async recordCampaignFeedback(params: {
+    deliveryId: number;
+    social: SocialType;
+    userSocialId?: number | null;
+    action: BroadcastFeedbackAction;
+  }) {
+    if (params.userSocialId == null) return null;
+
+    const delivery = await this.deliveryRepository.findOne({
+      where: { id: params.deliveryId },
+      relations: { campaign: true },
+    });
+    const campaign = delivery?.campaign;
+    if (
+      !delivery ||
+      !campaign ||
+      campaign.social !== params.social ||
+      !campaign.feedbackButton ||
+      delivery.userSocialId !== params.userSocialId
+    ) {
+      return null;
+    }
+
+    if (params.action === 'initial') {
+      const existing = await this.feedbackRepository.findOne({
+        where: { deliveryId: delivery.id, action: 'initial' },
+      });
+      if (existing) {
+        return {
+          feedback: existing,
+          created: false,
+          feedbackButton: campaign.feedbackButton,
+        };
+      }
+    } else {
+      if (!campaign.feedbackButton.afterClickText) return null;
+
+      const initialFeedback = await this.feedbackRepository.findOne({
+        where: { deliveryId: delivery.id, action: 'initial' },
+      });
+      if (!initialFeedback) return null;
+    }
+
+    try {
+      const feedback = await this.feedbackRepository.save(
+        this.feedbackRepository.create({
+          campaignId: campaign.id,
+          deliveryId: delivery.id,
+          social: params.social,
+          userSocialId: delivery.userSocialId,
+          action: params.action,
+        }),
+      );
+      return {
+        feedback,
+        created: true,
+        feedbackButton: campaign.feedbackButton,
+      };
+    } catch (err) {
+      if (params.action !== 'initial' || !this.isUniqueViolation(err)) {
+        throw err;
+      }
+
+      const feedback = await this.feedbackRepository.findOne({
+        where: { deliveryId: delivery.id, action: 'initial' },
+      });
+      return feedback
+        ? { feedback, created: false, feedbackButton: campaign.feedbackButton }
+        : null;
+    }
+  }
+
+  private isUniqueViolation(err: unknown) {
+    return (
+      typeof err === 'object' &&
+      err != null &&
+      'driverError' in err &&
+      typeof (err as { driverError?: { code?: unknown } }).driverError ===
+        'object' &&
+      (err as { driverError: { code?: unknown } }).driverError.code === '23505'
+    );
   }
 
   public async markDeliverySent(

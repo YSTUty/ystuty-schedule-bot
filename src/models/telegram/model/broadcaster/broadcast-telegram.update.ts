@@ -86,11 +86,11 @@ export class BroadcastTelegramUpdate {
       return;
     }
 
-    const result = await this.broadcastService.deleteCampaignMessages(
+    const campaign = await this.broadcastService.getCampaignForSocial(
       campaignId,
       SocialType.Telegram,
     );
-    if (!result) {
+    if (!campaign) {
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignNotFound, {
           campaignId,
@@ -100,7 +100,13 @@ export class BroadcastTelegramUpdate {
     }
 
     await ctx.replyWithHTML(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleted, result),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteConfirm, {
+        campaignId,
+      }),
+      this.keyboardFactory.getBroadcastCampaignDeleteConfirmation(
+        ctx,
+        campaignId,
+      ),
     );
   }
 
@@ -161,6 +167,16 @@ export class BroadcastTelegramUpdate {
   @Action(/broadcast:campaign:delete:(?<campaignId>\d+)/)
   async onBroadcastCampaignDelete(@Ctx() ctx: ICallbackQueryContext) {
     const campaignId = Number(ctx.match!.groups!.campaignId);
+    await ctx.tryAnswerCbQuery(
+      ctx.i18n.t(LocalePhrase.Broadcast_Notification_Campaign),
+    );
+
+    await this.renderDeleteConfirmation(ctx, campaignId);
+  }
+
+  @Action(/broadcast:campaign:delete:all:(?<campaignId>\d+)/)
+  async onBroadcastCampaignDeleteAll(@Ctx() ctx: ICallbackQueryContext) {
+    const campaignId = Number(ctx.match!.groups!.campaignId);
     const result = await this.broadcastService.deleteCampaignMessages(
       campaignId,
       SocialType.Telegram,
@@ -195,6 +211,70 @@ export class BroadcastTelegramUpdate {
         ...this.keyboardFactory.getBroadcastMenu(ctx),
       },
     );
+  }
+
+  @Action(/broadcast:campaign:delete:select:(?<campaignId>\d+):(?<page>\d+)/)
+  async onBroadcastCampaignDeleteSelect(@Ctx() ctx: ICallbackQueryContext) {
+    await ctx.tryAnswerCbQuery();
+    await this.renderDeleteSelector(
+      ctx,
+      Number(ctx.match!.groups!.campaignId),
+      Number(ctx.match!.groups!.page),
+    );
+  }
+
+  @Action(
+    /broadcast:campaign:delete:toggle:(?<campaignId>\d+):(?<page>\d+):(?<deliveryId>\d+)/,
+  )
+  async onBroadcastCampaignDeleteToggle(@Ctx() ctx: ICallbackQueryContext) {
+    const { campaignId, page, deliveryId } = ctx.match!.groups!;
+    const selected = new Set(
+      ctx.session.broadcastDeleteSelections?.[campaignId] || [],
+    );
+    const id = Number(deliveryId);
+    if (selected.has(id)) {
+      selected.delete(id);
+    } else {
+      selected.add(id);
+    }
+    ctx.session.broadcastDeleteSelections = {
+      ...ctx.session.broadcastDeleteSelections,
+      [campaignId]: [...selected],
+    };
+    await ctx.tryAnswerCbQuery();
+    await this.renderDeleteSelector(ctx, Number(campaignId), Number(page));
+  }
+
+  @Action(/broadcast:campaign:delete:selected:(?<campaignId>\d+):(?<page>\d+)/)
+  async onBroadcastCampaignDeleteSelected(@Ctx() ctx: ICallbackQueryContext) {
+    const { campaignId, page } = ctx.match!.groups!;
+    const selectedIds =
+      ctx.session.broadcastDeleteSelections?.[campaignId] || [];
+    if (!selectedIds.length) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteNoSelection),
+      );
+      return;
+    }
+
+    const result = await this.broadcastService.deleteCampaignMessages(
+      Number(campaignId),
+      { social: SocialType.Telegram, deliveryIds: selectedIds },
+    );
+    await ctx.tryAnswerCbQuery(
+      ctx.i18n.t(
+        result
+          ? LocalePhrase.Broadcast_Notification_Deleted
+          : LocalePhrase.Broadcast_Notification_NotFound,
+      ),
+    );
+    if (!result) {
+      await this.renderDeleteConfirmation(ctx, Number(campaignId));
+      return;
+    }
+
+    delete ctx.session.broadcastDeleteSelections?.[campaignId];
+    await this.renderDeleteResult(ctx, result, Number(page));
   }
 
   @Command('broadcast_terminate')
@@ -300,6 +380,141 @@ export class BroadcastTelegramUpdate {
         }),
       },
     );
+  }
+
+  private async renderDeleteConfirmation(
+    ctx: ICallbackQueryContext,
+    campaignId: number,
+  ) {
+    const campaign = await this.broadcastService.getCampaignForSocial(
+      campaignId,
+      SocialType.Telegram,
+    );
+    if (!campaign) {
+      await this.editCampaignDetails(ctx, campaignId);
+      return;
+    }
+
+    await this.safeEditMessageText(
+      ctx,
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteConfirm, {
+        campaignId,
+      }),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastCampaignDeleteConfirmation(
+          ctx,
+          campaignId,
+        ),
+      },
+    );
+  }
+
+  private async renderDeleteSelector(
+    ctx: ICallbackQueryContext,
+    campaignId: number,
+    page: number,
+  ) {
+    const result = await this.broadcastService.getCampaignMessageDeliveriesPage(
+      {
+        campaignId,
+        social: SocialType.Telegram,
+        page,
+        limit: 8,
+      },
+    );
+    if (!result) {
+      await this.editCampaignDetails(ctx, campaignId);
+      return;
+    }
+    if (!result.total) {
+      await this.safeEditMessageText(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteEmpty),
+        {
+          parse_mode: 'HTML',
+          ...this.keyboardFactory.getBroadcastCampaignDeleteConfirmation(
+            ctx,
+            campaignId,
+          ),
+        },
+      );
+      return;
+    }
+
+    const selected = new Set(
+      ctx.session.broadcastDeleteSelections?.[String(campaignId)] || [],
+    );
+    await this.safeEditMessageText(
+      ctx,
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleteSelector, {
+        campaignId,
+        selectedCount: selected.size,
+        currentPage: result.currentPage,
+        totalPages: result.totalPages,
+      }),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastCampaignDeleteSelector({
+          ctx,
+          campaignId,
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          selectedCount: selected.size,
+          items: result.items.map((delivery) => ({
+            id: delivery.id,
+            selected: selected.has(delivery.id),
+            title: this.renderDeliveryTitle(delivery),
+          })),
+        }),
+      },
+    );
+  }
+
+  private async renderDeleteResult(
+    ctx: ICallbackQueryContext,
+    result: {
+      campaignId: number;
+      deletedCount: number;
+      failedCount: number;
+      remainingCount: number;
+    },
+    page: number,
+  ) {
+    if (result.remainingCount) {
+      await this.renderDeleteSelector(ctx, result.campaignId, page);
+      return;
+    }
+
+    await this.safeEditMessageText(
+      ctx,
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignDeleted, result),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastMenu(ctx),
+      },
+    );
+  }
+
+  private renderDeliveryTitle(delivery: {
+    targetSocialId: string;
+    userSocial?: {
+      socialId: number;
+      username?: string | null;
+      displayname?: string | null;
+      groupName?: string | null;
+    } | null;
+  }) {
+    const userSocial = delivery.userSocial;
+    return [
+      userSocial?.displayname ||
+        userSocial?.username ||
+        `id${delivery.targetSocialId}`,
+      userSocial?.groupName ? `(${userSocial.groupName})` : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .slice(0, 50);
   }
 
   private async editQueueStatus(ctx: ICallbackQueryContext) {

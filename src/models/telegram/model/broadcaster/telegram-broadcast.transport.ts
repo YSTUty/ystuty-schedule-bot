@@ -8,6 +8,7 @@ import { IContext } from '@my-interfaces/telegram';
 
 import {
   BroadcastCampaignStatus,
+  BroadcastFeedbackButton,
   BroadcastMessageMode,
   BroadcastTransport,
   BroadcastTransportResult,
@@ -36,12 +37,14 @@ export class TelegramBroadcastTransport
   }
 
   public async sendCampaignDelivery(params: {
+    campaignId: number;
+    deliveryId: number;
     targetSocialId: string;
     mode: BroadcastMessageMode;
     sourceMessage: { chatId?: number; messageId?: number; text?: string };
+    feedbackButton?: BroadcastFeedbackButton | null;
   }): Promise<BroadcastTransportResult> {
     const chatId = Number(params.targetSocialId);
-
     if (params.mode === BroadcastMessageMode.Copy) {
       if (!params.sourceMessage.chatId || !params.sourceMessage.messageId) {
         throw new Error('Telegram broadcast requires source message');
@@ -52,6 +55,7 @@ export class TelegramBroadcastTransport
         params.sourceMessage.chatId,
         params.sourceMessage.messageId,
       );
+      await this.attachFeedbackButton(chatId, result.message_id, params);
 
       return { messageId: String(result.message_id) };
     }
@@ -66,6 +70,7 @@ export class TelegramBroadcastTransport
         params.sourceMessage.chatId,
         params.sourceMessage.messageId,
       );
+      await this.attachFeedbackButton(chatId, result.message_id, params);
 
       return { messageId: String(result.message_id) };
     }
@@ -77,7 +82,12 @@ export class TelegramBroadcastTransport
     const result = await this.telegramService.bot.telegram.sendMessage(
       chatId,
       params.sourceMessage.text,
-      { parse_mode: 'HTML' },
+      {
+        parse_mode: 'HTML',
+        ...(params.feedbackButton && {
+          reply_markup: this.getFeedbackReplyMarkup(params),
+        }),
+      },
     );
 
     return { messageId: String(result.message_id) };
@@ -97,6 +107,36 @@ export class TelegramBroadcastTransport
       if (err instanceof TelegramError) return false;
       throw err;
     }
+  }
+
+  /** Telegram не принимает reply_markup при forward/copy, поэтому добавляем её отдельным вызовом. */
+  private async attachFeedbackButton(
+    chatId: number,
+    messageId: number,
+    params: {
+      campaignId: number;
+      deliveryId: number;
+      feedbackButton?: BroadcastFeedbackButton | null;
+    },
+  ) {
+    if (!params.feedbackButton) return;
+    await this.telegramService.bot.telegram.editMessageReplyMarkup(
+      chatId,
+      messageId,
+      undefined,
+      this.getFeedbackReplyMarkup(params),
+    );
+  }
+
+  private getFeedbackReplyMarkup(params: {
+    campaignId: number;
+    deliveryId: number;
+    feedbackButton?: BroadcastFeedbackButton | null;
+  }) {
+    return this.keyboardFactory.getBroadcastFeedbackButton(
+      params.feedbackButton!.text,
+      params.deliveryId,
+    ).reply_markup;
   }
 
   public async updateCampaignProgress(params: {

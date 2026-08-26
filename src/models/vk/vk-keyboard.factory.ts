@@ -595,6 +595,111 @@ export class VKKeyboardFactory {
     ]);
   }
 
+  public getBroadcastCampaignDeleteConfirmation(
+    ctx: IContext,
+    campaignId: number,
+  ) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_DeleteAll),
+          payload: { broadcastAction: 'deleteAll', campaignId },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_DeleteSelect),
+          payload: { broadcastAction: 'deleteSelect', campaignId, page: 1 },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          payload: { broadcastAction: 'detail', campaignId },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastFeedbackButton(
+    text: string,
+    deliveryId: number,
+    action: 'initial' | 'repeat' = 'initial',
+  ) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: text,
+          payload: {
+            broadcastFeedbackAction: action,
+            deliveryId,
+          },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** На VK три доставки на странице: pager и две кнопки действий занимают ещё пять мест. */
+  public getBroadcastCampaignDeleteSelector(params: {
+    ctx: IContext;
+    campaignId: number;
+    items: { id: number; title: string; selected: boolean }[];
+    currentPage: number;
+    totalPages: number;
+    selectedCount: number;
+  }) {
+    return this.getPagination({
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((item) => ({
+        title: item.title,
+        payload: {
+          broadcastAction: 'deleteToggle',
+          campaignId: params.campaignId,
+          page: params.currentPage,
+          deliveryId: item.id,
+        },
+        selected: item.selected,
+      })),
+      getPagePayload: (page) => ({
+        broadcastAction: 'deleteSelect',
+        campaignId: params.campaignId,
+        page,
+      }),
+      additionalButtons: [
+        [
+          Keyboard.callbackButton({
+            label: params.ctx.i18n.t(
+              LocalePhrase.Button_Broadcast_DeleteSelected,
+              { selectedCount: params.selectedCount },
+            ),
+            payload: {
+              broadcastAction: 'deleteSelected',
+              campaignId: params.campaignId,
+              page: params.currentPage,
+            },
+            color: Keyboard.NEGATIVE_COLOR,
+          }),
+        ],
+        [
+          Keyboard.callbackButton({
+            label: params.ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+            payload: {
+              broadcastAction: 'detail',
+              campaignId: params.campaignId,
+            },
+            color: Keyboard.SECONDARY_COLOR,
+          }),
+        ],
+      ],
+      pagerMode: 'compact',
+    });
+  }
+
   public getActioner(
     ctx: IContext,
     items?:
@@ -648,12 +753,18 @@ export class VKKeyboardFactory {
       manualMode?: boolean;
       onlyAuthorized?: boolean;
       groupName?: string | null;
+      feedbackButton?: { text: string } | null;
+      feedbackResponseText?: string | null;
+      feedbackAfterClickText?: string | null;
     } = {},
   ) {
     const {
       manualMode = false,
       onlyAuthorized = false,
       groupName = null,
+      feedbackButton = null,
+      feedbackResponseText = null,
+      feedbackAfterClickText = null,
     } = options;
 
     return Keyboard.keyboard([
@@ -672,6 +783,29 @@ export class VKKeyboardFactory {
       ],
       [
         Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackResponse, {
+            feedbackResponseText,
+          }),
+          payload: { broadcastAction: 'feedbackResponse' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterToggle, {
+            feedbackAfterClickText,
+          }),
+          payload: { broadcastAction: 'feedbackAfterToggle' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterText),
+          payload: { broadcastAction: 'feedbackAfterText' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_SelectRecipients),
           payload: { broadcastAction: 'recipients', page: 1 },
           color: Keyboard.SECONDARY_COLOR,
@@ -684,6 +818,20 @@ export class VKKeyboardFactory {
             groupName: groupName || '-',
           }),
           payload: { broadcastAction: 'filters' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackToggle, {
+            feedbackButton,
+          }),
+          payload: { broadcastAction: 'feedbackToggle' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackText),
+          payload: { broadcastAction: 'feedbackText' },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],

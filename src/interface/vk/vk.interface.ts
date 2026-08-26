@@ -24,6 +24,8 @@ export interface ISessionState {
 
   socialConnectLink?: string;
   teacherId?: number;
+  /** Временный выбор доставок для удаления сообщений рассылки. */
+  broadcastDeleteSelections?: Record<string, number[]>;
 }
 
 interface ISessionConversationState {

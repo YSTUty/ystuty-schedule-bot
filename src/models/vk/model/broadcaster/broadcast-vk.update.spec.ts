@@ -12,6 +12,7 @@ describe('BroadcastVkUpdate', () => {
     );
 
     expect(listener.event({ broadcastAction: 'menuPanel' }, {})).toBe(true);
+    expect(listener.event({ broadcastAction: 'deleteSelect' }, {})).toBe(true);
     expect(listener.event({ broadcastAction: 'create' }, {})).toBe(false);
     expect(listener.event({ groupAction: 'select' }, {})).toBe(false);
   });

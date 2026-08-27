@@ -39,7 +39,19 @@ export class SelectGroupScene {
       return;
     }
 
-    if (!ctx.scene.step.firstTime) {
+    // Чужой callback не содержит введённого названия группы.
+    if (ctx.is(['message_event'])) {
+      const selectedGroupName =
+        'eventPayload' in ctx &&
+        ctx.eventPayload?.groupAction === 'select' &&
+        typeof ctx.eventPayload.groupName === 'string'
+          ? ctx.eventPayload.groupName
+          : undefined;
+      if (!selectedGroupName) {
+        return;
+      }
+      groupName = selectedGroupName;
+    } else if (!ctx.scene.step.firstTime) {
       groupName = ctx.text;
     }
 

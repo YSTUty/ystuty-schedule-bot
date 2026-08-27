@@ -23,6 +23,7 @@ import {
   BroadcastMessageMode,
   BroadcastRecipientAction,
   BroadcastSourceMessage,
+  getBroadcastFeedbackAfterClickMode,
 } from '../../../broadcast/broadcast.types';
 import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/broadcast-audience-group-filter.service';
 import { ScheduleService } from '../../../schedule/schedule.service';
@@ -262,8 +263,8 @@ export class TelegramBroadcastScene extends BaseScene {
   }
 
   @WizardStep(2)
-  @Action('broadcast:wizard:feedback:after-toggle')
-  async onFeedbackAfterToggle(@Ctx() ctx: IStepCtx) {
+  @Action(/broadcast:wizard:feedback:after:(?<mode>delete|keep|replace)/)
+  async onFeedbackAfterMode(@Ctx() ctx: IStepCtx) {
     const state = ctx.scene.state;
     state.awaitingFeedbackText = undefined;
     if (!state.feedbackButton) {
@@ -272,9 +273,10 @@ export class TelegramBroadcastScene extends BaseScene {
       );
       return;
     }
-    state.feedbackButton.afterClickText = state.feedbackButton.afterClickText
-      ? null
-      : '✅';
+    const mode = ctx.match!.groups!.mode as 'delete' | 'keep' | 'replace';
+    state.feedbackButton.afterClickMode = mode;
+    state.feedbackButton.afterClickText =
+      mode === 'replace' ? state.feedbackButton.afterClickText || '✅' : null;
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(this.renderFeedbackSettings(ctx, state), {
       parse_mode: 'HTML',
@@ -756,6 +758,9 @@ export class TelegramBroadcastScene extends BaseScene {
       audienceMode: state.manualRecipients ? 'manual' : 'all',
       mode: state.mode ?? BroadcastMessageMode.Copy,
       feedbackButton: state.feedbackButton,
+      feedbackAfterClickSummary: this.renderFeedbackAfterClickSummary(
+        state.feedbackButton,
+      ),
       actionKeyboard: state.actionKeyboard,
       actionKeyboardSummary: this.renderActionKeyboardSummary(
         state.actionKeyboard,
@@ -776,7 +781,22 @@ export class TelegramBroadcastScene extends BaseScene {
   private renderFeedbackSettings(ctx: IStepCtx, state: TelegramBroadcastState) {
     return ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackSettings, {
       feedbackButton: state.feedbackButton || { text: '-' },
+      feedbackAfterClickSummary: this.renderFeedbackAfterClickSummary(
+        state.feedbackButton,
+      ),
     });
+  }
+
+  /** Возвращает текст выбранного режима для экранов администратора. */
+  private renderFeedbackAfterClickSummary(
+    feedbackButton?: BroadcastFeedbackButton | null,
+  ) {
+    const mode = getBroadcastFeedbackAfterClickMode(feedbackButton);
+    if (mode === 'keep') return 'кнопка остаётся';
+    if (mode === 'replace') {
+      return `заменяется на «${feedbackButton?.afterClickText || '✅'}»`;
+    }
+    return 'кнопка удаляется';
   }
 
   /** Кратко отображает настроенные подписи action-кнопок без привязки к transport keyboard. */
@@ -1396,6 +1416,7 @@ export class TelegramBroadcastScene extends BaseScene {
       if (target === 'response') {
         ctx.scene.state.feedbackButton.responseText = value;
       } else {
+        ctx.scene.state.feedbackButton.afterClickMode = 'replace';
         ctx.scene.state.feedbackButton.afterClickText = value;
       }
     }

@@ -121,6 +121,23 @@ describe('VK MainUpdate', () => {
     expect(openTeachersList).not.toHaveBeenCalled();
   });
 
+  it('renders the invite keyboard from the current VK group id', async () => {
+    const keyboard = { inline: jest.fn().mockReturnValue('keyboard') };
+    (update as any).keyboardFactory.getInviteToChat = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    const ctx = { send: jest.fn(), $groupId: 182_322_377 } as any;
+
+    await update.onInvite(ctx);
+
+    expect(
+      (update as any).keyboardFactory.getInviteToChat,
+    ).toHaveBeenCalledWith(ctx);
+    expect(ctx.send).toHaveBeenCalledWith('Пригласить бота в беседу:', {
+      keyboard: 'keyboard',
+    });
+  });
+
   it('marks the conversation as left when the bot is kicked from a VK chat', async () => {
     const conversation = { isLeaved: false };
 

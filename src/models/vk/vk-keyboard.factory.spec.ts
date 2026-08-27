@@ -120,4 +120,22 @@ describe('VKKeyboardFactory', () => {
       deliveryId: 15,
     });
   });
+
+  it('offers every feedback button behavior after the initial click', () => {
+    const keyboard = new VKKeyboardFactory().getBroadcastFeedbackSettings(ctx, {
+      text: '🫡',
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+    const actions = renderedKeyboard.buttons
+      .flat()
+      .map((button: any) => JSON.parse(button.action.payload).broadcastAction);
+
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        'feedbackAfterDelete',
+        'feedbackAfterKeep',
+        'feedbackAfterReplace',
+      ]),
+    );
+  });
 });

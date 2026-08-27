@@ -99,6 +99,13 @@ export class MainUpdate {
     }
   }
 
+  @Hears('/invite')
+  async onInvite(@Ctx() ctx: IMessageContext) {
+    await ctx.send('Пригласить бота в беседу:', {
+      keyboard: this.keyboardFactory.getInviteToChat(ctx).inline(),
+    });
+  }
+
   @Hears('/profile')
   @VkHearsLocale(LocalePhrase.Button_Profile)
   async onProfile(@Ctx() ctx: IMessageContext) {

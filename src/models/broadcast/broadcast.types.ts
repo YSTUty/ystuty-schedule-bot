@@ -78,8 +78,27 @@ export type BroadcastFeedbackButton = {
   text: string;
   /** Текст snackbar/notification после нажатия; без него используется стандартный ответ. */
   responseText?: string | null;
-  /** Если задан, заменяет кнопку после первого клика вместо её удаления. */
+  /** Поведение feedback-кнопки после первого клика. */
+  afterClickMode?: BroadcastFeedbackAfterClickMode | null;
+  /** Текст кнопки для режима `replace`. */
   afterClickText?: string | null;
+};
+
+export type BroadcastFeedbackAfterClickMode = 'delete' | 'keep' | 'replace';
+
+/** Поддерживает кампании, созданные до появления явного режима после клика. */
+export const getBroadcastFeedbackAfterClickMode = (
+  feedbackButton?: BroadcastFeedbackButton | null,
+): BroadcastFeedbackAfterClickMode => {
+  if (
+    feedbackButton?.afterClickMode === 'delete' ||
+    feedbackButton?.afterClickMode === 'keep' ||
+    feedbackButton?.afterClickMode === 'replace'
+  ) {
+    return feedbackButton.afterClickMode;
+  }
+
+  return feedbackButton?.afterClickText ? 'replace' : 'delete';
 };
 
 /** Состояние callback-кнопки feedback. */

@@ -74,4 +74,22 @@ describe('TelegramKeyboardFactory', () => {
       ],
     ]);
   });
+
+  it('offers every feedback button behavior after the initial click', () => {
+    const keyboard = new TelegramKeyboardFactory().getBroadcastFeedbackSettings(
+      ctx,
+      { text: '🫡' },
+    );
+    const callbacks = keyboard.reply_markup.inline_keyboard
+      .flat()
+      .map((button) => ('callback_data' in button ? button.callback_data : ''));
+
+    expect(callbacks).toEqual(
+      expect.arrayContaining([
+        'broadcast:wizard:feedback:after:delete',
+        'broadcast:wizard:feedback:after:keep',
+        'broadcast:wizard:feedback:after:replace',
+      ]),
+    );
+  });
 });

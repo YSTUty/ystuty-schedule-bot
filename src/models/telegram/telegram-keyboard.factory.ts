@@ -16,6 +16,7 @@ import { IContext } from '@my-interfaces/telegram';
 import {
   BroadcastActionKeyboard,
   BroadcastFeedbackButton,
+  getBroadcastFeedbackAfterClickMode,
 } from '../broadcast/broadcast.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
@@ -80,6 +81,17 @@ export class TelegramKeyboardFactory {
         ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]]
         : []),
     ]).resize();
+  }
+
+  public getInviteToChat(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.url(
+          ctx.i18n.t(LocalePhrase.Button_InviteToChat),
+          `https://t.me/${xEnv.SOCIAL_TELEGRAM_BOT_NAME}?startgroup=invite`,
+        ),
+      ],
+    ]);
   }
 
   public getBroadcastQueueControls(ctx: IContext, paused = true) {
@@ -661,6 +673,7 @@ export class TelegramKeyboardFactory {
     ctx: IContext,
     feedbackButton?: {
       text: string;
+      afterClickMode?: 'delete' | 'keep' | 'replace' | null;
       afterClickText?: string | null;
     } | null,
   ) {
@@ -687,13 +700,31 @@ export class TelegramKeyboardFactory {
             ],
             [
               Markup.button.callback(
-                ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterToggle, {
-                  feedbackAfterClickText: feedbackButton.afterClickText,
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterDelete, {
+                  selected:
+                    getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                    'delete',
                 }),
-                'broadcast:wizard:feedback:after-toggle',
+                'broadcast:wizard:feedback:after:delete',
+              ),
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterKeep, {
+                  selected:
+                    getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                    'keep',
+                }),
+                'broadcast:wizard:feedback:after:keep',
+              ),
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_FeedbackAfterReplace, {
+                  selected:
+                    getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                    'replace',
+                }),
+                'broadcast:wizard:feedback:after:replace',
               ),
             ],
-            ...(feedbackButton.afterClickText
+            ...(getBroadcastFeedbackAfterClickMode(feedbackButton) === 'replace'
               ? [
                   [
                     Markup.button.callback(

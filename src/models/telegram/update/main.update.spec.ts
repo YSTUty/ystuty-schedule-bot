@@ -18,6 +18,24 @@ describe('Telegram MainUpdate', () => {
     (update as any).openTeachersList = openTeachersList;
   });
 
+  it('renders the invite keyboard', async () => {
+    const keyboard = { reply_markup: { inline_keyboard: [] } };
+    (update as any).keyboardFactory.getInviteToChat = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    const ctx = { replyWithHTML: jest.fn() } as any;
+
+    await update.onInvite(ctx);
+
+    expect(
+      (update as any).keyboardFactory.getInviteToChat,
+    ).toHaveBeenCalledWith(ctx);
+    expect(ctx.replyWithHTML).toHaveBeenCalledWith(
+      'Пригласить бота в группу:',
+      keyboard,
+    );
+  });
+
   it('opens a filtered teacher list for a matching private text message', async () => {
     isTeacherSearchFallbackQuery.mockReturnValue(true);
     const ctx = { message: { text: 'Шулев' } } as any;

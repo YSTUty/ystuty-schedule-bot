@@ -4,6 +4,7 @@ import { BroadcastService } from './broadcast.service';
 import {
   BroadcastCampaignStatus,
   BroadcastDeliveryStatus,
+  getBroadcastFeedbackAfterClickMode,
 } from './broadcast.types';
 
 describe('BroadcastService', () => {
@@ -186,6 +187,22 @@ describe('BroadcastService', () => {
     });
 
     expect(action).toBeNull();
+  });
+
+  it('adapts feedback behavior for campaigns created before the explicit mode', () => {
+    expect(getBroadcastFeedbackAfterClickMode({ text: '🫡' })).toBe('delete');
+    expect(
+      getBroadcastFeedbackAfterClickMode({
+        text: '🫡',
+        afterClickText: 'Готово',
+      }),
+    ).toBe('replace');
+    expect(
+      getBroadcastFeedbackAfterClickMode({
+        text: '🫡',
+        afterClickMode: 'keep',
+      }),
+    ).toBe('keep');
   });
 
   it('adapts legacy campaign settings without source or delivery data', () => {

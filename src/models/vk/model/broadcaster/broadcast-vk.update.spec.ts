@@ -114,11 +114,11 @@ describe('BroadcastVkUpdate', () => {
     });
   });
 
-  it('keeps a sticker feedback callback available without trying to replace the message', async () => {
+  it('clears the keyboard of a sticker feedback message after the initial click', async () => {
     const broadcastService = {
       recordCampaignFeedback: jest.fn().mockResolvedValue({
         created: true,
-        feedbackButton: { afterClickText: 'Готово' },
+        feedbackButton: { text: '🫡', afterClickMode: 'delete' },
       }),
     };
     const keyboard = { inline: jest.fn().mockReturnValue('new keyboard') };
@@ -148,7 +148,11 @@ describe('BroadcastVkUpdate', () => {
 
     await update.onBroadcastFeedback(ctx as any);
 
-    expect(ctx.api.messages.edit).not.toHaveBeenCalled();
+    expect(ctx.api.messages.edit).toHaveBeenCalledWith({
+      peer_id: 123,
+      cmid: 456,
+      keyboard: JSON.stringify({ buttons: [], inline: true }),
+    });
     expect(ctx.answer).toHaveBeenCalledWith({
       type: 'show_snackbar',
       text: 'received',
@@ -201,7 +205,6 @@ describe('BroadcastVkUpdate', () => {
 
     expect(ctx.api.messages.edit).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: '',
         attachment: 'wall-123_42_secret',
         keep_forward_messages: 1,
         keep_snippets: 1,

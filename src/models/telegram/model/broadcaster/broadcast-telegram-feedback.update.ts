@@ -7,7 +7,10 @@ import { LocalePhrase } from '@my-interfaces';
 import { ICallbackQueryContext } from '@my-interfaces/telegram';
 
 import { BroadcastService } from '../../../broadcast/broadcast.service';
-import { BroadcastFeedbackAction } from '../../../broadcast/broadcast.types';
+import {
+  BroadcastFeedbackAction,
+  getBroadcastFeedbackAfterClickMode,
+} from '../../../broadcast/broadcast.types';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 
 /** Обрабатывает feedback получателей без требования прав администратора. */
@@ -29,17 +32,25 @@ export class BroadcastTelegramFeedbackUpdate {
       action: action as BroadcastFeedbackAction,
     });
     if (result?.created && action === 'initial') {
+      const afterClickMode = getBroadcastFeedbackAfterClickMode(
+        result.feedbackButton,
+      );
       await ctx.editMessageReplyMarkup(
         this.keyboardFactory.getBroadcastRecipientKeyboard({
           deliveryId: Number(deliveryId),
           actionKeyboard: result.actionKeyboard,
           feedbackAction: 'repeat',
-          feedbackButton: result.feedbackButton.afterClickText
-            ? {
-                ...result.feedbackButton,
-                text: result.feedbackButton.afterClickText,
-              }
-            : null,
+          feedbackButton:
+            afterClickMode === 'delete'
+              ? null
+              : {
+                  ...result.feedbackButton,
+                  text:
+                    afterClickMode === 'replace'
+                      ? result.feedbackButton.afterClickText ||
+                        result.feedbackButton.text
+                      : result.feedbackButton.text,
+                },
         }).reply_markup,
       );
     }

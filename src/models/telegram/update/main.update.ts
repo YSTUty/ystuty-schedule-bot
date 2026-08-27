@@ -72,6 +72,13 @@ export class MainUpdate {
     throw new Error('Whoops');
   }
 
+  @Command('invite')
+  async onInvite(@Ctx() ctx: IMessageContext) {
+    await ctx.replyWithHTML('Пригласить бота в группу:', {
+      ...this.keyboardFactory.getInviteToChat(ctx),
+    });
+  }
+
   @Action(/nope(:(?<text>.*))?/)
   async onNopeAction(@Ctx() ctx: ICallbackQueryContext) {
     const text = ctx.match!.groups!.text;

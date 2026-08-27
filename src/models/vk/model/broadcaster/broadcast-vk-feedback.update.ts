@@ -10,6 +10,8 @@ import { BroadcastService } from '../../../broadcast/broadcast.service';
 import {
   BroadcastActionKeyboard,
   BroadcastFeedbackAction,
+  BroadcastFeedbackButton,
+  getBroadcastFeedbackAfterClickMode,
 } from '../../../broadcast/broadcast.types';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
@@ -38,7 +40,7 @@ export class BroadcastVkFeedbackUpdate {
       await this.replaceInitialFeedbackButton(
         ctx,
         Number(ctx.eventPayload.deliveryId),
-        result.feedbackButton.afterClickText,
+        result.feedbackButton,
         result.actionKeyboard,
       );
     }
@@ -59,13 +61,13 @@ export class BroadcastVkFeedbackUpdate {
   /**
    * VK API требует передавать текст или attachment даже при смене клавиатуры.
    * Для вложений, которые API позволяет передать повторно, сохраняем их при
-   * смене keyboard. У стикера такой формы нет, поэтому кнопку не редактируем:
-   * callback всё равно подтверждается, а повторное нажатие безопасно учтётся.
+   * смене keyboard. У стикера отсутствует сериализуемый attachment для
+   * `messages.edit`, поэтому очищаем keyboard отдельным API-вызовом.
    */
   private async replaceInitialFeedbackButton(
     ctx: IMessageEventContext,
     deliveryId: number,
-    afterClickText?: string | null,
+    feedbackButton: BroadcastFeedbackButton,
     actionKeyboard?: BroadcastActionKeyboard | null,
   ) {
     const source = await ctx.api.messages.getByConversationMessageId({
@@ -80,14 +82,22 @@ export class BroadcastVkFeedbackUpdate {
       ? sourceMessage.attachments
       : [];
     const attachment = this.serializeSourceAttachments(attachments);
+    const afterClickMode = getBroadcastFeedbackAfterClickMode(feedbackButton);
     if (!sourceMessage.text && !attachment && attachments.length) {
+      if (afterClickMode === 'delete') {
+        await ctx.api.messages.edit({
+          peer_id: ctx.peerId,
+          cmid: ctx.conversationMessageId,
+          keyboard: JSON.stringify({ buttons: [], inline: true }),
+        });
+      }
       return;
     }
 
     await ctx.api.messages.edit({
       peer_id: ctx.peerId,
       cmid: ctx.conversationMessageId,
-      message: sourceMessage.text, // || '\u2060',
+      ...(sourceMessage.text ? { message: sourceMessage.text } : {}),
       ...(attachment ? { attachment } : {}),
       // Не удаляем пересланные сообщения и сниппеты, когда меняется только keyboard.
       keep_forward_messages: 1,
@@ -97,7 +107,15 @@ export class BroadcastVkFeedbackUpdate {
           deliveryId,
           actionKeyboard,
           feedbackAction: 'repeat',
-          feedbackButton: afterClickText ? { text: afterClickText } : null,
+          feedbackButton:
+            afterClickMode === 'delete'
+              ? null
+              : {
+                  text:
+                    afterClickMode === 'replace'
+                      ? feedbackButton.afterClickText || feedbackButton.text
+                      : feedbackButton.text,
+                },
         })
         .inline(),
     });

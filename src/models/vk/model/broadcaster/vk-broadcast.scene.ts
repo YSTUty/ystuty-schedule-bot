@@ -18,6 +18,7 @@ import {
   BroadcastMessageMode,
   BroadcastRecipientAction,
   BroadcastSourceMessage,
+  getBroadcastFeedbackAfterClickMode,
 } from '../../../broadcast/broadcast.types';
 import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/broadcast-audience-group-filter.service';
 import { ScheduleService } from '../../../schedule/schedule.service';
@@ -318,7 +319,9 @@ export class VkBroadcastScene {
       | 'feedbackToggle'
       | 'feedbackText'
       | 'feedbackResponse'
-      | 'feedbackAfterToggle'
+      | 'feedbackAfterDelete'
+      | 'feedbackAfterKeep'
+      | 'feedbackAfterReplace'
       | 'feedbackAfterText'
       | 'actionSettings'
       | 'actionBack'
@@ -472,7 +475,11 @@ export class VkBroadcastScene {
       return true;
     }
 
-    if (action === 'feedbackAfterToggle') {
+    if (
+      action === 'feedbackAfterDelete' ||
+      action === 'feedbackAfterKeep' ||
+      action === 'feedbackAfterReplace'
+    ) {
       const feedbackButton = ctx.scene.state.feedbackButton;
       if (!feedbackButton) {
         await ctx.answer({
@@ -482,9 +489,14 @@ export class VkBroadcastScene {
         return true;
       }
       ctx.scene.state.awaitingFeedbackText = undefined;
-      feedbackButton.afterClickText = feedbackButton.afterClickText
-        ? null
-        : '✅';
+      const mode = {
+        feedbackAfterDelete: 'delete',
+        feedbackAfterKeep: 'keep',
+        feedbackAfterReplace: 'replace',
+      }[action] as 'delete' | 'keep' | 'replace';
+      feedbackButton.afterClickMode = mode;
+      feedbackButton.afterClickText =
+        mode === 'replace' ? feedbackButton.afterClickText || '✅' : null;
       await this.editCurrentVkMessage(ctx, this.renderFeedbackSettings(ctx), {
         keep_forward_messages: true,
         keyboard: this.getFeedbackSettingsKeyboard(ctx).inline(),
@@ -968,6 +980,9 @@ export class VkBroadcastScene {
       selectedRecipientIds: ctx.scene.state.selectedRecipientIds,
       audienceMode: ctx.scene.state.manualRecipients ? 'manual' : 'all',
       feedbackButton: ctx.scene.state.feedbackButton,
+      feedbackAfterClickSummary: this.renderFeedbackAfterClickSummary(
+        ctx.scene.state.feedbackButton,
+      ),
       actionKeyboard: ctx.scene.state.actionKeyboard,
       actionKeyboardSummary: this.renderActionKeyboardSummary(
         ctx.scene.state.actionKeyboard,
@@ -978,7 +993,22 @@ export class VkBroadcastScene {
   private renderFeedbackSettings(ctx: IStepCtx) {
     return ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackSettings, {
       feedbackButton: ctx.scene.state.feedbackButton || { text: '-' },
+      feedbackAfterClickSummary: this.renderFeedbackAfterClickSummary(
+        ctx.scene.state.feedbackButton,
+      ),
     });
+  }
+
+  /** Возвращает текст выбранного режима для экранов администратора. */
+  private renderFeedbackAfterClickSummary(
+    feedbackButton?: BroadcastFeedbackButton | null,
+  ) {
+    const mode = getBroadcastFeedbackAfterClickMode(feedbackButton);
+    if (mode === 'keep') return 'кнопка остаётся';
+    if (mode === 'replace') {
+      return `заменяется на «${feedbackButton?.afterClickText || '✅'}»`;
+    }
+    return 'кнопка удаляется';
   }
 
   /** Кратко отображает настроенные подписи action-кнопок без привязки к transport keyboard. */
@@ -1086,6 +1116,7 @@ export class VkBroadcastScene {
       if (target === 'response') {
         ctx.scene.state.feedbackButton.responseText = value;
       } else {
+        ctx.scene.state.feedbackButton.afterClickMode = 'replace';
         ctx.scene.state.feedbackButton.afterClickText = value;
       }
     }

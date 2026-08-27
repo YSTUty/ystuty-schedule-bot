@@ -25,10 +25,12 @@ import {
   BroadcastCampaignStatus,
   BroadcastDeliveryStatus,
   BroadcastFeedbackAction,
+  BroadcastFeedbackButton,
   BroadcastJobData,
   BroadcastMessageMode,
   BroadcastRecipientAction,
   BroadcastSourceMessage,
+  getBroadcastFeedbackAfterClickMode,
   normalizeBroadcastActionKeyboard,
 } from './broadcast.types';
 import { BroadcastCampaign } from './entity/broadcast-campaign.entity';
@@ -127,7 +129,7 @@ export class BroadcastService {
     sourceMessage: BroadcastSourceMessage;
     audienceFilter?: BroadcastAudienceFilter;
     recipientUserSocialIds?: number[];
-    feedbackButton?: { text: string } | null;
+    feedbackButton?: BroadcastFeedbackButton | null;
     actionKeyboard?: BroadcastActionKeyboard | null;
     createdBySocialId?: string | number | null;
   }) {
@@ -466,7 +468,11 @@ export class BroadcastService {
         };
       }
     } else {
-      if (!campaign.feedbackButton.afterClickText) return null;
+      if (
+        getBroadcastFeedbackAfterClickMode(campaign.feedbackButton) === 'delete'
+      ) {
+        return null;
+      }
 
       const initialFeedback = await this.feedbackRepository.findOne({
         where: { deliveryId: delivery.id, action: 'initial' },

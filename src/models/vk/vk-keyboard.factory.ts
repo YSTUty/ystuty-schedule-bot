@@ -11,6 +11,7 @@ import { IContext } from '@my-interfaces/vk';
 import {
   BroadcastActionKeyboard,
   BroadcastFeedbackButton,
+  getBroadcastFeedbackAfterClickMode,
 } from '../broadcast/broadcast.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
@@ -143,6 +144,17 @@ export class VKKeyboardFactory {
               }),
             ]
           : []),
+      ],
+    ]);
+  }
+
+  public getInviteToChat(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.urlButton({
+          label: ctx.i18n.t(LocalePhrase.Button_InviteToChat),
+          url: `https://vk.ru/app6441755_-${ctx.$groupId}`,
+        }),
       ],
     ]);
   }
@@ -889,6 +901,7 @@ export class VKKeyboardFactory {
     ctx: IContext,
     feedbackButton?: {
       text: string;
+      afterClickMode?: 'delete' | 'keep' | 'replace' | null;
       afterClickText?: string | null;
     } | null,
   ) {
@@ -921,14 +934,42 @@ export class VKKeyboardFactory {
             [
               Keyboard.callbackButton({
                 label: ctx.i18n.t(
-                  LocalePhrase.Button_Broadcast_FeedbackAfterToggle,
-                  { feedbackAfterClickText: feedbackButton.afterClickText },
+                  LocalePhrase.Button_Broadcast_FeedbackAfterDelete,
+                  {
+                    selected:
+                      getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                      'delete',
+                  },
                 ),
-                payload: { broadcastAction: 'feedbackAfterToggle' },
+                payload: { broadcastAction: 'feedbackAfterDelete' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_FeedbackAfterKeep,
+                  {
+                    selected:
+                      getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                      'keep',
+                  },
+                ),
+                payload: { broadcastAction: 'feedbackAfterKeep' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_FeedbackAfterReplace,
+                  {
+                    selected:
+                      getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                      'replace',
+                  },
+                ),
+                payload: { broadcastAction: 'feedbackAfterReplace' },
                 color: Keyboard.SECONDARY_COLOR,
               }),
             ],
-            ...(feedbackButton.afterClickText
+            ...(getBroadcastFeedbackAfterClickMode(feedbackButton) === 'replace'
               ? [
                   [
                     Keyboard.callbackButton({

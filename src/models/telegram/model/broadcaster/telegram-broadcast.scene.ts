@@ -163,7 +163,11 @@ export class TelegramBroadcastScene extends BaseScene {
     ctx.scene.state.awaitingActionText = undefined;
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
+        actionKeyboardSummary: this.renderActionKeyboardSummary(
+          ctx.scene.state.actionKeyboard,
+        ),
+      }),
       {
         parse_mode: 'HTML',
         ...this.keyboardFactory.getBroadcastActionSettings(
@@ -753,6 +757,9 @@ export class TelegramBroadcastScene extends BaseScene {
       mode: state.mode ?? BroadcastMessageMode.Copy,
       feedbackButton: state.feedbackButton,
       actionKeyboard: state.actionKeyboard,
+      actionKeyboardSummary: this.renderActionKeyboardSummary(
+        state.actionKeyboard,
+      ),
     });
   }
 
@@ -770,6 +777,29 @@ export class TelegramBroadcastScene extends BaseScene {
     return ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackSettings, {
       feedbackButton: state.feedbackButton || { text: '-' },
     });
+  }
+
+  /** Кратко отображает настроенные подписи action-кнопок без привязки к transport keyboard. */
+  private renderActionKeyboardSummary(
+    actionKeyboard?: BroadcastActionKeyboard | null,
+  ) {
+    const labels: Record<BroadcastRecipientAction, string> = {
+      select_group: 'Выбор группы',
+      auth: 'ЯГТУ.ID',
+    };
+    const defaultTexts: Record<BroadcastRecipientAction, string> = {
+      select_group: 'Выбрать актуальную группу',
+      auth: 'Подключить или обновить ЯГТУ.ID',
+    };
+
+    return (actionKeyboard || []).length
+      ? (actionKeyboard || [])
+          .map(
+            (item) =>
+              `${labels[item.type]}: ${item.text || defaultTexts[item.type]}`,
+          )
+          .join('; ')
+      : '-';
   }
 
   private getFeedbackSettingsKeyboard(
@@ -1066,7 +1096,11 @@ export class TelegramBroadcastScene extends BaseScene {
     );
     ctx.scene.state.awaitingActionText = undefined;
     await ctx.replyWithHTML(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
+        actionKeyboardSummary: this.renderActionKeyboardSummary(
+          ctx.scene.state.actionKeyboard,
+        ),
+      }),
       this.keyboardFactory.getBroadcastActionSettings(
         ctx,
         ctx.scene.state.actionKeyboard,
@@ -1077,7 +1111,11 @@ export class TelegramBroadcastScene extends BaseScene {
   private async renderActionSettings(ctx: IStepCtx) {
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
+        actionKeyboardSummary: this.renderActionKeyboardSummary(
+          ctx.scene.state.actionKeyboard,
+        ),
+      }),
       {
         parse_mode: 'HTML',
         ...this.keyboardFactory.getBroadcastActionSettings(

@@ -13,6 +13,7 @@ button:
   auth_link_connect: Войти через Social connect 🤖 (ЯГТУ ID)
   profile: Профиль 👤
   select_group: Выбрать группу
+  invite_to_chat: Пригласить бота в группу
   select_group_x: Выбрать группу "${groupName}"
   broadcast:
     title: Рассылки
@@ -58,7 +59,9 @@ button:
     feedback_settings: Настроить fallback
     feedback_text: Текст кнопки
     feedback_response: Изменить ответ
-    feedback_after_toggle: 'Кнопка после клика: ${feedbackAfterClickText ? "вкл" : "выкл"}'
+    feedback_after_delete: '${selected ? "✅ " : ""}Удалить после клика'
+    feedback_after_keep: '${selected ? "✅ " : ""}Оставить после клика'
+    feedback_after_replace: '${selected ? "✅ " : ""}Заменить после клика'
     feedback_after_text: Текст кнопки после клика
     action_buttons: 'Доп. кнопки: ${actionButtonsCount || "нет"}'
     action_select_group: 'Выбрать актуальную группу: ${actionButton ? "вкл" : "выкл"}'
@@ -238,8 +241,8 @@ page:
       • groups = ${filter.groupNames?.length ? filter.groupNames.length + ' выбрано' : '-'}
       • mode = ${mode}
       • fallback-кнопка = <code>${feedbackButton?.text || '-'}</code>
-      ${feedbackButton ? ('• ответ после клика = <code>' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '</code>\n• кнопка после клика = <code>' + (feedbackButton.afterClickText || 'удаляется') + '</code>') : ''}
-      • доп. кнопки = <code>${actionKeyboard?.length ? actionKeyboard.map((item) => item.type).join(', ') : '-'}</code>
+      ${feedbackButton ? ('• ответ после клика = <code>' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '</code>\n• кнопка после клика = <code>' + feedbackAfterClickSummary + '</code>') : ''}
+      • доп. кнопки = <code>${actionKeyboardSummary}</code>
 
       Нажми «Далее» или отправь <code>/next</code> для выбора сообщения.
     select_recipients: |
@@ -297,6 +300,7 @@ page:
     action_settings: |
       <b>Дополнительные кнопки</b>
       Включай нужные действия и при необходимости меняй их текст. Кнопки добавляются к каждому сообщению рассылки.
+      Сейчас: <code>${actionKeyboardSummary}</code>
     action_text: Отправь текст для дополнительной кнопки. Максимум 40 символов.
     action_text_invalid: Текст кнопки должен содержать от 1 до 40 символов.
     filter_exclude_campaigns_text: |
@@ -374,7 +378,7 @@ page:
       <b>Fallback-кнопка</b>
       Исходная кнопка: <code>${feedbackButton.text}</code>
       Ответ после первого клика: <code>${feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»'}</code>
-      После первого клика: <code>${feedbackButton.afterClickText || 'кнопка удаляется'}</code>
+      После первого клика: <code>${feedbackAfterClickSummary}</code>
     filter_groups_empty: Сначала выбери хотя бы одну группу.
     done: Готово. Основное меню бота снова доступно.
     campaign_not_found: |

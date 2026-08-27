@@ -28,5 +28,8 @@ describe('TelegramBroadcastScene', () => {
     const message = (scene as any).renderSettings(ctx, state);
 
     expect(message).toContain('Тестовая выборка: <code>1 ID: 2</code>');
+    expect(message).toContain(
+      'Выбор группы: Выбрать группу; ЯГТУ.ID: Подключить или обновить ЯГТУ.ID',
+    );
   });
 });

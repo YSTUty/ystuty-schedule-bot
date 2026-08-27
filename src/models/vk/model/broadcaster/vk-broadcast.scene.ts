@@ -965,9 +965,13 @@ export class VkBroadcastScene {
       filter: ctx.scene.state.filter,
       recipientsCount: ctx.scene.state.recipientsCount ?? 0,
       selectedCount: ctx.scene.state.selectedRecipientIds.length,
+      selectedRecipientIds: ctx.scene.state.selectedRecipientIds,
       audienceMode: ctx.scene.state.manualRecipients ? 'manual' : 'all',
       feedbackButton: ctx.scene.state.feedbackButton,
       actionKeyboard: ctx.scene.state.actionKeyboard,
+      actionKeyboardSummary: this.renderActionKeyboardSummary(
+        ctx.scene.state.actionKeyboard,
+      ),
     });
   }
 
@@ -975,6 +979,29 @@ export class VkBroadcastScene {
     return ctx.i18n.t(LocalePhrase.Page_Broadcast_FeedbackSettings, {
       feedbackButton: ctx.scene.state.feedbackButton || { text: '-' },
     });
+  }
+
+  /** Кратко отображает настроенные подписи action-кнопок без привязки к transport keyboard. */
+  private renderActionKeyboardSummary(
+    actionKeyboard?: BroadcastActionKeyboard | null,
+  ) {
+    const labels: Record<BroadcastRecipientAction, string> = {
+      select_group: 'Выбор группы',
+      auth: 'ЯГТУ.ID',
+    };
+    const defaultTexts: Record<BroadcastRecipientAction, string> = {
+      select_group: 'Выбрать актуальную группу',
+      auth: 'Подключить или обновить ЯГТУ.ID',
+    };
+
+    return (actionKeyboard || []).length
+      ? (actionKeyboard || [])
+          .map(
+            (item) =>
+              `${labels[item.type]}: ${item.text || defaultTexts[item.type]}`,
+          )
+          .join('; ')
+      : '-';
   }
 
   private renderReady(ctx: IStepCtx) {
@@ -1162,7 +1189,11 @@ export class VkBroadcastScene {
   private async renderActionSettings(ctx: IStepCtx) {
     await this.editCurrentVkMessage(
       ctx,
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
+        actionKeyboardSummary: this.renderActionKeyboardSummary(
+          ctx.scene.state.actionKeyboard,
+        ),
+      }),
       {
         keep_forward_messages: true,
         keyboard: this.keyboardFactory
@@ -1207,11 +1238,18 @@ export class VkBroadcastScene {
       (item) => (item.type === action ? { ...item, text: value } : item),
     );
     ctx.scene.state.awaitingActionText = undefined;
-    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings), {
-      keyboard: this.keyboardFactory
-        .getBroadcastActionSettings(ctx, ctx.scene.state.actionKeyboard)
-        .inline(),
-    });
+    await ctx.send(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
+        actionKeyboardSummary: this.renderActionKeyboardSummary(
+          ctx.scene.state.actionKeyboard,
+        ),
+      }),
+      {
+        keyboard: this.keyboardFactory
+          .getBroadcastActionSettings(ctx, ctx.scene.state.actionKeyboard)
+          .inline(),
+      },
+    );
   }
 
   private async renderSettingsScreen(ctx: IStepCtx) {

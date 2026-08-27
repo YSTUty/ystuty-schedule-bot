@@ -41,7 +41,13 @@ export class SelectGroupScene extends BaseScene {
   @Hears(/.+/)
   @Action(/.+/)
   async step1(
-    @Ctx() ctx: IStepContext<{ firstTime?: boolean; groupName?: string }>,
+    @Ctx()
+    ctx: IStepContext<{
+      firstTime?: boolean;
+      groupName?: string;
+      /** Не редактирует сообщение, из которого был открыт сценарий. */
+      forceNewMessage?: boolean;
+    }>,
   ) {
     const {
       scene: { state },
@@ -87,7 +93,20 @@ export class SelectGroupScene extends BaseScene {
           randomGroupName2: this.scheduleService.randomGroupName,
         },
       );
-      if (ctx.callbackQuery) {
+      const currentGroupName = isConv
+        ? ctx.conversation?.groupName
+        : userSocial.groupName;
+      const prompt = [
+        ...(currentGroupName
+          ? [
+              ctx.i18n.t(LocalePhrase.Page_SelectGroup_Current, {
+                groupName: currentGroupName,
+              }),
+            ]
+          : []),
+        content,
+      ].join('\n\n');
+      if (ctx.callbackQuery && !state.forceNewMessage) {
         // const keyboard = this.keyboardFactory.getCancelInline(ctx);
         const keyboard = Markup.inlineKeyboard([
           [
@@ -103,7 +122,7 @@ export class SelectGroupScene extends BaseScene {
             ),
           ],
         ]);
-        await ctx.editMessageText(content, {
+        await ctx.editMessageText(prompt, {
           ...keyboard,
           parse_mode: 'HTML',
         });
@@ -113,7 +132,7 @@ export class SelectGroupScene extends BaseScene {
           [ctx.i18n.t(LocalePhrase.Button_Cancel)],
           [ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups)],
         ]).resize();
-        await ctx.replyWithHTML(content, keyboard);
+        await ctx.replyWithHTML(prompt, keyboard);
       }
       return;
     }

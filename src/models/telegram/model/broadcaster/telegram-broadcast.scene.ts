@@ -18,6 +18,7 @@ import { BroadcastService } from '../../../broadcast/broadcast.service';
 import {
   BroadcastActionKeyboard,
   BroadcastAudienceFilter,
+  BroadcastCampaignSettings,
   BroadcastFeedbackButton,
   BroadcastMessageMode,
   BroadcastRecipientAction,
@@ -29,6 +30,8 @@ import { BaseScene } from '../../scene/base.scene';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 
 type TelegramBroadcastState = {
+  /** Совместимые параметры выбранной прошлой кампании, без сообщения и history. */
+  reusedSettings?: BroadcastCampaignSettings;
   filter: BroadcastAudienceFilter;
   sourceMessage?: BroadcastSourceMessage;
   recipientsCount?: number;
@@ -60,18 +63,27 @@ export class TelegramBroadcastScene extends BaseScene {
   @WizardStep(1)
   async onEnter(@Ctx() ctx: IStepCtx) {
     const state = ctx.scene.state;
-    state.filter = {
-      hasDM: true,
-      isBlockedBot: false,
-    };
-    state.mode = BroadcastMessageMode.Copy;
+    const reusedSettings = state.reusedSettings;
+    state.filter = reusedSettings
+      ? { ...reusedSettings.audienceFilter }
+      : {
+          hasDM: true,
+          isBlockedBot: false,
+        };
+    state.mode =
+      reusedSettings?.mode === BroadcastMessageMode.Forward
+        ? BroadcastMessageMode.Forward
+        : BroadcastMessageMode.Copy;
     state.selectedRecipientIds = [];
     state.recipientsPage = 1;
     state.manualRecipients = false;
     state.awaitingFilter = undefined;
     state.awaitingFeedbackText = undefined;
-    state.feedbackButton = null;
-    state.actionKeyboard = [];
+    state.feedbackButton = reusedSettings?.feedbackButton
+      ? { ...reusedSettings.feedbackButton }
+      : null;
+    state.actionKeyboard =
+      reusedSettings?.actionKeyboard.map((item) => ({ ...item })) || [];
     state.awaitingActionText = undefined;
 
     const count = await this.broadcastService.countRecipients(

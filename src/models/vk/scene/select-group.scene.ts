@@ -20,7 +20,10 @@ export class SelectGroupScene {
   ) {}
 
   @AddStep()
-  async step1(@Ctx() ctx: IStepContext<{ groupName: string }>) {
+  async step1(
+    @Ctx()
+    ctx: IStepContext<{ groupName: string; forceNewMessage?: boolean }>,
+  ) {
     const {
       isChat: isConv,
       scene: { state },
@@ -42,12 +45,24 @@ export class SelectGroupScene {
 
     if (ctx.scene.step.firstTime && !groupName) {
       const keyboard = this.keyboardFactory.getSelectGroupScene(ctx).inline();
+      const currentGroupName = isConv
+        ? ctx.state.conversation?.groupName
+        : ctx.state.userSocial.groupName;
       await ctx.send(
-        ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
-          randomGroupName:
-            ctx.state.user?.groupName || this.scheduleService.randomGroupName,
-          randomGroupName2: this.scheduleService.randomGroupName,
-        }),
+        [
+          ...(currentGroupName
+            ? [
+                ctx.i18n.t(LocalePhrase.Page_SelectGroup_Current, {
+                  groupName: currentGroupName,
+                }),
+              ]
+            : []),
+          ctx.i18n.t(LocalePhrase.Page_SelectGroup_EnterNameWithExample, {
+            randomGroupName:
+              ctx.state.user?.groupName || this.scheduleService.randomGroupName,
+            randomGroupName2: this.scheduleService.randomGroupName,
+          }),
+        ].join('\n\n'),
         { keyboard },
       );
       return;
@@ -94,7 +109,7 @@ export class SelectGroupScene {
       const keyboard = this.keyboardFactory
         .getStart(ctx)
         .inline(this.keyboardFactory.needInline(ctx));
-      if (ctx.isMessageEventContext()) {
+      if (ctx.isMessageEventContext() && !state.forceNewMessage) {
         await ctx.editMessage({
           message: ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
             selectedGroupName,

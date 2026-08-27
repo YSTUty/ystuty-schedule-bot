@@ -20,7 +20,9 @@ export class AuthScene {
   ) {}
 
   @AddStep()
-  async step1(@Ctx() ctx: IStepContext<{ groupName: string }>) {
+  async step1(
+    @Ctx() ctx: IStepContext<{ groupName: string; forceNewMessage?: boolean }>,
+  ) {
     if (!ctx.isDM && !ctx.is(['message_event'])) {
       await ctx.scene.leave({ canceled: true });
       return;

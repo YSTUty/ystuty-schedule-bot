@@ -37,6 +37,10 @@ export class BroadcastCampaign {
   @Column({ type: 'enum', enum: BroadcastMessageMode })
   public mode: BroadcastMessageMode;
 
+  /** Версия повторно используемых настроек; обновляется через явные adapters. */
+  @Column({ type: 'integer', default: 1 })
+  public settingsVersion: number;
+
   @Column({ type: 'jsonb' })
   public sourceMessage: BroadcastSourceMessage;
 

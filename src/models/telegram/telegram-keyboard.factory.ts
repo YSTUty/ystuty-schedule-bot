@@ -429,6 +429,12 @@ export class TelegramKeyboardFactory {
         : []),
       [
         Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ApplySettings),
+          `broadcast:campaign:apply:${params.campaignId}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_Delete),
           `broadcast:campaign:delete:${params.campaignId}`,
         ),

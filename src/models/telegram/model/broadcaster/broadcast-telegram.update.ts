@@ -164,6 +164,37 @@ export class BroadcastTelegramUpdate {
     await this.editCampaignDetails(ctx, Number(ctx.match!.groups!.campaignId));
   }
 
+  @Action(/broadcast:campaign:apply:(?<campaignId>\d+)/)
+  async onBroadcastCampaignApplySettings(@Ctx() ctx: ICallbackQueryContext) {
+    const campaignId = Number(ctx.match!.groups!.campaignId);
+    const campaign = await this.broadcastService.getCampaignForSocial(
+      campaignId,
+      SocialType.Telegram,
+    );
+    if (!campaign) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Broadcast_Notification_NotFound),
+      );
+      await this.editCampaignDetails(ctx, campaignId);
+      return;
+    }
+
+    const reuse = this.broadcastService.getCampaignSettingsForReuse(campaign);
+    if (!reuse.compatible) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Broadcast_Notification_SettingsIncompatible),
+      );
+      return;
+    }
+
+    await ctx.tryAnswerCbQuery(
+      ctx.i18n.t(LocalePhrase.Broadcast_Notification_SettingsApplied),
+    );
+    await ctx.scene.enter(TELEGRAM_BROADCAST_SCENE, {
+      reusedSettings: reuse.settings,
+    });
+  }
+
   @Action(/broadcast:campaign:delete:(?<campaignId>\d+)/)
   async onBroadcastCampaignDelete(@Ctx() ctx: ICallbackQueryContext) {
     const campaignId = Number(ctx.match!.groups!.campaignId);

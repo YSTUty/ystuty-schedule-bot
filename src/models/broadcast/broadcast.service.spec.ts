@@ -188,6 +188,47 @@ describe('BroadcastService', () => {
     expect(action).toBeNull();
   });
 
+  it('adapts legacy campaign settings without source or delivery data', () => {
+    const { service } = createService();
+    const result = service.getCampaignSettingsForReuse({
+      id: 7,
+      mode: 'forward',
+      audienceFilter: {
+        groupNames: ['ЦИС-11'],
+        onlyAuthorized: true,
+      },
+      feedbackButton: { text: '🫡' },
+      actionKeyboard: { type: 'select_group' },
+      sourceMessage: { text: 'Не переносить' },
+      deliveries: [{ id: 14 }],
+      status: BroadcastCampaignStatus.Completed,
+    } as any);
+
+    expect(result).toEqual({
+      compatible: true,
+      settings: {
+        settingsVersion: 1,
+        mode: 'forward',
+        audienceFilter: {
+          groupNames: ['ЦИС-11'],
+          onlyAuthorized: true,
+        },
+        feedbackButton: { text: '🫡' },
+        actionKeyboard: [{ type: 'select_group' }],
+      },
+    });
+  });
+
+  it('refuses campaign settings from an unknown schema', () => {
+    const { service } = createService();
+
+    const result = service.getCampaignSettingsForReuse({
+      settingsVersion: 2,
+    } as any);
+
+    expect(result).toEqual({ compatible: false, settingsVersion: 2 });
+  });
+
   it('records repeat feedback only after the initial click', async () => {
     const { service, deliveryRepository, feedbackRepository } = createService();
     deliveryRepository.findOne.mockResolvedValueOnce({

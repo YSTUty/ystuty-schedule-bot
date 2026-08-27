@@ -29,7 +29,9 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
       userSocialId: 7,
       action: 'select_group',
     });
-    expect(ctx.scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE');
+    expect(ctx.scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
+      forceNewMessage: true,
+    });
     expect(calls).toEqual(['scene', 'answer']);
   });
 
@@ -67,6 +69,8 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
 
     await update.onRecipientAction(ctx as any);
 
-    expect(ctx.scene.enter).toHaveBeenCalledWith('AUTH_SCENE');
+    expect(ctx.scene.enter).toHaveBeenCalledWith('AUTH_SCENE', {
+      forceNewMessage: true,
+    });
   });
 });

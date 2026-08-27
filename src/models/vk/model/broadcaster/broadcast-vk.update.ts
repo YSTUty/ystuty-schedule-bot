@@ -121,6 +121,7 @@ export class BroadcastVkUpdate {
       'menuCurrent',
       'menuList',
       'detail',
+      'applySettings',
       'delete',
       'deleteAll',
       'deleteSelect',
@@ -195,6 +196,42 @@ export class BroadcastVkUpdate {
         text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Campaign),
       });
       await this.editCampaignDetails(ctx, Number(ctx.eventPayload.campaignId));
+      return;
+    }
+
+    if (action === 'applySettings') {
+      const campaignId = Number(ctx.eventPayload.campaignId);
+      const campaign = await this.broadcastService.getCampaignForSocial(
+        campaignId,
+        SocialType.Vkontakte,
+      );
+      if (!campaign) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_NotFound),
+        });
+        await this.editCampaignDetails(ctx, campaignId);
+        return;
+      }
+
+      const reuse = this.broadcastService.getCampaignSettingsForReuse(campaign);
+      if (!reuse.compatible) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(
+            LocalePhrase.Broadcast_Notification_SettingsIncompatible,
+          ),
+        });
+        return;
+      }
+
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_SettingsApplied),
+      });
+      await ctx.scene.enter(VK_BROADCAST_SCENE, {
+        state: { reusedSettings: reuse.settings },
+      });
       return;
     }
 

@@ -581,6 +581,16 @@ export class VKKeyboardFactory {
         : []),
       [
         Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ApplySettings),
+          payload: {
+            broadcastAction: 'applySettings',
+            campaignId: params.campaignId,
+          },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Delete),
           payload: {
             broadcastAction: 'delete',

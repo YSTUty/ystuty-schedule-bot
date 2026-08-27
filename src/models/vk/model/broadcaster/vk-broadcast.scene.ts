@@ -13,6 +13,7 @@ import { BroadcastService } from '../../../broadcast/broadcast.service';
 import {
   BroadcastActionKeyboard,
   BroadcastAudienceFilter,
+  BroadcastCampaignSettings,
   BroadcastFeedbackButton,
   BroadcastMessageMode,
   BroadcastRecipientAction,
@@ -23,6 +24,8 @@ import { ScheduleService } from '../../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
 type VkBroadcastState = {
+  /** Совместимые параметры выбранной прошлой кампании, без сообщения и history. */
+  reusedSettings?: BroadcastCampaignSettings;
   filter: BroadcastAudienceFilter;
   sourceMessage?: BroadcastSourceMessage;
   recipientsCount?: number;
@@ -54,18 +57,24 @@ export class VkBroadcastScene {
   @AddStep()
   async step1(@Ctx() ctx: IStepCtx) {
     if (ctx.scene.step.firstTime) {
-      ctx.scene.state.filter = {
-        hasDM: true,
-        isBlockedBot: false,
-      };
+      const reusedSettings = ctx.scene.state.reusedSettings;
+      ctx.scene.state.filter = reusedSettings
+        ? { ...reusedSettings.audienceFilter }
+        : {
+            hasDM: true,
+            isBlockedBot: false,
+          };
       ctx.scene.state.selectedRecipientIds = [];
       ctx.scene.state.recipientsPage = 1;
       ctx.scene.state.manualRecipients = false;
       ctx.scene.state.awaitingSource = false;
       ctx.scene.state.awaitingFilter = undefined;
       ctx.scene.state.awaitingFeedbackText = undefined;
-      ctx.scene.state.feedbackButton = null;
-      ctx.scene.state.actionKeyboard = [];
+      ctx.scene.state.feedbackButton = reusedSettings?.feedbackButton
+        ? { ...reusedSettings.feedbackButton }
+        : null;
+      ctx.scene.state.actionKeyboard =
+        reusedSettings?.actionKeyboard.map((item) => ({ ...item })) || [];
       ctx.scene.state.awaitingActionText = undefined;
       ctx.scene.state.recipientsCount =
         await this.broadcastService.countRecipients(

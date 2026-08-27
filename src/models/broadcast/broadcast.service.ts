@@ -10,6 +10,7 @@ import { UserException } from '@my-common/exception';
 
 import { getBroadcastHistoryLimit } from './broadcast.config';
 import {
+  BROADCAST_CAMPAIGN_SETTINGS_VERSION,
   BROADCAST_TELEGRAM_QUEUE_NAME,
   BROADCAST_VK_QUEUE_NAME,
   DEFAULT_BROADCAST_JOB_DELAY_MS,
@@ -20,6 +21,7 @@ import {
   BroadcastActionKeyboard,
   BroadcastAudienceFilter,
   BroadcastAudienceGroupsPreview,
+  BroadcastCampaignSettingsReuse,
   BroadcastCampaignStatus,
   BroadcastDeliveryStatus,
   BroadcastFeedbackAction,
@@ -150,6 +152,7 @@ export class BroadcastService {
         social: params.social,
         status: BroadcastCampaignStatus.Queued,
         mode: params.mode,
+        settingsVersion: BROADCAST_CAMPAIGN_SETTINGS_VERSION,
         sourceMessage: params.sourceMessage,
         audienceFilter,
         contentPreview: this.createContentPreview(params.sourceMessage),
@@ -227,6 +230,39 @@ export class BroadcastService {
     return await this.campaignRepository.findOne({
       where: { id: campaignId, social },
     });
+  }
+
+  /**
+   * Возвращает только переносимые настройки кампании.
+   * Образец сообщения, deliveries, статус и прочая история намеренно не входят.
+   */
+  public getCampaignSettingsForReuse(
+    campaign: BroadcastCampaign,
+  ): BroadcastCampaignSettingsReuse {
+    const settingsVersion = campaign.settingsVersion ?? 0;
+    if (
+      settingsVersion !== 0 &&
+      settingsVersion !== BROADCAST_CAMPAIGN_SETTINGS_VERSION
+    ) {
+      return { compatible: false, settingsVersion };
+    }
+
+    return {
+      compatible: true,
+      settings: {
+        // Кампании без поля созданы до введения версии. Этот adapter сохраняет
+        // только уже поддерживаемые поля и приводит legacy actionKeyboard.
+        settingsVersion: BROADCAST_CAMPAIGN_SETTINGS_VERSION,
+        mode: campaign.mode,
+        audienceFilter: { ...campaign.audienceFilter },
+        feedbackButton: campaign.feedbackButton
+          ? { ...campaign.feedbackButton }
+          : null,
+        actionKeyboard: normalizeBroadcastActionKeyboard(
+          campaign.actionKeyboard,
+        ),
+      },
+    };
   }
 
   public async getRecentCampaigns(social: SocialType, limit = 10) {

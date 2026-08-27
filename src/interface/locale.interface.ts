@@ -21,6 +21,7 @@ export enum LocalePhrase {
   Button_Broadcast_Current = 'button.broadcast.current',
   Button_Broadcast_List = 'button.broadcast.list',
   Button_Broadcast_Delete = 'button.broadcast.delete',
+  Button_Broadcast_ApplySettings = 'button.broadcast.apply_settings',
   Button_Broadcast_DeleteAll = 'button.broadcast.delete_all',
   Button_Broadcast_DeleteSelect = 'button.broadcast.delete_select',
   Button_Broadcast_DeleteSelected = 'button.broadcast.delete_selected',
@@ -139,6 +140,7 @@ export enum LocalePhrase {
   Page_Profile_Info = 'page.profile.info',
 
   Page_SelectGroup_EnterNameWithExample = 'page.select_group.enter_name_with_example',
+  Page_SelectGroup_Current = 'page.select_group.current',
   Page_SelectGroup_InstitutesList = 'page.select_group.institutes_list',
   Page_SelectGroup_GroupsList = 'page.select_group.groups_list',
   Page_SelectGroup_Selected = 'page.select_group.selected',
@@ -216,6 +218,8 @@ export enum LocalePhrase {
   Broadcast_Notification_FeedbackAlreadyReceived = 'broadcast.notification.feedback_already_received',
   Broadcast_Notification_FeedbackUnavailable = 'broadcast.notification.feedback_unavailable',
   Broadcast_Notification_ActionUnavailable = 'broadcast.notification.action_unavailable',
+  Broadcast_Notification_SettingsApplied = 'broadcast.notification.settings_applied',
+  Broadcast_Notification_SettingsIncompatible = 'broadcast.notification.settings_incompatible',
 }
 
 export enum VkLocalePhrase {}

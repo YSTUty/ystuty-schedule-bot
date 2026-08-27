@@ -30,7 +30,10 @@ export class AuthScene extends BaseScene {
     LocalePhrase.Button_AuthLink,
     LocalePhrase.Button_AuthLink_SocialConnect,
   ])
-  async step1(@Ctx() ctx: IStepContext) {
+  async step1(
+    @Ctx()
+    ctx: IStepContext<{ firstTime?: boolean; forceNewMessage?: boolean }>,
+  ) {
     const {
       scene: { state },
     } = ctx;

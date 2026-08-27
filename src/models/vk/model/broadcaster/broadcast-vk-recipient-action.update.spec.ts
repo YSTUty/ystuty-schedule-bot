@@ -30,7 +30,9 @@ describe('BroadcastVkRecipientActionUpdate', () => {
       userSocialId: 7,
       action: 'select_group',
     });
-    expect(ctx.scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE');
+    expect(ctx.scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
+      state: { forceNewMessage: true },
+    });
     expect(ctx.answer).toHaveBeenCalledWith({
       type: 'show_snackbar',
       text: 'Готово',
@@ -76,7 +78,9 @@ describe('BroadcastVkRecipientActionUpdate', () => {
 
     await update.onRecipientAction(ctx as any);
 
-    expect(ctx.scene.enter).toHaveBeenCalledWith('AUTH_SCENE');
+    expect(ctx.scene.enter).toHaveBeenCalledWith('AUTH_SCENE', {
+      state: { forceNewMessage: true },
+    });
     expect(ctx.answer).toHaveBeenCalledWith({
       type: 'show_snackbar',
       text: 'Готово',

@@ -97,6 +97,19 @@ export type BroadcastActionKeyboard = BroadcastRecipientActionButton[];
 
 export type BroadcastRecipientAction = 'select_group' | 'auth';
 
+/** Набор параметров кампании, пригодный для повторного использования в wizard. */
+export type BroadcastCampaignSettings = {
+  settingsVersion: number;
+  mode: BroadcastMessageMode;
+  audienceFilter: BroadcastAudienceFilter;
+  feedbackButton: BroadcastFeedbackButton | null;
+  actionKeyboard: BroadcastActionKeyboard;
+};
+
+export type BroadcastCampaignSettingsReuse =
+  | { compatible: true; settings: BroadcastCampaignSettings }
+  | { compatible: false; settingsVersion: number };
+
 /** Приводит сохранённую настройку к безопасному набору кнопок, включая прежний JSONB-формат. */
 export const normalizeBroadcastActionKeyboard = (
   value?: BroadcastActionKeyboard | BroadcastRecipientActionButton | null,

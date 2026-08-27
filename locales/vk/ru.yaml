@@ -21,6 +21,7 @@ button:
     current: Текущая рассылка
     list: Список рассылок
     delete: Удалить сообщения
+    apply_settings: Применить настройки
     delete_all: Удалить все
     delete_select: Выбрать сообщения
     delete_selected: 'Удалить выбранные (${selectedCount})'
@@ -205,6 +206,7 @@ page:
     confirm_delete: Удалить рассылку расписания для группы ${groupName}? Это действие нельзя отменить.
 
   select_group:
+    current: 'Сейчас указана группа: ${groupName}'
     enter_name_with_example: |
       Напиши название нужной группы.\nНапример, ${randomGroupName} \
       или ${randomGroupName2.toLowerCase()}
@@ -329,6 +331,13 @@ page:
       Статус: ${campaign.status}
       Режим: ${campaign.mode}
       Содержимое: ${campaign.contentPreview || '-'}
+      Версия настроек: ${campaign.settingsVersion || 1}
+      Авторизованные: ${campaign.audienceFilter.onlyAuthorized === undefined ? 'любые' : campaign.audienceFilter.onlyAuthorized ? 'да' : 'нет'}
+      Группы: ${campaign.audienceFilter.groupNames?.length ? campaign.audienceFilter.groupNames.join(', ') : campaign.audienceFilter.groupName || 'все'}
+      Активность: ${campaign.audienceFilter.lastInteractionAfter || campaign.audienceFilter.lastInteractionBefore ? (campaign.audienceFilter.lastInteractionAfter || '−∞') + ' — ' + (campaign.audienceFilter.lastInteractionBefore || '+∞') : 'не ограничена'}
+      Исключить рассылки: ${campaign.audienceFilter.excludeCampaignIds?.length ? campaign.audienceFilter.excludeCampaignIds.join(', ') : 'нет'}
+      Feedback: ${campaign.feedbackButton?.text || 'нет'}
+      Доп. кнопки: ${campaign.actionKeyboard?.length ? campaign.actionKeyboard.map((item) => item.type).join(', ') : 'нет'}
       Получателей: ${campaign.totalCount}
       Успешно: ${campaign.sentCount}
       Ошибки: ${campaign.failedCount}
@@ -395,3 +404,5 @@ broadcast:
     feedback_already_received: Feedback уже учтён.
     feedback_unavailable: Эта кнопка больше недоступна.
     action_unavailable: Это действие больше недоступно.
+    settings_applied: Настройки применены.
+    settings_incompatible: Настройки этой рассылки несовместимы с текущей версией.

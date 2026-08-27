@@ -44,10 +44,12 @@ export class BroadcastTelegramRecipientActionUpdate {
   ) {
     switch (action) {
       case 'select_group':
-        await ctx.scene.enter(SELECT_GROUP_SCENE);
+        await ctx.scene.enter(SELECT_GROUP_SCENE, {
+          forceNewMessage: true,
+        });
         return;
       case 'auth':
-        await ctx.scene.enter(AUTH_SCENE);
+        await ctx.scene.enter(AUTH_SCENE, { forceNewMessage: true });
         return;
     }
   }

@@ -39,22 +39,7 @@ export class SelectGroupScene {
       return;
     }
 
-    // Чужой callback не содержит введённого названия группы.
-    if (ctx.is(['message_event'])) {
-      const selectedGroupName =
-        'eventPayload' in ctx &&
-        ctx.eventPayload?.groupAction === 'select' &&
-        typeof ctx.eventPayload.groupName === 'string'
-          ? ctx.eventPayload.groupName
-          : undefined;
-      if (!selectedGroupName) {
-        return;
-      }
-      groupName = selectedGroupName;
-    } else if (!ctx.scene.step.firstTime) {
-      groupName = ctx.text;
-    }
-
+    const isMessageEvent = ctx.is(['message_event']);
     if (ctx.scene.step.firstTime && !groupName) {
       const keyboard = this.keyboardFactory.getSelectGroupScene(ctx).inline();
       const currentGroupName = isConv
@@ -78,6 +63,22 @@ export class SelectGroupScene {
         { keyboard },
       );
       return;
+    }
+
+    // Чужой callback не содержит введённого названия группы.
+    if (isMessageEvent) {
+      const selectedGroupName =
+        'eventPayload' in ctx &&
+        ctx.eventPayload?.groupAction === 'select' &&
+        typeof ctx.eventPayload.groupName === 'string'
+          ? ctx.eventPayload.groupName
+          : undefined;
+      if (!selectedGroupName) {
+        return;
+      }
+      groupName = selectedGroupName;
+    } else if (!ctx.scene.step.firstTime) {
+      groupName = ctx.text;
     }
 
     if (

@@ -31,6 +31,33 @@ describe('VK SelectGroupScene', () => {
     expect(ctx.send).not.toHaveBeenCalled();
   });
 
+  it('renders the initial group prompt from a recipient action callback', async () => {
+    const keyboard = { inline: jest.fn().mockReturnValue('keyboard') };
+    const scene = new SelectGroupScene(
+      { randomGroupName: 'ЦИС-11' } as any,
+      { getSelectGroupScene: jest.fn().mockReturnValue(keyboard) } as any,
+      {} as any,
+    );
+    const ctx = {
+      eventPayload: {
+        deliveryId: 8,
+        broadcastRecipientAction: 'select_group',
+      },
+      is: jest.fn((types: string[]) => types.includes('message_event')),
+      isChat: false,
+      state: { userSocial: {}, user: null },
+      scene: { state: { forceNewMessage: true }, step: { firstTime: true } },
+      i18n: { t: jest.fn().mockReturnValue('Выбери группу') },
+      send: jest.fn(),
+    };
+
+    await scene.step1(ctx as any);
+
+    expect(ctx.send).toHaveBeenCalledWith('Выбери группу', {
+      keyboard: 'keyboard',
+    });
+  });
+
   it('saves a group selected by the scene callback', async () => {
     const scheduleService = {
       getGroupByName: jest.fn().mockReturnValue('ДПО'),

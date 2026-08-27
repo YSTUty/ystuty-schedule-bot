@@ -748,6 +748,7 @@ export class TelegramBroadcastScene extends BaseScene {
       filter: state.filter,
       recipientsCount: state.recipientsCount ?? 0,
       selectedCount: state.selectedRecipientIds.length,
+      selectedRecipientIds: state.selectedRecipientIds,
       audienceMode: state.manualRecipients ? 'manual' : 'all',
       mode: state.mode ?? BroadcastMessageMode.Copy,
       feedbackButton: state.feedbackButton,

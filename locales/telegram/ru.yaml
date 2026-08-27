@@ -59,6 +59,7 @@ button:
     feedback_response: Изменить ответ
     feedback_after_toggle: 'Кнопка после клика: ${feedbackAfterClickText ? "вкл" : "выкл"}'
     feedback_after_text: Текст кнопки после клика
+    action_select_group: 'Выбор актуальной группы: ${actionKeyboard?.type === "select_group" ? "вкл" : "выкл"}'
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -233,6 +234,7 @@ page:
       • mode = ${mode}
       • fallback-кнопка = <code>${feedbackButton?.text || '-'}</code>
       ${feedbackButton ? ('• ответ после клика = <code>' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '</code>\n• кнопка после клика = <code>' + (feedbackButton.afterClickText || 'удаляется') + '</code>') : ''}
+      • действие для получателя = <code>${actionKeyboard?.type === 'select_group' ? 'выбор актуальной группы' : '-'}</code>
 
       Нажми «Далее» или отправь <code>/next</code> для выбора сообщения.
     select_recipients: |
@@ -388,6 +390,7 @@ broadcast:
     feedback_received: Спасибо за feedback!
     feedback_already_received: Feedback уже учтён.
     feedback_unavailable: Эта кнопка больше недоступна.
+    action_unavailable: Это действие больше недоступно.
 
   telegram:
     select_your_group: Выбрать свою группу

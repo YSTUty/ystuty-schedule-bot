@@ -8,6 +8,10 @@ import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 
+import {
+  BroadcastActionKeyboard,
+  BroadcastFeedbackButton,
+} from '../broadcast/broadcast.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
 
@@ -643,6 +647,43 @@ export class VKKeyboardFactory {
     ]);
   }
 
+  /** Собирает action- и feedback-ряды в пределах лимитов VK inline-клавиатуры. */
+  public getBroadcastRecipientKeyboard(params: {
+    actionKeyboard?: BroadcastActionKeyboard | null;
+    feedbackButton?: BroadcastFeedbackButton | null;
+    feedbackAction?: 'initial' | 'repeat';
+    deliveryId: number;
+  }) {
+    const rows: IKeyboardProxyButton[][] = [];
+    if (params.actionKeyboard?.type === 'select_group') {
+      rows.push([
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            params.actionKeyboard.text || 'Выбрать актуальную группу',
+          ),
+          payload: {
+            broadcastRecipientAction: 'select_group',
+            deliveryId: params.deliveryId,
+          },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ]);
+    }
+    if (params.feedbackButton) {
+      rows.push([
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(params.feedbackButton.text),
+          payload: {
+            broadcastFeedbackAction: params.feedbackAction || 'initial',
+            deliveryId: params.deliveryId,
+          },
+          color: Keyboard.POSITIVE_COLOR,
+        }),
+      ]);
+    }
+    return Keyboard.keyboard(rows);
+  }
+
   /** На VK три доставки на странице: pager и две кнопки действий занимают ещё пять мест. */
   public getBroadcastCampaignDeleteSelector(params: {
     ctx: IContext;
@@ -754,6 +795,7 @@ export class VKKeyboardFactory {
       onlyAuthorized?: boolean;
       groupName?: string | null;
       feedbackButton?: { text: string } | null;
+      actionKeyboard?: BroadcastActionKeyboard | null;
     } = {},
   ) {
     const {
@@ -761,6 +803,7 @@ export class VKKeyboardFactory {
       onlyAuthorized = false,
       groupName = null,
       feedbackButton = null,
+      actionKeyboard = null,
     } = options;
 
     return Keyboard.keyboard([
@@ -775,6 +818,15 @@ export class VKKeyboardFactory {
             broadcastAction: manualMode ? 'audienceAll' : 'audienceManual',
           },
           color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionSelectGroup, {
+            actionKeyboard,
+          }),
+          payload: { broadcastAction: 'actionSelectGroupToggle' },
+          color: Keyboard.SECONDARY_COLOR,
         }),
       ],
       ...(manualMode

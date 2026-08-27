@@ -11,6 +11,7 @@ import { IStepContext } from '@my-interfaces/vk';
 import { VK_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants';
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import {
+  BroadcastActionKeyboard,
   BroadcastAudienceFilter,
   BroadcastFeedbackButton,
   BroadcastMessageMode,
@@ -31,6 +32,7 @@ type VkBroadcastState = {
   awaitingFilter?: 'groups' | 'activity';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
   feedbackButton?: BroadcastFeedbackButton | null;
+  actionKeyboard?: BroadcastActionKeyboard | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
   confirmMessage?: { chatId: number; messageId: number };
 };
@@ -61,6 +63,7 @@ export class VkBroadcastScene {
       ctx.scene.state.awaitingFilter = undefined;
       ctx.scene.state.awaitingFeedbackText = undefined;
       ctx.scene.state.feedbackButton = null;
+      ctx.scene.state.actionKeyboard = null;
       ctx.scene.state.recipientsCount =
         await this.broadcastService.countRecipients(
           SocialType.Vkontakte,
@@ -295,6 +298,7 @@ export class VkBroadcastScene {
       | 'feedbackResponse'
       | 'feedbackAfterToggle'
       | 'feedbackAfterText'
+      | 'actionSelectGroupToggle'
       | 'filterExcludeCampaignToggle'
       | 'filterExcludeCampaignDone'
       | undefined;
@@ -319,6 +323,14 @@ export class VkBroadcastScene {
         type: 'show_snackbar',
         text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
       });
+      return true;
+    }
+
+    if (action === 'actionSelectGroupToggle') {
+      ctx.scene.state.actionKeyboard = ctx.scene.state.actionKeyboard
+        ? null
+        : { type: 'select_group' };
+      await this.renderSettingsScreen(ctx);
       return true;
     }
 
@@ -782,6 +794,7 @@ export class VkBroadcastScene {
           ? ctx.scene.state.selectedRecipientIds
           : undefined,
         feedbackButton: ctx.scene.state.feedbackButton,
+        actionKeyboard: ctx.scene.state.actionKeyboard,
         createdBySocialId: ctx.senderId,
       });
     } catch (err) {
@@ -838,6 +851,7 @@ export class VkBroadcastScene {
       selectedCount: ctx.scene.state.selectedRecipientIds.length,
       audienceMode: ctx.scene.state.manualRecipients ? 'manual' : 'all',
       feedbackButton: ctx.scene.state.feedbackButton,
+      actionKeyboard: ctx.scene.state.actionKeyboard,
     });
   }
 
@@ -971,6 +985,7 @@ export class VkBroadcastScene {
       onlyAuthorized: !!ctx.scene.state.filter.onlyAuthorized,
       groupName: ctx.scene.state.filter.groupNames?.join(', ') || null,
       feedbackButton: ctx.scene.state.feedbackButton,
+      actionKeyboard: ctx.scene.state.actionKeyboard,
     });
   }
 

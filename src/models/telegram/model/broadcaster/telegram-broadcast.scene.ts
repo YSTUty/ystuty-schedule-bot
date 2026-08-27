@@ -16,6 +16,7 @@ import { IStepContext } from '@my-interfaces/telegram';
 import { TELEGRAM_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants';
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import {
+  BroadcastActionKeyboard,
   BroadcastAudienceFilter,
   BroadcastFeedbackButton,
   BroadcastMessageMode,
@@ -36,6 +37,7 @@ type TelegramBroadcastState = {
   awaitingFilter?: 'groups' | 'activity';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
   feedbackButton?: BroadcastFeedbackButton | null;
+  actionKeyboard?: BroadcastActionKeyboard | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
   mode: BroadcastMessageMode.Copy | BroadcastMessageMode.Forward;
 };
@@ -67,6 +69,7 @@ export class TelegramBroadcastScene extends BaseScene {
     state.awaitingFilter = undefined;
     state.awaitingFeedbackText = undefined;
     state.feedbackButton = null;
+    state.actionKeyboard = null;
 
     const count = await this.broadcastService.countRecipients(
       SocialType.Telegram,
@@ -132,6 +135,16 @@ export class TelegramBroadcastScene extends BaseScene {
       parse_mode: 'HTML',
       ...this.getFeedbackSettingsKeyboard(ctx, state),
     });
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:action:select-group:toggle')
+  async onActionSelectGroupToggle(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.actionKeyboard = state.actionKeyboard
+      ? null
+      : { type: 'select_group' };
+    await this.renderSettingsScreen(ctx);
   }
 
   @WizardStep(2)
@@ -637,6 +650,7 @@ export class TelegramBroadcastScene extends BaseScene {
       audienceMode: state.manualRecipients ? 'manual' : 'all',
       mode: state.mode ?? BroadcastMessageMode.Copy,
       feedbackButton: state.feedbackButton,
+      actionKeyboard: state.actionKeyboard,
     });
   }
 
@@ -646,6 +660,7 @@ export class TelegramBroadcastScene extends BaseScene {
       onlyAuthorized: !!state.filter.onlyAuthorized,
       groupName: state.filter.groupName,
       feedbackButton: state.feedbackButton,
+      actionKeyboard: state.actionKeyboard,
     });
   }
 
@@ -710,6 +725,7 @@ export class TelegramBroadcastScene extends BaseScene {
           ? state.selectedRecipientIds
           : undefined,
         feedbackButton: state.feedbackButton,
+        actionKeyboard: state.actionKeyboard,
         createdBySocialId: ctx.from?.id,
       });
     } catch (err) {

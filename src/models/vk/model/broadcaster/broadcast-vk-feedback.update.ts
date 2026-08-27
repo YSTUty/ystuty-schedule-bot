@@ -1,15 +1,16 @@
 import { UseFilters } from '@nestjs/common';
 import { Ctx, OnMessageEvent, Update } from 'nestjs-vk';
 
-import { Keyboard } from 'vk-io';
-
 import { VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageEventContext } from '@my-interfaces/vk';
 
 import { BroadcastService } from '../../../broadcast/broadcast.service';
-import { BroadcastFeedbackAction } from '../../../broadcast/broadcast.types';
+import {
+  BroadcastActionKeyboard,
+  BroadcastFeedbackAction,
+} from '../../../broadcast/broadcast.types';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
 /** Обрабатывает feedback получателей без требования прав администратора. */
@@ -38,6 +39,7 @@ export class BroadcastVkFeedbackUpdate {
         ctx,
         Number(ctx.eventPayload.deliveryId),
         result.feedbackButton.afterClickText,
+        result.actionKeyboard,
       );
     }
     const responseText = !result
@@ -62,6 +64,7 @@ export class BroadcastVkFeedbackUpdate {
     ctx: IMessageEventContext,
     deliveryId: number,
     afterClickText?: string | null,
+    actionKeyboard?: BroadcastActionKeyboard | null,
   ) {
     const source = await ctx.api.messages.getByConversationMessageId({
       peer_id: ctx.peerId,
@@ -76,11 +79,14 @@ export class BroadcastVkFeedbackUpdate {
       peer_id: ctx.peerId,
       cmid: ctx.conversationMessageId,
       message,
-      keyboard: afterClickText
-        ? this.keyboardFactory
-            .getBroadcastFeedbackButton(afterClickText, deliveryId, 'repeat')
-            .inline()
-        : Keyboard.keyboard([]).inline(),
+      keyboard: this.keyboardFactory
+        .getBroadcastRecipientKeyboard({
+          deliveryId,
+          actionKeyboard,
+          feedbackAction: 'repeat',
+          feedbackButton: afterClickText ? { text: afterClickText } : null,
+        })
+        .inline(),
     });
   }
 }

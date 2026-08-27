@@ -57,6 +57,7 @@ export enum LocalePhrase {
   Button_Broadcast_FeedbackResponse = 'button.broadcast.feedback_response',
   Button_Broadcast_FeedbackAfterToggle = 'button.broadcast.feedback_after_toggle',
   Button_Broadcast_FeedbackAfterText = 'button.broadcast.feedback_after_text',
+  Button_Broadcast_ActionSelectGroup = 'button.broadcast.action_select_group',
   Button_Broadcast_Back = 'button.broadcast.back',
   Button_Broadcast_BackToSettings = 'button.broadcast.back_to_settings',
   Button_ScheduleNotif = 'button.schedule_notification.title',
@@ -207,6 +208,7 @@ export enum LocalePhrase {
   Broadcast_Notification_FeedbackReceived = 'broadcast.notification.feedback_received',
   Broadcast_Notification_FeedbackAlreadyReceived = 'broadcast.notification.feedback_already_received',
   Broadcast_Notification_FeedbackUnavailable = 'broadcast.notification.feedback_unavailable',
+  Broadcast_Notification_ActionUnavailable = 'broadcast.notification.action_unavailable',
 }
 
 export enum VkLocalePhrase {}

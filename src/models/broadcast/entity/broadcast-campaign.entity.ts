@@ -11,6 +11,7 @@ import {
 import { SocialType } from '@my-common/constants';
 
 import {
+  BroadcastActionKeyboard,
   BroadcastAudienceFilter,
   BroadcastCampaignStatus,
   BroadcastFeedbackButton,
@@ -53,6 +54,10 @@ export class BroadcastCampaign {
   /** Необязательная кнопка feedback под каждым отправленным сообщением. */
   @Column({ type: 'jsonb', nullable: true })
   public feedbackButton: BroadcastFeedbackButton | null;
+
+  /** Предустановленное действие для получателя; transport формирует его клавиатуру сам. */
+  @Column({ type: 'jsonb', nullable: true })
+  public actionKeyboard: BroadcastActionKeyboard | null;
 
   @Column({ type: 'bigint', nullable: true })
   public createdBySocialId: string | null;

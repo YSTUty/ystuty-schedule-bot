@@ -7,6 +7,7 @@ import { i18n as i18nVk } from '@my-common/util/vk';
 import { IContext } from '@my-interfaces/vk';
 
 import {
+  BroadcastActionKeyboard,
   BroadcastCampaignStatus,
   BroadcastFeedbackButton,
   BroadcastMessageMode,
@@ -40,6 +41,7 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
     targetSocialId: string;
     mode: BroadcastMessageMode;
     sourceMessage: { text?: string; attachment?: string; stickerId?: number };
+    actionKeyboard?: BroadcastActionKeyboard | null;
     feedbackButton?: BroadcastFeedbackButton | null;
   }): Promise<BroadcastTransportResult> {
     if (params.mode !== BroadcastMessageMode.Text) {
@@ -95,15 +97,13 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
   private getFeedbackExtra(params: {
     campaignId: number;
     deliveryId: number;
+    actionKeyboard?: BroadcastActionKeyboard | null;
     feedbackButton?: BroadcastFeedbackButton | null;
   }) {
-    if (!params.feedbackButton) return {};
+    if (!params.feedbackButton && !params.actionKeyboard) return {};
     return {
       keyboard: this.keyboardFactory
-        .getBroadcastFeedbackButton(
-          params.feedbackButton.text,
-          params.deliveryId,
-        )
+        .getBroadcastRecipientKeyboard(params)
         .inline(),
     };
   }

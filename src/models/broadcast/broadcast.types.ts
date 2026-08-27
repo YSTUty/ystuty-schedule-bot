@@ -82,6 +82,15 @@ export type BroadcastFeedbackButton = {
 /** Состояние callback-кнопки feedback. */
 export type BroadcastFeedbackAction = 'initial' | 'repeat';
 
+/** Предустановленное действие, которое transport добавляет к сообщению рассылки. */
+export type BroadcastActionKeyboard = {
+  type: 'select_group';
+  /** Необязательная подпись вместо локализованной подписи действия по умолчанию. */
+  text?: string | null;
+};
+
+export type BroadcastRecipientAction = BroadcastActionKeyboard['type'];
+
 export type BroadcastJobData = {
   campaignId: number;
   deliveryId: number;
@@ -102,6 +111,7 @@ export interface BroadcastTransport {
     targetSocialId: string;
     mode: BroadcastMessageMode;
     sourceMessage: BroadcastSourceMessage;
+    actionKeyboard?: BroadcastActionKeyboard | null;
     feedbackButton?: BroadcastFeedbackButton | null;
   }): Promise<BroadcastTransportResult>;
 

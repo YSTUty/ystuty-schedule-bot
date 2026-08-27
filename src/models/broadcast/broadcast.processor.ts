@@ -48,6 +48,7 @@ export class BroadcastProcessorBase {
         targetSocialId: job.data.targetSocialId,
         mode: campaign.mode,
         sourceMessage: campaign.sourceMessage,
+        actionKeyboard: campaign.actionKeyboard,
         feedbackButton: campaign.feedbackButton,
       });
 

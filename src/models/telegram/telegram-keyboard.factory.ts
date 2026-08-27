@@ -13,6 +13,10 @@ import * as xEnv from '@my-environment';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
+import {
+  BroadcastActionKeyboard,
+  BroadcastFeedbackButton,
+} from '../broadcast/broadcast.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
 
@@ -479,6 +483,33 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  /** Собирает action- и feedback-ряды одной inline-клавиатуры рассылки. */
+  public getBroadcastRecipientKeyboard(params: {
+    actionKeyboard?: BroadcastActionKeyboard | null;
+    feedbackButton?: BroadcastFeedbackButton | null;
+    feedbackAction?: 'initial' | 'repeat';
+    deliveryId: number;
+  }) {
+    const rows: InlineKeyboardButton[][] = [];
+    if (params.actionKeyboard?.type === 'select_group') {
+      rows.push([
+        Markup.button.callback(
+          params.actionKeyboard.text || 'Выбрать актуальную группу',
+          `broadcast:action:${params.deliveryId}:select_group`,
+        ),
+      ]);
+    }
+    if (params.feedbackButton) {
+      rows.push([
+        Markup.button.callback(
+          params.feedbackButton.text,
+          `broadcast:feedback:${params.deliveryId}:${params.feedbackAction || 'initial'}`,
+        ),
+      ]);
+    }
+    return Markup.inlineKeyboard(rows);
+  }
+
   public getBroadcastCampaignDeleteSelector(params: {
     ctx: IContext;
     campaignId: number;
@@ -548,6 +579,7 @@ export class TelegramKeyboardFactory {
       onlyAuthorized?: boolean;
       groupName?: string | null;
       feedbackButton?: { text: string } | null;
+      actionKeyboard?: BroadcastActionKeyboard | null;
     } = {},
   ) {
     const {
@@ -555,6 +587,7 @@ export class TelegramKeyboardFactory {
       onlyAuthorized = false,
       groupName = null,
       feedbackButton = null,
+      actionKeyboard = null,
     } = options;
 
     return Markup.inlineKeyboard([
@@ -593,6 +626,14 @@ export class TelegramKeyboardFactory {
             feedbackButton,
           }),
           'broadcast:wizard:feedback:settings',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionSelectGroup, {
+            actionKeyboard,
+          }),
+          'broadcast:wizard:action:select-group:toggle',
         ),
       ],
       [

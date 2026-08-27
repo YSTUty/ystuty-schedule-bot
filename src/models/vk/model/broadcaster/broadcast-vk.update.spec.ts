@@ -1,6 +1,7 @@
 import { ListenerDecorator } from 'nestjs-vk';
 
 import { BroadcastVkFeedbackUpdate } from './broadcast-vk-feedback.update';
+import { BroadcastVkRecipientActionUpdate } from './broadcast-vk-recipient-action.update';
 import { BroadcastVkUpdate } from './broadcast-vk.update';
 
 describe('BroadcastVkUpdate', () => {
@@ -40,6 +41,29 @@ describe('BroadcastVkUpdate', () => {
     );
   });
 
+  it('routes recipient action callbacks with a valid delivery id', () => {
+    const listener = Reflect.getMetadata(
+      ListenerDecorator.KEY,
+      BroadcastVkRecipientActionUpdate.prototype.onRecipientAction,
+    ).find(
+      (item: { handlerType: string }) => item.handlerType === 'message_event',
+    );
+
+    expect(
+      listener.event(
+        { broadcastRecipientAction: 'future_action', deliveryId: 15 },
+        {},
+      ),
+    ).toBe(true);
+    expect(
+      listener.event(
+        { broadcastRecipientAction: 'select_group', deliveryId: 'invalid' },
+        {},
+      ),
+    ).toBe(false);
+    expect(listener.event({ groupAction: 'select' }, {})).toBe(false);
+  });
+
   it('synchronizes an old initial feedback button after a duplicate click', async () => {
     const broadcastService = {
       recordCampaignFeedback: jest.fn().mockResolvedValue({
@@ -49,7 +73,7 @@ describe('BroadcastVkUpdate', () => {
     };
     const keyboard = { inline: jest.fn().mockReturnValue('new keyboard') };
     const keyboardFactory = {
-      getBroadcastFeedbackButton: jest.fn().mockReturnValue(keyboard),
+      getBroadcastRecipientKeyboard: jest.fn().mockReturnValue(keyboard),
     };
     const update = new BroadcastVkFeedbackUpdate(
       broadcastService as any,
@@ -74,11 +98,12 @@ describe('BroadcastVkUpdate', () => {
 
     await update.onBroadcastFeedback(ctx as any);
 
-    expect(keyboardFactory.getBroadcastFeedbackButton).toHaveBeenCalledWith(
-      'Готово',
-      15,
-      'repeat',
-    );
+    expect(keyboardFactory.getBroadcastRecipientKeyboard).toHaveBeenCalledWith({
+      deliveryId: 15,
+      actionKeyboard: undefined,
+      feedbackAction: 'repeat',
+      feedbackButton: { text: 'Готово' },
+    });
     expect(ctx.api.messages.edit).toHaveBeenCalledWith({
       peer_id: 123,
       cmid: 456,

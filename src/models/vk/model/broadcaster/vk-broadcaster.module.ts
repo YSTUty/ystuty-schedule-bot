@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { BroadcastVkFeedbackUpdate } from './broadcast-vk-feedback.update';
+import { BroadcastVkRecipientActionUpdate } from './broadcast-vk-recipient-action.update';
 import { BroadcastVkUpdate } from './broadcast-vk.update';
 import { VkBroadcastScene } from './vk-broadcast.scene';
 import { VkBroadcastTransport } from './vk-broadcast.transport';
@@ -9,6 +10,7 @@ import { VkBroadcastTransport } from './vk-broadcast.transport';
   providers: [
     BroadcastVkUpdate,
     BroadcastVkFeedbackUpdate,
+    BroadcastVkRecipientActionUpdate,
     VkBroadcastScene,
     VkBroadcastTransport,
   ],

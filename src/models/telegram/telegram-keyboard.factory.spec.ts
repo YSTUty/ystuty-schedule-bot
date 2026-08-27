@@ -47,4 +47,26 @@ describe('TelegramKeyboardFactory', () => {
       expect.arrayContaining(['broadcast:wizard:filters']),
     );
   });
+
+  it('combines recipient action and feedback into separate inline rows', () => {
+    const keyboard =
+      new TelegramKeyboardFactory().getBroadcastRecipientKeyboard({
+        deliveryId: 15,
+        actionKeyboard: { type: 'select_group' },
+        feedbackButton: { text: '🫡' },
+      });
+
+    expect(keyboard.reply_markup.inline_keyboard).toEqual([
+      [
+        expect.objectContaining({
+          callback_data: 'broadcast:action:15:select_group',
+        }),
+      ],
+      [
+        expect.objectContaining({
+          callback_data: 'broadcast:feedback:15:initial',
+        }),
+      ],
+    ]);
+  });
 });

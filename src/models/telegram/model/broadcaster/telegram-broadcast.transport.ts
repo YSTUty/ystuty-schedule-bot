@@ -7,6 +7,7 @@ import { i18n as i18nTg } from '@my-common/util/tg';
 import { IContext } from '@my-interfaces/telegram';
 
 import {
+  BroadcastActionKeyboard,
   BroadcastCampaignStatus,
   BroadcastFeedbackButton,
   BroadcastMessageMode,
@@ -42,6 +43,7 @@ export class TelegramBroadcastTransport
     targetSocialId: string;
     mode: BroadcastMessageMode;
     sourceMessage: { chatId?: number; messageId?: number; text?: string };
+    actionKeyboard?: BroadcastActionKeyboard | null;
     feedbackButton?: BroadcastFeedbackButton | null;
   }): Promise<BroadcastTransportResult> {
     const chatId = Number(params.targetSocialId);
@@ -55,7 +57,7 @@ export class TelegramBroadcastTransport
         params.sourceMessage.chatId,
         params.sourceMessage.messageId,
       );
-      await this.attachFeedbackButton(chatId, result.message_id, params);
+      await this.attachRecipientKeyboard(chatId, result.message_id, params);
 
       return { messageId: String(result.message_id) };
     }
@@ -70,7 +72,7 @@ export class TelegramBroadcastTransport
         params.sourceMessage.chatId,
         params.sourceMessage.messageId,
       );
-      await this.attachFeedbackButton(chatId, result.message_id, params);
+      await this.attachRecipientKeyboard(chatId, result.message_id, params);
 
       return { messageId: String(result.message_id) };
     }
@@ -84,8 +86,8 @@ export class TelegramBroadcastTransport
       params.sourceMessage.text,
       {
         parse_mode: 'HTML',
-        ...(params.feedbackButton && {
-          reply_markup: this.getFeedbackReplyMarkup(params),
+        ...((params.feedbackButton || params.actionKeyboard) && {
+          reply_markup: this.getRecipientReplyMarkup(params),
         }),
       },
     );
@@ -110,33 +112,33 @@ export class TelegramBroadcastTransport
   }
 
   /** Telegram не принимает reply_markup при forward/copy, поэтому добавляем её отдельным вызовом. */
-  private async attachFeedbackButton(
+  private async attachRecipientKeyboard(
     chatId: number,
     messageId: number,
     params: {
       campaignId: number;
       deliveryId: number;
+      actionKeyboard?: BroadcastActionKeyboard | null;
       feedbackButton?: BroadcastFeedbackButton | null;
     },
   ) {
-    if (!params.feedbackButton) return;
+    if (!params.feedbackButton && !params.actionKeyboard) return;
     await this.telegramService.bot.telegram.editMessageReplyMarkup(
       chatId,
       messageId,
       undefined,
-      this.getFeedbackReplyMarkup(params),
+      this.getRecipientReplyMarkup(params),
     );
   }
 
-  private getFeedbackReplyMarkup(params: {
+  private getRecipientReplyMarkup(params: {
     campaignId: number;
     deliveryId: number;
+    actionKeyboard?: BroadcastActionKeyboard | null;
     feedbackButton?: BroadcastFeedbackButton | null;
   }) {
-    return this.keyboardFactory.getBroadcastFeedbackButton(
-      params.feedbackButton!.text,
-      params.deliveryId,
-    ).reply_markup;
+    return this.keyboardFactory.getBroadcastRecipientKeyboard(params)
+      .reply_markup;
   }
 
   public async updateCampaignProgress(params: {

@@ -154,6 +154,40 @@ describe('BroadcastService', () => {
     });
   });
 
+  it('returns a recipient action only for its delivery, transport and owner', async () => {
+    const { service, deliveryRepository } = createService();
+    deliveryRepository.findOne.mockResolvedValueOnce({
+      id: 14,
+      userSocialId: 12,
+      campaign: {
+        social: SocialType.Telegram,
+        actionKeyboard: { type: 'select_group' },
+      },
+    });
+
+    const action = await service.getCampaignRecipientAction({
+      deliveryId: 14,
+      social: SocialType.Telegram,
+      userSocialId: 12,
+      action: 'select_group',
+    });
+
+    expect(action).toEqual({ type: 'select_group' });
+  });
+
+  it('does not return a recipient action to a different recipient', async () => {
+    const { service } = createService();
+
+    const action = await service.getCampaignRecipientAction({
+      deliveryId: 14,
+      social: SocialType.Telegram,
+      userSocialId: 15,
+      action: 'select_group',
+    });
+
+    expect(action).toBeNull();
+  });
+
   it('records repeat feedback only after the initial click', async () => {
     const { service, deliveryRepository, feedbackRepository } = createService();
     deliveryRepository.findOne.mockResolvedValueOnce({

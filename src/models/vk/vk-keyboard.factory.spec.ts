@@ -102,4 +102,22 @@ describe('VKKeyboardFactory', () => {
 
     expect(actions).toEqual(expect.arrayContaining(['filters']));
   });
+
+  it('combines recipient action and feedback within VK inline keyboard limits', () => {
+    const keyboard = new VKKeyboardFactory().getBroadcastRecipientKeyboard({
+      deliveryId: 15,
+      actionKeyboard: { type: 'select_group' },
+      feedbackButton: { text: '🫡' },
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons).toHaveLength(2);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(2);
+    expect(
+      JSON.parse(renderedKeyboard.buttons[0][0].action.payload),
+    ).toMatchObject({
+      broadcastRecipientAction: 'select_group',
+      deliveryId: 15,
+    });
+  });
 });

@@ -30,13 +30,17 @@ export class BroadcastTelegramFeedbackUpdate {
     });
     if (result?.created && action === 'initial') {
       await ctx.editMessageReplyMarkup(
-        result.feedbackButton.afterClickText
-          ? this.keyboardFactory.getBroadcastFeedbackButton(
-              result.feedbackButton.afterClickText,
-              Number(deliveryId),
-              'repeat',
-            ).reply_markup
-          : { inline_keyboard: [] },
+        this.keyboardFactory.getBroadcastRecipientKeyboard({
+          deliveryId: Number(deliveryId),
+          actionKeyboard: result.actionKeyboard,
+          feedbackAction: 'repeat',
+          feedbackButton: result.feedbackButton.afterClickText
+            ? {
+                ...result.feedbackButton,
+                text: result.feedbackButton.afterClickText,
+              }
+            : null,
+        }).reply_markup,
       );
     }
     const responseText = !result

@@ -17,6 +17,7 @@ import {
   DEFAULT_BROADCAST_PROGRESS_STEP,
 } from './broadcast.constants';
 import {
+  BroadcastActionKeyboard,
   BroadcastAudienceFilter,
   BroadcastAudienceGroupsPreview,
   BroadcastCampaignStatus,
@@ -24,6 +25,7 @@ import {
   BroadcastFeedbackAction,
   BroadcastJobData,
   BroadcastMessageMode,
+  BroadcastRecipientAction,
   BroadcastSourceMessage,
 } from './broadcast.types';
 import { BroadcastCampaign } from './entity/broadcast-campaign.entity';
@@ -123,6 +125,7 @@ export class BroadcastService {
     audienceFilter?: BroadcastAudienceFilter;
     recipientUserSocialIds?: number[];
     feedbackButton?: { text: string } | null;
+    actionKeyboard?: BroadcastActionKeyboard | null;
     createdBySocialId?: string | number | null;
   }) {
     await this.assertCanStartCampaign(params.social);
@@ -150,6 +153,7 @@ export class BroadcastService {
         audienceFilter,
         contentPreview: this.createContentPreview(params.sourceMessage),
         feedbackButton: params.feedbackButton || null,
+        actionKeyboard: params.actionKeyboard || null,
         createdBySocialId:
           params.createdBySocialId == null
             ? null
@@ -419,6 +423,7 @@ export class BroadcastService {
           feedback: existing,
           created: false,
           feedbackButton: campaign.feedbackButton,
+          actionKeyboard: campaign.actionKeyboard,
         };
       }
     } else {
@@ -444,6 +449,7 @@ export class BroadcastService {
         feedback,
         created: true,
         feedbackButton: campaign.feedbackButton,
+        actionKeyboard: campaign.actionKeyboard,
       };
     } catch (err) {
       if (params.action !== 'initial' || !this.isUniqueViolation(err)) {
@@ -454,9 +460,41 @@ export class BroadcastService {
         where: { deliveryId: delivery.id, action: 'initial' },
       });
       return feedback
-        ? { feedback, created: false, feedbackButton: campaign.feedbackButton }
+        ? {
+            feedback,
+            created: false,
+            feedbackButton: campaign.feedbackButton,
+            actionKeyboard: campaign.actionKeyboard,
+          }
         : null;
     }
+  }
+
+  /** Возвращает действие только для доставки текущего получателя в нужном transport. */
+  public async getCampaignRecipientAction(params: {
+    deliveryId: number;
+    social: SocialType;
+    userSocialId?: number | null;
+    action: BroadcastRecipientAction;
+  }) {
+    if (params.userSocialId == null) return null;
+
+    const delivery = await this.deliveryRepository.findOne({
+      where: { id: params.deliveryId },
+      relations: { campaign: true },
+    });
+    const actionKeyboard = delivery?.campaign?.actionKeyboard;
+    if (
+      !delivery ||
+      !actionKeyboard ||
+      delivery.campaign.social !== params.social ||
+      delivery.userSocialId !== params.userSocialId ||
+      actionKeyboard.type !== params.action
+    ) {
+      return null;
+    }
+
+    return actionKeyboard;
   }
 
   private isUniqueViolation(err: unknown) {

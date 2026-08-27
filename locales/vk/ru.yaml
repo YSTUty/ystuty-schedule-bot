@@ -59,6 +59,7 @@ button:
     feedback_response: Изменить ответ
     feedback_after_toggle: 'Кнопка после клика: ${feedbackAfterClickText ? "вкл" : "выкл"}'
     feedback_after_text: Текст кнопки после клика
+    action_select_group: 'Выбор актуальной группы: ${actionKeyboard?.type === "select_group" ? "вкл" : "выкл"}'
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -228,6 +229,7 @@ page:
       Группы: ${filter.groupNames?.length ? filter.groupNames.length + ' выбрано' : '-'}
       Fallback-кнопка: ${feedbackButton?.text || '-'}
       ${feedbackButton ? ('Ответ после клика: ' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '\nКнопка после клика: ' + (feedbackButton.afterClickText || 'удаляется')) : ''}
+      Действие для получателя: ${actionKeyboard?.type === 'select_group' ? 'выбор актуальной группы' : '-'}
 
       Нажми «Далее» или отправь /next для выбора сообщения.
     select_recipients: |
@@ -382,3 +384,4 @@ broadcast:
     feedback_received: Спасибо за feedback!
     feedback_already_received: Feedback уже учтён.
     feedback_unavailable: Эта кнопка больше недоступна.
+    action_unavailable: Это действие больше недоступно.

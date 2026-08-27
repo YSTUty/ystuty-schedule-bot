@@ -1,6 +1,40 @@
 import { MainMiddleware } from './main.middleware';
 
 describe('VK MainMiddleware message subscription', () => {
+  it('answers a message event only once', async () => {
+    const middleware = Object.create(
+      MainMiddleware.prototype,
+    ) as MainMiddleware;
+    Object.defineProperty(middleware, 'concurrencyService', {
+      value: {
+        buildKey: jest.fn().mockReturnValue('mw:update:vk:123'),
+        exclusiveLocal: jest.fn(async (_key, callback) => callback()),
+      },
+    });
+    const originalAnswer = jest.fn().mockResolvedValue(1);
+    const ctx = {
+      isOutbox: false,
+      type: 'message_event',
+      peerId: 123,
+      state: {},
+      answer: originalAnswer,
+      is: jest.fn((types: string[]) => types.includes('message_event')),
+      toJSON: jest.fn().mockReturnValue({}),
+    };
+
+    await middleware['featureMiddleware'](ctx as never, async () => {
+      await ctx.answer({ type: 'show_snackbar', text: 'Первый ответ' });
+      await ctx.answer({ type: 'show_snackbar', text: 'Повторный ответ' });
+    });
+
+    expect(originalAnswer).toHaveBeenCalledTimes(1);
+    expect(originalAnswer).toHaveBeenCalledWith({
+      type: 'show_snackbar',
+      text: 'Первый ответ',
+    });
+    expect(ctx.state).toEqual({ eventAnswered: true });
+  });
+
   it.each([
     ['message_allow', true, false],
     ['message_deny', false, true],

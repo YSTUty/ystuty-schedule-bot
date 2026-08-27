@@ -219,8 +219,9 @@ export class MainMiddleware {
       }
 
       if (ctx.isMessageEventContext()) {
-        const answer = ctx.answer.bind(ctx);
+        const answer = ctx.answer.bind(ctx) as typeof ctx.answer;
         ctx.answer = async (eventData: MessageEventAction) => {
+          if (ctx.state.eventAnswered) return 1;
           const res = await answer(eventData);
           ctx.state.eventAnswered = true;
           return res;

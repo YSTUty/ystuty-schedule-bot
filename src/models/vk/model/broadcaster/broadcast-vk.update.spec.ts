@@ -114,7 +114,7 @@ describe('BroadcastVkUpdate', () => {
     });
   });
 
-  it('clears the keyboard of a sticker feedback message after the initial click', async () => {
+  it('recreates an immutable sticker feedback message without its deleted button', async () => {
     const broadcastService = {
       recordCampaignFeedback: jest.fn().mockResolvedValue({
         created: true,
@@ -137,9 +137,17 @@ describe('BroadcastVkUpdate', () => {
       api: {
         messages: {
           getByConversationMessageId: jest.fn().mockResolvedValue({
-            items: [{ text: '', attachments: [{ type: 'sticker' }] }],
+            items: [
+              {
+                id: 789,
+                text: '',
+                attachments: [{ type: 'sticker', sticker: { sticker_id: 42 } }],
+              },
+            ],
           }),
           edit: jest.fn(),
+          delete: jest.fn(),
+          send: jest.fn(),
         },
       },
       i18n: { t: jest.fn().mockReturnValue('received') },
@@ -148,11 +156,25 @@ describe('BroadcastVkUpdate', () => {
 
     await update.onBroadcastFeedback(ctx as any);
 
-    expect(ctx.api.messages.edit).toHaveBeenCalledWith({
+    expect(ctx.api.messages.edit).not.toHaveBeenCalled();
+    expect(ctx.api.messages.delete).toHaveBeenCalledWith({
       peer_id: 123,
-      cmid: 456,
-      keyboard: JSON.stringify({ buttons: [], inline: true }),
+      message_ids: [789],
+      delete_for_all: 1,
     });
+    expect(keyboardFactory.getBroadcastRecipientKeyboard).toHaveBeenCalledWith({
+      deliveryId: 15,
+      actionKeyboard: undefined,
+      feedbackAction: 'repeat',
+      feedbackButton: null,
+    });
+    expect(ctx.api.messages.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        peer_id: 123,
+        sticker_id: 42,
+        keyboard: 'new keyboard',
+      }),
+    );
     expect(ctx.answer).toHaveBeenCalledWith({
       type: 'show_snackbar',
       text: 'received',

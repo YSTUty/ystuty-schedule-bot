@@ -1,5 +1,7 @@
-import { UseFilters } from '@nestjs/common';
+import { Logger, UseFilters } from '@nestjs/common';
 import { Ctx, OnMessageEvent, Update } from 'nestjs-vk';
+
+import { APIError, getRandomId } from 'vk-io';
 
 import { VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
@@ -19,6 +21,8 @@ import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 @Update()
 @UseFilters(VkExceptionFilter)
 export class BroadcastVkFeedbackUpdate {
+  private readonly logger = new Logger(BroadcastVkFeedbackUpdate.name);
+
   constructor(
     private readonly broadcastService: BroadcastService,
     private readonly keyboardFactory: VKKeyboardFactory,
@@ -61,8 +65,9 @@ export class BroadcastVkFeedbackUpdate {
   /**
    * VK API требует передавать текст или attachment даже при смене клавиатуры.
    * Для вложений, которые API позволяет передать повторно, сохраняем их при
-   * смене keyboard. У стикера отсутствует сериализуемый attachment для
-   * `messages.edit`, поэтому очищаем keyboard отдельным API-вызовом.
+   * смене keyboard. VK не поддерживает `messages.edit` для sticker (ошибка
+   * 920), поэтому сообщение пересоздаётся: исходное удаляется и тот же
+   * sticker отправляется заново с нужной keyboard.
    */
   private async replaceInitialFeedbackButton(
     ctx: IMessageEventContext,
@@ -82,17 +87,18 @@ export class BroadcastVkFeedbackUpdate {
       ? sourceMessage.attachments
       : [];
     const attachment = this.serializeSourceAttachments(attachments);
-    const afterClickMode = getBroadcastFeedbackAfterClickMode(feedbackButton);
-    if (!sourceMessage.text && !attachment && attachments.length) {
-      if (afterClickMode === 'delete') {
-        await ctx.api.messages.edit({
-          peer_id: ctx.peerId,
-          cmid: ctx.conversationMessageId,
-          keyboard: JSON.stringify({ buttons: [], inline: true }),
-        });
-      }
+    if (!sourceMessage.text && !attachment && this.getStickerId(attachments)) {
+      await this.recreateStickerFeedbackMessage(
+        ctx,
+        sourceMessage,
+        deliveryId,
+        feedbackButton,
+        actionKeyboard,
+      );
       return;
     }
+    if (!sourceMessage.text && !attachment) return;
+    const afterClickMode = getBroadcastFeedbackAfterClickMode(feedbackButton);
 
     await ctx.api.messages.edit({
       peer_id: ctx.peerId,
@@ -119,6 +125,67 @@ export class BroadcastVkFeedbackUpdate {
         })
         .inline(),
     });
+  }
+
+  /** Пересоздаёт неизменяемое VK-сообщение со sticker с обновлённой keyboard. */
+  private async recreateStickerFeedbackMessage(
+    ctx: IMessageEventContext,
+    sourceMessage: { id?: number },
+    deliveryId: number,
+    feedbackButton: BroadcastFeedbackButton,
+    actionKeyboard?: BroadcastActionKeyboard | null,
+  ) {
+    const stickerId = await this.getStickerIdFromMessage(ctx);
+    if (!stickerId || !sourceMessage.id) {
+      this.logger.warn(
+        `[Broadcast] VK sticker delivery=${deliveryId}: source sticker cannot be recreated`,
+      );
+      return;
+    }
+
+    const afterClickMode = getBroadcastFeedbackAfterClickMode(feedbackButton);
+    try {
+      await ctx.api.messages.delete({
+        peer_id: ctx.peerId,
+        message_ids: [sourceMessage.id],
+        delete_for_all: 1,
+      });
+      const feedbackText =
+        afterClickMode === 'replace'
+          ? feedbackButton.afterClickText || feedbackButton.text
+          : feedbackButton.text;
+      await ctx.api.messages.send({
+        peer_id: ctx.peerId,
+        random_id: getRandomId(),
+        sticker_id: stickerId,
+        keyboard: this.keyboardFactory
+          .getBroadcastRecipientKeyboard({
+            deliveryId,
+            actionKeyboard,
+            feedbackAction: 'repeat',
+            feedbackButton:
+              afterClickMode === 'delete' ? null : { text: feedbackText },
+          })
+          .inline(),
+      });
+    } catch (err) {
+      if (err instanceof APIError) {
+        this.logger.warn(
+          `[Broadcast] VK sticker delivery=${deliveryId}: recreation failed (${err.code})`,
+        );
+        return;
+      }
+      throw err;
+    }
+  }
+
+  /** Загружает исходный sticker после проверки, что его можно пересоздать. */
+  private async getStickerIdFromMessage(ctx: IMessageEventContext) {
+    const source = await ctx.api.messages.getByConversationMessageId({
+      peer_id: ctx.peerId,
+      conversation_message_ids: ctx.conversationMessageId,
+    });
+    return this.getStickerId(source.items[0]?.attachments);
   }
 
   /** Преобразует вложения API VK, которые можно без потери приложить повторно. */
@@ -152,5 +219,19 @@ export class BroadcastVkFeedbackUpdate {
     });
 
     return values.length ? values.join(',') : null;
+  }
+
+  /** Возвращает ID единственного исходного sticker для повторной передачи в VK API. */
+  private getStickerId(attachments: unknown): number | null {
+    if (!Array.isArray(attachments) || attachments.length !== 1) return null;
+
+    const attachment = attachments[0];
+    if (!attachment || typeof attachment !== 'object') return null;
+
+    const sticker = (attachment as Record<string, unknown>).sticker;
+    if (!sticker || typeof sticker !== 'object') return null;
+
+    const stickerId = (sticker as { sticker_id?: unknown }).sticker_id;
+    return typeof stickerId === 'number' ? stickerId : null;
   }
 }

@@ -5,6 +5,7 @@ import {
   FindOptionsWhere,
   In,
   IsNull,
+  LessThan,
   MoreThanOrEqual,
   Not,
   Raw,
@@ -47,6 +48,9 @@ export class BroadcastAudienceFilterService {
     const lastInteractionAfter = this.normalizeDate(
       filter.lastInteractionAfter,
     );
+    const lastInteractionBefore = this.normalizeDate(
+      filter.lastInteractionBefore,
+    );
 
     return {
       hasDM: true,
@@ -54,6 +58,7 @@ export class BroadcastAudienceFilterService {
       ...filter,
       ...(groupNames && { groupNames }),
       ...(lastInteractionAfter && { lastInteractionAfter }),
+      ...(lastInteractionBefore && { lastInteractionBefore }),
       ...(excludeCampaignIds?.length && { excludeCampaignIds }),
       ...(social === SocialType.Vkontakte && { hasDM: filter.hasDM ?? true }),
     };
@@ -162,8 +167,10 @@ export class BroadcastAudienceFilterService {
     if (typeof filter.isBlockedBot === 'boolean') {
       where.isBlockedBot = filter.isBlockedBot;
     }
-    if (filter.onlyAuthorized) {
+    if (filter.onlyAuthorized === true) {
       where.userId = Not(IsNull()) as unknown as number;
+    } else if (filter.onlyAuthorized === false) {
+      where.userId = IsNull() as unknown as number;
     }
     if (Array.isArray(filter.groupNames)) {
       where.groupName = In(filter.groupNames);
@@ -185,9 +192,18 @@ export class BroadcastAudienceFilterService {
     } else if (userSocialIdsFilter || excludedCampaignsFilter) {
       where.id = userSocialIdsFilter || excludedCampaignsFilter;
     }
-    if (filter.lastInteractionAfter) {
+    if (filter.lastInteractionAfter && filter.lastInteractionBefore) {
+      where.lastInteractionAt = And(
+        MoreThanOrEqual(new Date(filter.lastInteractionAfter)),
+        LessThan(new Date(filter.lastInteractionBefore)),
+      );
+    } else if (filter.lastInteractionAfter) {
       where.lastInteractionAt = MoreThanOrEqual(
         new Date(filter.lastInteractionAfter),
+      );
+    } else if (filter.lastInteractionBefore) {
+      where.lastInteractionAt = LessThan(
+        new Date(filter.lastInteractionBefore),
       );
     }
 

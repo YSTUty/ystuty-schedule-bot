@@ -17,7 +17,10 @@ import {
   BROADCAST_VK_QUEUE_NAME,
 } from './broadcast.constants';
 import { BroadcastService } from './broadcast.service';
-import { BroadcastJobData } from './broadcast.types';
+import {
+  BroadcastJobData,
+  normalizeBroadcastActionKeyboard,
+} from './broadcast.types';
 import { BroadcastTransportRegistry } from './transport/broadcast-transport.registry';
 
 export class BroadcastProcessorBase {
@@ -48,7 +51,9 @@ export class BroadcastProcessorBase {
         targetSocialId: job.data.targetSocialId,
         mode: campaign.mode,
         sourceMessage: campaign.sourceMessage,
-        actionKeyboard: campaign.actionKeyboard,
+        actionKeyboard: normalizeBroadcastActionKeyboard(
+          campaign.actionKeyboard,
+        ),
         feedbackButton: campaign.feedbackButton,
       });
 

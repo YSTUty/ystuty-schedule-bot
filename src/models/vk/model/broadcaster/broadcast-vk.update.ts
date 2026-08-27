@@ -216,7 +216,7 @@ export class BroadcastVkUpdate {
     }
 
     if (action === 'deleteSelect') {
-      await ctx.answer({ type: 'show_snackbar', text: '' });
+      await ctx.answer({ type: 'show_snackbar', text: 'Готово' });
       await this.renderDeleteSelector(
         ctx,
         Number(ctx.eventPayload.campaignId),
@@ -240,7 +240,7 @@ export class BroadcastVkUpdate {
         ...ctx.session.broadcastDeleteSelections,
         [campaignId]: [...selected],
       };
-      await ctx.answer({ type: 'show_snackbar', text: '' });
+      await ctx.answer({ type: 'show_snackbar', text: 'Готово' });
       await this.renderDeleteSelector(
         ctx,
         Number(campaignId),

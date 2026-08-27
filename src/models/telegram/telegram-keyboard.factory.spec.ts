@@ -52,7 +52,7 @@ describe('TelegramKeyboardFactory', () => {
     const keyboard =
       new TelegramKeyboardFactory().getBroadcastRecipientKeyboard({
         deliveryId: 15,
-        actionKeyboard: { type: 'select_group' },
+        actionKeyboard: [{ type: 'select_group' }, { type: 'auth' }],
         feedbackButton: { text: '🫡' },
       });
 
@@ -60,6 +60,11 @@ describe('TelegramKeyboardFactory', () => {
       [
         expect.objectContaining({
           callback_data: 'broadcast:action:15:select_group',
+        }),
+      ],
+      [
+        expect.objectContaining({
+          callback_data: 'broadcast:action:15:auth',
         }),
       ],
       [

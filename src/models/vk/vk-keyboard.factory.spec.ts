@@ -106,7 +106,7 @@ describe('VKKeyboardFactory', () => {
   it('combines recipient action and feedback within VK inline keyboard limits', () => {
     const keyboard = new VKKeyboardFactory().getBroadcastRecipientKeyboard({
       deliveryId: 15,
-      actionKeyboard: { type: 'select_group' },
+      actionKeyboard: [{ type: 'select_group' }],
       feedbackButton: { text: '🫡' },
     });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));

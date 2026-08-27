@@ -49,6 +49,19 @@ describe('BroadcastAudienceFilterService', () => {
     expect(where.groupName._value).toEqual(['ЦИС-21', 'ЦПИ-22']);
   });
 
+  it('filters explicitly unauthorized profiles by a missing user binding', async () => {
+    const repository = { find: jest.fn().mockResolvedValue([]) };
+    const service = new BroadcastAudienceFilterService(
+      repository as any,
+      { getGroupInstitutes: jest.fn() } as any,
+    );
+
+    await service.getRecipients(SocialType.Telegram, { onlyAuthorized: false });
+
+    const [{ where }] = repository.find.mock.calls[0];
+    expect(where.userId).toBeDefined();
+  });
+
   it('builds preview only from groups with eligible recipients', async () => {
     const repository = {
       find: jest
@@ -116,5 +129,19 @@ describe('BroadcastAudienceFilterService', () => {
     expect(where.id.objectLiteralParameters).toEqual({
       excludeCampaignIds: [4, 11],
     });
+  });
+
+  it('accepts an inclusive Moscow date range as a UTC half-open interval', () => {
+    const service = new BroadcastAudienceFilterService(
+      {} as any,
+      { getGroupInstitutes: jest.fn() } as any,
+    );
+    const filter = service.normalizeFilter(SocialType.Telegram, {
+      lastInteractionAfter: '2026-08-01T00:00:00+03:00',
+      lastInteractionBefore: '2026-08-02T00:00:00+03:00',
+    });
+
+    expect(filter.lastInteractionAfter).toBe('2026-07-31T21:00:00.000Z');
+    expect(filter.lastInteractionBefore).toBe('2026-08-01T21:00:00.000Z');
   });
 });

@@ -10,13 +10,14 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
     const update = new BroadcastTelegramRecipientActionUpdate(
       broadcastService as any,
     );
+    const calls: string[] = [];
     const ctx = {
       match: {
         groups: { deliveryId: '15', action: 'select_group' },
       },
       userSocial: { id: 7 },
-      scene: { enter: jest.fn() },
-      tryAnswerCbQuery: jest.fn(),
+      scene: { enter: jest.fn(async () => calls.push('scene')) },
+      tryAnswerCbQuery: jest.fn(async () => calls.push('answer')),
       i18n: { t: jest.fn() },
     };
 
@@ -29,6 +30,7 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
       action: 'select_group',
     });
     expect(ctx.scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE');
+    expect(calls).toEqual(['scene', 'answer']);
   });
 
   it('does not enter the scene for an unavailable action', async () => {
@@ -49,5 +51,22 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
 
     expect(ctx.scene.enter).not.toHaveBeenCalled();
     expect(ctx.tryAnswerCbQuery).toHaveBeenCalledWith('unavailable');
+  });
+
+  it('opens the existing authorization scene for the auth action', async () => {
+    const update = new BroadcastTelegramRecipientActionUpdate({
+      getCampaignRecipientAction: jest.fn().mockResolvedValue({ type: 'auth' }),
+    } as any);
+    const ctx = {
+      match: { groups: { deliveryId: '15', action: 'auth' } },
+      userSocial: { id: 7 },
+      scene: { enter: jest.fn() },
+      tryAnswerCbQuery: jest.fn(),
+      i18n: { t: jest.fn() },
+    };
+
+    await update.onRecipientAction(ctx as any);
+
+    expect(ctx.scene.enter).toHaveBeenCalledWith('AUTH_SCENE');
   });
 });

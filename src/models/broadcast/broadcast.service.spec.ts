@@ -161,7 +161,7 @@ describe('BroadcastService', () => {
       userSocialId: 12,
       campaign: {
         social: SocialType.Telegram,
-        actionKeyboard: { type: 'select_group' },
+        actionKeyboard: [{ type: 'select_group' }],
       },
     });
 

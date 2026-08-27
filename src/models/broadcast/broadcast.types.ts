@@ -25,13 +25,16 @@ export enum BroadcastMessageMode {
 export type BroadcastAudienceFilter = {
   hasDM?: boolean;
   isBlockedBot?: boolean;
+  /** `undefined` — любой статус, `true` — привязанный ЯГТУ.ID, `false` — без привязки. */
   onlyAuthorized?: boolean;
   /** @deprecated Используется только для чтения кампаний, созданных до группового фильтра. */
   groupName?: string | null;
   /** `undefined` — без ограничения по группе, пустой массив — намеренно пустая выборка. */
   groupNames?: string[];
-  /** Оставляет пользователей, взаимодействовавших с ботом не раньше указанной даты. */
+  /** Нижняя включительная граница активности в UTC. */
   lastInteractionAfter?: string | null;
+  /** Верхняя исключающая граница активности в UTC. */
+  lastInteractionBefore?: string | null;
   /** Исключает пользователей, для которых создавалась delivery указанных кампаний. */
   excludeCampaignIds?: number[];
   profileType?: string | null;
@@ -82,14 +85,45 @@ export type BroadcastFeedbackButton = {
 /** Состояние callback-кнопки feedback. */
 export type BroadcastFeedbackAction = 'initial' | 'repeat';
 
-/** Предустановленное действие, которое transport добавляет к сообщению рассылки. */
-export type BroadcastActionKeyboard = {
-  type: 'select_group';
+/** Предустановленная дополнительная кнопка для получателя рассылки. */
+export type BroadcastRecipientActionButton = {
+  type: BroadcastRecipientAction;
   /** Необязательная подпись вместо локализованной подписи действия по умолчанию. */
   text?: string | null;
 };
 
-export type BroadcastRecipientAction = BroadcastActionKeyboard['type'];
+/** Набор transport-независимых дополнительных кнопок получателя. */
+export type BroadcastActionKeyboard = BroadcastRecipientActionButton[];
+
+export type BroadcastRecipientAction = 'select_group' | 'auth';
+
+/** Приводит сохранённую настройку к безопасному набору кнопок, включая прежний JSONB-формат. */
+export const normalizeBroadcastActionKeyboard = (
+  value?: BroadcastActionKeyboard | BroadcastRecipientActionButton | null,
+): BroadcastActionKeyboard => {
+  const items = Array.isArray(value) ? value : value ? [value] : [];
+  const seen = new Set<BroadcastRecipientAction>();
+
+  return items.flatMap((item) => {
+    if (
+      !item ||
+      (item.type !== 'select_group' && item.type !== 'auth') ||
+      seen.has(item.type)
+    ) {
+      return [];
+    }
+    seen.add(item.type);
+
+    return [
+      {
+        type: item.type,
+        ...(typeof item.text === 'string' && item.text.trim()
+          ? { text: item.text.trim().slice(0, 40) }
+          : {}),
+      },
+    ];
+  });
+};
 
 export type BroadcastJobData = {
   campaignId: number;

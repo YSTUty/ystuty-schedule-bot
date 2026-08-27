@@ -86,7 +86,7 @@ export class TelegramBroadcastTransport
       params.sourceMessage.text,
       {
         parse_mode: 'HTML',
-        ...((params.feedbackButton || params.actionKeyboard) && {
+        ...((params.feedbackButton || params.actionKeyboard?.length) && {
           reply_markup: this.getRecipientReplyMarkup(params),
         }),
       },
@@ -122,7 +122,7 @@ export class TelegramBroadcastTransport
       feedbackButton?: BroadcastFeedbackButton | null;
     },
   ) {
-    if (!params.feedbackButton && !params.actionKeyboard) return;
+    if (!params.feedbackButton && !params.actionKeyboard?.length) return;
     await this.telegramService.bot.telegram.editMessageReplyMarkup(
       chatId,
       messageId,

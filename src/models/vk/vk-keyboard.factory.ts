@@ -655,14 +655,17 @@ export class VKKeyboardFactory {
     deliveryId: number;
   }) {
     const rows: IKeyboardProxyButton[][] = [];
-    if (params.actionKeyboard?.type === 'select_group') {
+    for (const actionButton of params.actionKeyboard || []) {
       rows.push([
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            params.actionKeyboard.text || 'Выбрать актуальную группу',
+            actionButton.text ||
+              (actionButton.type === 'auth'
+                ? 'Подключить или обновить ЯГТУ.ID'
+                : 'Выбрать актуальную группу'),
           ),
           payload: {
-            broadcastRecipientAction: 'select_group',
+            broadcastRecipientAction: actionButton.type,
             deliveryId: params.deliveryId,
           },
           color: Keyboard.PRIMARY_COLOR,
@@ -803,7 +806,7 @@ export class VKKeyboardFactory {
       onlyAuthorized = false,
       groupName = null,
       feedbackButton = null,
-      actionKeyboard = null,
+      actionKeyboard = [],
     } = options;
 
     return Keyboard.keyboard([
@@ -822,10 +825,10 @@ export class VKKeyboardFactory {
       ],
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionSelectGroup, {
-            actionKeyboard,
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionButtons, {
+            actionButtonsCount: actionKeyboard?.length || 0,
           }),
-          payload: { broadcastAction: 'actionSelectGroupToggle' },
+          payload: { broadcastAction: 'actionSettings' },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],
@@ -940,6 +943,112 @@ export class VKKeyboardFactory {
     ]);
   }
 
+  /** Экран набора дополнительных кнопок получателя. */
+  public getBroadcastActionSettings(
+    ctx: IContext,
+    actionKeyboard: BroadcastActionKeyboard = [],
+  ) {
+    const getAction = (type: BroadcastActionKeyboard[number]['type']) =>
+      actionKeyboard.find((item) => item.type === type);
+    const selectGroup = getAction('select_group');
+    const auth = getAction('auth');
+
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionSelectGroup, {
+            actionButton: selectGroup,
+          }),
+          payload: { broadcastAction: 'actionSelectGroupToggle' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      ...(selectGroup
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
+                payload: { broadcastAction: 'actionSelectGroupText' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ],
+          ]
+        : []),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionAuth, {
+            actionButton: auth,
+          }),
+          payload: { broadcastAction: 'actionAuthToggle' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      ...(auth
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
+                payload: { broadcastAction: 'actionAuthText' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+            ],
+          ]
+        : []),
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
+          payload: { broadcastAction: 'actionBack' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastActivityFilterMenu(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: 'Был активен до даты',
+          payload: { broadcastAction: 'filterActivityBefore' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: 'Был активен в диапазоне',
+          payload: { broadcastAction: 'filterActivityRange' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsClear),
+          payload: { broadcastAction: 'filterActivityClear' },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          payload: { broadcastAction: 'filters' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  public getBroadcastActionTextPrompt(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          payload: { broadcastAction: 'actionSettings' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
   /** VK: четыре кампании, pager и кнопка «Готово» укладываются в лимит 10 кнопок. */
   public getBroadcastExcludeCampaignsSelector(params: {
     ctx: IContext;
@@ -984,7 +1093,7 @@ export class VKKeyboardFactory {
     ctx: IContext,
     params: {
       hasGroups: boolean;
-      onlyAuthorized: boolean;
+      onlyAuthorized?: boolean;
       hasActivityFilter: boolean;
       hasExcludedCampaigns: boolean;
     },

@@ -8,7 +8,7 @@ import { ICallbackQueryContext } from '@my-interfaces/telegram';
 
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import { BroadcastRecipientAction } from '../../../broadcast/broadcast.types';
-import { SELECT_GROUP_SCENE } from '../../telegram.constants';
+import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../../telegram.constants';
 
 /** Обрабатывает предустановленные действия получателей без требования прав администратора. */
 @Update()
@@ -45,6 +45,9 @@ export class BroadcastTelegramRecipientActionUpdate {
     switch (action) {
       case 'select_group':
         await ctx.scene.enter(SELECT_GROUP_SCENE);
+        return;
+      case 'auth':
+        await ctx.scene.enter(AUTH_SCENE);
         return;
     }
   }

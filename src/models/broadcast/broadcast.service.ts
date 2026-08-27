@@ -27,6 +27,7 @@ import {
   BroadcastMessageMode,
   BroadcastRecipientAction,
   BroadcastSourceMessage,
+  normalizeBroadcastActionKeyboard,
 } from './broadcast.types';
 import { BroadcastCampaign } from './entity/broadcast-campaign.entity';
 import { BroadcastDelivery } from './entity/broadcast-delivery.entity';
@@ -153,7 +154,7 @@ export class BroadcastService {
         audienceFilter,
         contentPreview: this.createContentPreview(params.sourceMessage),
         feedbackButton: params.feedbackButton || null,
-        actionKeyboard: params.actionKeyboard || null,
+        actionKeyboard: normalizeBroadcastActionKeyboard(params.actionKeyboard),
         createdBySocialId:
           params.createdBySocialId == null
             ? null
@@ -423,7 +424,9 @@ export class BroadcastService {
           feedback: existing,
           created: false,
           feedbackButton: campaign.feedbackButton,
-          actionKeyboard: campaign.actionKeyboard,
+          actionKeyboard: normalizeBroadcastActionKeyboard(
+            campaign.actionKeyboard,
+          ),
         };
       }
     } else {
@@ -449,7 +452,9 @@ export class BroadcastService {
         feedback,
         created: true,
         feedbackButton: campaign.feedbackButton,
-        actionKeyboard: campaign.actionKeyboard,
+        actionKeyboard: normalizeBroadcastActionKeyboard(
+          campaign.actionKeyboard,
+        ),
       };
     } catch (err) {
       if (params.action !== 'initial' || !this.isUniqueViolation(err)) {
@@ -464,7 +469,9 @@ export class BroadcastService {
             feedback,
             created: false,
             feedbackButton: campaign.feedbackButton,
-            actionKeyboard: campaign.actionKeyboard,
+            actionKeyboard: normalizeBroadcastActionKeyboard(
+              campaign.actionKeyboard,
+            ),
           }
         : null;
     }
@@ -483,18 +490,22 @@ export class BroadcastService {
       where: { id: params.deliveryId },
       relations: { campaign: true },
     });
-    const actionKeyboard = delivery?.campaign?.actionKeyboard;
+    const actionKeyboard = normalizeBroadcastActionKeyboard(
+      delivery?.campaign?.actionKeyboard,
+    );
+    const actionButton = actionKeyboard.find(
+      (item) => item.type === params.action,
+    );
     if (
       !delivery ||
-      !actionKeyboard ||
       delivery.campaign.social !== params.social ||
       delivery.userSocialId !== params.userSocialId ||
-      actionKeyboard.type !== params.action
+      !actionButton
     ) {
       return null;
     }
 
-    return actionKeyboard;
+    return actionButton;
   }
 
   private isUniqueViolation(err: unknown) {

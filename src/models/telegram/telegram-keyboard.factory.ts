@@ -491,11 +491,16 @@ export class TelegramKeyboardFactory {
     deliveryId: number;
   }) {
     const rows: InlineKeyboardButton[][] = [];
-    if (params.actionKeyboard?.type === 'select_group') {
+    for (const actionButton of params.actionKeyboard || []) {
+      const label =
+        actionButton.text ||
+        (actionButton.type === 'auth'
+          ? 'Подключить или обновить ЯГТУ.ID'
+          : 'Выбрать актуальную группу');
       rows.push([
         Markup.button.callback(
-          params.actionKeyboard.text || 'Выбрать актуальную группу',
-          `broadcast:action:${params.deliveryId}:select_group`,
+          label,
+          `broadcast:action:${params.deliveryId}:${actionButton.type}`,
         ),
       ]);
     }
@@ -587,7 +592,7 @@ export class TelegramKeyboardFactory {
       onlyAuthorized = false,
       groupName = null,
       feedbackButton = null,
-      actionKeyboard = null,
+      actionKeyboard = [],
     } = options;
 
     return Markup.inlineKeyboard([
@@ -630,10 +635,10 @@ export class TelegramKeyboardFactory {
       ],
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionSelectGroup, {
-            actionKeyboard,
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionButtons, {
+            actionButtonsCount: actionKeyboard?.length || 0,
           }),
-          'broadcast:wizard:action:select-group:toggle',
+          'broadcast:wizard:actions:settings',
         ),
       ],
       [
@@ -705,6 +710,102 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  /** Экран набора дополнительных кнопок получателя. */
+  public getBroadcastActionSettings(
+    ctx: IContext,
+    actionKeyboard: BroadcastActionKeyboard = [],
+  ) {
+    const getAction = (type: BroadcastActionKeyboard[number]['type']) =>
+      actionKeyboard.find((item) => item.type === type);
+    const selectGroup = getAction('select_group');
+    const auth = getAction('auth');
+
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionSelectGroup, {
+            actionButton: selectGroup,
+          }),
+          'broadcast:wizard:actions:select-group:toggle',
+        ),
+      ],
+      ...(selectGroup
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
+                'broadcast:wizard:actions:select-group:text',
+              ),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionAuth, {
+            actionButton: auth,
+          }),
+          'broadcast:wizard:actions:auth:toggle',
+        ),
+      ],
+      ...(auth
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
+                'broadcast:wizard:actions:auth:text',
+              ),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
+          'broadcast:wizard:actions:back',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastActivityFilterMenu(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          'Был активен до даты',
+          'broadcast:wizard:filter:activity:before',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          'Был активен в диапазоне',
+          'broadcast:wizard:filter:activity:range',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterGroupsClear),
+          'broadcast:wizard:filter:activity:clear',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:filters',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastActionTextPrompt(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:actions:settings',
+        ),
+      ],
+    ]);
+  }
+
   public getBroadcastExcludeCampaignsSelector(params: {
     ctx: IContext;
     items: { id: number; title: string; selected: boolean }[];
@@ -739,7 +840,7 @@ export class TelegramKeyboardFactory {
     ctx: IContext,
     params: {
       hasGroups: boolean;
-      onlyAuthorized: boolean;
+      onlyAuthorized?: boolean;
       hasActivityFilter: boolean;
       hasExcludedCampaigns: boolean;
     },

@@ -58,7 +58,9 @@ export class BroadcastVkFeedbackUpdate {
 
   /**
    * VK API требует передавать текст или attachment даже при смене клавиатуры.
-   * Поэтому сначала читаем исходное сообщение и сохраняем его текст.
+   * Для вложений, которые API позволяет передать повторно, сохраняем их при
+   * смене keyboard. У стикера такой формы нет, поэтому кнопку не редактируем:
+   * callback всё равно подтверждается, а повторное нажатие безопасно учтётся.
    */
   private async replaceInitialFeedbackButton(
     ctx: IMessageEventContext,
@@ -70,15 +72,26 @@ export class BroadcastVkFeedbackUpdate {
       peer_id: ctx.peerId,
       conversation_message_ids: ctx.conversationMessageId,
     });
-    const message = source.items[0]?.text;
-    if (!message) {
-      throw new Error('VK feedback message is empty or unavailable');
+    const sourceMessage = source.items[0];
+    if (!sourceMessage) {
+      return;
+    }
+    const attachments = Array.isArray(sourceMessage.attachments)
+      ? sourceMessage.attachments
+      : [];
+    const attachment = this.serializeSourceAttachments(attachments);
+    if (!sourceMessage.text && !attachment && attachments.length) {
+      return;
     }
 
     await ctx.api.messages.edit({
       peer_id: ctx.peerId,
       cmid: ctx.conversationMessageId,
-      message,
+      message: sourceMessage.text, // || '\u2060',
+      ...(attachment ? { attachment } : {}),
+      // Не удаляем пересланные сообщения и сниппеты, когда меняется только keyboard.
+      keep_forward_messages: 1,
+      keep_snippets: 1,
       keyboard: this.keyboardFactory
         .getBroadcastRecipientKeyboard({
           deliveryId,
@@ -88,5 +101,38 @@ export class BroadcastVkFeedbackUpdate {
         })
         .inline(),
     });
+  }
+
+  /** Преобразует вложения API VK, которые можно без потери приложить повторно. */
+  private serializeSourceAttachments(attachments: unknown): string | null {
+    if (!Array.isArray(attachments)) return null;
+
+    const values = attachments.flatMap((item) => {
+      if (!item || typeof item !== 'object') return [];
+
+      const typedItem = item as Record<string, unknown>;
+      const type = typedItem.type;
+      if (typeof type !== 'string') return [];
+
+      const payload = typedItem[type];
+      if (!payload || typeof payload !== 'object') return [];
+
+      const {
+        id,
+        owner_id: ownerId,
+        access_key: accessKey,
+      } = payload as {
+        id?: unknown;
+        owner_id?: unknown;
+        access_key?: unknown;
+      };
+      if (typeof id !== 'number' || typeof ownerId !== 'number') return [];
+
+      return [
+        `${type}${ownerId}_${id}${typeof accessKey === 'string' ? `_${accessKey}` : ''}`,
+      ];
+    });
+
+    return values.length ? values.join(',') : null;
   }
 }

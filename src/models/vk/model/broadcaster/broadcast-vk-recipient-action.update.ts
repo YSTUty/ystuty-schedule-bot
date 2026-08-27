@@ -8,7 +8,7 @@ import { IMessageEventContext } from '@my-interfaces/vk';
 
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import { BroadcastRecipientAction } from '../../../broadcast/broadcast.types';
-import { SELECT_GROUP_SCENE } from '../../vk.constants';
+import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../../vk.constants';
 
 /** Обрабатывает предустановленные действия получателей без требования прав администратора. */
 @Update()
@@ -39,6 +39,7 @@ export class BroadcastVkRecipientActionUpdate {
     }
 
     await this.runRecipientAction(ctx, actionKeyboard.type);
+    await ctx.answer({ type: 'show_snackbar', text: 'Готово' });
   }
 
   /** Transport-адаптер действий кампании; доступ проверяется до вызова. */
@@ -49,6 +50,9 @@ export class BroadcastVkRecipientActionUpdate {
     switch (action) {
       case 'select_group':
         await ctx.scene.enter(SELECT_GROUP_SCENE);
+        return;
+      case 'auth':
+        await ctx.scene.enter(AUTH_SCENE);
         return;
     }
   }

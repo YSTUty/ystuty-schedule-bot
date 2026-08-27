@@ -55,7 +55,7 @@ export class BroadcastCampaign {
   @Column({ type: 'jsonb', nullable: true })
   public feedbackButton: BroadcastFeedbackButton | null;
 
-  /** Предустановленное действие для получателя; transport формирует его клавиатуру сам. */
+  /** Дополнительные действия получателя; transport формирует клавиатуру сам. */
   @Column({ type: 'jsonb', nullable: true })
   public actionKeyboard: BroadcastActionKeyboard | null;
 

@@ -15,6 +15,7 @@ import {
   BroadcastAudienceFilter,
   BroadcastFeedbackButton,
   BroadcastMessageMode,
+  BroadcastRecipientAction,
   BroadcastSourceMessage,
 } from '../../../broadcast/broadcast.types';
 import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/broadcast-audience-group-filter.service';
@@ -29,8 +30,9 @@ type VkBroadcastState = {
   recipientsPage: number;
   manualRecipients: boolean;
   awaitingSource: boolean;
-  awaitingFilter?: 'groups' | 'activity';
+  awaitingFilter?: 'groups' | 'activity_before' | 'activity_range';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
+  awaitingActionText?: BroadcastRecipientAction;
   feedbackButton?: BroadcastFeedbackButton | null;
   actionKeyboard?: BroadcastActionKeyboard | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
@@ -63,7 +65,8 @@ export class VkBroadcastScene {
       ctx.scene.state.awaitingFilter = undefined;
       ctx.scene.state.awaitingFeedbackText = undefined;
       ctx.scene.state.feedbackButton = null;
-      ctx.scene.state.actionKeyboard = null;
+      ctx.scene.state.actionKeyboard = [];
+      ctx.scene.state.awaitingActionText = undefined;
       ctx.scene.state.recipientsCount =
         await this.broadcastService.countRecipients(
           SocialType.Vkontakte,
@@ -101,6 +104,15 @@ export class VkBroadcastScene {
       await this.applyFeedbackText(
         ctx,
         ctx.scene.state.awaitingFeedbackText,
+        ctx.text,
+      );
+      return;
+    }
+
+    if (ctx.scene.state.awaitingActionText && ctx.text) {
+      await this.applyActionText(
+        ctx,
+        ctx.scene.state.awaitingActionText,
         ctx.text,
       );
       return;
@@ -284,6 +296,7 @@ export class VkBroadcastScene {
       | 'filterExcludeCampaigns'
       | 'filterTextCancel'
       | 'filterGroupsClear'
+      | 'filterGroupsSelectionClear'
       | 'filterGroupsShow'
       | 'filterInstitutes'
       | 'filterInstitute'
@@ -298,7 +311,15 @@ export class VkBroadcastScene {
       | 'feedbackResponse'
       | 'feedbackAfterToggle'
       | 'feedbackAfterText'
+      | 'actionSettings'
+      | 'actionBack'
       | 'actionSelectGroupToggle'
+      | 'actionSelectGroupText'
+      | 'actionAuthToggle'
+      | 'actionAuthText'
+      | 'filterActivityBefore'
+      | 'filterActivityRange'
+      | 'filterActivityClear'
       | 'filterExcludeCampaignToggle'
       | 'filterExcludeCampaignDone'
       | undefined;
@@ -326,11 +347,53 @@ export class VkBroadcastScene {
       return true;
     }
 
-    if (action === 'actionSelectGroupToggle') {
-      ctx.scene.state.actionKeyboard = ctx.scene.state.actionKeyboard
-        ? null
-        : { type: 'select_group' };
+    if (action === 'actionSettings') {
+      ctx.scene.state.awaitingActionText = undefined;
+      await this.renderActionSettings(ctx);
+      return true;
+    }
+
+    if (action === 'actionBack') {
       await this.renderSettingsScreen(ctx);
+      return true;
+    }
+
+    if (action === 'actionSelectGroupToggle' || action === 'actionAuthToggle') {
+      this.toggleRecipientAction(
+        ctx.scene.state,
+        action === 'actionAuthToggle' ? 'auth' : 'select_group',
+      );
+      await this.renderActionSettings(ctx);
+      return true;
+    }
+
+    if (action === 'actionSelectGroupText' || action === 'actionAuthText') {
+      const recipientAction =
+        action === 'actionAuthText' ? 'auth' : 'select_group';
+      if (!this.getRecipientActionButton(ctx.scene.state, recipientAction)) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: ctx.i18n.t(
+            LocalePhrase.Broadcast_Notification_ActionUnavailable,
+          ),
+        });
+        return true;
+      }
+      ctx.scene.state.awaitingActionText = recipientAction;
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionText),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastActionTextPrompt(ctx)
+            .inline(),
+        },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
       return true;
     }
 
@@ -508,7 +571,11 @@ export class VkBroadcastScene {
 
     if (action === 'filterAuthorized') {
       ctx.scene.state.filter.onlyAuthorized =
-        !ctx.scene.state.filter.onlyAuthorized;
+        ctx.scene.state.filter.onlyAuthorized === undefined
+          ? true
+          : ctx.scene.state.filter.onlyAuthorized
+            ? false
+            : undefined;
       this.resetManualRecipients(ctx.scene.state);
       await this.refreshRecipientsCount(ctx.scene.state);
       await this.renderFilters(ctx);
@@ -581,6 +648,24 @@ export class VkBroadcastScene {
       return true;
     }
 
+    if (action === 'filterGroupsSelectionClear') {
+      ctx.scene.state.filter.groupName = null;
+      ctx.scene.state.filter.groupNames = undefined;
+      this.resetManualRecipients(ctx.scene.state);
+      const active = ctx.scene.state.activeGroupFilter;
+      if (!active) {
+        await this.renderInstitutes(ctx);
+      } else {
+        await this.renderInstituteGroups(
+          ctx,
+          active.institutesPage,
+          active.instituteIndex,
+          1,
+        );
+      }
+      return true;
+    }
+
     if (action === 'filterGroupsShow') {
       await ctx.answer({
         type: 'show_snackbar',
@@ -591,13 +676,26 @@ export class VkBroadcastScene {
     }
 
     if (action === 'filterActivity') {
-      if (ctx.scene.state.filter.lastInteractionAfter) {
-        ctx.scene.state.filter.lastInteractionAfter = undefined;
-        this.resetManualRecipients(ctx.scene.state);
-        await this.renderFilters(ctx);
-        return true;
-      }
-      ctx.scene.state.awaitingFilter = 'activity';
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityMode),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastActivityFilterMenu(ctx)
+            .inline(),
+        },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
+      return true;
+    }
+
+    if (action === 'filterActivityBefore' || action === 'filterActivityRange') {
+      ctx.scene.state.awaitingFilter =
+        action === 'filterActivityRange' ? 'activity_range' : 'activity_before';
       await this.editCurrentVkMessage(
         ctx,
         ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityText),
@@ -612,6 +710,15 @@ export class VkBroadcastScene {
         type: 'show_snackbar',
         text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
       });
+      return true;
+    }
+
+    if (action === 'filterActivityClear') {
+      ctx.scene.state.filter.lastInteractionAfter = undefined;
+      ctx.scene.state.filter.lastInteractionBefore = undefined;
+      ctx.scene.state.awaitingFilter = undefined;
+      this.resetManualRecipients(ctx.scene.state);
+      await this.renderFilters(ctx);
       return true;
     }
 
@@ -902,15 +1009,16 @@ export class VkBroadcastScene {
       }
       ctx.scene.state.filter.groupName = null;
       ctx.scene.state.filter.groupNames = groupNames;
-    } else if (awaitingFilter === 'activity') {
-      const date = this.parseFilterDate(text);
-      if (!date) {
+    } else {
+      const range = this.parseActivityFilter(text, awaitingFilter);
+      if (!range) {
         await ctx.send(
           ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityText),
         );
         return;
       }
-      ctx.scene.state.filter.lastInteractionAfter = date.toISOString();
+      ctx.scene.state.filter.lastInteractionAfter = range.after;
+      ctx.scene.state.filter.lastInteractionBefore = range.before;
     }
 
     ctx.scene.state.awaitingFilter = undefined;
@@ -952,13 +1060,59 @@ export class VkBroadcastScene {
     });
   }
 
-  private parseFilterDate(text: string) {
-    const normalized = text.trim();
-    const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(normalized);
-    const date = match
-      ? new Date(`${match[3]}-${match[2]}-${match[1]}T00:00:00.000Z`)
-      : new Date(normalized);
+  private parseActivityFilter(
+    text: string,
+    mode: 'activity_before' | 'activity_range',
+  ) {
+    const dates = text
+      .trim()
+      .split(/\s*(?:-|—|–)\s*/)
+      .map((value) => this.parseMoscowDate(value));
+    if (
+      (mode === 'activity_before' && dates.length !== 1) ||
+      dates.some((date) => !date)
+    ) {
+      return null;
+    }
+    if (mode === 'activity_before') {
+      return { before: this.addMoscowDays(dates[0]!, 1).toISOString() };
+    }
+    if (dates.length !== 2 || dates[0]! > dates[1]!) return null;
+
+    return {
+      after: dates[0]!.toISOString(),
+      before: this.addMoscowDays(dates[1]!, 1).toISOString(),
+    };
+  }
+
+  /** Календарные даты рассылки трактуются в Europe/Moscow независимо от timezone процесса. */
+  private parseMoscowDate(value: string) {
+    const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value.trim());
+    if (!match) return null;
+    const date = new Date(`${match[3]}-${match[2]}-${match[1]}T00:00:00+03:00`);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private addMoscowDays(date: Date, days: number) {
+    return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  private renderActivityFilter(filter: BroadcastAudienceFilter) {
+    const format = (value: string | number) =>
+      new Intl.DateTimeFormat('ru-RU', {
+        timeZone: 'Europe/Moscow',
+      }).format(new Date(value));
+    if (filter.lastInteractionAfter && filter.lastInteractionBefore) {
+      return `с ${format(filter.lastInteractionAfter)} по ${format(
+        new Date(filter.lastInteractionBefore).getTime() - 1,
+      )}`;
+    }
+    if (filter.lastInteractionBefore) {
+      return `до ${format(
+        new Date(filter.lastInteractionBefore).getTime() - 1,
+      )}`;
+    }
+    return null;
   }
 
   private async applyGroupFilter(ctx: IStepCtx, groupNamesText: string) {
@@ -982,7 +1136,7 @@ export class VkBroadcastScene {
   private getSettingsKeyboard(ctx: IStepCtx) {
     return this.keyboardFactory.getBroadcastSettings(ctx, {
       manualMode: ctx.scene.state.manualRecipients,
-      onlyAuthorized: !!ctx.scene.state.filter.onlyAuthorized,
+      onlyAuthorized: ctx.scene.state.filter.onlyAuthorized,
       groupName: ctx.scene.state.filter.groupNames?.join(', ') || null,
       feedbackButton: ctx.scene.state.feedbackButton,
       actionKeyboard: ctx.scene.state.actionKeyboard,
@@ -994,6 +1148,61 @@ export class VkBroadcastScene {
       ctx,
       ctx.scene.state.feedbackButton,
     );
+  }
+
+  private async renderActionSettings(ctx: IStepCtx) {
+    await this.editCurrentVkMessage(
+      ctx,
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings),
+      {
+        keep_forward_messages: true,
+        keyboard: this.keyboardFactory
+          .getBroadcastActionSettings(ctx, ctx.scene.state.actionKeyboard || [])
+          .inline(),
+      },
+    );
+    await ctx.answer({
+      type: 'show_snackbar',
+      text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+    });
+  }
+
+  private getRecipientActionButton(
+    state: VkBroadcastState,
+    action: BroadcastRecipientAction,
+  ) {
+    return state.actionKeyboard?.find((item) => item.type === action);
+  }
+
+  private toggleRecipientAction(
+    state: VkBroadcastState,
+    action: BroadcastRecipientAction,
+  ) {
+    const actionKeyboard = state.actionKeyboard || [];
+    state.actionKeyboard = actionKeyboard.some((item) => item.type === action)
+      ? actionKeyboard.filter((item) => item.type !== action)
+      : [...actionKeyboard, { type: action }];
+  }
+
+  private async applyActionText(
+    ctx: IStepCtx,
+    action: BroadcastRecipientAction,
+    text: string,
+  ) {
+    const value = text.trim();
+    if (!value || value.length > 40) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionTextInvalid));
+      return;
+    }
+    ctx.scene.state.actionKeyboard = (ctx.scene.state.actionKeyboard || []).map(
+      (item) => (item.type === action ? { ...item, text: value } : item),
+    );
+    ctx.scene.state.awaitingActionText = undefined;
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings), {
+      keyboard: this.keyboardFactory
+        .getBroadcastActionSettings(ctx, ctx.scene.state.actionKeyboard)
+        .inline(),
+    });
   }
 
   private async renderSettingsScreen(ctx: IStepCtx) {
@@ -1076,14 +1285,16 @@ export class VkBroadcastScene {
       recipientsCount: state.recipientsCount,
       groupsCount: state.filter.groupNames?.length || 0,
       groupsText,
-      lastInteractionAfter: state.filter.lastInteractionAfter,
+      activityText: this.renderActivityFilter(state.filter),
       excludeCampaignIds: state.filter.excludeCampaignIds || [],
     });
     const keyboard = this.keyboardFactory
       .getBroadcastFilters(ctx, {
         hasGroups: !!state.filter.groupNames?.length,
-        onlyAuthorized: !!state.filter.onlyAuthorized,
-        hasActivityFilter: !!state.filter.lastInteractionAfter,
+        onlyAuthorized: state.filter.onlyAuthorized,
+        hasActivityFilter:
+          !!state.filter.lastInteractionAfter ||
+          !!state.filter.lastInteractionBefore,
         hasExcludedCampaigns: !!state.filter.excludeCampaignIds?.length,
       })
       .inline();
@@ -1206,6 +1417,7 @@ export class VkBroadcastScene {
       ctx,
       ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterGroups, {
         instituteName: result.institute.instituteName,
+        selectedGroupsCount: selected.size,
         currentPage: result.currentPage,
         totalPages: result.totalPages,
       }),
@@ -1246,6 +1458,21 @@ export class VkBroadcastScene {
                   color: Keyboard.PRIMARY_COLOR,
                 }),
               ],
+              ...(selected.size
+                ? [
+                    [
+                      Keyboard.callbackButton({
+                        label: ctx.i18n.t(
+                          LocalePhrase.Button_Broadcast_FilterGroupsClear,
+                        ),
+                        payload: {
+                          broadcastAction: 'filterGroupsSelectionClear',
+                        },
+                        color: Keyboard.NEGATIVE_COLOR,
+                      }),
+                    ],
+                  ]
+                : []),
               [
                 Keyboard.callbackButton({
                   label: ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),

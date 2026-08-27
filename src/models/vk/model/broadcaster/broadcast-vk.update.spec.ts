@@ -108,7 +108,105 @@ describe('BroadcastVkUpdate', () => {
       peer_id: 123,
       cmid: 456,
       message: 'Исходный текст рассылки',
+      keep_forward_messages: 1,
+      keep_snippets: 1,
       keyboard: 'new keyboard',
     });
+  });
+
+  it('keeps a sticker feedback callback available without trying to replace the message', async () => {
+    const broadcastService = {
+      recordCampaignFeedback: jest.fn().mockResolvedValue({
+        created: true,
+        feedbackButton: { afterClickText: 'Готово' },
+      }),
+    };
+    const keyboard = { inline: jest.fn().mockReturnValue('new keyboard') };
+    const keyboardFactory = {
+      getBroadcastRecipientKeyboard: jest.fn().mockReturnValue(keyboard),
+    };
+    const update = new BroadcastVkFeedbackUpdate(
+      broadcastService as any,
+      keyboardFactory as any,
+    );
+    const ctx = {
+      eventPayload: { broadcastFeedbackAction: 'initial', deliveryId: 15 },
+      peerId: 123,
+      conversationMessageId: 456,
+      state: { userSocial: { id: 7 } },
+      api: {
+        messages: {
+          getByConversationMessageId: jest.fn().mockResolvedValue({
+            items: [{ text: '', attachments: [{ type: 'sticker' }] }],
+          }),
+          edit: jest.fn(),
+        },
+      },
+      i18n: { t: jest.fn().mockReturnValue('received') },
+      answer: jest.fn(),
+    };
+
+    await update.onBroadcastFeedback(ctx as any);
+
+    expect(ctx.api.messages.edit).not.toHaveBeenCalled();
+    expect(ctx.answer).toHaveBeenCalledWith({
+      type: 'show_snackbar',
+      text: 'received',
+    });
+  });
+
+  it('preserves a wall attachment when updating a feedback keyboard', async () => {
+    const broadcastService = {
+      recordCampaignFeedback: jest.fn().mockResolvedValue({
+        created: true,
+        feedbackButton: { afterClickText: null },
+      }),
+    };
+    const keyboard = { inline: jest.fn().mockReturnValue('new keyboard') };
+    const keyboardFactory = {
+      getBroadcastRecipientKeyboard: jest.fn().mockReturnValue(keyboard),
+    };
+    const update = new BroadcastVkFeedbackUpdate(
+      broadcastService as any,
+      keyboardFactory as any,
+    );
+    const ctx = {
+      eventPayload: { broadcastFeedbackAction: 'initial', deliveryId: 15 },
+      peerId: 123,
+      conversationMessageId: 456,
+      state: { userSocial: { id: 7 } },
+      api: {
+        messages: {
+          getByConversationMessageId: jest.fn().mockResolvedValue({
+            items: [
+              {
+                text: '',
+                attachments: [
+                  {
+                    type: 'wall',
+                    wall: { id: 42, owner_id: -123, access_key: 'secret' },
+                  },
+                ],
+              },
+            ],
+          }),
+          edit: jest.fn(),
+        },
+      },
+      i18n: { t: jest.fn().mockReturnValue('received') },
+      answer: jest.fn(),
+    };
+
+    await update.onBroadcastFeedback(ctx as any);
+
+    expect(ctx.api.messages.edit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: '',
+        attachment: 'wall-123_42_secret',
+        keep_forward_messages: 1,
+        keep_snippets: 1,
+        keyboard: 'new keyboard',
+      }),
+    );
   });
 });

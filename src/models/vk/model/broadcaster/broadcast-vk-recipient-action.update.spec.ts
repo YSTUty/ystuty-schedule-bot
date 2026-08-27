@@ -10,14 +10,15 @@ describe('BroadcastVkRecipientActionUpdate', () => {
     const update = new BroadcastVkRecipientActionUpdate(
       broadcastService as any,
     );
+    const calls: string[] = [];
     const ctx = {
       eventPayload: {
         deliveryId: 15,
         broadcastRecipientAction: 'select_group',
       },
       state: { userSocial: { id: 7 } },
-      scene: { enter: jest.fn() },
-      answer: jest.fn(),
+      scene: { enter: jest.fn(async () => calls.push('scene')) },
+      answer: jest.fn(async () => calls.push('answer')),
       i18n: { t: jest.fn() },
     };
 
@@ -30,6 +31,11 @@ describe('BroadcastVkRecipientActionUpdate', () => {
       action: 'select_group',
     });
     expect(ctx.scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE');
+    expect(ctx.answer).toHaveBeenCalledWith({
+      type: 'show_snackbar',
+      text: 'Готово',
+    });
+    expect(calls).toEqual(['scene', 'answer']);
   });
 
   it('does not enter the scene for an unavailable action', async () => {
@@ -53,6 +59,56 @@ describe('BroadcastVkRecipientActionUpdate', () => {
     expect(ctx.answer).toHaveBeenCalledWith({
       type: 'show_snackbar',
       text: 'unavailable',
+    });
+  });
+
+  it('opens the existing authorization scene for the auth action', async () => {
+    const update = new BroadcastVkRecipientActionUpdate({
+      getCampaignRecipientAction: jest.fn().mockResolvedValue({ type: 'auth' }),
+    } as any);
+    const ctx = {
+      eventPayload: { deliveryId: 15, broadcastRecipientAction: 'auth' },
+      state: { userSocial: { id: 7 } },
+      scene: { enter: jest.fn() },
+      answer: jest.fn(),
+      i18n: { t: jest.fn() },
+    };
+
+    await update.onRecipientAction(ctx as any);
+
+    expect(ctx.scene.enter).toHaveBeenCalledWith('AUTH_SCENE');
+    expect(ctx.answer).toHaveBeenCalledWith({
+      type: 'show_snackbar',
+      text: 'Готово',
+    });
+  });
+
+  it('leaves the duplicate-callback protection to VK middleware', async () => {
+    const update = new BroadcastVkRecipientActionUpdate({
+      getCampaignRecipientAction: jest
+        .fn()
+        .mockResolvedValue({ type: 'select_group' }),
+    } as any);
+    const ctx = {
+      eventPayload: {
+        deliveryId: 15,
+        broadcastRecipientAction: 'select_group',
+      },
+      state: { userSocial: { id: 7 }, eventAnswered: false },
+      scene: {
+        enter: jest.fn(async () => {
+          ctx.state.eventAnswered = true;
+        }),
+      },
+      answer: jest.fn(),
+      i18n: { t: jest.fn() },
+    };
+
+    await update.onRecipientAction(ctx as any);
+
+    expect(ctx.answer).toHaveBeenCalledWith({
+      type: 'show_snackbar',
+      text: 'Готово',
     });
   });
 });

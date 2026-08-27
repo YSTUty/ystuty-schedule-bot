@@ -100,7 +100,7 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
     actionKeyboard?: BroadcastActionKeyboard | null;
     feedbackButton?: BroadcastFeedbackButton | null;
   }) {
-    if (!params.feedbackButton && !params.actionKeyboard) return {};
+    if (!params.feedbackButton && !params.actionKeyboard?.length) return {};
     return {
       keyboard: this.keyboardFactory
         .getBroadcastRecipientKeyboard(params)

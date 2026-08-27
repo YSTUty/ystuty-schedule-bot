@@ -37,7 +37,7 @@ button:
     select_recipients: Тестовая выборка получателей
     audience_all: Все по фильтру
     audience_manual: Тестовая выборка
-    filter_authorized: 'Авторизованные: ${onlyAuthorized ? "да" : "нет"}'
+    filter_authorized: 'Авторизованные: ${onlyAuthorized === undefined ? "любые" : onlyAuthorized ? "да" : "нет"}'
     filter_group: 'Группа: ${groupName}'
     filter_group_reset: Сбросить группу
     edit_filters: Фильтры аудитории
@@ -59,7 +59,10 @@ button:
     feedback_response: Изменить ответ
     feedback_after_toggle: 'Кнопка после клика: ${feedbackAfterClickText ? "вкл" : "выкл"}'
     feedback_after_text: Текст кнопки после клика
-    action_select_group: 'Выбор актуальной группы: ${actionKeyboard?.type === "select_group" ? "вкл" : "выкл"}'
+    action_buttons: 'Доп. кнопки: ${actionButtonsCount || "нет"}'
+    action_select_group: 'Выбрать актуальную группу: ${actionButton ? "вкл" : "выкл"}'
+    action_auth: 'Подключить или обновить ЯГТУ.ID: ${actionButton ? "вкл" : "выкл"}'
+    action_text: Изменить текст кнопки
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -229,12 +232,12 @@ page:
       • social = telegram
       • hasDM = ${filter.hasDM}
       • isBlockedBot = ${filter.isBlockedBot}
-      • onlyAuthorized = ${filter.onlyAuthorized ? 'да' : 'нет'}
+      • onlyAuthorized = ${filter.onlyAuthorized === undefined ? 'любые' : filter.onlyAuthorized ? 'да' : 'нет'}
       • groups = ${filter.groupNames?.length ? filter.groupNames.length + ' выбрано' : '-'}
       • mode = ${mode}
       • fallback-кнопка = <code>${feedbackButton?.text || '-'}</code>
       ${feedbackButton ? ('• ответ после клика = <code>' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '</code>\n• кнопка после клика = <code>' + (feedbackButton.afterClickText || 'удаляется') + '</code>') : ''}
-      • действие для получателя = <code>${actionKeyboard?.type === 'select_group' ? 'выбор актуальной группы' : '-'}</code>
+      • доп. кнопки = <code>${actionKeyboard?.length ? actionKeyboard.map((item) => item.type).join(', ') : '-'}</code>
 
       Нажми «Далее» или отправь <code>/next</code> для выбора сообщения.
     select_recipients: |
@@ -267,9 +270,9 @@ page:
     filters: |
       <b>Фильтры аудитории</b>
       Получателей: <code>${recipientsCount}</code>
-      Авторизованные: <code>${filter.onlyAuthorized ? 'только' : 'все'}</code>
+      Авторизованные: <code>${filter.onlyAuthorized === undefined ? 'любые' : filter.onlyAuthorized ? 'да' : 'нет'}</code>
       Группы: <code>${groupsCount ? groupsCount + ' выбрано' : 'все'}</code>
-      Активность с: <code>${lastInteractionAfter ? new Date(lastInteractionAfter).toLocaleDateString('ru-RU') : 'не ограничена'}</code>
+      Активность: <code>${activityText || 'не ограничена'}</code>
       Исключить кампании: <code>${excludeCampaignIds.length ? excludeCampaignIds.join(', ') : 'нет'}</code>
     filter_institutes: |
       <b>Институты с подходящими получателями</b>
@@ -277,6 +280,7 @@ page:
     filter_groups_menu: <b>Выбор групп</b>
     filter_groups: |
       <b>Группы${instituteName ? ': ' + instituteName : ''}</b>
+      Выбрано: <code>${selectedGroupsCount}</code>
       Страница: <code>${currentPage}/${totalPages}</code>
     filter_groups_text: |
       Отправь список групп через запятую, точку с запятой или новую строку.
@@ -284,9 +288,15 @@ page:
     filter_groups_list: |
       <b>Выбранные группы</b>
       <code>${groupNames}</code>
+    filter_activity_mode: Выбери правило активности.
     filter_activity_text: |
-      Отправь дату активности в формате <code>ДД.ММ.ГГГГ</code> или <code>ГГГГ-ММ-ДД</code>.
-      В рассылку войдут только пользователи, которые взаимодействовали с ботом в ЛС в эту дату или позднее.
+      Отправь дату или диапазон в формате <code>ДД.ММ.ГГГГ</code> или <code>ДД.ММ.ГГГГ - ДД.ММ.ГГГГ</code>.
+      Для режима «до даты» будут выбраны пользователи, активные до конца указанного дня. Для диапазона обе даты включаются.
+    action_settings: |
+      <b>Дополнительные кнопки</b>
+      Включай нужные действия и при необходимости меняй их текст. Кнопки добавляются к каждому сообщению рассылки.
+    action_text: Отправь текст для дополнительной кнопки. Максимум 40 символов.
+    action_text_invalid: Текст кнопки должен содержать от 1 до 40 символов.
     filter_exclude_campaigns_text: |
       Выбери рассылки галочками в списке. Пользователи, для которых уже
       создавалась delivery выбранных кампаний, будут исключены.

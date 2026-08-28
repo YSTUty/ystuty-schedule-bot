@@ -4,7 +4,7 @@ common:
   error: 💢 Произошла ошибка.
   banned: Вы в бане.
   no_access: Нет доступа.
-  cooldown: ⏳ Cooldown...
+  cooldown: ⏳ Подождите немного…
   canceled: 🔄 Отменено
 
 button:
@@ -168,7 +168,7 @@ page:
 
   auth:
     need_auth: |
-      🐜 Вы не авторизированы.
+      🐜 Вы не авторизованы.
       Необходимо пройти авторизацию через ЯГТУ ID
     done: |
       Привет, <i>${user.fullname}</i>!
@@ -184,7 +184,7 @@ page:
     need_connect: |
       🔑 Необходимо пройти единую авторизацию в боте <code>@${botName}</code>.
 
-      Для этого нажмите конпку.
+      Для этого нажмите кнопку.
     wait_confirm: 🦉 Вам отправлено подтверждение на авторизацию в @${botName}
     already_sent: 🐨 Вам уже было отправлено подтверждение на авторизацию. Проверьте его в @${botName}
 
@@ -200,7 +200,7 @@ page:
     nearest_schedule: |
       ⚠️ Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
       ${content}
-    not_found_today: Похоже, что на этот день нету расписания... 🐜
+    not_found_today: Похоже, на этот день расписания нет. 🐜
     teachers_list: |
       <b>Преподаватели</b>
       <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
@@ -263,13 +263,12 @@ page:
       Режим аудитории: <code>${audienceMode === 'manual' ? 'тестовая выборка' : 'все по фильтру'}</code>
       Тестовая выборка: <code>${selectedCount ? selectedCount + ' ID: ' + selectedRecipientIds.join(', ') : '-'}</code>
 
-      Фильтры первой версии:
-      • social = telegram
-      • hasDM = ${filter.hasDM}
-      • isBlockedBot = ${filter.isBlockedBot}
-      • onlyAuthorized = ${filter.onlyAuthorized === undefined ? 'любые' : filter.onlyAuthorized ? 'да' : 'нет'}
-      • groups = ${filter.groupNames?.length ? filter.groupNames.length + ' выбрано' : '-'}
-      • mode = ${mode}
+      Фильтры:
+      • Личные сообщения: ${filter.hasDM ? 'доступны' : 'недоступны'}
+      • Бот заблокирован: ${filter.isBlockedBot ? 'да' : 'нет'}
+      • Авторизация: ${filter.onlyAuthorized === undefined ? 'любая' : filter.onlyAuthorized ? 'требуется' : 'не требуется'}
+      • Группы: ${filter.groupNames?.length ? filter.groupNames.length + ' выбрано' : 'все'}
+      • Режим: ${mode}
       • fallback-кнопка = <code>${feedbackButton?.text || '-'}</code>
       ${feedbackButton ? ('• ответ после клика = <code>' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '</code>\n• кнопка после клика = <code>' + feedbackAfterClickSummary + '</code>') : ''}
       • доп. кнопки:

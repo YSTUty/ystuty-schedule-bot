@@ -151,9 +151,10 @@ export class VKKeyboardFactory {
   public getInviteToChat(ctx: IContext) {
     return Keyboard.keyboard([
       [
-        Keyboard.urlButton({
+        Keyboard.applicationButton({
           label: ctx.i18n.t(LocalePhrase.Button_InviteToChat),
-          url: `https://vk.ru/app6441755_-${ctx.$groupId}`,
+          appId: 6441755,
+          ownerId: -ctx.$groupId!,
         }),
       ],
     ]);
@@ -175,9 +176,10 @@ export class VKKeyboardFactory {
         }),
       ],
       [
-        Keyboard.urlButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Welcome_InviteToChat),
-          url: `https://vk.ru/app6441755_-${ctx.$groupId}`,
+        Keyboard.applicationButton({
+          label: ctx.i18n.t(LocalePhrase.Button_InviteToChat),
+          appId: 6441755,
+          ownerId: -ctx.$groupId!,
         }),
       ],
     ]);

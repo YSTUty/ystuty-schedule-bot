@@ -25,11 +25,17 @@ export class TgScheduleNotifUpdate {
   ) {}
 
   @TgHearsLocale(LocalePhrase.Button_ScheduleNotif)
+  @Action(LocalePhrase.Button_ScheduleNotif)
   async openFromMenu(@Ctx() ctx: ICbQOrMsg) {
     if (!(await this.canManage(ctx))) {
       await this.replyNoAccess(ctx);
       return;
     }
+
+    if (ctx.updateType === 'callback_query') {
+      await ctx.tryAnswerCbQuery();
+    }
+
     await this.openSettings(ctx);
   }
 

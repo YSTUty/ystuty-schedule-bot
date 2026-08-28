@@ -1,4 +1,5 @@
 import { TG_ALLOWED_CHAT_TYPES_KEY } from '@my-common/decorator/tg';
+import { LocalePhrase } from '@my-interfaces';
 
 import { MainUpdate } from './main.update';
 
@@ -34,6 +35,62 @@ describe('Telegram MainUpdate', () => {
       'Пригласить бота в группу:',
       keyboard,
     );
+  });
+
+  it('sends a feature card after the start message in a private chat', async () => {
+    const startKeyboard = { reply_markup: { keyboard: [] } };
+    const welcomeKeyboard = { reply_markup: { inline_keyboard: [] } };
+    (update as any).keyboardFactory.getStart = jest
+      .fn()
+      .mockReturnValue(startKeyboard);
+    (update as any).keyboardFactory.getWelcomeFeatures = jest
+      .fn()
+      .mockReturnValue(welcomeKeyboard);
+    const ctx = {
+      chat: { id: 7, type: 'private' },
+      from: { id: 9 },
+      message: { text: '/start' },
+      session: {},
+      user: { id: 1 },
+      userSocial: { groupName: 'ЦИС-11' },
+      replyWithHTML: jest.fn(),
+    } as any;
+    (update as any).telegramService.syncPrivateChatCommands = jest.fn();
+    (update as any).telegramService.isAdmin = jest.fn().mockReturnValue(false);
+    ctx.i18n = { t: jest.fn((phrase) => phrase) };
+
+    await update.hearStart(ctx);
+
+    expect(ctx.replyWithHTML).toHaveBeenNthCalledWith(
+      1,
+      LocalePhrase.Page_Start,
+      startKeyboard,
+    );
+    expect(ctx.replyWithHTML).toHaveBeenNthCalledWith(
+      2,
+      LocalePhrase.Page_WelcomeFeatures,
+      welcomeKeyboard,
+    );
+  });
+
+  it('does not send the feature card on start in a group chat', async () => {
+    const ctx = {
+      chat: { id: -1001, type: 'group' },
+      state: { appeal: true },
+      session: {},
+      message: { text: '/start' },
+      userSocial: { groupName: 'ЦИС-11' },
+      i18n: { t: jest.fn((phrase) => phrase) },
+      replyWithHTML: jest.fn(),
+    } as any;
+    (update as any).keyboardFactory.getStart = jest.fn().mockReturnValue({});
+    (update as any).keyboardFactory.getWelcomeFeatures = jest.fn();
+
+    await update.hearStart(ctx);
+
+    expect(
+      (update as any).keyboardFactory.getWelcomeFeatures,
+    ).not.toHaveBeenCalled();
   });
 
   it('opens a filtered teacher list for a matching private text message', async () => {

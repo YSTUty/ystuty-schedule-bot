@@ -20,6 +20,25 @@ describe('TelegramKeyboardFactory', () => {
     });
   });
 
+  it('builds welcome quick actions for selecting a group, notifications and chat invite', () => {
+    const keyboard = new TelegramKeyboardFactory().getWelcomeFeatures(ctx);
+    const buttons = keyboard.reply_markup.inline_keyboard.flat();
+
+    expect(buttons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          callback_data: 'button.select_group',
+        }),
+        expect.objectContaining({
+          callback_data: 'button.schedule_notification.title',
+        }),
+        expect.objectContaining({
+          url: expect.stringContaining('?startgroup=invite'),
+        }),
+      ]),
+    );
+  });
+
   it('opens hour selection before choosing minutes in the notif editor', () => {
     const keyboard = new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 7,

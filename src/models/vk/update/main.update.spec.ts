@@ -50,6 +50,65 @@ describe('VK MainUpdate', () => {
     ).toEqual({ groupAction: 'select' });
   });
 
+  it('sends a feature card after the start message in a VK DM', async () => {
+    const startKeyboard = { inline: jest.fn().mockReturnValue('start') };
+    const welcomeKeyboard = { inline: jest.fn().mockReturnValue('welcome') };
+    (update as any).keyboardFactory.getStart = jest
+      .fn()
+      .mockReturnValue(startKeyboard);
+    (update as any).keyboardFactory.getWelcomeFeatures = jest
+      .fn()
+      .mockReturnValue(welcomeKeyboard);
+    (update as any).keyboardFactory.needInline = jest
+      .fn()
+      .mockReturnValue(false);
+    const ctx = {
+      isChat: false,
+      isDM: true,
+      $match: [],
+      state: { user: { id: 1 }, userSocial: { groupName: 'ЦИС-11' } },
+      session: {},
+      i18n: { t: jest.fn((phrase) => phrase) },
+      send: jest.fn(),
+    } as any;
+
+    await update.hearStart(ctx);
+
+    expect(ctx.send).toHaveBeenNthCalledWith(1, LocalePhrase.Page_Start, {
+      keyboard: 'start',
+    });
+    expect(ctx.send).toHaveBeenNthCalledWith(
+      2,
+      LocalePhrase.Page_WelcomeFeatures,
+      { keyboard: 'welcome' },
+    );
+  });
+
+  it('does not send the feature card on start in a VK chat', async () => {
+    const ctx = {
+      isChat: true,
+      isDM: false,
+      state: { appeal: true, userSocial: { groupName: 'ЦИС-11' } },
+      session: {},
+      $match: [],
+      i18n: { t: jest.fn((phrase) => phrase) },
+      send: jest.fn(),
+    } as any;
+    (update as any).keyboardFactory.getStart = jest
+      .fn()
+      .mockReturnValue({ inline: jest.fn().mockReturnValue('start') });
+    (update as any).keyboardFactory.needInline = jest
+      .fn()
+      .mockReturnValue(true);
+    (update as any).keyboardFactory.getWelcomeFeatures = jest.fn();
+
+    await update.hearStart(ctx);
+
+    expect(
+      (update as any).keyboardFactory.getWelcomeFeatures,
+    ).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['onNope', { nope: {} }, { teacherAction: 'list' }],
     [

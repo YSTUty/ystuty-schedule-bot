@@ -55,6 +55,13 @@ export class VkScheduleNotifUpdate {
       return;
     }
 
+    if (action === 'settings') {
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: 'Открываю настройки',
+      });
+    }
+
     if (action === 'create') {
       await this.editStep(
         ctx,

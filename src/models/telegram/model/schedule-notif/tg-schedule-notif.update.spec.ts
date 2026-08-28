@@ -3,6 +3,21 @@ import { LocalePhrase } from '@my-interfaces';
 import { TgScheduleNotifUpdate } from './tg-schedule-notif.update';
 
 describe('TgScheduleNotifUpdate', () => {
+  it('acknowledges the welcome-card notification callback', async () => {
+    const update = new TgScheduleNotifUpdate({} as any, {} as any, {} as any);
+    (update as any).openSettings = jest.fn();
+    const ctx = {
+      updateType: 'callback_query',
+      chat: { type: 'private' },
+      tryAnswerCbQuery: jest.fn(),
+    };
+
+    await update.openFromMenu(ctx as any);
+
+    expect(ctx.tryAnswerCbQuery).toHaveBeenCalledTimes(1);
+    expect((update as any).openSettings).toHaveBeenCalledWith(ctx);
+  });
+
   it('shows the notif group before confirming deletion', async () => {
     const notifService = {
       getFirstNotif: jest.fn().mockResolvedValue({

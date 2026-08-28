@@ -159,6 +159,30 @@ export class VKKeyboardFactory {
     ]);
   }
 
+  /** Быстрые действия из приветственной карточки личного чата. */
+  public getWelcomeFeatures(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Welcome_SelectGroup),
+          payload: { phrase: LocalePhrase.Button_SelectGroup },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Welcome_ScheduleNotif),
+          payload: { phrase: LocalePhrase.Button_ScheduleNotif },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.urlButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Welcome_InviteToChat),
+          url: `https://vk.ru/app6441755_-${ctx.$groupId}`,
+        }),
+      ],
+    ]);
+  }
+
   public getBroadcastQueueControls(ctx: IContext, paused = true) {
     return Keyboard.keyboard([
       [

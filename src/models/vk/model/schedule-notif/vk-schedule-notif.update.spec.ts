@@ -5,6 +5,25 @@ import { LocalePhrase } from '@my-interfaces';
 import { VkScheduleNotifUpdate } from './vk-schedule-notif.update';
 
 describe('VkScheduleNotifUpdate', () => {
+  it('acknowledges the welcome-card notification callback', async () => {
+    const update = new VkScheduleNotifUpdate({} as any, {} as any, {} as any);
+    (update as any).openSettings = jest.fn();
+    const ctx = {
+      eventPayload: { phrase: LocalePhrase.Button_ScheduleNotif },
+      isDM: true,
+      state: { userSocial: { id: 1 } },
+      answer: jest.fn(),
+    };
+
+    await update.onMessageEvent(ctx as any);
+
+    expect(ctx.answer).toHaveBeenCalledWith({
+      type: 'show_snackbar',
+      text: 'Открываю настройки',
+    });
+    expect((update as any).openSettings).toHaveBeenCalledWith(ctx);
+  });
+
   it('only routes schedule-notification callbacks', () => {
     const listener = Reflect.getMetadata(
       ListenerDecorator.KEY,

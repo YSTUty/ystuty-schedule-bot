@@ -16,6 +16,9 @@ export enum LocalePhrase {
   Button_SelectGroup = 'button.select_group',
   Button_InviteToChat = 'button.invite_to_chat',
   Button_SelectGroup_X = 'button.select_group_x',
+  Button_Welcome_SelectGroup = 'button.welcome.select_group',
+  Button_Welcome_ScheduleNotif = 'button.welcome.schedule_notification',
+  Button_Welcome_InviteToChat = 'button.welcome.invite_to_chat',
   Button_Broadcast = 'button.broadcast.title',
   Button_Broadcast_Create = 'button.broadcast.create',
   Button_Broadcast_Status = 'button.broadcast.status',
@@ -108,6 +111,7 @@ export enum LocalePhrase {
   // Pages
   Page_Start = 'page.start',
   Page_InitBot = 'page.init_bot',
+  Page_WelcomeFeatures = 'page.welcome_features',
   Page_Help = 'page.help',
   Page_UnknownMessage = 'page.unknown_message',
   Page_Schedule_NearestSchedule = 'page.schedule.nearest_schedule',

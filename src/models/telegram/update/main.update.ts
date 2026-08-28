@@ -153,6 +153,13 @@ export class MainUpdate {
     const keyboard = this.keyboardFactory.getStart(ctx);
     await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Page_Start), keyboard);
 
+    if (ctx.chat.type === 'private') {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_WelcomeFeatures),
+        this.keyboardFactory.getWelcomeFeatures(ctx),
+      );
+    }
+
     if (
       ctx.chat.type === 'private' &&
       (!ctx.userSocial.groupName || !ctx.user)

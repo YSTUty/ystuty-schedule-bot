@@ -86,6 +86,12 @@ export class MainUpdate {
       .inline(this.keyboardFactory.needInline(ctx));
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), { keyboard });
 
+    if (ctx.isDM) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_WelcomeFeatures), {
+        keyboard: this.keyboardFactory.getWelcomeFeatures(ctx).inline(),
+      });
+    }
+
     if (!ctx.isChat && (!ctx.state.userSocial.groupName || !ctx.state.user)) {
       const keyboard = !ctx.state.user
         ? this.keyboardFactory

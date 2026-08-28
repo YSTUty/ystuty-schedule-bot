@@ -18,6 +18,36 @@ describe('VKKeyboardFactory', () => {
     expect(renderedKeyboard.buttons[0][0].action.label).toHaveLength(40);
   });
 
+  it('builds welcome quick actions for selecting a group, notifications and chat invite', () => {
+    const keyboard = new VKKeyboardFactory().getWelcomeFeatures({
+      ...ctx,
+      $groupId: 42,
+    });
+    const buttons = JSON.parse(String(keyboard.inline())).buttons.flat();
+
+    expect(buttons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: expect.objectContaining({
+            payload: JSON.stringify({ phrase: 'button.select_group' }),
+          }),
+        }),
+        expect.objectContaining({
+          action: expect.objectContaining({
+            payload: JSON.stringify({
+              phrase: 'button.schedule_notification.title',
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          action: expect.objectContaining({
+            link: 'https://vk.ru/app6441755_-42',
+          }),
+        }),
+      ]),
+    );
+  });
+
   it('creates a schedule notif editor within VK inline keyboard limits', () => {
     const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 1,

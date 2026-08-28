@@ -94,6 +94,28 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  /** Быстрые действия из приветственной карточки личного чата. */
+  public getWelcomeFeatures(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Welcome_SelectGroup),
+          LocalePhrase.Button_SelectGroup,
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Welcome_ScheduleNotif),
+          LocalePhrase.Button_ScheduleNotif,
+        ),
+      ],
+      [
+        Markup.button.url(
+          ctx.i18n.t(LocalePhrase.Button_Welcome_InviteToChat),
+          `https://t.me/${xEnv.SOCIAL_TELEGRAM_BOT_NAME}?startgroup=invite`,
+        ),
+      ],
+    ]);
+  }
+
   public getBroadcastQueueControls(ctx: IContext, paused = true) {
     return Markup.inlineKeyboard([
       [

@@ -7,6 +7,7 @@ import * as xEnv from '@my-environment';
 
 import { MainMiddleware } from './middleware/main.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
+import { UnhandledPrivateMessageMiddleware } from './middleware/unhandled-private-message.middleware';
 import { UserMiddleware } from './middleware/user.middleware';
 import { TelegramBroadcasterModule } from './model/broadcaster/telegram-broadcaster.module';
 import { TgScheduleNotifModule } from './model/schedule-notif/tg-schedule-notif.module';
@@ -17,20 +18,18 @@ import { TelegramService } from './telegram.service';
 import { AdminUpdate } from './update/admin.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
-import { UnhandledPrivateMessageUpdate } from './update/unhandled-private-message.update';
 
 const baseProviders = [TelegramService, TelegramKeyboardFactory];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
 const providers = [
   ...middlewares,
+  UnhandledPrivateMessageMiddleware,
   // updates
   AdminUpdate,
   MainUpdate,
   ScheduleUpdate,
   AuthScene,
   SelectGroupScene,
-  // Должен регистрироваться последним, чтобы ответить только после остальных listeners.
-  UnhandledPrivateMessageUpdate,
 ];
 
 @Global()

@@ -111,10 +111,19 @@ export type BroadcastRecipientActionButton = {
   text?: string | null;
 };
 
-/** Набор transport-независимых дополнительных кнопок получателя. */
-export type BroadcastActionKeyboard = BroadcastRecipientActionButton[];
+/** Произвольная внешняя ссылка под сообщением рассылки. */
+export type BroadcastLinkButton = {
+  type: 'link';
+  text: string;
+  url: string;
+};
 
-export type BroadcastRecipientAction = 'select_group' | 'auth';
+/** Набор transport-независимых дополнительных кнопок получателя. */
+export type BroadcastActionKeyboard = Array<
+  BroadcastRecipientActionButton | BroadcastLinkButton
+>;
+
+export type BroadcastRecipientAction = 'select_group' | 'auth' | 'start';
 
 /** Набор параметров кампании, пригодный для повторного использования в wizard. */
 export type BroadcastCampaignSettings = {
@@ -134,27 +143,56 @@ export const normalizeBroadcastActionKeyboard = (
   value?: BroadcastActionKeyboard | BroadcastRecipientActionButton | null,
 ): BroadcastActionKeyboard => {
   const items = Array.isArray(value) ? value : value ? [value] : [];
-  const seen = new Set<BroadcastRecipientAction>();
+  const seen = new Set<BroadcastRecipientAction | 'link'>();
+  const result: BroadcastActionKeyboard = [];
 
-  return items.flatMap((item) => {
+  for (const item of items) {
+    if (!item || seen.has(item.type)) continue;
+
+    if (item.type === 'link') {
+      const text =
+        typeof item.text === 'string' ? item.text.trim().slice(0, 40) : '';
+      const url = normalizeBroadcastLinkUrl(item.url);
+      if (!text || !url) continue;
+      seen.add(item.type);
+      result.push({ type: item.type, text, url });
+      continue;
+    }
+
     if (
-      !item ||
-      (item.type !== 'select_group' && item.type !== 'auth') ||
+      (item.type !== 'select_group' &&
+        item.type !== 'auth' &&
+        item.type !== 'start') ||
       seen.has(item.type)
     ) {
-      return [];
+      continue;
     }
     seen.add(item.type);
 
-    return [
-      {
-        type: item.type,
-        ...(typeof item.text === 'string' && item.text.trim()
-          ? { text: item.text.trim().slice(0, 40) }
-          : {}),
-      },
-    ];
-  });
+    result.push({
+      type: item.type,
+      ...(typeof item.text === 'string' && item.text.trim()
+        ? { text: item.text.trim().slice(0, 40) }
+        : {}),
+    });
+  }
+
+  return result;
+};
+
+/** Разрешает только абсолютные HTTP(S)-ссылки для URL-кнопки рассылки. */
+export const normalizeBroadcastLinkUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+
+  try {
+    const parsed = new URL(value.trim());
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return null;
+    }
+    return value.trim();
+  } catch {
+    return null;
+  }
 };
 
 export type BroadcastJobData = {

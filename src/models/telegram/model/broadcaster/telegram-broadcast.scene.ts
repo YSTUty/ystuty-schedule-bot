@@ -9,6 +9,7 @@ import {
 
 import { Markup } from 'telegraf';
 
+import { escapeHTML } from '@my-common';
 import { SocialType } from '@my-common/constants';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
@@ -24,6 +25,7 @@ import {
   BroadcastRecipientAction,
   BroadcastSourceMessage,
   getBroadcastFeedbackAfterClickMode,
+  normalizeBroadcastLinkUrl,
 } from '../../../broadcast/broadcast.types';
 import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/broadcast-audience-group-filter.service';
 import { ScheduleService } from '../../../schedule/schedule.service';
@@ -41,7 +43,8 @@ type TelegramBroadcastState = {
   manualRecipients: boolean;
   awaitingFilter?: 'groups' | 'activity_before' | 'activity_range';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
-  awaitingActionText?: BroadcastRecipientAction;
+  awaitingActionText?: BroadcastRecipientAction | 'link';
+  awaitingActionLinkUrl?: boolean;
   feedbackButton?: BroadcastFeedbackButton | null;
   actionKeyboard?: BroadcastActionKeyboard | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
@@ -86,6 +89,7 @@ export class TelegramBroadcastScene extends BaseScene {
     state.actionKeyboard =
       reusedSettings?.actionKeyboard.map((item) => ({ ...item })) || [];
     state.awaitingActionText = undefined;
+    state.awaitingActionLinkUrl = undefined;
 
     const count = await this.broadcastService.countRecipients(
       SocialType.Telegram,
@@ -134,6 +138,11 @@ export class TelegramBroadcastScene extends BaseScene {
       await this.applyActionText(ctx, state.awaitingActionText, text);
       return;
     }
+    if (state.awaitingActionLinkUrl) {
+      const text = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
+      await this.applyActionLinkUrl(ctx, text);
+      return;
+    }
     if (state.awaitingFilter) {
       const text = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
       await this.applyTextFilter(ctx, state.awaitingFilter, text);
@@ -162,6 +171,7 @@ export class TelegramBroadcastScene extends BaseScene {
   @Action('broadcast:wizard:actions:settings')
   async onActionSettings(@Ctx() ctx: IStepCtx) {
     ctx.scene.state.awaitingActionText = undefined;
+    ctx.scene.state.awaitingActionLinkUrl = undefined;
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
@@ -184,7 +194,7 @@ export class TelegramBroadcastScene extends BaseScene {
     await this.renderSettingsScreen(ctx);
   }
 
-  @Action(/broadcast:wizard:actions:(?<action>select-group|auth):toggle/)
+  @Action(/broadcast:wizard:actions:(?<action>select-group|auth|start):toggle/)
   async onActionToggle(@Ctx() ctx: IStepCtx) {
     const action = this.getRecipientAction(ctx.match!.groups!.action);
     if (!action) return;
@@ -192,7 +202,7 @@ export class TelegramBroadcastScene extends BaseScene {
     await this.renderActionSettings(ctx);
   }
 
-  @Action(/broadcast:wizard:actions:(?<action>select-group|auth):text/)
+  @Action(/broadcast:wizard:actions:(?<action>select-group|auth|start):text/)
   async onActionText(@Ctx() ctx: IStepCtx) {
     const action = this.getRecipientAction(ctx.match!.groups!.action);
     if (!action || !this.getRecipientActionButton(ctx.scene.state, action)) {
@@ -200,9 +210,54 @@ export class TelegramBroadcastScene extends BaseScene {
       return;
     }
     ctx.scene.state.awaitingActionText = action;
+    ctx.scene.state.awaitingActionLinkUrl = undefined;
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionText),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastActionTextPrompt(ctx),
+      },
+    );
+  }
+
+  @Action('broadcast:wizard:actions:link:toggle')
+  async onActionLinkToggle(@Ctx() ctx: IStepCtx) {
+    const link = this.getRecipientActionButton(ctx.scene.state, 'link');
+    ctx.scene.state.actionKeyboard = link
+      ? (ctx.scene.state.actionKeyboard || []).filter(
+          (item) => item.type !== 'link',
+        )
+      : [
+          ...(ctx.scene.state.actionKeyboard || []),
+          { type: 'link', text: 'Открыть', url: 'https://ystuty.ru/' },
+        ];
+    await this.renderActionSettings(ctx);
+  }
+
+  @Action('broadcast:wizard:actions:link:text')
+  async onActionLinkText(@Ctx() ctx: IStepCtx) {
+    if (!this.getRecipientActionButton(ctx.scene.state, 'link')) return;
+    ctx.scene.state.awaitingActionText = 'link';
+    ctx.scene.state.awaitingActionLinkUrl = undefined;
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionText),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastActionTextPrompt(ctx),
+      },
+    );
+  }
+
+  @Action('broadcast:wizard:actions:link:url')
+  async onActionLinkUrl(@Ctx() ctx: IStepCtx) {
+    if (!this.getRecipientActionButton(ctx.scene.state, 'link')) return;
+    ctx.scene.state.awaitingActionText = undefined;
+    ctx.scene.state.awaitingActionLinkUrl = true;
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionLinkUrl),
       {
         parse_mode: 'HTML',
         ...this.keyboardFactory.getBroadcastActionTextPrompt(ctx),
@@ -799,27 +854,35 @@ export class TelegramBroadcastScene extends BaseScene {
     return 'кнопка удаляется';
   }
 
-  /** Кратко отображает настроенные подписи action-кнопок без привязки к transport keyboard. */
+  /** Формирует HTML-список настроенных action-кнопок для экрана администратора. */
   private renderActionKeyboardSummary(
     actionKeyboard?: BroadcastActionKeyboard | null,
   ) {
-    const labels: Record<BroadcastRecipientAction, string> = {
+    const labels: Record<BroadcastRecipientAction | 'link', string> = {
       select_group: 'Выбор группы',
       auth: 'ЯГТУ.ID',
+      start: 'Стартовое меню',
+      link: 'Ссылка',
     };
-    const defaultTexts: Record<BroadcastRecipientAction, string> = {
+    const defaultTexts: Record<BroadcastRecipientAction | 'link', string> = {
       select_group: 'Выбрать актуальную группу',
       auth: 'Подключить или обновить ЯГТУ.ID',
+      start: 'Начать',
+      link: 'Открыть',
     };
 
     return (actionKeyboard || []).length
       ? (actionKeyboard || [])
           .map(
             (item) =>
-              `${labels[item.type]}: ${item.text || defaultTexts[item.type]}`,
+              `  • ${labels[item.type]}: <code>${
+                escapeHTML(item.text || defaultTexts[item.type])
+              }</code>${
+                item.type === 'link' ? ` → <code>${escapeHTML(item.url)}</code>` : ''
+              }`,
           )
-          .join('; ')
-      : '-';
+          .join('\n')
+      : '  • нет';
   }
 
   private getFeedbackSettingsKeyboard(
@@ -1079,12 +1142,14 @@ export class TelegramBroadcastScene extends BaseScene {
       ? 'select_group'
       : value === 'auth'
         ? 'auth'
-        : null;
+        : value === 'start'
+          ? 'start'
+          : null;
   }
 
   private getRecipientActionButton(
     state: TelegramBroadcastState,
-    action: BroadcastRecipientAction,
+    action: BroadcastRecipientAction | 'link',
   ) {
     return state.actionKeyboard?.find((item) => item.type === action);
   }
@@ -1101,7 +1166,7 @@ export class TelegramBroadcastScene extends BaseScene {
 
   private async applyActionText(
     ctx: IStepCtx,
-    action: BroadcastRecipientAction,
+    action: BroadcastRecipientAction | 'link',
     text: string,
   ) {
     const value = text.trim();
@@ -1128,22 +1193,39 @@ export class TelegramBroadcastScene extends BaseScene {
     );
   }
 
-  private async renderActionSettings(ctx: IStepCtx) {
-    await ctx.tryAnswerCbQuery();
-    await ctx.editMessageText(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
-        actionKeyboardSummary: this.renderActionKeyboardSummary(
-          ctx.scene.state.actionKeyboard,
-        ),
-      }),
-      {
-        parse_mode: 'HTML',
-        ...this.keyboardFactory.getBroadcastActionSettings(
-          ctx,
-          ctx.scene.state.actionKeyboard || [],
-        ),
-      },
+  private async applyActionLinkUrl(ctx: IStepCtx, text: string) {
+    const url = normalizeBroadcastLinkUrl(text);
+    if (!url) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionLinkUrlInvalid),
+      );
+      return;
+    }
+    ctx.scene.state.actionKeyboard = (ctx.scene.state.actionKeyboard || []).map(
+      (item) => (item.type === 'link' ? { ...item, url } : item),
     );
+    ctx.scene.state.awaitingActionLinkUrl = undefined;
+    await this.renderActionSettings(ctx);
+  }
+
+  private async renderActionSettings(ctx: IStepCtx) {
+    const message = ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
+      actionKeyboardSummary: this.renderActionKeyboardSummary(
+        ctx.scene.state.actionKeyboard,
+      ),
+    });
+    const keyboard = this.keyboardFactory.getBroadcastActionSettings(
+      ctx,
+      ctx.scene.state.actionKeyboard || [],
+    );
+
+    if (!ctx.callbackQuery?.message) {
+      await ctx.replyWithHTML(message, keyboard);
+      return;
+    }
+
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(message, { parse_mode: 'HTML', ...keyboard });
   }
 
   private async renderExcludeCampaignsSelector(ctx: IStepCtx, page: number) {

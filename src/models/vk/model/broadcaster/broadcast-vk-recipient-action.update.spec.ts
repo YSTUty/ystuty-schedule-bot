@@ -1,3 +1,5 @@
+import { LocalePhrase } from '@my-interfaces';
+
 import { BroadcastVkRecipientActionUpdate } from './broadcast-vk-recipient-action.update';
 
 describe('BroadcastVkRecipientActionUpdate', () => {
@@ -9,6 +11,7 @@ describe('BroadcastVkRecipientActionUpdate', () => {
     };
     const update = new BroadcastVkRecipientActionUpdate(
       broadcastService as any,
+      {} as any,
     );
     const calls: string[] = [];
     const ctx = {
@@ -41,9 +44,10 @@ describe('BroadcastVkRecipientActionUpdate', () => {
   });
 
   it('does not enter the scene for an unavailable action', async () => {
-    const update = new BroadcastVkRecipientActionUpdate({
-      getCampaignRecipientAction: jest.fn().mockResolvedValue(null),
-    } as any);
+    const update = new BroadcastVkRecipientActionUpdate(
+      { getCampaignRecipientAction: jest.fn().mockResolvedValue(null) } as any,
+      {} as any,
+    );
     const ctx = {
       eventPayload: {
         deliveryId: 15,
@@ -65,9 +69,14 @@ describe('BroadcastVkRecipientActionUpdate', () => {
   });
 
   it('opens the existing authorization scene for the auth action', async () => {
-    const update = new BroadcastVkRecipientActionUpdate({
-      getCampaignRecipientAction: jest.fn().mockResolvedValue({ type: 'auth' }),
-    } as any);
+    const update = new BroadcastVkRecipientActionUpdate(
+      {
+        getCampaignRecipientAction: jest
+          .fn()
+          .mockResolvedValue({ type: 'auth' }),
+      } as any,
+      {} as any,
+    );
     const ctx = {
       eventPayload: { deliveryId: 15, broadcastRecipientAction: 'auth' },
       state: { userSocial: { id: 7 } },
@@ -87,12 +96,53 @@ describe('BroadcastVkRecipientActionUpdate', () => {
     });
   });
 
+  it('sends the regular start screen for the start action', async () => {
+    const startKeyboard = { inline: jest.fn().mockReturnValue('start') };
+    const welcomeKeyboard = { inline: jest.fn().mockReturnValue('welcome') };
+    const keyboardFactory = {
+      getStart: jest.fn().mockReturnValue(startKeyboard),
+      getWelcomeFeatures: jest.fn().mockReturnValue(welcomeKeyboard),
+      needInline: jest.fn().mockReturnValue(false),
+    };
+    const update = new BroadcastVkRecipientActionUpdate(
+      {
+        getCampaignRecipientAction: jest
+          .fn()
+          .mockResolvedValue({ type: 'start' }),
+      } as any,
+      keyboardFactory as any,
+    );
+    const ctx = {
+      eventPayload: { deliveryId: 15, broadcastRecipientAction: 'start' },
+      state: { userSocial: { id: 7 } },
+      answer: jest.fn(),
+      i18n: { t: jest.fn((phrase) => phrase) },
+      send: jest.fn(),
+    };
+
+    await update.onRecipientAction(ctx as any);
+
+    expect(ctx.send).toHaveBeenNthCalledWith(1, LocalePhrase.Page_Start, {
+      keyboard: 'start',
+    });
+    expect(ctx.send).toHaveBeenNthCalledWith(
+      2,
+      LocalePhrase.Page_WelcomeFeatures,
+      { keyboard: 'welcome' },
+    );
+    expect(keyboardFactory.getStart).toHaveBeenCalledWith(ctx);
+    expect(keyboardFactory.getWelcomeFeatures).toHaveBeenCalledWith(ctx);
+  });
+
   it('leaves the duplicate-callback protection to VK middleware', async () => {
-    const update = new BroadcastVkRecipientActionUpdate({
-      getCampaignRecipientAction: jest
-        .fn()
-        .mockResolvedValue({ type: 'select_group' }),
-    } as any);
+    const update = new BroadcastVkRecipientActionUpdate(
+      {
+        getCampaignRecipientAction: jest
+          .fn()
+          .mockResolvedValue({ type: 'select_group' }),
+      } as any,
+      {} as any,
+    );
     const ctx = {
       eventPayload: {
         deliveryId: 15,

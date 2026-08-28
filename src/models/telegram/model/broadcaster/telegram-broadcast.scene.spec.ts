@@ -28,8 +28,44 @@ describe('TelegramBroadcastScene', () => {
     const message = (scene as any).renderSettings(ctx, state);
 
     expect(message).toContain('Тестовая выборка: <code>1 ID: 2</code>');
+    expect(message).toContain('  • Выбор группы: <code>Выбрать группу</code>');
     expect(message).toContain(
-      'Выбор группы: Выбрать группу; ЯГТУ.ID: Подключить или обновить ЯГТУ.ID',
+      '  • ЯГТУ.ID: <code>Подключить или обновить ЯГТУ.ID</code>',
+    );
+  });
+
+  it('sends a new action settings screen after entering a link URL', async () => {
+    const keyboard = {};
+    const keyboardFactory = {
+      getBroadcastActionSettings: jest.fn().mockReturnValue(keyboard),
+    };
+    const scene = new TelegramBroadcastScene(
+      {} as any,
+      {} as any,
+      {} as any,
+      keyboardFactory as any,
+    );
+    const ctx = {
+      scene: {
+        state: {
+          actionKeyboard: [
+            { type: 'link', text: 'Открыть', url: 'https://old.ystuty.ru/' },
+          ],
+          awaitingActionLinkUrl: true,
+        },
+      },
+      i18n: { t: jest.fn((phrase) => phrase) },
+      replyWithHTML: jest.fn(),
+    };
+
+    await (scene as any).applyActionLinkUrl(ctx, 'https://ystuty.ru/');
+
+    expect(ctx.replyWithHTML).toHaveBeenCalledTimes(1);
+    expect(ctx.scene.state.awaitingActionLinkUrl).toBeUndefined();
+    expect(ctx.scene.state.actionKeyboard[0].url).toBe('https://ystuty.ru/');
+    expect(keyboardFactory.getBroadcastActionSettings).toHaveBeenCalledWith(
+      ctx,
+      ctx.scene.state.actionKeyboard,
     );
   });
 });

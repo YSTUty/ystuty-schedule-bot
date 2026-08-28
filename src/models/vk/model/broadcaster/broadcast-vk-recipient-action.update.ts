@@ -8,13 +8,17 @@ import { IMessageEventContext } from '@my-interfaces/vk';
 
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import { BroadcastRecipientAction } from '../../../broadcast/broadcast.types';
+import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../../vk.constants';
 
 /** Обрабатывает предустановленные действия получателей без требования прав администратора. */
 @Update()
 @UseFilters(VkExceptionFilter)
 export class BroadcastVkRecipientActionUpdate {
-  constructor(private readonly broadcastService: BroadcastService) {}
+  constructor(
+    private readonly broadcastService: BroadcastService,
+    private readonly keyboardFactory: VKKeyboardFactory,
+  ) {}
 
   @OnMessageEvent(
     (payload) =>
@@ -56,6 +60,16 @@ export class BroadcastVkRecipientActionUpdate {
       case 'auth':
         await ctx.scene.enter(AUTH_SCENE, {
           state: { forceNewMessage: true },
+        });
+        return;
+      case 'start':
+        await ctx.send(ctx.i18n.t(LocalePhrase.Page_Start), {
+          keyboard: this.keyboardFactory
+            .getStart(ctx)
+            .inline(this.keyboardFactory.needInline(ctx)),
+        });
+        await ctx.send(ctx.i18n.t(LocalePhrase.Page_WelcomeFeatures), {
+          keyboard: this.keyboardFactory.getWelcomeFeatures(ctx).inline(),
         });
         return;
     }

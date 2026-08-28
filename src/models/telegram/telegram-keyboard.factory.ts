@@ -532,11 +532,17 @@ export class TelegramKeyboardFactory {
   }) {
     const rows: InlineKeyboardButton[][] = [];
     for (const actionButton of params.actionKeyboard || []) {
+      if (actionButton.type === 'link') {
+        rows.push([Markup.button.url(actionButton.text, actionButton.url)]);
+        continue;
+      }
       const label =
         actionButton.text ||
         (actionButton.type === 'auth'
           ? 'Подключить или обновить ЯГТУ.ID'
-          : 'Выбрать актуальную группу');
+          : actionButton.type === 'start'
+            ? 'Начать'
+            : 'Выбрать актуальную группу');
       rows.push([
         Markup.button.callback(
           label,
@@ -778,6 +784,8 @@ export class TelegramKeyboardFactory {
       actionKeyboard.find((item) => item.type === type);
     const selectGroup = getAction('select_group');
     const auth = getAction('auth');
+    const start = getAction('start');
+    const link = getAction('link');
 
     return Markup.inlineKeyboard([
       [
@@ -792,7 +800,7 @@ export class TelegramKeyboardFactory {
         ? [
             [
               Markup.button.callback(
-                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionSelectGroupText),
                 'broadcast:wizard:actions:select-group:text',
               ),
             ],
@@ -810,8 +818,48 @@ export class TelegramKeyboardFactory {
         ? [
             [
               Markup.button.callback(
-                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionAuthText),
                 'broadcast:wizard:actions:auth:text',
+              ),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionStart, {
+            actionButton: start,
+          }),
+          'broadcast:wizard:actions:start:toggle',
+        ),
+      ],
+      ...(start
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionStartText),
+                'broadcast:wizard:actions:start:text',
+              ),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLink, {
+            actionButton: link,
+          }),
+          'broadcast:wizard:actions:link:toggle',
+        ),
+      ],
+      ...(link
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLinkText),
+                'broadcast:wizard:actions:link:text',
+              ),
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLinkUrl),
+                'broadcast:wizard:actions:link:url',
               ),
             ],
           ]

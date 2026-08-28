@@ -1,3 +1,5 @@
+import { LocalePhrase } from '@my-interfaces';
+
 import { BroadcastTelegramRecipientActionUpdate } from './broadcast-telegram-recipient-action.update';
 
 describe('BroadcastTelegramRecipientActionUpdate', () => {
@@ -9,6 +11,7 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
     };
     const update = new BroadcastTelegramRecipientActionUpdate(
       broadcastService as any,
+      {} as any,
     );
     const calls: string[] = [];
     const ctx = {
@@ -36,9 +39,10 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
   });
 
   it('does not enter the scene for an unavailable action', async () => {
-    const update = new BroadcastTelegramRecipientActionUpdate({
-      getCampaignRecipientAction: jest.fn().mockResolvedValue(null),
-    } as any);
+    const update = new BroadcastTelegramRecipientActionUpdate(
+      { getCampaignRecipientAction: jest.fn().mockResolvedValue(null) } as any,
+      {} as any,
+    );
     const ctx = {
       match: {
         groups: { deliveryId: '15', action: 'select_group' },
@@ -56,9 +60,14 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
   });
 
   it('opens the existing authorization scene for the auth action', async () => {
-    const update = new BroadcastTelegramRecipientActionUpdate({
-      getCampaignRecipientAction: jest.fn().mockResolvedValue({ type: 'auth' }),
-    } as any);
+    const update = new BroadcastTelegramRecipientActionUpdate(
+      {
+        getCampaignRecipientAction: jest
+          .fn()
+          .mockResolvedValue({ type: 'auth' }),
+      } as any,
+      {} as any,
+    );
     const ctx = {
       match: { groups: { deliveryId: '15', action: 'auth' } },
       userSocial: { id: 7 },
@@ -72,5 +81,44 @@ describe('BroadcastTelegramRecipientActionUpdate', () => {
     expect(ctx.scene.enter).toHaveBeenCalledWith('AUTH_SCENE', {
       forceNewMessage: true,
     });
+  });
+
+  it('sends the regular start screen for the start action', async () => {
+    const startKeyboard = {};
+    const welcomeKeyboard = { reply_markup: { inline_keyboard: [] } };
+    const keyboardFactory = {
+      getStart: jest.fn().mockReturnValue(startKeyboard),
+      getWelcomeFeatures: jest.fn().mockReturnValue(welcomeKeyboard),
+    };
+    const update = new BroadcastTelegramRecipientActionUpdate(
+      {
+        getCampaignRecipientAction: jest
+          .fn()
+          .mockResolvedValue({ type: 'start' }),
+      } as any,
+      keyboardFactory as any,
+    );
+    const ctx = {
+      match: { groups: { deliveryId: '15', action: 'start' } },
+      userSocial: { id: 7 },
+      tryAnswerCbQuery: jest.fn(),
+      i18n: { t: jest.fn((phrase) => phrase) },
+      replyWithHTML: jest.fn(),
+    };
+
+    await update.onRecipientAction(ctx as any);
+
+    expect(ctx.replyWithHTML).toHaveBeenNthCalledWith(
+      1,
+      LocalePhrase.Page_Start,
+      startKeyboard,
+    );
+    expect(ctx.replyWithHTML).toHaveBeenNthCalledWith(
+      2,
+      LocalePhrase.Page_WelcomeFeatures,
+      welcomeKeyboard,
+    );
+    expect(keyboardFactory.getStart).toHaveBeenCalledWith(ctx);
+    expect(keyboardFactory.getWelcomeFeatures).toHaveBeenCalledWith(ctx);
   });
 });

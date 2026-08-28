@@ -61,6 +61,7 @@ export class BroadcastVkUpdate {
   async onBroadcastList(@Ctx() ctx: IMessageContext) {
     const items = await this.broadcastService.getRecentCampaigns(
       SocialType.Vkontakte,
+      5,
     );
     await ctx.send(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, { items }),
@@ -349,6 +350,7 @@ export class BroadcastVkUpdate {
   private async editCampaignsList(ctx: IMessageEventContext) {
     const items = await this.broadcastService.getRecentCampaigns(
       SocialType.Vkontakte,
+      5,
     );
     await ctx.api.messages.edit({
       peer_id: ctx.peerId,

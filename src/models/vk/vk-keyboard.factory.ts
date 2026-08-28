@@ -704,13 +704,24 @@ export class VKKeyboardFactory {
   }) {
     const rows: IKeyboardProxyButton[][] = [];
     for (const actionButton of params.actionKeyboard || []) {
+      if (actionButton.type === 'link') {
+        rows.push([
+          Keyboard.urlButton({
+            label: getVKButtonLabel(actionButton.text),
+            url: actionButton.url,
+          }),
+        ]);
+        continue;
+      }
       rows.push([
         Keyboard.callbackButton({
           label: getVKButtonLabel(
             actionButton.text ||
               (actionButton.type === 'auth'
                 ? 'Подключить или обновить ЯГТУ.ID'
-                : 'Выбрать актуальную группу'),
+                : actionButton.type === 'start'
+                  ? 'Начать'
+                  : 'Выбрать актуальную группу'),
           ),
           payload: {
             broadcastRecipientAction: actionButton.type,
@@ -1029,6 +1040,8 @@ export class VKKeyboardFactory {
       actionKeyboard.find((item) => item.type === type);
     const selectGroup = getAction('select_group');
     const auth = getAction('auth');
+    const start = getAction('start');
+    const link = getAction('link');
 
     return Keyboard.keyboard([
       [
@@ -1037,35 +1050,84 @@ export class VKKeyboardFactory {
             actionButton: selectGroup,
           }),
           payload: { broadcastAction: 'actionSelectGroupToggle' },
-          color: Keyboard.SECONDARY_COLOR,
+          color: selectGroup
+            ? Keyboard.POSITIVE_COLOR
+            : Keyboard.NEGATIVE_COLOR,
         }),
-      ],
-      ...(selectGroup
-        ? [
-            [
-              Keyboard.callbackButton({
-                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
-                payload: { broadcastAction: 'actionSelectGroupText' },
-                color: Keyboard.SECONDARY_COLOR,
-              }),
-            ],
-          ]
-        : []),
-      [
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionAuth, {
             actionButton: auth,
           }),
           payload: { broadcastAction: 'actionAuthToggle' },
-          color: Keyboard.SECONDARY_COLOR,
+          color: auth ? Keyboard.POSITIVE_COLOR : Keyboard.NEGATIVE_COLOR,
         }),
       ],
-      ...(auth
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionStart, {
+            actionButton: start,
+          }),
+          payload: { broadcastAction: 'actionStartToggle' },
+          color: start ? Keyboard.POSITIVE_COLOR : Keyboard.NEGATIVE_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLink, {
+            actionButton: link,
+          }),
+          payload: { broadcastAction: 'actionLinkToggle' },
+          color: link ? Keyboard.POSITIVE_COLOR : Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+      ...(selectGroup || auth || start
+        ? [
+            [
+              ...(selectGroup
+                ? [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_Broadcast_ActionSelectGroupText,
+                      ),
+                      payload: { broadcastAction: 'actionSelectGroupText' },
+                      color: Keyboard.SECONDARY_COLOR,
+                    }),
+                  ]
+                : []),
+              ...(auth
+                ? [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_Broadcast_ActionAuthText,
+                      ),
+                      payload: { broadcastAction: 'actionAuthText' },
+                      color: Keyboard.SECONDARY_COLOR,
+                    }),
+                  ]
+                : []),
+              ...(start
+                ? [
+                    Keyboard.callbackButton({
+                      label: ctx.i18n.t(
+                        LocalePhrase.Button_Broadcast_ActionStartText,
+                      ),
+                      payload: { broadcastAction: 'actionStartText' },
+                      color: Keyboard.SECONDARY_COLOR,
+                    }),
+                  ]
+                : []),
+            ],
+          ]
+        : []),
+      ...(link
         ? [
             [
               Keyboard.callbackButton({
-                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
-                payload: { broadcastAction: 'actionAuthText' },
+                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLinkText),
+                payload: { broadcastAction: 'actionLinkText' },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLinkUrl),
+                payload: { broadcastAction: 'actionLinkUrl' },
                 color: Keyboard.SECONDARY_COLOR,
               }),
             ],

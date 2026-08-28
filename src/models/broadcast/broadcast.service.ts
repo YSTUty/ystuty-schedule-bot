@@ -29,6 +29,7 @@ import {
   BroadcastJobData,
   BroadcastMessageMode,
   BroadcastRecipientAction,
+  BroadcastRecipientActionButton,
   BroadcastSourceMessage,
   getBroadcastFeedbackAfterClickMode,
   normalizeBroadcastActionKeyboard,
@@ -536,7 +537,8 @@ export class BroadcastService {
       delivery?.campaign?.actionKeyboard,
     );
     const actionButton = actionKeyboard.find(
-      (item) => item.type === params.action,
+      (item): item is BroadcastRecipientActionButton =>
+        item.type === params.action,
     );
     if (
       !delivery ||

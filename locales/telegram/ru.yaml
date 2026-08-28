@@ -70,7 +70,14 @@ button:
     action_buttons: 'Доп. кнопки: ${actionButtonsCount || "нет"}'
     action_select_group: 'Выбрать актуальную группу: ${actionButton ? "вкл" : "выкл"}'
     action_auth: 'Подключить или обновить ЯГТУ.ID: ${actionButton ? "вкл" : "выкл"}'
+    action_start: 'Начать: ${actionButton ? "вкл" : "выкл"}'
+    action_link: 'Кнопка-ссылка: ${actionButton ? "вкл" : "выкл"}'
     action_text: Изменить текст кнопки
+    action_select_group_text: 'Текст: группа'
+    action_auth_text: 'Текст: ЯГТУ.ID'
+    action_start_text: 'Текст: начать'
+    action_link_text: 'Текст: ссылка'
+    action_link_url: Изменить ссылку
     back: Назад
     back_to_settings: Назад к настройкам
   schedule:
@@ -258,7 +265,8 @@ page:
       • mode = ${mode}
       • fallback-кнопка = <code>${feedbackButton?.text || '-'}</code>
       ${feedbackButton ? ('• ответ после клика = <code>' + (feedbackButton.responseText || 'стандартный: «Спасибо за feedback!»') + '</code>\n• кнопка после клика = <code>' + feedbackAfterClickSummary + '</code>') : ''}
-      • доп. кнопки = <code>${actionKeyboardSummary}</code>
+      • доп. кнопки:
+      ${actionKeyboardSummary}
 
       Нажми «Далее» или отправь <code>/next</code> для выбора сообщения.
     select_recipients: |
@@ -316,9 +324,12 @@ page:
     action_settings: |
       <b>Дополнительные кнопки</b>
       Включай нужные действия и при необходимости меняй их текст. Кнопки добавляются к каждому сообщению рассылки.
-      Сейчас: <code>${actionKeyboardSummary}</code>
+      Сейчас:
+      ${actionKeyboardSummary}
     action_text: Отправь текст для дополнительной кнопки. Максимум 40 символов.
     action_text_invalid: Текст кнопки должен содержать от 1 до 40 символов.
+    action_link_url: Отправь ссылку для кнопки. Разрешены только адреса http:// или https://.
+    action_link_url_invalid: Укажи корректную ссылку, начинающуюся с http:// или https://.
     filter_exclude_campaigns_text: |
       Выбери рассылки галочками в списке. Пользователи, для которых уже
       создавалась delivery выбранных кампаний, будут исключены.

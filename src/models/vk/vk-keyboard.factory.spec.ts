@@ -41,7 +41,8 @@ describe('VKKeyboardFactory', () => {
         }),
         expect.objectContaining({
           action: expect.objectContaining({
-            link: 'https://vk.ru/app6441755_-42',
+            app_id: 6441755,
+            owner_id: -42,
           }),
         }),
       ]),
@@ -133,22 +134,86 @@ describe('VKKeyboardFactory', () => {
     expect(actions).toEqual(expect.arrayContaining(['filters']));
   });
 
-  it('combines recipient action and feedback within VK inline keyboard limits', () => {
+  it('keeps the broadcast campaigns list within the VK inline keyboard row limit', () => {
+    const keyboard = new VKKeyboardFactory().getBroadcastCampaignsList(
+      ctx,
+      Array.from({ length: 5 }, (_, index) => ({
+        id: index + 1,
+        status: 'completed',
+      })),
+    );
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons).toHaveLength(6);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(6);
+  });
+
+  it('renders recipient actions, a URL link and feedback within VK inline keyboard limits', () => {
     const keyboard = new VKKeyboardFactory().getBroadcastRecipientKeyboard({
       deliveryId: 15,
-      actionKeyboard: [{ type: 'select_group' }],
+      actionKeyboard: [
+        { type: 'select_group' },
+        { type: 'start' },
+        { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
+      ],
       feedbackButton: { text: '🫡' },
     });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
-    expect(renderedKeyboard.buttons).toHaveLength(2);
-    expect(renderedKeyboard.buttons.flat()).toHaveLength(2);
+    expect(renderedKeyboard.buttons).toHaveLength(4);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(4);
     expect(
       JSON.parse(renderedKeyboard.buttons[0][0].action.payload),
     ).toMatchObject({
       broadcastRecipientAction: 'select_group',
       deliveryId: 15,
     });
+    expect(
+      JSON.parse(renderedKeyboard.buttons[1][0].action.payload),
+    ).toMatchObject({
+      broadcastRecipientAction: 'start',
+      deliveryId: 15,
+    });
+    expect(renderedKeyboard.buttons[2][0].action.link).toBe(
+      'https://ystuty.ru/',
+    );
+  });
+
+  it('distinguishes localized labels and toggle colors for recipient actions', () => {
+    const actionTextLabels = {
+      'button.broadcast.action_select_group_text': 'Text: group',
+      'button.broadcast.action_auth_text': 'Text: auth',
+      'button.broadcast.action_start_text': 'Text: start',
+      'button.broadcast.action_link_text': 'Text: link',
+    };
+    const keyboard = new VKKeyboardFactory().getBroadcastActionSettings(
+      {
+        i18n: {
+          t: (phrase: keyof typeof actionTextLabels) =>
+            actionTextLabels[phrase] || phrase,
+        },
+      } as any,
+      [
+        { type: 'select_group' },
+        { type: 'auth' },
+        { type: 'start' },
+        { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
+      ],
+    );
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+    const buttons = renderedKeyboard.buttons.flat();
+    const getButton = (action: string) =>
+      buttons.find(
+        (button: any) =>
+          JSON.parse(button.action.payload).broadcastAction === action,
+      );
+
+    expect(getButton('actionSelectGroupText').action.label).toBe('Text: group');
+    expect(getButton('actionAuthText').action.label).toBe('Text: auth');
+    expect(getButton('actionStartText').action.label).toBe('Text: start');
+    expect(getButton('actionLinkText').action.label).toBe('Text: link');
+    expect(getButton('actionSelectGroupToggle').color).toBe('positive');
+    expect(getButton('actionLinkToggle').color).toBe('positive');
   });
 
   it('offers every feedback button behavior after the initial click', () => {

@@ -19,6 +19,7 @@ import {
   BroadcastRecipientAction,
   BroadcastSourceMessage,
   getBroadcastFeedbackAfterClickMode,
+  normalizeBroadcastLinkUrl,
 } from '../../../broadcast/broadcast.types';
 import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/broadcast-audience-group-filter.service';
 import { ScheduleService } from '../../../schedule/schedule.service';
@@ -36,7 +37,8 @@ type VkBroadcastState = {
   awaitingSource: boolean;
   awaitingFilter?: 'groups' | 'activity_before' | 'activity_range';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
-  awaitingActionText?: BroadcastRecipientAction;
+  awaitingActionText?: BroadcastRecipientAction | 'link';
+  awaitingActionLinkUrl?: boolean;
   feedbackButton?: BroadcastFeedbackButton | null;
   actionKeyboard?: BroadcastActionKeyboard | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
@@ -77,6 +79,7 @@ export class VkBroadcastScene {
       ctx.scene.state.actionKeyboard =
         reusedSettings?.actionKeyboard.map((item) => ({ ...item })) || [];
       ctx.scene.state.awaitingActionText = undefined;
+      ctx.scene.state.awaitingActionLinkUrl = undefined;
       ctx.scene.state.recipientsCount =
         await this.broadcastService.countRecipients(
           SocialType.Vkontakte,
@@ -125,6 +128,11 @@ export class VkBroadcastScene {
         ctx.scene.state.awaitingActionText,
         ctx.text,
       );
+      return;
+    }
+
+    if (ctx.scene.state.awaitingActionLinkUrl && ctx.text) {
+      await this.applyActionLinkUrl(ctx, ctx.text);
       return;
     }
 
@@ -329,6 +337,11 @@ export class VkBroadcastScene {
       | 'actionSelectGroupText'
       | 'actionAuthToggle'
       | 'actionAuthText'
+      | 'actionStartToggle'
+      | 'actionStartText'
+      | 'actionLinkToggle'
+      | 'actionLinkText'
+      | 'actionLinkUrl'
       | 'filterActivityBefore'
       | 'filterActivityRange'
       | 'filterActivityClear'
@@ -370,18 +383,34 @@ export class VkBroadcastScene {
       return true;
     }
 
-    if (action === 'actionSelectGroupToggle' || action === 'actionAuthToggle') {
+    if (
+      action === 'actionSelectGroupToggle' ||
+      action === 'actionAuthToggle' ||
+      action === 'actionStartToggle'
+    ) {
       this.toggleRecipientAction(
         ctx.scene.state,
-        action === 'actionAuthToggle' ? 'auth' : 'select_group',
+        action === 'actionAuthToggle'
+          ? 'auth'
+          : action === 'actionStartToggle'
+            ? 'start'
+            : 'select_group',
       );
       await this.renderActionSettings(ctx);
       return true;
     }
 
-    if (action === 'actionSelectGroupText' || action === 'actionAuthText') {
+    if (
+      action === 'actionSelectGroupText' ||
+      action === 'actionAuthText' ||
+      action === 'actionStartText'
+    ) {
       const recipientAction =
-        action === 'actionAuthText' ? 'auth' : 'select_group';
+        action === 'actionAuthText'
+          ? 'auth'
+          : action === 'actionStartText'
+            ? 'start'
+            : 'select_group';
       if (!this.getRecipientActionButton(ctx.scene.state, recipientAction)) {
         await ctx.answer({
           type: 'show_snackbar',
@@ -406,6 +435,54 @@ export class VkBroadcastScene {
         type: 'show_snackbar',
         text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
       });
+      return true;
+    }
+
+    if (action === 'actionLinkToggle') {
+      const link = this.getRecipientActionButton(ctx.scene.state, 'link');
+      ctx.scene.state.actionKeyboard = link
+        ? (ctx.scene.state.actionKeyboard || []).filter(
+            (item) => item.type !== 'link',
+          )
+        : [
+            ...(ctx.scene.state.actionKeyboard || []),
+            { type: 'link', text: 'Открыть', url: 'https://ystuty.ru/' },
+          ];
+      await this.renderActionSettings(ctx);
+      return true;
+    }
+
+    if (action === 'actionLinkText') {
+      if (!this.getRecipientActionButton(ctx.scene.state, 'link')) return true;
+      ctx.scene.state.awaitingActionText = 'link';
+      ctx.scene.state.awaitingActionLinkUrl = undefined;
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionText),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastActionTextPrompt(ctx)
+            .inline(),
+        },
+      );
+      return true;
+    }
+
+    if (action === 'actionLinkUrl') {
+      if (!this.getRecipientActionButton(ctx.scene.state, 'link')) return true;
+      ctx.scene.state.awaitingActionText = undefined;
+      ctx.scene.state.awaitingActionLinkUrl = true;
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionLinkUrl),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastActionTextPrompt(ctx)
+            .inline(),
+        },
+      );
       return true;
     }
 
@@ -1011,27 +1088,33 @@ export class VkBroadcastScene {
     return 'кнопка удаляется';
   }
 
-  /** Кратко отображает настроенные подписи action-кнопок без привязки к transport keyboard. */
+  /** Формирует многострочный список настроенных action-кнопок для экрана администратора. */
   private renderActionKeyboardSummary(
     actionKeyboard?: BroadcastActionKeyboard | null,
   ) {
-    const labels: Record<BroadcastRecipientAction, string> = {
+    const labels: Record<BroadcastRecipientAction | 'link', string> = {
       select_group: 'Выбор группы',
       auth: 'ЯГТУ.ID',
+      start: 'Стартовое меню',
+      link: 'Ссылка',
     };
-    const defaultTexts: Record<BroadcastRecipientAction, string> = {
+    const defaultTexts: Record<BroadcastRecipientAction | 'link', string> = {
       select_group: 'Выбрать актуальную группу',
       auth: 'Подключить или обновить ЯГТУ.ID',
+      start: 'Начать',
+      link: 'Открыть',
     };
 
     return (actionKeyboard || []).length
       ? (actionKeyboard || [])
           .map(
             (item) =>
-              `${labels[item.type]}: ${item.text || defaultTexts[item.type]}`,
+              `  • ${labels[item.type]}: «${
+                item.text || defaultTexts[item.type]
+              }»${item.type === 'link' ? ` → ${item.url}` : ''}`,
           )
-          .join('; ')
-      : '-';
+          .join('\n')
+      : '  • нет';
   }
 
   private renderReady(ctx: IStepCtx) {
@@ -1218,20 +1301,24 @@ export class VkBroadcastScene {
   }
 
   private async renderActionSettings(ctx: IStepCtx) {
-    await this.editCurrentVkMessage(
-      ctx,
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
-        actionKeyboardSummary: this.renderActionKeyboardSummary(
-          ctx.scene.state.actionKeyboard,
-        ),
-      }),
-      {
-        keep_forward_messages: true,
-        keyboard: this.keyboardFactory
-          .getBroadcastActionSettings(ctx, ctx.scene.state.actionKeyboard || [])
-          .inline(),
-      },
-    );
+    const message = ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
+      actionKeyboardSummary: this.renderActionKeyboardSummary(
+        ctx.scene.state.actionKeyboard,
+      ),
+    });
+    const keyboard = this.keyboardFactory
+      .getBroadcastActionSettings(ctx, ctx.scene.state.actionKeyboard || [])
+      .inline();
+
+    if (!ctx.isMessageEventContext()) {
+      await ctx.send(message, { keyboard });
+      return;
+    }
+
+    await this.editCurrentVkMessage(ctx, message, {
+      keep_forward_messages: true,
+      keyboard,
+    });
     await ctx.answer({
       type: 'show_snackbar',
       text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
@@ -1240,7 +1327,7 @@ export class VkBroadcastScene {
 
   private getRecipientActionButton(
     state: VkBroadcastState,
-    action: BroadcastRecipientAction,
+    action: BroadcastRecipientAction | 'link',
   ) {
     return state.actionKeyboard?.find((item) => item.type === action);
   }
@@ -1257,7 +1344,7 @@ export class VkBroadcastScene {
 
   private async applyActionText(
     ctx: IStepCtx,
-    action: BroadcastRecipientAction,
+    action: BroadcastRecipientAction | 'link',
     text: string,
   ) {
     const value = text.trim();
@@ -1281,6 +1368,21 @@ export class VkBroadcastScene {
           .inline(),
       },
     );
+  }
+
+  private async applyActionLinkUrl(ctx: IStepCtx, text: string) {
+    const url = normalizeBroadcastLinkUrl(text);
+    if (!url) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionLinkUrlInvalid),
+      );
+      return;
+    }
+    ctx.scene.state.actionKeyboard = (ctx.scene.state.actionKeyboard || []).map(
+      (item) => (item.type === 'link' ? { ...item, url } : item),
+    );
+    ctx.scene.state.awaitingActionLinkUrl = undefined;
+    await this.renderActionSettings(ctx);
   }
 
   private async renderSettingsScreen(ctx: IStepCtx) {

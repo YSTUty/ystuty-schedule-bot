@@ -17,6 +17,7 @@ import { TelegramService } from './telegram.service';
 import { AdminUpdate } from './update/admin.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
+import { UnhandledPrivateMessageUpdate } from './update/unhandled-private-message.update';
 
 const baseProviders = [TelegramService, TelegramKeyboardFactory];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
@@ -28,6 +29,8 @@ const providers = [
   ScheduleUpdate,
   AuthScene,
   SelectGroupScene,
+  // Должен регистрироваться последним, чтобы ответить только после остальных listeners.
+  UnhandledPrivateMessageUpdate,
 ];
 
 @Global()

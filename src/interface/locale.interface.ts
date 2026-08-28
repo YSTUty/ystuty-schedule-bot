@@ -109,6 +109,7 @@ export enum LocalePhrase {
   Page_Start = 'page.start',
   Page_InitBot = 'page.init_bot',
   Page_Help = 'page.help',
+  Page_UnknownMessage = 'page.unknown_message',
   Page_Schedule_NearestSchedule = 'page.schedule.nearest_schedule',
   Page_Schedule_NotFoundToday = 'page.schedule.not_found_today',
   Page_Schedule_TeachersList = 'page.schedule.teachers_list',

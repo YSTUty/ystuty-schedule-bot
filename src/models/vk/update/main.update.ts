@@ -630,14 +630,22 @@ export class MainUpdate {
 
   @HearFallback()
   async onHearFallback(@Ctx() ctx: IMessageContext) {
-    const query = ctx.text?.trim();
-    if (
-      !ctx.isDM ||
-      !this.scheduleService.isTeacherSearchFallbackQuery(query)
-    ) {
+    if (!ctx.isDM || !ctx.isMessageContext()) {
       return;
     }
 
-    await this.openTeachersList(ctx, query!);
+    const query = ctx.text?.trim();
+    if (!query) {
+      return;
+    }
+
+    if (this.scheduleService.isTeacherSearchFallbackQuery(query)) {
+      await this.openTeachersList(ctx, query!);
+      return;
+    }
+
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_UnknownMessage), {
+      keyboard: this.keyboardFactory.getStart(ctx),
+    });
   }
 }

@@ -95,7 +95,11 @@ describe('VK MainUpdate', () => {
 
   it('opens a filtered teacher list for a matching fallback message in a DM', async () => {
     isTeacherSearchFallbackQuery.mockReturnValue(true);
-    const ctx = { isDM: true, text: 'Шулев' } as any;
+    const ctx = {
+      isDM: true,
+      isMessageContext: jest.fn().mockReturnValue(true),
+      text: 'Шулев',
+    } as any;
 
     await update.onHearFallback(ctx);
 
@@ -103,7 +107,11 @@ describe('VK MainUpdate', () => {
   });
 
   it('ignores fallback text in a VK group chat', async () => {
-    const ctx = { isDM: false, text: 'Шулев' } as any;
+    const ctx = {
+      isDM: false,
+      isMessageContext: jest.fn(),
+      text: 'Шулев',
+    } as any;
 
     await update.onHearFallback(ctx);
 
@@ -111,14 +119,56 @@ describe('VK MainUpdate', () => {
     expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
   });
 
-  it('does not open a VK teacher list for unrelated DM text', async () => {
+  it('replies to an unhandled VK DM message with the start keyboard', async () => {
     isTeacherSearchFallbackQuery.mockReturnValue(false);
-    const ctx = { isDM: true, text: 'аудитория' } as any;
+    const keyboard = { inline: jest.fn() };
+    (update as any).keyboardFactory.getStart = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    const ctx = {
+      isDM: true,
+      isMessageContext: jest.fn().mockReturnValue(true),
+      text: 'аудитория',
+      i18n: { t: jest.fn().mockReturnValue('Не понял сообщение.') },
+      send: jest.fn(),
+    } as any;
 
     await update.onHearFallback(ctx);
 
     expect(isTeacherSearchFallbackQuery).toHaveBeenCalledWith('аудитория');
     expect(openTeachersList).not.toHaveBeenCalled();
+    expect((update as any).keyboardFactory.getStart).toHaveBeenCalledWith(ctx);
+    expect(ctx.i18n.t).toHaveBeenCalledWith(LocalePhrase.Page_UnknownMessage);
+    expect(ctx.send).toHaveBeenCalledWith('Не понял сообщение.', { keyboard });
+  });
+
+  it('does not reply to a VK message event', async () => {
+    const ctx = {
+      isDM: true,
+      isMessageContext: jest.fn().mockReturnValue(false),
+      send: jest.fn(),
+    } as any;
+
+    await update.onHearFallback(ctx);
+
+    expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
+    expect(openTeachersList).not.toHaveBeenCalled();
+    expect(ctx.send).not.toHaveBeenCalled();
+  });
+
+  it('does not reply to a VK DM attachment without text', async () => {
+    const ctx = {
+      isDM: true,
+      isMessageContext: jest.fn().mockReturnValue(true),
+      text: undefined,
+      send: jest.fn(),
+    } as any;
+
+    await update.onHearFallback(ctx);
+
+    expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
+    expect(openTeachersList).not.toHaveBeenCalled();
+    expect(ctx.send).not.toHaveBeenCalled();
   });
 
   it('renders the invite keyboard from the current VK group id', async () => {

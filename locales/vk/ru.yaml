@@ -122,7 +122,7 @@ page:
     Привет! Это бот для расписания ЯГТУ
     ${ctx.state.userSocial.groupName ? '' : '\nНапиши help для получения списка команд'} \
     ${ctx.isDM ? '\nДля смены группы или преподавателя используй кнопки ниже.' : ''} \
-    ${webViewLink ? ('\nПросмотр расписания в браузере — ' + webViewLink + (ctx.state.userSocial.groupName ? '/g/' + ctx.state.userSocial.groupName : '')) : ''}
+    ${webViewLink ? ('\nПросмотр расписания в браузере — ' + webViewLink + (ctx.state.userSocial.groupName ? '/g/' + encodeGroupNameForUrl(ctx.state.userSocial.groupName) : '')) : ''}
 
   init_bot: |
     Чтобы посмотреть расписание, можно авторизироваться, выбрать учебную группу или преподавателя.

@@ -4,19 +4,18 @@ import { HttpService } from '@nestjs/axios';
 
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
-import {
-  getLessonTypeStrArr,
-  isConcurrencyControlError,
-  matchGroupName,
-  md5,
-} from '@my-common';
-import { Lesson, LessonFlags, OneWeek, WeekNumberType } from '@my-interfaces';
+import { isConcurrencyControlError, matchGroupName, md5 } from '@my-common';
+import { OneWeek, WeekNumberType } from '@my-interfaces';
 
 import { ConcurrencyService } from '../concurrency/concurrency.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { RedisService } from '../redis/redis.service';
 
 import * as scheduleUtil from './util/schedule.util';
+import {
+  formatScheduleWeekDays,
+  SchedulePresentation,
+} from './util/schedule-formatter.util';
 
 type Teacher = {
   id: number;
@@ -353,6 +352,7 @@ export class ScheduleService implements OnModuleInit {
     isWeek = false,
     weekNumber = WeekNumberType.Monday,
     withTags = false,
+    presentation = 'compact',
     ...targetRest
   }: (
     | { groupName: string }
@@ -363,6 +363,7 @@ export class ScheduleService implements OnModuleInit {
     isWeek?: boolean;
     weekNumber?: WeekNumberType;
     withTags?: boolean;
+    presentation?: SchedulePresentation;
   }) {
     const targetId =
       'targetId' in targetRest
@@ -393,6 +394,7 @@ export class ScheduleService implements OnModuleInit {
         skipDays,
         isWeek,
         withTags,
+        presentation,
       });
       if (responseSchedule !== null || isWeek) {
         return [skipDays, responseSchedule];
@@ -419,6 +421,7 @@ export class ScheduleService implements OnModuleInit {
     skipDays = 0,
     isWeek = false,
     withTags = false,
+    presentation = 'compact',
     targetId,
     targetType,
   }: {
@@ -427,6 +430,7 @@ export class ScheduleService implements OnModuleInit {
     skipDays?: number;
     isWeek?: boolean;
     withTags?: boolean;
+    presentation?: SchedulePresentation;
   }) {
     // // ! for test
     // const now = new Date(2024, 0, 12);
@@ -457,13 +461,14 @@ export class ScheduleService implements OnModuleInit {
         return null;
       }
 
-      return this.formateWeekDays(
+      return formatScheduleWeekDays({
         week,
         dayNumber,
         addHashTag,
         withTags,
         targetType,
-      );
+        presentation,
+      });
     };
 
     try {
@@ -486,182 +491,6 @@ export class ScheduleService implements OnModuleInit {
       );
       return false;
     }
-  }
-
-  private formateWeekDays(
-    week: OneWeek,
-    dayNumber: WeekNumberType | null = null,
-    addHashTag: boolean = false,
-    withTags = false,
-    targetType: 'group' | 'teacher',
-  ) {
-    const fullWeek = dayNumber === null;
-
-    const startDay = fullWeek ? WeekNumberType.Monday : dayNumber;
-    const weekDay = week.days.find((e) => e.info.type === startDay);
-    if (!fullWeek && !weekDay) {
-      return null;
-    }
-
-    let message: string | null = null;
-    for (let dayIndex = startDay; dayIndex < 7; ++dayIndex) {
-      const day = week.days.find((e) => e.info.type === dayIndex);
-      if (!day) {
-        if (!fullWeek) {
-          break;
-        }
-        continue;
-      }
-
-      if (!message) {
-        message = '';
-      }
-
-      const {
-        info: { type: dayType, date: dayDateStr, weekNumber },
-        lessons,
-      } = day;
-      const dayDate = dayDateStr && new Date(dayDateStr);
-
-      const isDoneDay = dayDate
-        ? Date.now() > dayDate.getTime() &&
-          lessons.every(
-            (e) => !e.endAt || Date.now() > new Date(e.endAt).getTime(),
-          )
-        : false;
-
-      let msg = '';
-      msg += `${scheduleUtil.short2Long2(dayType)} `;
-      msg += withTags
-        ? `<b>Расписание на <code>${scheduleUtil.short2Long2(
-            dayType,
-            2,
-          )}</code></b>`
-        : `Расписание на ${scheduleUtil.short2Long2(dayType, 2)}`;
-      if (weekNumber) msg += ` [${weekNumber}]`;
-      if (dayDate)
-        msg += withTags
-          ? isDoneDay
-            ? ` <b>(<s>${dayDate.toLocaleDateString('ru-RU')}</s>)</b>`
-            : ` <b>(${dayDate.toLocaleDateString('ru-RU')})</b>`
-          : ` (${dayDate.toLocaleDateString('ru-RU')})`;
-      if (isDoneDay) msg += ` ✅`;
-      msg += ` ${weekNumber % 2 === 0 ? 'Ч' : 'Н'}`;
-      msg += '\n';
-
-      let lastLesson: Lesson | null = null;
-      for (const index in lessons) {
-        const lesson = lessons[index];
-        const nextLesson = lessons[index + 1];
-
-        const isDone =
-          lesson.endAt && Date.now() > new Date(lesson.endAt).getTime();
-
-        const typeName = getLessonTypeStrArr(lesson.type).join(', ');
-
-        if (
-          lastLesson &&
-          lastLesson.number > 0 &&
-          lastLesson.number < 3 &&
-          /*lastNumber !== 2 &&*/ lesson.number === 3
-        ) {
-          msg += `✌ ${scheduleUtil.getTimez('11:40', 40)}. FREE TIME\n`;
-        }
-
-        const auditoryName = [
-          lesson.auditoryName,
-          lesson.additionalAuditoryName,
-        ]
-          .filter(Boolean)
-          .join('; ');
-        const auditory = !auditoryName
-          ? ''
-          : withTags
-            ? ` {<code>${auditoryName}</code>}`
-            : ` {${auditoryName}}`;
-        const typeStr = !typeName
-          ? ''
-          : withTags
-            ? ` <b>[${typeName}]</b>`
-            : ` [${typeName}]`;
-        const distantStr = !lesson.isDistant
-          ? ''
-          : withTags
-            ? ' <b>(ONLINE)</b>'
-            : ' (ONLINE)';
-
-        const targetStr = (
-          targetType === 'group'
-            ? [lesson.teacherName, lesson.additionalTeacherId]
-            : lesson.groups || ['-']
-        )
-          .filter(Boolean)
-          .join('; ');
-
-        const targetsStrFmt = !targetStr
-          ? ''
-          : withTags
-            ? ` (<i>${targetStr}</i>)`
-            : ` (${targetStr})`;
-
-        if (
-          lastLesson?.number == lesson.number &&
-          !(lesson.type & LessonFlags.Exam)
-        ) {
-          msg += `Другая П/Г: ${auditory}${distantStr} ${lesson.lessonName}${typeStr}${targetsStrFmt}`;
-        } else {
-          msg += `${scheduleUtil.getNumberEmoji(lesson.number)} ${((s) =>
-            isDone && withTags ? `<s>${s}</s>` : s)(
-            lesson.timeRange || lesson.time || (withTags ? '<b>—</b>' : '—'),
-          )}.${auditory}${distantStr} ${
-            lesson.lessonName
-          }${typeStr}${targetsStrFmt}`;
-        }
-
-        if (lesson.isDivision) {
-          msg += ' П/Г';
-        }
-        if (isDone) msg += ` ✅`;
-        msg += '\n';
-
-        if (lesson.duration > 2 && nextLesson?.number != lesson.number) {
-          const [xHours, xMinutes] = (lesson.timeRange || lesson.time)
-            .split('-')[0]
-            .split(':');
-          msg += `${scheduleUtil.getNumberEmoji(lesson.number + 1)} ${((s) =>
-            isDone && withTags ? `<s>${s}</s>` : s)(
-            scheduleUtil.getTimez(
-              `${xHours}:${
-                parseInt(xMinutes, 10) + (lesson.number === 5 ? 110 : 100)
-              }`,
-            ),
-          )}. ↑...`;
-          if (isDone) msg += ` ✅`;
-          msg += `\n`;
-        }
-        lastLesson = lesson;
-      }
-
-      if (!lessons.length) {
-        msg += withTags
-          ? `<b>✌ FREE TIME. <i>Занятий нет</i></b>\n`
-          : `✌ FREE TIME. Занятий нет\n`;
-      }
-
-      if (addHashTag) {
-        msg += `#${weekNumber % 2 === 0 ? 'Ч' : 'Н'}${scheduleUtil.short2Long2(
-          dayType,
-          1,
-        )}\n`;
-      }
-
-      message += fullWeek ? `${msg}\n` : msg;
-      if (!fullWeek) {
-        break;
-      }
-    }
-
-    return message;
   }
 
   public async getSchedule(

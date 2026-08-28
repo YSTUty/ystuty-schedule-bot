@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { load } from 'js-yaml';
 import { resolve } from 'path';
 
+import { patternGroupName } from './schedule.util';
 import { i18n as telegramI18n } from './tg/i18n.util';
 import { i18n as vkI18n } from './vk/i18n.util';
 
@@ -149,6 +150,23 @@ const getTemplatePathsForTransport = (transport: 'telegram' | 'vk') => {
   return getTemplatePaths(locale);
 };
 
+const getScheduleRegExp = (
+  transport: 'telegram' | 'vk',
+  period: 'for_one_day' | 'for_week',
+) => {
+  const path = resolve(__dirname, `../../../locales/${transport}/ru.yaml`);
+  const locale = load(readFileSync(path, 'utf8')) as {
+    regexp: { schedule: Record<typeof period, string> };
+  };
+  const source = locale.regexp.schedule[period];
+  const [, pattern, flags] = source.match(/^\/(.*)\/([a-z]*)$/i) || [];
+
+  return new RegExp(
+    pattern.replace('${patternGroupName}', patternGroupName),
+    flags,
+  );
+};
+
 describe.each([
   [
     'Telegram',
@@ -184,3 +202,25 @@ describe.each([
     }
   });
 });
+
+describe.each(['telegram', 'vk'] as const)(
+  '%s schedule commands',
+  (transport) => {
+    it('supports the detailed presentation for days, weeks and explicit groups', () => {
+      expect(
+        getScheduleRegExp(transport, 'for_one_day').exec('расписание подробно')
+          ?.groups?.detailed,
+      ).toBe(' подробно');
+      expect(
+        getScheduleRegExp(transport, 'for_one_day').exec(
+          'расписание ЦИС-46 подробно',
+        )?.groups,
+      ).toMatchObject({ detailed: ' подробно', groupName: 'ЦИС-46' });
+      expect(
+        getScheduleRegExp(transport, 'for_week').exec(
+          'расписание на неделю подробно',
+        )?.groups?.detailed,
+      ).toBe(' подробно');
+    });
+  },
+);

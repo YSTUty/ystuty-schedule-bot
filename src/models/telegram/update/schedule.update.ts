@@ -272,6 +272,7 @@ export class ScheduleUpdate {
 
     const _skipDays = ctx.match?.groups?.skipDays ?? null;
     let skipDays = Number(_skipDays) || 0;
+    const presentation = ctx.match?.groups?.detailed ? 'detailed' : 'compact';
     const isTomorrow =
       !!ctx.match?.groups?.tomorrow ||
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
@@ -289,6 +290,7 @@ export class ScheduleUpdate {
         targetId,
         targetType,
         withTags: true,
+        presentation,
       });
     } else if (_skipDays !== null) {
       message = await this.scheduleService.getFormatedSchedule({
@@ -296,6 +298,7 @@ export class ScheduleUpdate {
         targetId,
         targetType,
         withTags: true,
+        presentation,
       });
       if (message === false) {
         message = `${ctx.i18n.t(LocalePhrase.Common_Error)}\n`;
@@ -305,6 +308,7 @@ export class ScheduleUpdate {
         targetId,
         targetType,
         withTags: true,
+        presentation,
       });
     }
 
@@ -434,6 +438,7 @@ export class ScheduleUpdate {
     const isNextWeek =
       !!ctx.match?.groups?.next ||
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
+    const presentation = ctx.match?.groups?.detailed ? 'detailed' : 'compact';
     const skipDays = isNextWeek ? 7 + 1 : 1;
 
     if (!ctx.callbackQuery) {
@@ -446,6 +451,7 @@ export class ScheduleUpdate {
       skipDays,
       isWeek: true,
       withTags: true,
+      presentation,
     });
     let message = scheduleMessage;
 

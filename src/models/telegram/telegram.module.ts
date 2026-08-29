@@ -12,10 +12,12 @@ import { UserMiddleware } from './middleware/user.middleware';
 import { TelegramBroadcasterModule } from './model/broadcaster/telegram-broadcaster.module';
 import { TgScheduleNotifModule } from './model/schedule-notif/tg-schedule-notif.module';
 import { AuthScene } from './scene/auth.scene';
+import { TelegramFeedbackScene } from './scene/feedback.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 import { TelegramService } from './telegram.service';
 import { AdminUpdate } from './update/admin.update';
+import { TelegramFeedbackUpdate } from './update/feedback.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
 
@@ -26,9 +28,11 @@ const providers = [
   UnhandledPrivateMessageMiddleware,
   // updates
   AdminUpdate,
+  TelegramFeedbackUpdate,
   MainUpdate,
   ScheduleUpdate,
   AuthScene,
+  TelegramFeedbackScene,
   SelectGroupScene,
 ];
 

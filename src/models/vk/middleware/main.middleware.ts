@@ -413,11 +413,31 @@ export class MainMiddleware {
         ['cancel', '/cancel', 'exit', '/exit'].includes(normalizedText || '');
 
       if (isCancel) {
-        const keyboard = this.keyboardFactory.getStart(ctx); // getClose(ctx);
-        await ctx.send(ctx.i18n.t(LocalePhrase.Common_Canceled), {
-          keyboard,
-        });
-        if ('eventPayload' in ctx) {
+        const sceneState = ctx.scene.state as {
+          cancelToStartScreen?: boolean;
+          menuMessageId?: number;
+        };
+        const isFeedbackCancel = sceneState.cancelToStartScreen === true;
+        const keyboard = isFeedbackCancel
+          ? this.keyboardFactory.getWelcomeFeatures(ctx).inline()
+          : this.keyboardFactory.getStart(ctx); // getClose(ctx);
+        if (sceneState.menuMessageId) {
+          await ctx.api.messages
+            .delete({
+              message_ids: sceneState.menuMessageId,
+              delete_for_all: true,
+            })
+            .catch(() => undefined);
+        }
+        await ctx.send(
+          ctx.i18n.t(
+            isFeedbackCancel
+              ? LocalePhrase.Page_WelcomeFeatures
+              : LocalePhrase.Common_Canceled,
+          ),
+          { keyboard },
+        );
+        if ('eventPayload' in ctx && !sceneState.menuMessageId) {
           ctx.deleteMessage({ delete_for_all: true }).catch();
           // ctx.answer({ type: 'show_snackbar', text: 'Отменено' }).catch();
         }

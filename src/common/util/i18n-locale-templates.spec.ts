@@ -46,6 +46,7 @@ const localeTemplateData = {
   doneCount: 9,
   excludeCampaignIds: [12],
   failedCount: 1,
+  feedbackId: 12,
   feedbackAfterClickSummary: 'оставить',
   feedbackButton: { responseText: 'Спасибо!', text: '🫡' },
   filter: {

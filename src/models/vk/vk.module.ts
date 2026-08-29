@@ -7,7 +7,9 @@ import { MainMiddleware } from './middleware/main.middleware';
 import { VkBroadcasterModule } from './model/broadcaster/vk-broadcaster.module';
 import { VkScheduleNotifModule } from './model/schedule-notif/vk-schedule-notif.module';
 import { AuthScene } from './scene/auth.scene';
+import { VkFeedbackScene } from './scene/feedback.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
+import { VkFeedbackUpdate } from './update/feedback.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
 import { VKKeyboardFactory } from './vk-keyboard.factory';
@@ -19,8 +21,10 @@ const providers = [
   ...middlewares,
   // Приоритет применения слушателей
   MainUpdate,
+  VkFeedbackUpdate,
   ScheduleUpdate,
   AuthScene,
+  VkFeedbackScene,
   SelectGroupScene,
 ];
 

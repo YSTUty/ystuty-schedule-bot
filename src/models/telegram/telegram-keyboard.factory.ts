@@ -18,6 +18,7 @@ import {
   BroadcastFeedbackButton,
   getBroadcastFeedbackAfterClickMode,
 } from '../broadcast/broadcast.types';
+import { FeedbackCategory } from '../feedback/feedback.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
 
@@ -76,6 +77,7 @@ export class TelegramKeyboardFactory {
             ],
           ]
         : []),
+      ...(isPrivate ? [[ctx.i18n.t(LocalePhrase.Button_Feedback)]] : []),
       ...(!isPrivate ? [[ctx.i18n.t(LocalePhrase.Button_ScheduleNotif)]] : []),
       ...(isPrivate && isAdmin
         ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]]
@@ -89,6 +91,60 @@ export class TelegramKeyboardFactory {
         Markup.button.url(
           ctx.i18n.t(LocalePhrase.Button_InviteToChat),
           `https://t.me/${xEnv.SOCIAL_TELEGRAM_BOT_NAME}?startgroup=invite`,
+        ),
+      ],
+    ]);
+  }
+
+  /** Inline-клавиатура категории пользовательского отзыва. */
+  public getFeedbackCategories(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Feedback_CategorySchedule),
+          `feedback:category:${FeedbackCategory.Schedule}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Feedback_CategoryBot),
+          `feedback:category:${FeedbackCategory.Bot}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Feedback_CategorySuggestion),
+          `feedback:category:${FeedbackCategory.Suggestion}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Feedback_CategoryOther),
+          `feedback:category:${FeedbackCategory.Other}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Cancel),
+          LocalePhrase.Button_Cancel,
+        ),
+      ],
+    ]);
+  }
+
+  /** Постоянная кнопка завершения сбора текста и медиа. */
+  public getFeedbackCollector(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Feedback_Submit),
+          'feedback:submit',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Cancel),
+          LocalePhrase.Button_Cancel,
         ),
       ],
     ]);

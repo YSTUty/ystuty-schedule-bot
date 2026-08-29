@@ -91,6 +91,13 @@ export enum LocalePhrase {
   Button_ScheduleNotif_PreviousPage = 'button.schedule_notification.previous_page',
   Button_ScheduleNotif_NextPage = 'button.schedule_notification.next_page',
 
+  Button_Feedback = 'button.feedback.title',
+  Button_Feedback_CategorySchedule = 'button.feedback.category_schedule',
+  Button_Feedback_CategoryBot = 'button.feedback.category_bot',
+  Button_Feedback_CategorySuggestion = 'button.feedback.category_suggestion',
+  Button_Feedback_CategoryOther = 'button.feedback.category_other',
+  Button_Feedback_Submit = 'button.feedback.submit',
+
   Button_Schedule_Schedule = 'button.schedule.schedule',
   Button_Schedule_ForToday = 'button.schedule.for_today',
   Button_Schedule_ForTomorrow = 'button.schedule.for_tomorrow',
@@ -141,6 +148,14 @@ export enum LocalePhrase {
   Page_ScheduleNotif_Saved = 'page.schedule_notification.saved',
   Page_ScheduleNotif_SelectGroup = 'page.schedule_notification.select_group',
   Page_ScheduleNotif_ConfirmDelete = 'page.schedule_notification.confirm_delete',
+  Page_Feedback_SelectCategory = 'page.feedback.select_category',
+  Page_Feedback_EnterContent = 'page.feedback.enter_content',
+  Page_Feedback_MediaLimit = 'page.feedback.media_limit',
+  Page_Feedback_OnlyOneText = 'page.feedback.only_one_text',
+  Page_Feedback_ContentRequired = 'page.feedback.content_required',
+  Page_Feedback_Cooldown = 'page.feedback.cooldown',
+  Page_Feedback_Submitted = 'page.feedback.submitted',
+  Page_Feedback_DeliveryPending = 'page.feedback.delivery_pending',
 
   Page_Auth_NeedAuth = 'page.auth.need_auth',
   Page_Auth_Done = 'page.auth.done',

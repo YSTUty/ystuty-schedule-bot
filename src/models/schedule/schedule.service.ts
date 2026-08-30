@@ -378,9 +378,7 @@ export class ScheduleService implements OnModuleInit {
           ? 'group'
           : 'teacher';
 
-    this.metricsService.scheduleCounter.inc({
-      [targetType === 'group' ? 'groupName' : 'teacherId']: targetId,
-    });
+    this.metricsService.incrementScheduleRequest(targetType, targetId);
 
     const findDeep = async (
       skipDays: number,

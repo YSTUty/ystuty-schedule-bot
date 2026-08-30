@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 
@@ -12,7 +12,7 @@ import { Conversation } from './entity/conversation.entity';
 import { UserToConversation } from './entity/userToConversation.entity';
 
 @Injectable()
-export class SocialService implements OnModuleInit {
+export class SocialService {
   private readonly logger = new Logger(TelegramService.name);
 
   constructor(
@@ -23,24 +23,6 @@ export class SocialService implements OnModuleInit {
 
     private readonly metricsService: MetricsService,
   ) {}
-
-  public async onModuleInit() {
-    try {
-      this.metricsService.conversationCounter.remove('social');
-      for (const social of Object.values(SocialType)) {
-        const countConversation = await this.conversationRepository.count({
-          where: { social },
-        });
-        this.metricsService.conversationCounter.set(
-          { social },
-          countConversation,
-        );
-      }
-    } catch (err) {
-      console.log('[onModuleInit] Error loading metrics');
-      console.error(err);
-    }
-  }
 
   public async createConversation(
     social: SocialType,

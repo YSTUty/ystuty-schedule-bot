@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { IncomingMessage } from 'http';
 
@@ -48,30 +48,6 @@ export class UserService {
     private readonly vkKeyboardFactory: VKKeyboardFactory,
   ) {}
 
-  public async onModuleInit() {
-    try {
-      const countUsers = await this.userRepository.count({
-        where: { isBanned: Not(true) },
-      });
-      this.metricsService.userCounter.remove();
-      this.metricsService.userCounter.set(countUsers);
-
-      this.metricsService.userSocialCounter.remove('social');
-      for (const social of Object.values(SocialType)) {
-        const countSocial = await this.userSocialRepository.count({
-          where: {
-            social,
-            isBlockedBot: Not(true),
-          },
-        });
-        this.metricsService.userSocialCounter.set({ social }, countSocial);
-      }
-    } catch (err) {
-      console.log('[onModuleInit] Error loading metrics');
-      console.error(err);
-    }
-  }
-
   private getMessengerService(socialType: SocialType) {
     if (socialType === SocialType.Telegram) {
       return this.telegramService;
@@ -98,7 +74,7 @@ export class UserService {
       });
       if (curUser) {
         user = { ...curUser, ...user };
-      } else {
+      } else if (!user.isBanned) {
         this.metricsService.userCounter.inc();
       }
       return await this.userRepository.save(new User(user));
@@ -125,7 +101,9 @@ export class UserService {
 
       if (!curUser) {
         curUser = await this.userRepository.save(new User(user));
-        this.metricsService.userCounter.inc();
+        if (!user.isBanned) {
+          this.metricsService.userCounter.inc();
+        }
       }
       return curUser;
     };
@@ -168,7 +146,7 @@ export class UserService {
   ) {
     profile.social = provider;
     profile.user = user;
-    if (profile.hasDM) {
+    if (profile.hasDM && !profile.isBlockedBot) {
       this.metricsService.userSocialCounter.inc({ social: provider });
     }
     const userSocial = new UserSocial(

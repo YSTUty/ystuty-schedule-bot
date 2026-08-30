@@ -20,6 +20,7 @@ import { MessagesDeleteParams } from 'vk-io/lib/api/schemas/params';
 import { VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
 import { isConcurrencyControlError } from '@my-common/exception';
+import { withRedisSessionLoadRetry } from '@my-common/util/redis-session-retry.util';
 import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
 import {
@@ -90,8 +91,17 @@ export class MainMiddleware {
     composer.use(this.featureMiddleware);
     composer.use(this.middlewareMetrics);
     composer.use(this.safeTextConverstionMiddleware);
-    composer.use(this.sessionManager.middleware);
-    composer.use(this.sessionConversationManager.middleware);
+    composer.use(
+      withRedisSessionLoadRetry(this.sessionManager.middleware, {
+        onRetry: (error) => this.logRedisSessionRetry('session', error),
+      }),
+    );
+    composer.use(
+      withRedisSessionLoadRetry(this.sessionConversationManager.middleware, {
+        onRetry: (error) =>
+          this.logRedisSessionRetry('conversation session', error),
+      }),
+    );
     composer.use(this.middlewareCleaner);
     composer.use(i18n.middleware);
     composer.use(this.sceneManager.middleware);
@@ -109,6 +119,12 @@ export class MainMiddleware {
     composer.use(this.hearManagerProvider.middleware);
 
     return composer.compose();
+  }
+
+  private logRedisSessionRetry(sessionName: string, error: Error) {
+    this.logger.warn(
+      `[Redis session] Retrying ${sessionName} load after transient connection error: ${error.message}`,
+    );
   }
 
   private get middlewareMetrics() {

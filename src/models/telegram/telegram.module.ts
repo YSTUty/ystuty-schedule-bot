@@ -1,9 +1,11 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { TelegrafModule } from '@xtcry/nestjs-telegraf';
 
 import * as RedisSession from 'telegraf-session-redis';
 
 import * as xEnv from '@my-environment';
+
+import { withRedisSessionLoadRetry } from '@my-common/util/redis-session-retry.util';
 
 import { MainMiddleware } from './middleware/main.middleware';
 import { MetricsMiddleware } from './middleware/metrics.middleware';
@@ -20,6 +22,9 @@ import { AdminUpdate } from './update/admin.update';
 import { TelegramFeedbackUpdate } from './update/feedback.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
+
+const TelegramRedisSession =
+  RedisSession as unknown as typeof RedisSession.default;
 
 const baseProviders = [TelegramService, TelegramKeyboardFactory];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
@@ -39,6 +44,8 @@ const providers = [
 @Global()
 @Module({})
 export class TelegramModule {
+  private static logger = new Logger(TelegramModule.name);
+
   static register() {
     return {
       module: TelegramModule,
@@ -51,49 +58,64 @@ export class TelegramModule {
             mainMiddleware: MainMiddleware,
             metricsMiddleware: MetricsMiddleware,
             userMiddleware: UserMiddleware,
-          ) => ({
-            token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
-            launchOptions: false,
-            options: { telegram: { apiRoot: xEnv.SOCIAL_TELEGRAM_API_ROOT } },
-            middlewares: [
-              mainMiddleware,
-              metricsMiddleware,
-              // @ts-expect-error RedisSession is typed against an older Telegraf middleware API.
-              new RedisSession({
-                store: {
-                  host: xEnv.REDIS_HOST,
-                  port: xEnv.REDIS_PORT,
-                  db: xEnv.REDIS_DATABASE,
-                  password: xEnv.REDIS_PASSWORD,
-                  prefix: xEnv.REDIS_PREFIX,
-                },
-                ttl: 3 * 7 * 24 * 3600,
-                getSessionKey: (ctx) =>
-                  `tg:session:${
-                    (ctx.from && ctx.chat && `${ctx.from.id}:${ctx.chat.id}`) ||
-                    (ctx.from && `${ctx.from.id}:${ctx.from.id}`)
-                  }`,
-              }) as RedisSession.default,
-              // @ts-expect-error RedisSession is typed against an older Telegraf middleware API.
-              new RedisSession({
-                store: {
-                  host: xEnv.REDIS_HOST,
-                  port: xEnv.REDIS_PORT,
-                  db: xEnv.REDIS_DATABASE,
-                  password: xEnv.REDIS_PASSWORD,
-                  prefix: xEnv.REDIS_PREFIX,
-                },
-                ttl: 3 * 7 * 24 * 3600,
-                property: 'sessionConversation',
-                getSessionKey: (ctx) =>
-                  ctx.chat && `tg:session:conversation:${ctx.chat.id}`,
-              }) as RedisSession.default,
-              mainMiddleware.middlewareCleaner(),
-              mainMiddleware.i18nMiddleware,
-              userMiddleware,
-              mainMiddleware.middlewareCleaner(true),
-            ],
-          }),
+          ) => {
+            const session = new TelegramRedisSession({
+              store: {
+                host: xEnv.REDIS_HOST,
+                port: xEnv.REDIS_PORT,
+                db: xEnv.REDIS_DATABASE,
+                password: xEnv.REDIS_PASSWORD,
+                prefix: xEnv.REDIS_PREFIX,
+              },
+              ttl: 3 * 7 * 24 * 3600,
+              getSessionKey: (ctx) =>
+                `tg:session:${
+                  (ctx.from && ctx.chat && `${ctx.from.id}:${ctx.chat.id}`) ||
+                  (ctx.from && `${ctx.from.id}:${ctx.from.id}`)
+                }`,
+            });
+            const sessionConversation = new TelegramRedisSession({
+              store: {
+                host: xEnv.REDIS_HOST,
+                port: xEnv.REDIS_PORT,
+                db: xEnv.REDIS_DATABASE,
+                password: xEnv.REDIS_PASSWORD,
+                prefix: xEnv.REDIS_PREFIX,
+              },
+              ttl: 3 * 7 * 24 * 3600,
+              property: 'sessionConversation',
+              getSessionKey: (ctx) =>
+                ctx.chat && `tg:session:conversation:${ctx.chat.id}`,
+            });
+
+            return {
+              token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,
+              launchOptions: false,
+              options: {
+                telegram: { apiRoot: xEnv.SOCIAL_TELEGRAM_API_ROOT },
+              },
+              middlewares: [
+                mainMiddleware,
+                metricsMiddleware,
+                withRedisSessionLoadRetry(session.middleware(), {
+                  onRetry: (error) =>
+                    this.logger.warn(
+                      `[Redis session] Retrying session load after transient connection error: ${error.message}`,
+                    ),
+                }),
+                withRedisSessionLoadRetry(sessionConversation.middleware(), {
+                  onRetry: (error) =>
+                    this.logger.warn(
+                      `[Redis session] Retrying conversation session load after transient connection error: ${error.message}`,
+                    ),
+                }),
+                mainMiddleware.middlewareCleaner(),
+                mainMiddleware.i18nMiddleware,
+                userMiddleware,
+                mainMiddleware.middlewareCleaner(true),
+              ],
+            };
+          },
         }),
       ],
       providers: [...baseProviders, ...providers],

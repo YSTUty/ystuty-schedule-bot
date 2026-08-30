@@ -6,7 +6,7 @@ import type { MessagesEditParams } from 'vk-io/lib/api/schemas/params';
 
 import { SocialType, VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
-import { IStepContext } from '@my-interfaces/vk';
+import { IMessageContext, IStepContext } from '@my-interfaces/vk';
 
 import { VK_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants';
 import { BroadcastService } from '../../../broadcast/broadcast.service';
@@ -141,6 +141,11 @@ export class VkBroadcastScene {
       return;
     }
 
+    if (ctx.isMessageEventContext()) {
+      await ctx.answer({ type: 'show_snackbar', text: '?..' });
+      return;
+    }
+
     if (ctx.text === '/next') {
       await this.continueToSource(ctx);
       return;
@@ -264,11 +269,9 @@ export class VkBroadcastScene {
     return ctx.scene.leave();
   }
 
-  private getSourceMessage(ctx: IStepCtx): BroadcastSourceMessage | null {
-    if (ctx.hasText) {
-      return { text: ctx.text, messageId: ctx.id };
-    }
-
+  private getSourceMessage(
+    ctx: IMessageContext,
+  ): BroadcastSourceMessage | null {
     if (ctx.hasAttachments(AttachmentType.STICKER)) {
       const stickers = ctx.getAttachments(AttachmentType.STICKER);
       return stickers[0]?.id
@@ -276,23 +279,30 @@ export class VkBroadcastScene {
         : null;
     }
 
-    // TODO(broadcast): продумать корректную пересылку VK-вложений.
-    // У разных типов вложений разная структура и не все можно безопасно
-    // восстановить через строковое представление без потери контекста.
-    // if (ctx.hasAttachments(AttachmentType.WALL)) {
-    //   const walls = ctx.getAttachments(AttachmentType.WALL);
-    //   console.log(walls);
-    //   return { wallId: walls[0].id };
-    // }
+    const attachment = this.serializeAttachments(ctx);
+    if (attachment) {
+      return {
+        ...(ctx.hasText ? { text: ctx.text } : {}),
+        attachment,
+        messageId: ctx.id,
+      };
+    }
 
-    // const attachments = 'attachments' in ctx ? ctx.attachments : [];
-    // const attachment = attachments.map((e) => e.toJSON());
-    // console.log(attachments);
-    // if (attachment) {
-    //   return { text: '', attachment };
-    // }
+    if (ctx.hasText) {
+      return { text: ctx.text, messageId: ctx.id };
+    }
 
     return null;
+  }
+
+  /** Собирает attachable-вложения VK в CSV-строку для `messages.send`. */
+  private serializeAttachments(ctx: IMessageContext): string | null {
+    const attachments = ctx.attachments
+      .filter((attachment) => attachment.canBeAttached)
+      .map(String)
+      .filter((attachment) => !attachment.startsWith('[object '));
+
+    return attachments.length ? attachments.join(',') : null;
   }
 
   private async handleSettingsAction(ctx: IStepCtx) {

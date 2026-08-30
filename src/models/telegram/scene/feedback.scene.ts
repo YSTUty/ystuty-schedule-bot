@@ -16,6 +16,7 @@ import { TelegramService } from '../telegram.service';
 import { BaseScene } from './base.scene';
 
 export const TELEGRAM_FEEDBACK_SCENE = 'TELEGRAM_FEEDBACK_SCENE';
+const MAX_FEEDBACK_MESSAGES = 10;
 const MAX_FEEDBACK_MEDIA = 10;
 const categories = new Set(Object.values(FeedbackCategory));
 
@@ -23,7 +24,6 @@ type FeedbackSceneState = {
   category?: FeedbackCategory;
   messages: FeedbackSourceMessage[];
   mediaCount: number;
-  hasStandaloneText: boolean;
   menuMessageId?: number;
 };
 
@@ -42,7 +42,6 @@ export class TelegramFeedbackScene extends BaseScene {
   async onEnter(@Ctx() ctx: IStepContext<FeedbackSceneState>) {
     ctx.scene.state.messages = [];
     ctx.scene.state.mediaCount = 0;
-    ctx.scene.state.hasStandaloneText = false;
     const menuMessage = await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Feedback_SelectCategory),
       this.keyboardFactory.getFeedbackCategories(ctx),
@@ -78,14 +77,12 @@ export class TelegramFeedbackScene extends BaseScene {
     if (!input) return;
 
     const state = ctx.scene.state;
-    const isStandaloneText = !!input.text && !input.attachments?.length;
-    const mediaCount = input.attachments?.length || 0;
-    if (isStandaloneText && state.hasStandaloneText) {
-      await ctx.replyWithHTML(
-        ctx.i18n.t(LocalePhrase.Page_Feedback_OnlyOneText),
-      );
+    if (state.messages.length >= MAX_FEEDBACK_MESSAGES) {
+      await ctx.react('💔').catch(() => undefined);
       return;
     }
+
+    const mediaCount = input.attachments?.length || 0;
     if (state.mediaCount + mediaCount > MAX_FEEDBACK_MEDIA) {
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_Feedback_MediaLimit),
@@ -93,9 +90,29 @@ export class TelegramFeedbackScene extends BaseScene {
       return;
     }
 
-    state.messages.push(input);
+    const isPrimary = state.messages.length === 0;
+    state.messages.push({
+      ...input,
+      ...(isPrimary ? { isPrimary: true } : {}),
+    });
     state.mediaCount += mediaCount;
-    state.hasStandaloneText ||= isStandaloneText;
+    if (isPrimary) {
+      // Реакция служит пользователю визуальной меткой основного сообщения.
+      await ctx.react('🏆').catch(() => undefined);
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Feedback_FirstMessage),
+        this.keyboardFactory.getFeedbackCollector(ctx),
+      );
+    } else if (input.text) {
+      await ctx.react('🫡').catch(() => undefined);
+    }
+
+    if (state.messages.length === MAX_FEEDBACK_MESSAGES) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Feedback_MessageLimitReached),
+        this.keyboardFactory.getFeedbackCollector(ctx),
+      );
+    }
   }
 
   @WizardStep(2)

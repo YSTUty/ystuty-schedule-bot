@@ -18,6 +18,8 @@ export enum FeedbackDeliveryStatus {
 /** Исходное сообщение, которое будет переслано администраторам. */
 export type FeedbackSourceMessage = {
   messageId: number;
+  /** Первое добавленное сообщение — основное; остальные дополняют отзыв. */
+  isPrimary?: boolean;
   conversationMessageId?: number;
   text?: string;
   attachments?: FeedbackAttachment[];

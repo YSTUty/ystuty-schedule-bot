@@ -15,9 +15,11 @@ import {
   FeedbackSourceMessage,
 } from '../../feedback/feedback.types';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
+import { VK_REACTION_IDS, VkReactionEmoji } from '../vk.constants';
 import { VkService } from '../vk.service';
 
 export const VK_FEEDBACK_SCENE = 'VK_FEEDBACK_SCENE';
+const MAX_FEEDBACK_MESSAGES = 10;
 const MAX_FEEDBACK_MEDIA = 10;
 const categories = new Set(Object.values(FeedbackCategory));
 
@@ -25,7 +27,6 @@ type FeedbackSceneState = {
   category?: FeedbackCategory;
   messages: FeedbackSourceMessage[];
   mediaCount: number;
-  hasStandaloneText: boolean;
   /** Возвращает стартовый экран, если отмена перехвачена общим middleware. */
   cancelToStartScreen?: boolean;
   menuMessageId?: number;
@@ -46,7 +47,6 @@ export class VkFeedbackScene {
     if (ctx.scene.step.firstTime) {
       state.messages = [];
       state.mediaCount = 0;
-      state.hasStandaloneText = false;
       state.cancelToStartScreen = true;
       const menuMessageId = await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_Feedback_SelectCategory),
@@ -91,20 +91,38 @@ export class VkFeedbackScene {
     const input = this.getSourceMessage(ctx);
     if (!input) return;
 
-    const isStandaloneText = !!input.text && !input.attachments?.length;
-    const mediaCount = input.attachments?.length || 0;
-    if (isStandaloneText && state.hasStandaloneText) {
-      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Feedback_OnlyOneText));
+    if (state.messages.length >= MAX_FEEDBACK_MESSAGES) {
+      await this.reactToMessage(ctx, '👎');
       return;
     }
+
+    const mediaCount = input.attachments?.length || 0;
     if (state.mediaCount + mediaCount > MAX_FEEDBACK_MEDIA) {
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_Feedback_MediaLimit));
       return;
     }
 
-    state.messages.push(input);
+    const isPrimary = state.messages.length === 0;
+    state.messages.push({
+      ...input,
+      ...(isPrimary ? { isPrimary: true } : {}),
+    });
     state.mediaCount += mediaCount;
-    state.hasStandaloneText ||= isStandaloneText;
+    if (isPrimary) {
+      await this.reactToMessage(ctx, '🏆');
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Feedback_FirstMessage), {
+        keyboard: this.keyboardFactory.getFeedbackCollector(ctx),
+      });
+    } else if (input.text) {
+      await this.reactToMessage(ctx, '👌');
+    }
+
+    if (state.messages.length === MAX_FEEDBACK_MESSAGES) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_Feedback_MessageLimitReached),
+        { keyboard: this.keyboardFactory.getFeedbackCollector(ctx) },
+      );
+    }
   }
 
   private async selectCategory(
@@ -195,6 +213,21 @@ export class VkFeedbackScene {
     };
   }
 
+  /** Отмечает сообщение реакцией, но не прерывает сценарий при ошибке VK API. */
+  private async reactToMessage(
+    ctx: IStepContext<FeedbackSceneState>,
+    reaction: VkReactionEmoji,
+  ) {
+    if (!ctx.conversationMessageId) return;
+    await this.vkService.bot.api.messages
+      .sendReaction({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        reaction_id: VK_REACTION_IDS[reaction],
+      })
+      .catch(() => undefined);
+  }
+
   private async forwardToAdmins(
     ctx: IStepContext<FeedbackSceneState>,
     feedbackId: number,
@@ -208,10 +241,14 @@ export class VkFeedbackScene {
     }
     for (const adminId of xEnv.SOCIAL_VK_ADMIN_IDS) {
       try {
-        await this.vkService.sendMessage(
+        const headerMessageId = await this.vkService.sendMessage(
           adminId,
           `Обратная связь №${feedbackId}\nКатегория: ${this.getCategoryTitle(ctx, state.category!)}`,
         );
+        if (!headerMessageId) {
+          errors.push(`Failed to send feedback header to VK admin ${adminId}`);
+          continue;
+        }
         await this.vkService.bot.api.messages.send({
           peer_id: adminId,
           random_id: getRandomId(),

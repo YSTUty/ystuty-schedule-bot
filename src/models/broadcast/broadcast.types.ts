@@ -62,6 +62,8 @@ export type BroadcastSourceMessage = {
   chatId?: number;
   messageId?: number;
   text?: string;
+  /** Текст отдельного сообщения с inline-клавиатурой после Telegram-forward. */
+  recipientKeyboardMessageText?: string;
   attachment?: string;
   stickerId?: number;
   parseMode?: 'HTML' | 'MarkdownV2' | 'Markdown';
@@ -204,6 +206,34 @@ export type BroadcastJobData = {
 
 export type BroadcastTransportResult = {
   messageId?: string | null;
+};
+
+/**
+ * Хранит один или несколько идентификаторов сообщений в существующем поле
+ * доставки без изменения схемы БД. Старые одиночные значения остаются
+ * совместимыми.
+ */
+export const serializeBroadcastDeliveryMessageIds = (messageIds: string[]) =>
+  messageIds.length === 1 ? messageIds[0] : JSON.stringify(messageIds);
+
+/** Читает старый одиночный ID либо JSON-массив ID сообщений одной доставки. */
+export const parseBroadcastDeliveryMessageIds = (value: string): string[] => {
+  try {
+    const messageIds = JSON.parse(value);
+    if (
+      Array.isArray(messageIds) &&
+      messageIds.every(
+        (messageId): messageId is string =>
+          typeof messageId === 'string' && /^\d+$/.test(messageId),
+      )
+    ) {
+      return messageIds;
+    }
+  } catch {
+    // Старый формат хранит одиночный ID обычной строкой.
+  }
+
+  return /^\d+$/.test(value) ? [value] : [];
 };
 
 export interface BroadcastTransport {

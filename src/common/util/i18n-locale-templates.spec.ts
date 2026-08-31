@@ -49,6 +49,7 @@ const localeTemplateData = {
   feedbackId: 12,
   feedbackAfterClickSummary: 'оставить',
   feedbackButton: { responseText: 'Спасибо!', text: '🫡' },
+  forwardKeyboardMessageText: 'Выберите действие:',
   filter: {
     groupNames: ['ЦИС-46'],
     hasDM: true,
@@ -62,6 +63,7 @@ const localeTemplateData = {
   hasActivityFilter: true,
   hasExcludedCampaigns: true,
   hasGroups: true,
+  hasRecipientKeyboard: true,
   instituteName: 'Институт цифровых систем',
   isNextWeek: false,
   items: [

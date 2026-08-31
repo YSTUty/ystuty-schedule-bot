@@ -651,7 +651,11 @@ export class TelegramKeyboardFactory {
     });
   }
 
-  public getBroadcastConfirm(ctx: IContext, mode: 'copy' | 'forward') {
+  public getBroadcastConfirm(
+    ctx: IContext,
+    mode: 'copy' | 'forward',
+    hasRecipientKeyboard = false,
+  ) {
     const nextMode = mode === 'copy' ? 'forward' : 'copy';
 
     return Markup.inlineKeyboard([
@@ -661,6 +665,18 @@ export class TelegramKeyboardFactory {
           'broadcast:wizard:send',
         ),
       ],
+      ...(mode === 'forward' && hasRecipientKeyboard
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(
+                  LocalePhrase.Button_Broadcast_ForwardKeyboardMessageText,
+                ),
+                'broadcast:wizard:forward-keyboard:text',
+              ),
+            ],
+          ]
+        : []),
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_ModeToggle, {
@@ -964,6 +980,17 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
           'broadcast:wizard:actions:settings',
+        ),
+      ],
+    ]);
+  }
+
+  public getBroadcastForwardKeyboardMessageTextPrompt(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:forward-keyboard:back',
         ),
       ],
     ]);

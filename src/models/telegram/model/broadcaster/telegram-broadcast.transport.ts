@@ -13,6 +13,8 @@ import {
   BroadcastMessageMode,
   BroadcastTransport,
   BroadcastTransportResult,
+  parseBroadcastDeliveryMessageIds,
+  serializeBroadcastDeliveryMessageIds,
 } from '../../../broadcast/broadcast.types';
 import { BroadcastTransportRegistry } from '../../../broadcast/transport/broadcast-transport.registry';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
@@ -42,7 +44,12 @@ export class TelegramBroadcastTransport
     deliveryId: number;
     targetSocialId: string;
     mode: BroadcastMessageMode;
-    sourceMessage: { chatId?: number; messageId?: number; text?: string };
+    sourceMessage: {
+      chatId?: number;
+      messageId?: number;
+      text?: string;
+      recipientKeyboardMessageText?: string;
+    };
     actionKeyboard?: BroadcastActionKeyboard | null;
     feedbackButton?: BroadcastFeedbackButton | null;
   }): Promise<BroadcastTransportResult> {
@@ -72,9 +79,18 @@ export class TelegramBroadcastTransport
         params.sourceMessage.chatId,
         params.sourceMessage.messageId,
       );
-      await this.attachRecipientKeyboard(chatId, result.message_id, params);
+      const keyboardMessageId = await this.sendForwardRecipientKeyboard(
+        chatId,
+        params,
+      );
 
-      return { messageId: String(result.message_id) };
+      return {
+        messageId: serializeBroadcastDeliveryMessageIds(
+          [result.message_id, keyboardMessageId]
+            .filter((messageId): messageId is number => messageId != null)
+            .map(String),
+        ),
+      };
     }
 
     if (!params.sourceMessage.text) {
@@ -99,12 +115,22 @@ export class TelegramBroadcastTransport
     targetSocialId: string;
     messageId: string;
   }): Promise<boolean> {
+    const messageIds = parseBroadcastDeliveryMessageIds(params.messageId);
+    if (!messageIds.length) return false;
+
     try {
-      await this.telegramService.bot.telegram.deleteMessage(
-        Number(params.targetSocialId),
-        Number(params.messageId),
+      const results = await Promise.all(
+        messageIds.map((messageId) =>
+          this.telegramService.bot.telegram
+            .deleteMessage(Number(params.targetSocialId), Number(messageId))
+            .then(() => true)
+            .catch((err) => {
+              if (err instanceof TelegramError) return false;
+              throw err;
+            }),
+        ),
       );
-      return true;
+      return results.every(Boolean);
     } catch (err) {
       if (err instanceof TelegramError) return false;
       throw err;
@@ -129,6 +155,30 @@ export class TelegramBroadcastTransport
       undefined,
       this.getRecipientReplyMarkup(params),
     );
+  }
+
+  /**
+   * Пересланное сообщение не поддерживает reply_markup в `forwardMessage`.
+   * Поэтому кнопки отправляются следующим сообщением, созданным самим ботом.
+   */
+  private async sendForwardRecipientKeyboard(
+    chatId: number,
+    params: {
+      campaignId: number;
+      deliveryId: number;
+      sourceMessage: { recipientKeyboardMessageText?: string };
+      actionKeyboard?: BroadcastActionKeyboard | null;
+      feedbackButton?: BroadcastFeedbackButton | null;
+    },
+  ): Promise<number | null> {
+    if (!params.feedbackButton && !params.actionKeyboard?.length) return null;
+
+    const result = await this.telegramService.bot.telegram.sendMessage(
+      chatId,
+      params.sourceMessage.recipientKeyboardMessageText || 'Выберите действие:',
+      { reply_markup: this.getRecipientReplyMarkup(params) },
+    );
+    return result.message_id;
   }
 
   private getRecipientReplyMarkup(params: {

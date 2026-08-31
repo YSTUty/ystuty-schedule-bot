@@ -67,6 +67,30 @@ describe('TelegramKeyboardFactory', () => {
     );
   });
 
+  it('offers the keyboard message text setting only for forwards with buttons', () => {
+    const factory = new TelegramKeyboardFactory();
+    const getCallbacks = (
+      mode: 'copy' | 'forward',
+      hasRecipientKeyboard: boolean,
+    ) =>
+      factory
+        .getBroadcastConfirm(ctx, mode, hasRecipientKeyboard)
+        .reply_markup.inline_keyboard.flat()
+        .map((button) =>
+          'callback_data' in button ? button.callback_data : '',
+        );
+
+    expect(getCallbacks('forward', true)).toContain(
+      'broadcast:wizard:forward-keyboard:text',
+    );
+    expect(getCallbacks('forward', false)).not.toContain(
+      'broadcast:wizard:forward-keyboard:text',
+    );
+    expect(getCallbacks('copy', true)).not.toContain(
+      'broadcast:wizard:forward-keyboard:text',
+    );
+  });
+
   it('renders recipient actions, a URL link and feedback into separate inline rows', () => {
     const keyboard =
       new TelegramKeyboardFactory().getBroadcastRecipientKeyboard({

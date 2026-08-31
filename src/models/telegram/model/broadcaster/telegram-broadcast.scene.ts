@@ -45,6 +45,8 @@ type TelegramBroadcastState = {
   awaitingFeedbackText?: 'button' | 'response' | 'after';
   awaitingActionText?: BroadcastRecipientAction | 'link';
   awaitingActionLinkUrl?: boolean;
+  awaitingForwardKeyboardMessageText?: boolean;
+  forwardKeyboardMessageText: string;
   feedbackButton?: BroadcastFeedbackButton | null;
   actionKeyboard?: BroadcastActionKeyboard | null;
   activeGroupFilter?: { institutesPage: number; instituteIndex: number };
@@ -90,6 +92,8 @@ export class TelegramBroadcastScene extends BaseScene {
       reusedSettings?.actionKeyboard.map((item) => ({ ...item })) || [];
     state.awaitingActionText = undefined;
     state.awaitingActionLinkUrl = undefined;
+    state.awaitingForwardKeyboardMessageText = undefined;
+    state.forwardKeyboardMessageText = 'Выберите действие:';
 
     const count = await this.broadcastService.countRecipients(
       SocialType.Telegram,
@@ -691,6 +695,7 @@ export class TelegramBroadcastScene extends BaseScene {
     state.sourceMessage = {
       chatId: ctx.chat.id,
       messageId: ctx.message.message_id,
+      recipientKeyboardMessageText: state.forwardKeyboardMessageText,
       text:
         ('text' in ctx.message && ctx.message.text) ||
         ('caption' in ctx.message ? ctx.message.caption : undefined),
@@ -798,7 +803,49 @@ export class TelegramBroadcastScene extends BaseScene {
   }
 
   @WizardStep(4)
+  @Action('broadcast:wizard:forward-keyboard:text')
+  async onForwardKeyboardMessageText(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    if (
+      state.mode !== BroadcastMessageMode.Forward ||
+      !this.hasRecipientKeyboard(state)
+    ) {
+      await ctx.tryAnswerCbQuery();
+      return;
+    }
+
+    state.awaitingForwardKeyboardMessageText = true;
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ForwardKeyboardMessageText),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastForwardKeyboardMessageTextPrompt(
+          ctx,
+        ),
+      },
+    );
+  }
+
+  @WizardStep(4)
+  @Action('broadcast:wizard:forward-keyboard:back')
+  async onForwardKeyboardMessageTextBack(@Ctx() ctx: IStepCtx) {
+    ctx.scene.state.awaitingForwardKeyboardMessageText = undefined;
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(this.renderReady(ctx, ctx.scene.state), {
+      parse_mode: 'HTML',
+      ...this.getConfirmKeyboard(ctx, ctx.scene.state),
+    });
+  }
+
+  @WizardStep(4)
   async onStep4Fallback(@Ctx() ctx: IStepCtx) {
+    if (ctx.scene.state.awaitingForwardKeyboardMessageText) {
+      const text = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
+      await this.applyForwardKeyboardMessageText(ctx, text);
+      return;
+    }
+
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_SendCommandHint),
     );
@@ -875,10 +922,12 @@ export class TelegramBroadcastScene extends BaseScene {
       ? (actionKeyboard || [])
           .map(
             (item) =>
-              `  • ${labels[item.type]}: <code>${
-                escapeHTML(item.text || defaultTexts[item.type])
-              }</code>${
-                item.type === 'link' ? ` → <code>${escapeHTML(item.url)}</code>` : ''
+              `  • ${labels[item.type]}: <code>${escapeHTML(
+                item.text || defaultTexts[item.type],
+              )}</code>${
+                item.type === 'link'
+                  ? ` → <code>${escapeHTML(item.url)}</code>`
+                  : ''
               }`,
           )
           .join('\n')
@@ -904,7 +953,11 @@ export class TelegramBroadcastScene extends BaseScene {
   }
 
   private getConfirmKeyboard(ctx: IStepCtx, state: TelegramBroadcastState) {
-    return this.keyboardFactory.getBroadcastConfirm(ctx, state.mode);
+    return this.keyboardFactory.getBroadcastConfirm(
+      ctx,
+      state.mode,
+      this.hasRecipientKeyboard(state),
+    );
   }
 
   private async backToSettings(ctx: IStepCtx) {
@@ -1208,6 +1261,32 @@ export class TelegramBroadcastScene extends BaseScene {
     await this.renderActionSettings(ctx);
   }
 
+  private async applyForwardKeyboardMessageText(ctx: IStepCtx, text: string) {
+    const value = text.trim();
+    if (!value || value.length > 4096) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(
+          LocalePhrase.Page_Broadcast_ForwardKeyboardMessageTextInvalid,
+        ),
+      );
+      return;
+    }
+
+    const state = ctx.scene.state;
+    state.forwardKeyboardMessageText = value;
+    state.awaitingForwardKeyboardMessageText = undefined;
+    if (state.sourceMessage) {
+      state.sourceMessage = {
+        ...state.sourceMessage,
+        recipientKeyboardMessageText: value,
+      };
+    }
+
+    await ctx.replyWithHTML(this.renderReady(ctx, state), {
+      ...this.getConfirmKeyboard(ctx, state),
+    });
+  }
+
   private async renderActionSettings(ctx: IStepCtx) {
     const message = ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionSettings, {
       actionKeyboardSummary: this.renderActionKeyboardSummary(
@@ -1447,7 +1526,13 @@ export class TelegramBroadcastScene extends BaseScene {
       recipientsCount: state.recipientsCount ?? 0,
       selectedCount: state.selectedRecipientIds.length,
       mode: state.mode,
+      hasRecipientKeyboard: this.hasRecipientKeyboard(state),
+      forwardKeyboardMessageText: escapeHTML(state.forwardKeyboardMessageText),
     });
+  }
+
+  private hasRecipientKeyboard(state: TelegramBroadcastState) {
+    return Boolean(state.feedbackButton || state.actionKeyboard?.length);
   }
 
   private async refreshRecipientsCount(state: TelegramBroadcastState) {

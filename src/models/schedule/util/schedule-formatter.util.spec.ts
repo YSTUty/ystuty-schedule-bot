@@ -69,19 +69,26 @@ describe('formatScheduleWeekDays', () => {
   });
 
   it('keeps the compact view concise and includes all lesson data', () => {
-    const result = format([
-      lesson({
-        auditoryName: 'А-315',
-        additionalAuditoryName: 'А-332',
-        teacherName: 'Иванов И. И.',
-        isDivision: true,
-      }),
-    ]);
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-31T12:00:00+03:00'));
 
-    expect(result).toBe(
-      '📗 Расписание на Вторник [1] (01.09.2026) Н\n' +
-        '2⃣ 10:10-11:40. {А-315; А-332} Адаптационная практика [ПР] (Иванов И. И.) П/Г',
-    );
+    try {
+      const result = format([
+        lesson({
+          auditoryName: 'А-315',
+          additionalAuditoryName: 'А-332',
+          teacherName: 'Иванов И. И.',
+          isDivision: true,
+        }),
+      ]);
+
+      expect(result).toBe(
+        '📗 Расписание на Вторник [1] (01.09.2026) Н\n' +
+          '2⃣ 10:10-11:40. {А-315; А-332} Адаптационная практика [ПР] (Иванов И. И.) П/Г',
+      );
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('renders the detailed view as separate readable lesson fields', () => {

@@ -20,66 +20,66 @@ button:
     schedule_notification: 🔔 Настроить рассылку
     invite_to_chat: 👥 Добавить в беседу
   broadcast:
-    title: Рассылки
-    create: Создать рассылку
-    status: Статус очереди
-    current: Текущая рассылка
-    list: Список рассылок
-    delete: Удалить сообщения
-    apply_settings: Применить настройки
-    delete_all: Удалить все
-    delete_select: Выбрать сообщения
-    delete_selected: 'Удалить выбранные (${selectedCount})'
-    delete_confirm: Да, удалить
-    delete_cancel: Отмена
-    back_to_menu: Назад в меню
-    back_to_list: Назад к списку
+    title: 📣 Рассылки
+    create: ✍️ Создать рассылку
+    status: 📊 Статус очереди
+    current: 🔄 Текущая рассылка
+    list: 📋 Список рассылок
+    delete: 🗑️ Удалить сообщения
+    apply_settings: ✅ Применить настройки
+    delete_all: 🗑️ Удалить все
+    delete_select: ☑️ Выбрать сообщения
+    delete_selected: '🗑️ Удалить выбранные (${selectedCount})'
+    delete_confirm: ✅ Да, удалить
+    delete_cancel: ↩️ Отмена
+    back_to_menu: ↩️ Назад в меню
+    back_to_list: ↩️ Назад к списку
     create_queue: 🚀 Создать очередь
-    continue: Далее
+    continue: ➡️ Далее
     resume: ▶️ Запустить
     pause: ⏸ Пауза
     terminate: ⛔ Остановить
-    mode_toggle: 'Режим: ${mode}. Переключить на ${nextMode}'
-    select_recipients: Тестовая выборка получателей
-    audience_all: Все по фильтру
-    audience_manual: Тестовая выборка
-    filter_authorized: 'Авторизованные: ${onlyAuthorized === undefined ? "любые" : onlyAuthorized ? "да" : "нет"}'
-    filter_group: 'Группа: ${groupName}'
-    filter_group_reset: Сбросить группу
-    edit_filters: Фильтры аудитории
-    filter_groups: 'Группы: ${hasGroups ? "выбраны" : "все"}'
-    filter_groups_institutes: Выбрать по институту
-    filter_groups_text: Ввести список групп
-    filter_groups_text_cancel: Отменить ввод
-    filter_groups_show: Показать группы
-    filter_groups_clear: Очистить группы
-    filter_groups_done: Готово
-    filter_institute_toggle: '${selected ? "Снять весь институт" : "Выбрать весь институт"}'
-    filter_activity: 'Активность: ${hasActivityFilter ? "выбрана" : "любая"}'
-    filter_exclude_campaigns: 'Исключить рассылки: ${hasExcludedCampaigns ? "выбраны" : "нет"}'
-    filter_exclude_campaigns_done: 'Готово (${selectedCount})'
-    filter_text_cancel: Отменить ввод
-    feedback_toggle: 'Fallback btn: ${feedbackButton ? feedbackButton.text : "-"}'
-    feedback_settings: Настроить fallback
-    feedback_text: Текст кнопки
-    feedback_response: Изменить ответ
-    feedback_after_delete: '${selected ? "✅ " : ""}Удалить после клика'
-    feedback_after_keep: '${selected ? "✅ " : ""}Оставить после клика'
-    feedback_after_replace: '${selected ? "✅ " : ""}Заменить после клика'
-    feedback_after_text: Текст кнопки после клика
-    action_buttons: 'Доп. кнопки: ${actionButtonsCount || "нет"}'
-    action_select_group: 'Выбрать актуальную группу: ${actionButton ? "вкл" : "выкл"}'
-    action_auth: 'Подключить или обновить ЯГТУ.ID: ${actionButton ? "вкл" : "выкл"}'
-    action_start: 'Начать: ${actionButton ? "вкл" : "выкл"}'
-    action_link: 'Кнопка-ссылка: ${actionButton ? "вкл" : "выкл"}'
-    action_text: Изменить текст кнопки
-    action_select_group_text: 'Текст: группа'
-    action_auth_text: 'Текст: ЯГТУ.ID'
-    action_start_text: 'Текст: начать'
-    action_link_text: 'Текст: ссылка'
-    action_link_url: Изменить ссылку
-    back: Назад
-    back_to_settings: Назад к настройкам
+    mode_toggle: '🔁 Режим: ${mode}. На ${nextMode}'
+    select_recipients: 👤 Тестовая выборка
+    audience_all: 🌐 Все по фильтру
+    audience_manual: 🧪 Тестовая выборка
+    filter_authorized: '🔐 Авторизованные: ${onlyAuthorized === undefined ? "любые" : onlyAuthorized ? "да" : "нет"}'
+    filter_group: '🎓 Группа: ${groupName}'
+    filter_group_reset: 🔄 Сбросить группу
+    edit_filters: ⚙️ Фильтры аудитории
+    filter_groups: '👥 Группы: ${hasGroups ? "выбраны" : "все"}'
+    filter_groups_institutes: 🏫 Выбрать по институту
+    filter_groups_text: ✍️ Ввести список групп
+    filter_groups_text_cancel: ❌ Отменить ввод
+    filter_groups_show: 👀 Показать группы
+    filter_groups_clear: 🧹 Очистить группы
+    filter_groups_done: ✅ Готово
+    filter_institute_toggle: '${selected ? "➖ Снять институт" : "➕ Выбрать институт"}'
+    filter_activity: '🕒 Активность: ${hasActivityFilter ? "выбрана" : "любая"}'
+    filter_exclude_campaigns: '🚫 Исключить: ${hasExcludedCampaigns ? "выбраны" : "нет"}'
+    filter_exclude_campaigns_done: '✅ Готово (${selectedCount})'
+    filter_text_cancel: ❌ Отменить ввод
+    feedback_toggle: '💬 Fallback: ${feedbackButton ? feedbackButton.text : "-"}'
+    feedback_settings: ⚙️ Настроить fallback
+    feedback_text: ✏️ Текст кнопки
+    feedback_response: ✏️ Изменить ответ
+    feedback_after_delete: '${selected ? "✅ " : ""}🗑️ Удалить после клика'
+    feedback_after_keep: '${selected ? "✅ " : ""}📌 Оставить после клика'
+    feedback_after_replace: '${selected ? "✅ " : ""}🔄 Заменить после клика'
+    feedback_after_text: ✏️ Текст кнопки после клика
+    action_buttons: '🔘 Доп. кнопки: ${actionButtonsCount || "нет"}'
+    action_select_group: '🎓 Актуальная группа: ${actionButton ? "вкл" : "выкл"}'
+    action_auth: '🔐 ЯГТУ.ID: ${actionButton ? "вкл" : "выкл"}'
+    action_start: '🚀 Начать: ${actionButton ? "вкл" : "выкл"}'
+    action_link: '🔗 Кнопка-ссылка: ${actionButton ? "вкл" : "выкл"}'
+    action_text: ✏️ Изменить текст кнопки
+    action_select_group_text: '✏️ Текст: группа'
+    action_auth_text: '✏️ Текст: ЯГТУ.ID'
+    action_start_text: '✏️ Текст: начать'
+    action_link_text: '✏️ Текст: ссылка'
+    action_link_url: 🔗 Изменить ссылку
+    back: ↩️ Назад
+    back_to_settings: ↩️ Назад к настройкам
   schedule:
     schedule: Расписание группы
     for_today: На сегодня
@@ -104,11 +104,11 @@ button:
     next_page: ▶
   feedback:
     title: 💬 Оставить обратную связь
-    category_schedule: Ошибка в расписании
-    category_bot: Ошибка бота
-    category_suggestion: Идея / пожелание
-    category_other: Другое
-    submit: Отправить
+    category_schedule: 🗓️ Ошибка в расписании
+    category_bot: 🤖 Ошибка бота
+    category_suggestion: 💡 Идея / пожелание
+    category_other: 📝 Другое
+    submit: 📨 Отправить
   groups:
     list_inst_and_groups: 🏫 Список институтов и групп 📚
     list_groups: 📚 Список групп 📚

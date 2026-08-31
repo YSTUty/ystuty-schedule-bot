@@ -26,6 +26,9 @@ const getDate = (value?: string) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const formatScheduleDate = (date: Date, options?: Intl.DateTimeFormatOptions) =>
+  date.toLocaleDateString('ru-RU', { ...options, timeZone: 'Europe/Moscow' });
+
 const getLessonTypes = (lesson: Lesson) =>
   getLessonTypeStrArr(lesson.type).filter(
     (type) => type !== 'N/A' && type !== '???',
@@ -193,8 +196,8 @@ export function formatScheduleWeekDays({
 
     let message =
       presentation === 'detailed'
-        ? `${withTags ? '<b>' : ''}${scheduleUtil.short2Long2(dayType)} ${dayName}${withTags ? '</b>' : ''}${dayDate ? ` · ${dayDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}` : ''}\n${withTags ? '<i>' : ''}Неделя ${weekNumber} · ${parity}${withTags ? '</i>' : ''}\n\n`
-        : `${scheduleUtil.short2Long2(dayType)} ${withTags ? '<b>Расписание на <code>' : 'Расписание на '}${dayName}${withTags ? '</code></b>' : ''}${weekNumber ? ` [${weekNumber}]` : ''}${dayDate ? (withTags ? ` <b>(${isDoneDay ? `<s>${dayDate.toLocaleDateString('ru-RU')}</s>` : dayDate.toLocaleDateString('ru-RU')})</b>` : ` (${dayDate.toLocaleDateString('ru-RU')})`) : ''}${isDoneDay ? ' ✅' : ''} ${compactParity}\n`;
+        ? `${withTags ? '<b>' : ''}${scheduleUtil.short2Long2(dayType)} ${dayName}${withTags ? '</b>' : ''}${dayDate ? ` · ${formatScheduleDate(dayDate, { day: 'numeric', month: 'long' })}` : ''}\n${withTags ? '<i>' : ''}Неделя ${weekNumber} · ${parity}${withTags ? '</i>' : ''}\n\n`
+        : `${scheduleUtil.short2Long2(dayType)} ${withTags ? '<b>Расписание на <code>' : 'Расписание на '}${dayName}${withTags ? '</code></b>' : ''}${weekNumber ? ` [${weekNumber}]` : ''}${dayDate ? (withTags ? ` <b>(${isDoneDay ? `<s>${formatScheduleDate(dayDate)}</s>` : formatScheduleDate(dayDate)})</b>` : ` (${formatScheduleDate(dayDate)})`) : ''}${isDoneDay ? ' ✅' : ''} ${compactParity}\n`;
 
     let lastLesson: Lesson | null = null;
     for (const [index, lesson] of lessons.entries()) {

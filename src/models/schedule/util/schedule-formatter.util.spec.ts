@@ -50,6 +50,24 @@ const format = (
   });
 
 describe('formatScheduleWeekDays', () => {
+  it('formats schedule dates in Moscow timezone independently of the process timezone', () => {
+    const originalTimeZone = process.env.TZ;
+    process.env.TZ = 'UTC';
+
+    try {
+      expect(format([lesson()])).toContain('(01.09.2026)');
+      expect(
+        format([lesson()], { targetType: 'group', presentation: 'detailed' }),
+      ).toContain('Вторник · 1 сентября');
+    } finally {
+      if (originalTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTimeZone;
+      }
+    }
+  });
+
   it('keeps the compact view concise and includes all lesson data', () => {
     const result = format([
       lesson({

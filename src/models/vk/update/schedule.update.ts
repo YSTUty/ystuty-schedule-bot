@@ -53,7 +53,9 @@ export class ScheduleUpdate {
     );
     if (!target) return;
 
-    await ctx.setActivity();
+    try {
+      await ctx.setActivity();
+    } catch {}
 
     let message: string | false | null;
     let days: number = 0;
@@ -130,7 +132,9 @@ export class ScheduleUpdate {
     );
     if (!target) return;
 
-    await ctx.setActivity();
+    try {
+      await ctx.setActivity();
+    } catch {}
 
     const [days, scheduleMessage] = await this.scheduleService.findNext({
       skipDays,

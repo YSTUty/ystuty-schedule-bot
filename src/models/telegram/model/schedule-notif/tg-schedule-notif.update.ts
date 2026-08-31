@@ -1,4 +1,4 @@
-import { Action, Ctx, Update } from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Update } from '@xtcry/nestjs-telegraf';
 
 import { TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
@@ -25,6 +25,7 @@ export class TgScheduleNotifUpdate {
   ) {}
 
   @TgHearsLocale(LocalePhrase.Button_ScheduleNotif)
+  @Command('notif')
   @Action(LocalePhrase.Button_ScheduleNotif)
   async openFromMenu(@Ctx() ctx: ICbQOrMsg) {
     if (!(await this.canManage(ctx))) {

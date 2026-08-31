@@ -1,5 +1,5 @@
 import { UseFilters } from '@nestjs/common';
-import { Ctx, OnMessageEvent, Update } from 'nestjs-vk';
+import { Ctx, Hears, OnMessageEvent, Update } from 'nestjs-vk';
 
 import { APIError } from 'vk-io';
 
@@ -30,6 +30,7 @@ export class VkScheduleNotifUpdate {
   ) {}
 
   @VkHearsLocale(LocalePhrase.Button_ScheduleNotif)
+  @Hears('/notif')
   async openFromMenu(@Ctx() ctx: IMessageContext) {
     if (!(await this.canManage(ctx))) {
       await ctx.send(ctx.i18n.t(LocalePhrase.Common_NoAccess));

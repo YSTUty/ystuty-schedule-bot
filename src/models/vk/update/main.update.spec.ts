@@ -48,6 +48,34 @@ describe('VK MainUpdate', () => {
     expect(
       getMessageEventCondition(MainUpdate.prototype, 'onGroupSelect'),
     ).toEqual({ groupAction: 'select' });
+    expect(
+      getMessageEventCondition(MainUpdate.prototype, 'onHelpMessageEvent'),
+    ).toEqual({ mainAction: 'help' });
+  });
+
+  it('acknowledges the inline help button before showing help', async () => {
+    const keyboard = { inline: jest.fn().mockReturnValue('start') };
+    (update as any).keyboardFactory.getStart = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    (update as any).keyboardFactory.needInline = jest
+      .fn()
+      .mockReturnValue(false);
+    const ctx = {
+      isDM: true,
+      state: {},
+      i18n: { t: jest.fn().mockReturnValue('Помощь') },
+      answer: jest.fn(),
+      send: jest.fn(),
+    } as any;
+
+    await update.onHelpMessageEvent(ctx);
+
+    expect(ctx.answer).toHaveBeenCalledWith({
+      type: 'show_snackbar',
+      text: 'Открываю справку',
+    });
+    expect(ctx.send).toHaveBeenCalledWith('Помощь', { keyboard: 'start' });
   });
 
   it('sends a feature card after the start message in a VK DM', async () => {
@@ -178,10 +206,10 @@ describe('VK MainUpdate', () => {
     expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
   });
 
-  it('replies to an unhandled VK DM message with the start keyboard', async () => {
+  it('replies to an unhandled VK DM message with an inline help button', async () => {
     isTeacherSearchFallbackQuery.mockReturnValue(false);
-    const keyboard = { inline: jest.fn() };
-    (update as any).keyboardFactory.getStart = jest
+    const keyboard = { inline_keyboard: [] };
+    (update as any).keyboardFactory.getUnknownMessageHelp = jest
       .fn()
       .mockReturnValue(keyboard);
     const ctx = {
@@ -196,7 +224,9 @@ describe('VK MainUpdate', () => {
 
     expect(isTeacherSearchFallbackQuery).toHaveBeenCalledWith('аудитория');
     expect(openTeachersList).not.toHaveBeenCalled();
-    expect((update as any).keyboardFactory.getStart).toHaveBeenCalledWith(ctx);
+    expect(
+      (update as any).keyboardFactory.getUnknownMessageHelp,
+    ).toHaveBeenCalledWith(ctx);
     expect(ctx.i18n.t).toHaveBeenCalledWith(LocalePhrase.Page_UnknownMessage);
     expect(ctx.send).toHaveBeenCalledWith('Не понял сообщение.', { keyboard });
   });

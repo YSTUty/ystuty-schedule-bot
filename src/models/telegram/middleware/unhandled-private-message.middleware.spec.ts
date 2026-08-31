@@ -5,7 +5,7 @@ import { UnhandledPrivateMessageMiddleware } from './unhandled-private-message.m
 describe('UnhandledPrivateMessageMiddleware', () => {
   const createMiddleware = () => {
     const bot = { on: jest.fn() };
-    const keyboardFactory = { getStart: jest.fn() };
+    const keyboardFactory = { getUnknownMessageHelp: jest.fn() };
     const middleware = new UnhandledPrivateMessageMiddleware(
       bot as any,
       keyboardFactory as any,
@@ -21,11 +21,11 @@ describe('UnhandledPrivateMessageMiddleware', () => {
     expect(bot.on).toHaveBeenCalledWith('text', expect.any(Function));
   });
 
-  it('replies to unhandled private texts with the start keyboard', async () => {
+  it('replies to unhandled private texts with an inline help button', async () => {
     const { bot, keyboardFactory } = createMiddleware();
     const fallback = bot.on.mock.calls[0][1];
     const keyboard = { reply_markup: { keyboard: [] } };
-    keyboardFactory.getStart.mockReturnValue(keyboard);
+    keyboardFactory.getUnknownMessageHelp.mockReturnValue(keyboard);
     const ctx = {
       chat: { type: 'private' },
       i18n: { t: jest.fn().mockReturnValue('Не понял сообщение.') },
@@ -34,7 +34,7 @@ describe('UnhandledPrivateMessageMiddleware', () => {
 
     await fallback(ctx);
 
-    expect(keyboardFactory.getStart).toHaveBeenCalledWith(ctx);
+    expect(keyboardFactory.getUnknownMessageHelp).toHaveBeenCalledWith(ctx);
     expect(ctx.i18n.t).toHaveBeenCalledWith(LocalePhrase.Page_UnknownMessage);
     expect(ctx.replyWithHTML).toHaveBeenCalledWith(
       'Не понял сообщение.',
@@ -52,7 +52,7 @@ describe('UnhandledPrivateMessageMiddleware', () => {
 
     await fallback(ctx);
 
-    expect(keyboardFactory.getStart).not.toHaveBeenCalled();
+    expect(keyboardFactory.getUnknownMessageHelp).not.toHaveBeenCalled();
     expect(ctx.replyWithHTML).not.toHaveBeenCalled();
   });
 });

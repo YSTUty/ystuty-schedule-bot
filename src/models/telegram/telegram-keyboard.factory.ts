@@ -96,6 +96,18 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
+  /** Inline-кнопка справки для ответа на нераспознанное сообщение. */
+  public getUnknownMessageHelp(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Help),
+          'help:open',
+        ),
+      ],
+    ]);
+  }
+
   /** Inline-клавиатура категории пользовательского отзыва. */
   public getFeedbackCategories(ctx: IContext) {
     return Markup.inlineKeyboard([

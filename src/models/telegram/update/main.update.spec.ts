@@ -37,6 +37,26 @@ describe('Telegram MainUpdate', () => {
     );
   });
 
+  it('acknowledges the inline help button before showing help', async () => {
+    const keyboard = { reply_markup: { keyboard: [] } };
+    (update as any).keyboardFactory.getStart = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    const ctx = {
+      updateType: 'callback_query',
+      chat: { type: 'private' },
+      state: {},
+      i18n: { t: jest.fn().mockReturnValue('Помощь') },
+      tryAnswerCbQuery: jest.fn(),
+      replyWithHTML: jest.fn(),
+    } as any;
+
+    await update.hearHelp(ctx);
+
+    expect(ctx.tryAnswerCbQuery).toHaveBeenCalledTimes(1);
+    expect(ctx.replyWithHTML).toHaveBeenCalledWith('Помощь', keyboard);
+  });
+
   it('sends a feature card after the start message in a private chat', async () => {
     const startKeyboard = { reply_markup: { keyboard: [] } };
     const welcomeKeyboard = { reply_markup: { inline_keyboard: [] } };

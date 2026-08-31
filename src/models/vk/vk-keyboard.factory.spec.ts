@@ -49,6 +49,16 @@ describe('VKKeyboardFactory', () => {
     );
   });
 
+  it('builds the fallback help button as an inline callback', () => {
+    const keyboard = new VKKeyboardFactory().getUnknownMessageHelp(ctx);
+    const renderedKeyboard = JSON.parse(String(keyboard));
+
+    expect(renderedKeyboard.buttons[0][0].action).toMatchObject({
+      label: 'button.help',
+      payload: JSON.stringify({ mainAction: 'help' }),
+    });
+  });
+
   it('creates a schedule notif editor within VK inline keyboard limits', () => {
     const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 1,

@@ -262,9 +262,14 @@ export class MainUpdate {
   }
 
   @TgHearsLocale(LocalePhrase.RegExp_Help)
-  async hearHelp(@Ctx() ctx: IMessageContext) {
-    if (ctx.chat.type !== 'private' && !ctx.state.appeal) {
+  @Action('help:open')
+  async hearHelp(@Ctx() ctx: ICbQOrMsg) {
+    if (!ctx.chat || (ctx.chat.type !== 'private' && !ctx.state.appeal)) {
       return;
+    }
+
+    if (ctx.updateType === 'callback_query') {
+      await ctx.tryAnswerCbQuery();
     }
 
     const keyboard = this.keyboardFactory.getStart(ctx);
@@ -366,8 +371,8 @@ export class MainUpdate {
   }
 
   @TgHearsLocale(LocalePhrase.Button_Groups_ListInstAndGroups)
-  @Command('groups')
   @Command('institutes')
+  @Hears(/^институт(ы)?$/i)
   @Action(/pager:inst-list(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i)
   async onInstitutesList(@Ctx() ctx: ICbQOrMsg) {
     let page: number | null = null;
@@ -418,7 +423,9 @@ export class MainUpdate {
     }
   }
 
+  @Command('groups')
   @Command('glist')
+  @Hears(/^групп(а|ы)$/i)
   @Action(
     /pager:glist(:(?<instituteHash>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
   )

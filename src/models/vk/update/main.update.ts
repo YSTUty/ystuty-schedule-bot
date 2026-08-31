@@ -188,6 +188,16 @@ export class MainUpdate {
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Help), { keyboard });
   }
 
+  @OnMessageEvent({ mainAction: 'help' })
+  async onHelpMessageEvent(@Ctx() ctx: IMessageEventContext) {
+    await ctx.answer({ type: 'show_snackbar', text: 'Открываю справку' });
+
+    const keyboard = this.keyboardFactory
+      .getStart(ctx)
+      .inline(this.keyboardFactory.needInline(ctx));
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Help), { keyboard });
+  }
+
   @On('chat_invite_user')
   async onChatInviteUser(@Ctx() ctx: IMessageContext) {
     if (ctx.eventMemberId !== -ctx.$groupId!) {
@@ -373,12 +383,15 @@ export class MainUpdate {
   }
 
   @Hears('/institutes')
+  @Hears(/^институт(ы)?$/i)
   @VkHearsLocale(LocalePhrase.Button_Groups_ListInstAndGroups)
   async onInstitutesList(@Ctx() ctx: IMessageContext | IMessageEventContext) {
     await this.renderInstitutesList(ctx);
   }
 
+  @Hears('/groups')
   @Hears('/glist')
+  @Hears(/^групп(а|ы)$/i)
   async onGroupsList(@Ctx() ctx: IMessageContext | IMessageEventContext) {
     await this.renderGroupsList(ctx);
   }
@@ -651,7 +664,7 @@ export class MainUpdate {
     }
 
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_UnknownMessage), {
-      keyboard: this.keyboardFactory.getStart(ctx),
+      keyboard: this.keyboardFactory.getUnknownMessageHelp(ctx),
     });
   }
 }

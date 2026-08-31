@@ -25,7 +25,7 @@ export class UnhandledPrivateMessageMiddleware implements OnApplicationBootstrap
       const context = ctx as IContext;
       await context.replyWithHTML(
         context.i18n.t(LocalePhrase.Page_UnknownMessage),
-        this.keyboardFactory.getStart(context),
+        this.keyboardFactory.getUnknownMessageHelp(context),
       );
     });
   }

@@ -39,6 +39,19 @@ describe('TelegramKeyboardFactory', () => {
     );
   });
 
+  it('builds the fallback help button as an inline callback', () => {
+    const keyboard = new TelegramKeyboardFactory().getUnknownMessageHelp(ctx);
+
+    expect(keyboard.reply_markup.inline_keyboard).toEqual([
+      [
+        expect.objectContaining({
+          callback_data: 'help:open',
+          text: 'button.help',
+        }),
+      ],
+    ]);
+  });
+
   it('opens hour selection before choosing minutes in the notif editor', () => {
     const keyboard = new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 7,

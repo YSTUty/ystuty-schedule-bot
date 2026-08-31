@@ -10,6 +10,7 @@ export enum LocalePhrase {
 
   // Buttons
   Button_Cancel = 'button.cancel',
+  Button_Help = 'button.help',
   Button_AuthLink = 'button.auth_link',
   Button_AuthLink_SocialConnect = 'button.auth_link_connect',
   Button_Profile = 'button.profile',

@@ -173,6 +173,19 @@ export class VKKeyboardFactory {
     ]);
   }
 
+  /** Inline-кнопка справки для ответа на нераспознанное сообщение. */
+  public getUnknownMessageHelp(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Help),
+          payload: { mainAction: 'help' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+    ]).inline();
+  }
+
   /** Inline-клавиатура категории пользовательского отзыва. */
   public getFeedbackCategories(ctx: IContext) {
     return Keyboard.keyboard([

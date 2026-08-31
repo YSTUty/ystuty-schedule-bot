@@ -5,8 +5,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  IMAGE_APP: ghcr.io/${{ github.repository | lower }}
+  IMAGE_APP: ghcr.io/ystuty/ystuty-schedule-bot
 
 jobs:
   build-check:

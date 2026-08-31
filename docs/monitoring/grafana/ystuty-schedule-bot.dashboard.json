@@ -3,10 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
+        "datasource": { "type": "datasource", "uid": "grafana" },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -16,597 +13,398 @@
     ]
   },
   "editable": true,
-  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unitScale": true
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "ystuty_user_count{app=~\"$app\"}",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Users",
-      "type": "timeseries"
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short",
-          "unitScale": true
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
+      "id": 10,
+      "type": "stat",
+      "title": "Process uptime",
+      "description": "Время непрерывной работы процесса бота.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
+      "targets": [{ "expr": "time() - process_start_time_seconds{app=~\"$app\"}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "justifyMode": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Active users",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 },
+      "targets": [{ "expr": "ystuty_user_status_count{app=~\"$app\", status=\"active\"}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Reachable Telegram users",
+      "description": "Профили с доступным ЛС, не заблокировавшие бота.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 1 },
+      "targets": [{ "expr": "ystuty_user_social_count{app=~\"$app\", social=\"telegram\"}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Reachable VK users",
+      "description": "Профили с доступным ЛС, не заблокировавшие бота.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 },
+      "targets": [{ "expr": "ystuty_user_social_count{app=~\"$app\", social=\"vkontakte\"}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "All updates in 30 minutes",
+      "description": "Сумма обработанных Telegram и VK updates за последние 30 минут.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 },
+      "targets": [{ "expr": "(sum(increase(ystuty_telegram_request_total{app=~\"$app\"}[30m])) or vector(0)) + (sum(increase(ystuty_vk_request_total{app=~\"$app\"}[30m])) or vector(0))", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Schedule requests in 30 minutes",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 },
+      "targets": [{ "expr": "sum(increase(ystuty_schedule_request_total{app=~\"$app\"}[30m])) or vector(0)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }
+    },
+    {
       "id": 2,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.3.3",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "ystuty_user_social_count{app=~\"$app\"}",
-          "legendFormat": "{{social}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Social users with available direct messages",
-      "type": "timeseries"
+      "type": "row",
+      "title": "Inbound updates and handler performance",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "panels": []
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unitScale": true
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 11,
-        "x": 0,
-        "y": 6
-      },
-      "id": 5,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
+      "id": 20,
+      "type": "timeseries",
+      "title": "Inbound updates — rolling 30 minutes",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
       "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "increase(ystuty_telegram_request_total{app=~\"$app\"}[30m])",
-          "instant": false,
-          "legendFormat": "Telegram {{updateType}} · {{status}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "increase(ystuty_vk_request_total{app=~\"$app\"}[30m])",
-          "instant": false,
-          "legendFormat": "VK {{updateType}} · {{status}}",
-          "range": true,
-          "refId": "B"
-        }
+        { "expr": "increase(ystuty_telegram_request_total{app=~\"$app\"}[30m])", "legendFormat": "Telegram · {{updateType}} · {{status}}", "refId": "A" },
+        { "expr": "increase(ystuty_vk_request_total{app=~\"$app\"}[30m])", "legendFormat": "VK · {{updateType}} · {{status}}", "refId": "B" }
       ],
-      "title": "Bot activity in the last 30 minutes",
-      "type": "timeseries"
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never", "spanNulls": false, "stacking": { "mode": "none", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short",
-          "unitScale": true
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 13,
-        "x": 11,
-        "y": 6
-      },
-      "id": 6,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "10.3.3",
+      "id": 21,
+      "type": "timeseries",
+      "title": "Handler errors — rolling 30 minutes",
+      "description": "Series появятся только после ошибок обработчиков; отсутствие линии означает отсутствие зафиксированных ошибок.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
       "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "(sum(increase(ystuty_telegram_request_total{app=~\"$app\"}[30m])) or vector(0)) + (sum(increase(ystuty_vk_request_total{app=~\"$app\"}[30m])) or vector(0))",
-          "instant": false,
-          "legendFormat": "All updates",
-          "range": true,
-          "refId": "A"
-        }
+        { "expr": "sum by (updateType, status) (increase(ystuty_telegram_request_total{app=~\"$app\", status!=\"success\"}[30m]))", "legendFormat": "Telegram · {{updateType}} · {{status}}", "refId": "A" },
+        { "expr": "sum by (updateType, status) (increase(ystuty_vk_request_total{app=~\"$app\", status!=\"success\"}[30m]))", "legendFormat": "VK · {{updateType}} · {{status}}", "refId": "B" }
       ],
-      "title": "All updates in the last 30 minutes",
-      "type": "gauge"
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "custom": { "drawStyle": "bars", "fillOpacity": 35, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unitScale": true
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 12
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.3.3",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "topk(5, sum by (target_type, target) (increase(ystuty_schedule_target_request_total{app=~\"$app\"}[12h])))",
-          "instant": false,
-          "legendFormat": "{{target_type}} · {{target}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Top 5 schedule targets in 12 hours",
-      "type": "timeseries"
+      "id": 22,
+      "type": "timeseries",
+      "title": "Telegram handler duration p95",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, updateType) (rate(ystuty_telegram_request_duration_bucket{app=~\"$app\", status=\"success\"}[$__rate_interval])))", "legendFormat": "{{updateType}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short",
-          "unitScale": true
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 22
-      },
+      "id": 23,
+      "type": "timeseries",
+      "title": "VK handler duration p95",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, updateType) (rate(ystuty_vk_request_duration_bucket{app=~\"$app\", status=\"success\"}[$__rate_interval])))", "legendFormat": "{{updateType}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
       "id": 3,
-      "options": {
-        "displayMode": "lcd",
-        "maxVizHeight": 300,
-        "minVizHeight": 16,
-        "minVizWidth": 75,
-        "namePlacement": "auto",
-        "orientation": "vertical",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "sizing": "manual",
-        "valueMode": "color"
-      },
-      "pluginVersion": "10.3.3",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum by (target_type) (increase(ystuty_schedule_request_total{app=~\"$app\"}[$__range]))",
-          "instant": false,
-          "legendFormat": "{{target_type}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
+      "type": "row",
+      "title": "Audience and conversations",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Users by status",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 24 },
+      "targets": [{ "expr": "ystuty_user_status_count{app=~\"$app\"}", "legendFormat": "{{status}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Reachable direct-message profiles",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 24 },
+      "targets": [{ "expr": "ystuty_user_social_count{app=~\"$app\"}", "legendFormat": "{{social}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 32,
+      "type": "bargauge",
+      "title": "Social profile availability and authorization",
+      "description": "Раскладка всех профилей по соцсети, доступности ЛС, блокировке бота и авторизации в ЯГТУ ID.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
+      "targets": [{ "expr": "sum by (social, is_blocked, has_dm, is_authorized) (ystuty_user_social_status_count{app=~\"$app\"})", "legendFormat": "{{social}} · DM={{has_dm}} · blocked={{is_blocked}} · auth={{is_authorized}}", "instant": true, "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showUnfilled": true }
+    },
+    {
+      "id": 33,
+      "type": "bargauge",
+      "title": "Conversations where the bot is absent",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
+      "targets": [{ "expr": "sum by (social, chat_status) (ystuty_conversation_status_count{app=~\"$app\", is_leaved=\"true\"})", "legendFormat": "{{social}} · {{chat_status}}", "instant": true, "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }, "overrides": [] },
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showUnfilled": true }
+    },
+    {
+      "id": 4,
+      "type": "row",
+      "title": "Schedule usage",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
       "title": "Schedule requests by target type",
-      "type": "bargauge"
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "targets": [{ "expr": "sum by (target_type) (increase(ystuty_schedule_request_total{app=~\"$app\"}[$__rate_interval]))", "legendFormat": "{{target_type}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "bars", "fillOpacity": 30, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "total"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Selected schedule target — rolling activity",
+      "description": "Выбери тип и конкретную цель в переменных dashboard. До первого запроса series подробной метрики не существует.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "targets": [{ "expr": "sum by (target_type, target) (increase(ystuty_schedule_target_request_total{app=~\"$app\", target_type=~\"$target_type\", target=~\"$target\"}[$__rate_interval]))", "legendFormat": "{{target_type}} · {{target}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 42,
+      "type": "bargauge",
+      "title": "Top 10 groups in selected period",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "targets": [{ "expr": "topk(10, sum by (target) (increase(ystuty_schedule_target_request_total{app=~\"$app\", target_type=\"group\"}[$__range])))", "legendFormat": "{{target}}", "instant": true, "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showUnfilled": true }
+    },
+    {
+      "id": 43,
+      "type": "bargauge",
+      "title": "Top 10 teachers in selected period",
+      "description": "Текущая метрика хранит ID преподавателя в label target.",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "targets": [{ "expr": "topk(10, sum by (target) (increase(ystuty_schedule_target_request_total{app=~\"$app\", target_type=\"teacher\"}[$__range])))", "legendFormat": "{{target}}", "instant": true, "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showUnfilled": true }
+    },
+    {
+      "id": 44,
+      "type": "table",
+      "title": "Top 20 detailed schedule targets in selected period",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 56 },
+      "targets": [{ "expr": "topk(20, sum by (target_type, target) (increase(ystuty_schedule_target_request_total{app=~\"$app\"}[$__range])))", "format": "table", "instant": true, "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "showHeader": true, "sortBy": [{ "displayName": "Value", "desc": true }] }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Node.js runtime",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 65 },
+      "panels": []
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Process and heap memory",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 66 },
+      "targets": [
+        { "expr": "process_resident_memory_bytes{app=~\"$app\"}", "legendFormat": "RSS", "refId": "A" },
+        { "expr": "nodejs_heap_size_used_bytes{app=~\"$app\"}", "legendFormat": "Heap used", "refId": "B" },
+        { "expr": "nodejs_heap_size_total_bytes{app=~\"$app\"}", "legendFormat": "Heap total", "refId": "C" },
+        { "expr": "nodejs_external_memory_bytes{app=~\"$app\"}", "legendFormat": "External", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "CPU and event-loop lag",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 66 },
+      "targets": [
+        { "expr": "100 * rate(process_cpu_seconds_total{app=~\"$app\"}[$__rate_interval])", "legendFormat": "CPU", "refId": "A" },
+        { "expr": "1000 * nodejs_eventloop_lag_p50_seconds{app=~\"$app\"}", "legendFormat": "Event loop p50", "refId": "B" },
+        { "expr": "1000 * nodejs_eventloop_lag_p90_seconds{app=~\"$app\"}", "legendFormat": "Event loop p90", "refId": "C" },
+        { "expr": "1000 * nodejs_eventloop_lag_p99_seconds{app=~\"$app\"}", "legendFormat": "Event loop p99", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [{ "matcher": { "id": "byName", "options": "CPU" }, "properties": [{ "id": "unit", "value": "percent" }] }, { "matcher": { "id": "byRegexp", "options": "Event loop.*" }, "properties": [{ "id": "unit", "value": "ms" }] }] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Open file descriptors and active resources",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 74 },
+      "targets": [
+        { "expr": "process_open_fds{app=~\"$app\"}", "legendFormat": "Open FDs", "refId": "A" },
+        { "expr": "nodejs_active_handles_total{app=~\"$app\"}", "legendFormat": "Active handles", "refId": "B" },
+        { "expr": "nodejs_active_resources_total{app=~\"$app\"}", "legendFormat": "Active resources", "refId": "C" },
+        { "expr": "nodejs_active_requests_total{app=~\"$app\"}", "legendFormat": "Active requests", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 53,
+      "type": "timeseries",
+      "title": "Garbage collection duration p95",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 74 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, kind) (rate(nodejs_gc_duration_seconds_bucket{app=~\"$app\"}[$__rate_interval])))", "legendFormat": "{{kind}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 54,
+      "type": "timeseries",
+      "title": "V8 heap spaces used",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 82 },
+      "targets": [{ "expr": "nodejs_heap_space_size_used_bytes{app=~\"$app\"}", "legendFormat": "{{space}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     }
   ],
-  "refresh": "",
+  "refresh": "30s",
   "schemaVersion": 39,
-  "tags": [
-    "ystuty",
-    "schedule-bot",
-    "prometheus"
-  ],
+  "tags": ["ystuty", "schedule-bot", "prometheus", "nodejs"],
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "",
-          "value": ""
-        },
+        "name": "DS_PROMETHEUS",
+        "label": "Prometheus datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "", "value": "" },
         "hide": 0,
         "includeAll": false,
-        "label": "Prometheus datasource",
         "multi": false,
-        "name": "DS_PROMETHEUS",
         "options": [],
-        "query": "prometheus",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
+        "skipUrlSync": false
       },
       {
-        "current": {
-          "selected": true,
-          "text": [
-            "ystuty-schedule-bot"
-          ],
-          "value": [
-            "ystuty-schedule-bot"
-          ]
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
-        },
-        "definition": "label_values(ystuty_user_count, app)",
-        "hide": 0,
-        "includeAll": false,
-        "label": "App",
-        "multi": true,
         "name": "app",
+        "label": "App",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "definition": "label_values(ystuty_user_count, app)",
+        "query": { "qryType": 1, "query": "label_values(ystuty_user_count, app)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "current": { "selected": true, "text": ["ystuty-schedule-bot"], "value": ["ystuty-schedule-bot"] },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
         "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(ystuty_user_count, app)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
+        "sort": 0
+      },
+      {
+        "name": "target_type",
+        "label": "Schedule target type",
+        "type": "custom",
+        "query": "group,teacher",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "options": [
+          { "selected": false, "text": "group", "value": "group" },
+          { "selected": false, "text": "teacher", "value": "teacher" }
+        ],
+        "skipUrlSync": false
+      },
+      {
+        "name": "target",
+        "label": "Schedule target",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "definition": "label_values(ystuty_schedule_target_request_total{app=~\"$app\", target_type=~\"$target_type\"}, target)",
+        "query": { "qryType": 1, "query": "label_values(ystuty_schedule_target_request_total{app=~\"$app\", target_type=~\"$target_type\"}, target)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "options": [],
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1
       }
     ]
   },
-  "time": {
-    "from": "now-2d",
-    "to": "now"
-  },
+  "time": { "from": "now-2d", "to": "now" },
   "timepicker": {},
   "timezone": "",
   "title": "[YSTUty] Schedule bot",
   "uid": "3Pk2TS0Ik",
-  "version": 7,
+  "version": 8,
   "weekStart": ""
 }

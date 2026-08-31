@@ -44,7 +44,9 @@ export class ScheduleNotifDeliveryService {
         !recipient ||
         notif.conversation?.isLeaved ||
         (recipient.type === 'user' &&
-          (!recipient.userSocial.hasDM || recipient.userSocial.isBlockedBot))
+          (!recipient.userSocial.hasDM ||
+            recipient.userSocial.isBlockedBot ||
+            recipient.userSocial.broadcastDisabledAt))
       ) {
         return await this.markSkipped(
           notif,

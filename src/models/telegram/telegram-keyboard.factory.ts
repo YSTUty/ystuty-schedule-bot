@@ -598,7 +598,9 @@ export class TelegramKeyboardFactory {
           ? 'Подключить или обновить ЯГТУ.ID'
           : actionButton.type === 'start'
             ? 'Начать'
-            : 'Выбрать актуальную группу');
+            : actionButton.type === 'unsubscribe'
+              ? '🔕 Отключить уведомления'
+              : 'Выбрать актуальную группу');
       rows.push([
         Markup.button.callback(
           label,
@@ -615,6 +617,24 @@ export class TelegramKeyboardFactory {
       ]);
     }
     return Markup.inlineKeyboard(rows);
+  }
+
+  /** Подтверждение отключения персональных рассылок. */
+  public getBroadcastUnsubscribeConfirmation(ctx: IContext) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_UnsubscribeConfirm),
+          'broadcast:unsubscribe:confirm',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Cancel),
+          'broadcast:unsubscribe:cancel',
+        ),
+      ],
+    ]);
   }
 
   public getBroadcastCampaignDeleteSelector(params: {
@@ -857,6 +877,7 @@ export class TelegramKeyboardFactory {
     const selectGroup = getAction('select_group');
     const auth = getAction('auth');
     const start = getAction('start');
+    const unsubscribe = getAction('unsubscribe');
     const link = getAction('link');
 
     return Markup.inlineKeyboard([
@@ -910,6 +931,24 @@ export class TelegramKeyboardFactory {
               Markup.button.callback(
                 ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionStartText),
                 'broadcast:wizard:actions:start:text',
+              ),
+            ],
+          ]
+        : []),
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionUnsubscribe, {
+            actionButton: unsubscribe,
+          }),
+          'broadcast:wizard:actions:unsubscribe:toggle',
+        ),
+      ],
+      ...(unsubscribe
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionUnsubscribeText),
+                'broadcast:wizard:actions:unsubscribe:text',
               ),
             ],
           ]

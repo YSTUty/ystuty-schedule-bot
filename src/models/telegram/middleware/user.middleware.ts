@@ -8,6 +8,10 @@ import { IContext } from '@my-interfaces/telegram';
 
 import { ConcurrencyService } from '../../concurrency/concurrency.service';
 import { SocialService } from '../../social/social.service';
+import {
+  isBroadcastUnsubscribeCallback,
+  isBroadcastUnsubscribeText,
+} from '../../user/broadcast-preference.util';
 import { UserService } from '../../user/user.service';
 
 @Injectable()
@@ -65,6 +69,26 @@ export class UserMiddleware implements MiddlewareObj<IContext> {
       if (ctx.userSocial.isBlockedBot) {
         ctx.userSocial.isBlockedBot = false;
         await this.userService.saveUserSocial(ctx.userSocial);
+      }
+
+      const callbackData =
+        ctx.callbackQuery && 'data' in ctx.callbackQuery
+          ? ctx.callbackQuery.data
+          : undefined;
+      const messageText =
+        ctx.message && 'text' in ctx.message ? ctx.message.text : undefined;
+      const isUnsubscribeFlow =
+        isBroadcastUnsubscribeCallback(callbackData) ||
+        isBroadcastUnsubscribeText(messageText);
+      if (
+        ctx.chat?.type === 'private' &&
+        !isUnsubscribeFlow &&
+        typeof this.userService.restoreBroadcastsIfDisabled === 'function' &&
+        (await this.userService.restoreBroadcastsIfDisabled(ctx.userSocial))
+      ) {
+        await ctx.replyWithHTML(
+          ctx.i18n.t(LocalePhrase.Broadcast_Notification_SubscriptionsRestored),
+        );
       }
 
       if (ctx.user?.isBanned) {

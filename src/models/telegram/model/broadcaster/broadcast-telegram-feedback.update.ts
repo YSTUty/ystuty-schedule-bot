@@ -31,7 +31,8 @@ export class BroadcastTelegramFeedbackUpdate {
       userSocialId: ctx.userSocial?.id,
       action: action as BroadcastFeedbackAction,
     });
-    if (result?.created && action === 'initial') {
+    // Повторный callback восстанавливает keyboard, если первое обновление UI не дошло.
+    if (result && action === 'initial') {
       const afterClickMode = getBroadcastFeedbackAfterClickMode(
         result.feedbackButton,
       );

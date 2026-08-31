@@ -71,11 +71,14 @@ button:
     action_select_group: '🎓 Актуальная группа: ${actionButton ? "вкл" : "выкл"}'
     action_auth: '🔐 ЯГТУ.ID: ${actionButton ? "вкл" : "выкл"}'
     action_start: '🚀 Начать: ${actionButton ? "вкл" : "выкл"}'
+    action_unsubscribe: '🔕 Отключить уведомления: ${actionButton ? "вкл" : "выкл"}'
     action_link: '🔗 Кнопка-ссылка: ${actionButton ? "вкл" : "выкл"}'
     action_text: ✏️ Изменить текст кнопки
     action_select_group_text: '✏️ Текст: группа'
     action_auth_text: '✏️ Текст: ЯГТУ.ID'
     action_start_text: '✏️ Текст: начать'
+    action_unsubscribe_text: '✏️ Текст: отключить уведомления'
+    unsubscribe_confirm: '🔕 Отключить уведомления'
     action_link_text: '✏️ Текст: ссылка'
     action_link_url: 🔗 Изменить ссылку
     back: ↩️ Назад
@@ -351,6 +354,12 @@ page:
       Включай нужные действия и при необходимости меняй их текст. Кнопки добавляются к каждому сообщению рассылки.
       Сейчас:
       ${actionKeyboardSummary}
+    unsubscribe_confirm: |
+      🔕 Отключить уведомления?
+
+      Бот больше не будет сам отправлять тебе рассылки и личные уведомления с расписанием.
+      Сообщения в беседах останутся.
+    action_text_select: Выбери кнопку, текст которой нужно изменить.
     action_text: Отправь текст для дополнительной кнопки. Максимум 40 символов.
     action_text_invalid: Текст кнопки должен содержать от 1 до 40 символов.
     action_link_url: Отправь ссылку для кнопки. Разрешены только адреса http:// или https://.
@@ -465,5 +474,7 @@ broadcast:
     feedback_already_received: Feedback уже учтён.
     feedback_unavailable: Эта кнопка больше недоступна.
     action_unavailable: Это действие больше недоступно.
+    unsubscribed: 🔕 Уведомления отключены. При следующем сообщении боту в ЛС они снова включатся.
+    subscriptions_restored: 🔔 Уведомления снова включены.
     settings_applied: Настройки применены.
     settings_incompatible: Настройки этой рассылки несовместимы с текущей версией.

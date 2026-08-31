@@ -11,6 +11,7 @@ import { IContext } from '@my-interfaces/vk';
 import {
   BroadcastActionKeyboard,
   BroadcastFeedbackButton,
+  BroadcastRecipientAction,
   getBroadcastFeedbackAfterClickMode,
 } from '../broadcast/broadcast.types';
 import { FeedbackCategory } from '../feedback/feedback.types';
@@ -806,7 +807,9 @@ export class VKKeyboardFactory {
                 ? 'Подключить или обновить ЯГТУ.ID'
                 : actionButton.type === 'start'
                   ? 'Начать'
-                  : 'Выбрать актуальную группу'),
+                  : actionButton.type === 'unsubscribe'
+                    ? '🔕 Отключить уведомления'
+                    : 'Выбрать актуальную группу'),
           ),
           payload: {
             broadcastRecipientAction: actionButton.type,
@@ -1064,7 +1067,11 @@ export class VKKeyboardFactory {
                   },
                 ),
                 payload: { broadcastAction: 'feedbackAfterDelete' },
-                color: Keyboard.SECONDARY_COLOR,
+                color:
+                  getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                  'delete'
+                    ? Keyboard.POSITIVE_COLOR
+                    : Keyboard.SECONDARY_COLOR,
               }),
               Keyboard.callbackButton({
                 label: ctx.i18n.t(
@@ -1076,7 +1083,10 @@ export class VKKeyboardFactory {
                   },
                 ),
                 payload: { broadcastAction: 'feedbackAfterKeep' },
-                color: Keyboard.SECONDARY_COLOR,
+                color:
+                  getBroadcastFeedbackAfterClickMode(feedbackButton) === 'keep'
+                    ? Keyboard.POSITIVE_COLOR
+                    : Keyboard.SECONDARY_COLOR,
               }),
               Keyboard.callbackButton({
                 label: ctx.i18n.t(
@@ -1088,7 +1098,11 @@ export class VKKeyboardFactory {
                   },
                 ),
                 payload: { broadcastAction: 'feedbackAfterReplace' },
-                color: Keyboard.SECONDARY_COLOR,
+                color:
+                  getBroadcastFeedbackAfterClickMode(feedbackButton) ===
+                  'replace'
+                    ? Keyboard.POSITIVE_COLOR
+                    : Keyboard.SECONDARY_COLOR,
               }),
             ],
             ...(getBroadcastFeedbackAfterClickMode(feedbackButton) === 'replace'
@@ -1126,6 +1140,7 @@ export class VKKeyboardFactory {
     const selectGroup = getAction('select_group');
     const auth = getAction('auth');
     const start = getAction('start');
+    const unsubscribe = getAction('unsubscribe');
     const link = getAction('link');
 
     return Keyboard.keyboard([
@@ -1156,73 +1171,107 @@ export class VKKeyboardFactory {
           color: start ? Keyboard.POSITIVE_COLOR : Keyboard.NEGATIVE_COLOR,
         }),
         Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionUnsubscribe, {
+            actionButton: unsubscribe,
+          }),
+          payload: { broadcastAction: 'actionUnsubscribeToggle' },
+          color: unsubscribe
+            ? Keyboard.POSITIVE_COLOR
+            : Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLink, {
             actionButton: link,
           }),
           payload: { broadcastAction: 'actionLinkToggle' },
           color: link ? Keyboard.POSITIVE_COLOR : Keyboard.NEGATIVE_COLOR,
         }),
-      ],
-      ...(selectGroup || auth || start
-        ? [
-            [
-              ...(selectGroup
-                ? [
-                    Keyboard.callbackButton({
-                      label: ctx.i18n.t(
-                        LocalePhrase.Button_Broadcast_ActionSelectGroupText,
-                      ),
-                      payload: { broadcastAction: 'actionSelectGroupText' },
-                      color: Keyboard.SECONDARY_COLOR,
-                    }),
-                  ]
-                : []),
-              ...(auth
-                ? [
-                    Keyboard.callbackButton({
-                      label: ctx.i18n.t(
-                        LocalePhrase.Button_Broadcast_ActionAuthText,
-                      ),
-                      payload: { broadcastAction: 'actionAuthText' },
-                      color: Keyboard.SECONDARY_COLOR,
-                    }),
-                  ]
-                : []),
-              ...(start
-                ? [
-                    Keyboard.callbackButton({
-                      label: ctx.i18n.t(
-                        LocalePhrase.Button_Broadcast_ActionStartText,
-                      ),
-                      payload: { broadcastAction: 'actionStartText' },
-                      color: Keyboard.SECONDARY_COLOR,
-                    }),
-                  ]
-                : []),
-            ],
-          ]
-        : []),
-      ...(link
-        ? [
-            [
-              Keyboard.callbackButton({
-                label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLinkText),
-                payload: { broadcastAction: 'actionLinkText' },
-                color: Keyboard.SECONDARY_COLOR,
-              }),
+        ...(link
+          ? [
               Keyboard.callbackButton({
                 label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionLinkUrl),
                 payload: { broadcastAction: 'actionLinkUrl' },
                 color: Keyboard.SECONDARY_COLOR,
               }),
-            ],
-          ]
-        : []),
+            ]
+          : []),
+      ],
       [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_ActionText),
+          payload: { broadcastAction: 'actionTextSelector' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
           payload: { broadcastAction: 'actionBack' },
           color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** Выбор включённой action-кнопки перед редактированием её подписи. */
+  public getBroadcastActionTextSelector(
+    ctx: IContext,
+    actionKeyboard: BroadcastActionKeyboard = [],
+  ) {
+    const actionNames: Record<BroadcastRecipientAction | 'link', string> = {
+      select_group: 'Группа',
+      auth: 'ЯГТУ.ID',
+      start: 'Начать',
+      unsubscribe: 'Отключить уведомления',
+      link: 'Ссылка',
+    };
+    const actionPayloads: Record<BroadcastRecipientAction | 'link', string> = {
+      select_group: 'actionSelectGroupText',
+      auth: 'actionAuthText',
+      start: 'actionStartText',
+      unsubscribe: 'actionUnsubscribeText',
+      link: 'actionLinkText',
+    };
+    const rows: IKeyboardProxyButton[][] = [];
+    for (let index = 0; index < actionKeyboard.length; index += 2) {
+      rows.push(
+        actionKeyboard.slice(index, index + 2).map((actionButton) =>
+          Keyboard.callbackButton({
+            label: getVKButtonLabel(
+              `✏️ ${actionButton.text || actionNames[actionButton.type]}`,
+            ),
+            payload: { broadcastAction: actionPayloads[actionButton.type] },
+            color: Keyboard.SECONDARY_COLOR,
+          }),
+        ),
+      );
+    }
+    rows.push([
+      Keyboard.callbackButton({
+        label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToSettings),
+        payload: { broadcastAction: 'actionSettings' },
+        color: Keyboard.PRIMARY_COLOR,
+      }),
+    ]);
+
+    return Keyboard.keyboard(rows);
+  }
+
+  /** Подтверждение отключения персональных рассылок. */
+  public getBroadcastUnsubscribeConfirmation(ctx: IContext) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Broadcast_UnsubscribeConfirm),
+          payload: { broadcastUnsubscribe: 'confirm' },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Cancel),
+          payload: { broadcastUnsubscribe: 'cancel' },
+          color: Keyboard.SECONDARY_COLOR,
         }),
       ],
     ]);

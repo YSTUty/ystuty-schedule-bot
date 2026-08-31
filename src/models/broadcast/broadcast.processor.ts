@@ -44,6 +44,21 @@ export class BroadcastProcessorBase {
     await this.broadcastService.markCampaignRunning(campaign.id);
 
     try {
+      const recipient = await this.userSocialRepository.findOne({
+        where: {
+          social: job.data.social,
+          socialId: Number(job.data.targetSocialId),
+        },
+        select: { id: true, broadcastDisabledAt: true },
+      });
+      if (recipient?.broadcastDisabledAt) {
+        await this.broadcastService.markDeliverySkipped(
+          job.data.deliveryId,
+          'Recipient disabled personal broadcasts',
+        );
+        return null;
+      }
+
       const transport = this.transportRegistry.get(job.data.social);
       const result = await transport.sendCampaignDelivery({
         campaignId: campaign.id,

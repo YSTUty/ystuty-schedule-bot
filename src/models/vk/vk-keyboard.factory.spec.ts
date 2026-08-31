@@ -179,12 +179,11 @@ describe('VKKeyboardFactory', () => {
     );
   });
 
-  it('distinguishes localized labels and toggle colors for recipient actions', () => {
+  it('keeps action settings within VK limits and opens a separate text selector', () => {
     const actionTextLabels = {
-      'button.broadcast.action_select_group_text': 'Text: group',
-      'button.broadcast.action_auth_text': 'Text: auth',
-      'button.broadcast.action_start_text': 'Text: start',
-      'button.broadcast.action_link_text': 'Text: link',
+      'button.broadcast.action_text': 'Edit title',
+      'button.broadcast.action_link_url': 'Edit URL',
+      'button.broadcast.back_to_settings': 'Back',
     };
     const keyboard = new VKKeyboardFactory().getBroadcastActionSettings(
       {
@@ -197,6 +196,7 @@ describe('VKKeyboardFactory', () => {
         { type: 'select_group' },
         { type: 'auth' },
         { type: 'start' },
+        { type: 'unsubscribe' },
         { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
       ],
     );
@@ -208,12 +208,43 @@ describe('VKKeyboardFactory', () => {
           JSON.parse(button.action.payload).broadcastAction === action,
       );
 
-    expect(getButton('actionSelectGroupText').action.label).toBe('Text: group');
-    expect(getButton('actionAuthText').action.label).toBe('Text: auth');
-    expect(getButton('actionStartText').action.label).toBe('Text: start');
-    expect(getButton('actionLinkText').action.label).toBe('Text: link');
+    expect(renderedKeyboard.buttons).toHaveLength(4);
+    expect(buttons).toHaveLength(8);
+    expect(getButton('actionTextSelector').action.label).toBe('Edit title');
+    expect(getButton('actionLinkUrl').action.label).toBe('Edit URL');
     expect(getButton('actionSelectGroupToggle').color).toBe('positive');
     expect(getButton('actionLinkToggle').color).toBe('positive');
+  });
+
+  it('shows all enabled action buttons on the separate text selector', () => {
+    const keyboard = new VKKeyboardFactory().getBroadcastActionTextSelector(
+      {
+        i18n: { t: (phrase: string) => phrase },
+      } as any,
+      [
+        { type: 'select_group' },
+        { type: 'auth' },
+        { type: 'start' },
+        { type: 'unsubscribe' },
+        { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
+      ],
+    );
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+    const actions = renderedKeyboard.buttons
+      .flat()
+      .map((button: any) => JSON.parse(button.action.payload).broadcastAction);
+
+    expect(renderedKeyboard.buttons).toHaveLength(4);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(6);
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        'actionSelectGroupText',
+        'actionAuthText',
+        'actionStartText',
+        'actionUnsubscribeText',
+        'actionLinkText',
+      ]),
+    );
   });
 
   it('offers every feedback button behavior after the initial click', () => {
@@ -232,5 +263,22 @@ describe('VKKeyboardFactory', () => {
         'feedbackAfterReplace',
       ]),
     );
+  });
+
+  it('highlights the selected feedback behavior in green', () => {
+    const keyboard = new VKKeyboardFactory().getBroadcastFeedbackSettings(ctx, {
+      text: '🫡',
+      afterClickMode: 'keep',
+    });
+    const buttons = JSON.parse(String(keyboard.inline())).buttons.flat();
+    const getButton = (action: string) =>
+      buttons.find(
+        (button: any) =>
+          JSON.parse(button.action.payload).broadcastAction === action,
+      );
+
+    expect(getButton('feedbackAfterKeep').color).toBe('positive');
+    expect(getButton('feedbackAfterDelete').color).toBe('secondary');
+    expect(getButton('feedbackAfterReplace').color).toBe('secondary');
   });
 });

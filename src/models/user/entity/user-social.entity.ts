@@ -73,6 +73,10 @@ export class UserSocial {
   @Column({ type: 'timestamp', nullable: true })
   public lastInteractionAt: Date | null;
 
+  /** Когда пользователь отключил персональные рассылки бота. */
+  @Column({ type: 'timestamp', nullable: true })
+  public broadcastDisabledAt: Date | null;
+
   @Expose()
   @ManyToOne(() => User, (user) => user.socials, { nullable: true })
   @JoinColumn()

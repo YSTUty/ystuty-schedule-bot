@@ -125,7 +125,11 @@ export type BroadcastActionKeyboard = Array<
   BroadcastRecipientActionButton | BroadcastLinkButton
 >;
 
-export type BroadcastRecipientAction = 'select_group' | 'auth' | 'start';
+export type BroadcastRecipientAction =
+  | 'select_group'
+  | 'auth'
+  | 'start'
+  | 'unsubscribe';
 
 /** Набор параметров кампании, пригодный для повторного использования в wizard. */
 export type BroadcastCampaignSettings = {
@@ -164,7 +168,8 @@ export const normalizeBroadcastActionKeyboard = (
     if (
       (item.type !== 'select_group' &&
         item.type !== 'auth' &&
-        item.type !== 'start') ||
+        item.type !== 'start' &&
+        item.type !== 'unsubscribe') ||
       seen.has(item.type)
     ) {
       continue;

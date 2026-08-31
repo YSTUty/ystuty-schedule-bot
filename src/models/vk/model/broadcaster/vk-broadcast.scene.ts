@@ -342,6 +342,7 @@ export class VkBroadcastScene {
       | 'feedbackAfterReplace'
       | 'feedbackAfterText'
       | 'actionSettings'
+      | 'actionTextSelector'
       | 'actionBack'
       | 'actionSelectGroupToggle'
       | 'actionSelectGroupText'
@@ -349,6 +350,8 @@ export class VkBroadcastScene {
       | 'actionAuthText'
       | 'actionStartToggle'
       | 'actionStartText'
+      | 'actionUnsubscribeToggle'
+      | 'actionUnsubscribeText'
       | 'actionLinkToggle'
       | 'actionLinkText'
       | 'actionLinkUrl'
@@ -388,6 +391,11 @@ export class VkBroadcastScene {
       return true;
     }
 
+    if (action === 'actionTextSelector') {
+      await this.renderActionTextSelector(ctx);
+      return true;
+    }
+
     if (action === 'actionBack') {
       await this.renderSettingsScreen(ctx);
       return true;
@@ -396,7 +404,8 @@ export class VkBroadcastScene {
     if (
       action === 'actionSelectGroupToggle' ||
       action === 'actionAuthToggle' ||
-      action === 'actionStartToggle'
+      action === 'actionStartToggle' ||
+      action === 'actionUnsubscribeToggle'
     ) {
       this.toggleRecipientAction(
         ctx.scene.state,
@@ -404,7 +413,9 @@ export class VkBroadcastScene {
           ? 'auth'
           : action === 'actionStartToggle'
             ? 'start'
-            : 'select_group',
+            : action === 'actionUnsubscribeToggle'
+              ? 'unsubscribe'
+              : 'select_group',
       );
       await this.renderActionSettings(ctx);
       return true;
@@ -413,14 +424,17 @@ export class VkBroadcastScene {
     if (
       action === 'actionSelectGroupText' ||
       action === 'actionAuthText' ||
-      action === 'actionStartText'
+      action === 'actionStartText' ||
+      action === 'actionUnsubscribeText'
     ) {
       const recipientAction =
         action === 'actionAuthText'
           ? 'auth'
           : action === 'actionStartText'
             ? 'start'
-            : 'select_group';
+            : action === 'actionUnsubscribeText'
+              ? 'unsubscribe'
+              : 'select_group';
       if (!this.getRecipientActionButton(ctx.scene.state, recipientAction)) {
         await ctx.answer({
           type: 'show_snackbar',
@@ -1106,12 +1120,14 @@ export class VkBroadcastScene {
       select_group: 'Выбор группы',
       auth: 'ЯГТУ.ID',
       start: 'Стартовое меню',
+      unsubscribe: 'Отключение уведомлений',
       link: 'Ссылка',
     };
     const defaultTexts: Record<BroadcastRecipientAction | 'link', string> = {
       select_group: 'Выбрать актуальную группу',
       auth: 'Подключить или обновить ЯГТУ.ID',
       start: 'Начать',
+      unsubscribe: '🔕 Отключить уведомления',
       link: 'Открыть',
     };
 
@@ -1333,6 +1349,23 @@ export class VkBroadcastScene {
       type: 'show_snackbar',
       text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
     });
+  }
+
+  /** Отдельный экран не позволяет превысить лимит VK inline-клавиатуры. */
+  private async renderActionTextSelector(ctx: IStepCtx) {
+    await this.editCurrentVkMessage(
+      ctx,
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_ActionTextSelect),
+      {
+        keep_forward_messages: true,
+        keyboard: this.keyboardFactory
+          .getBroadcastActionTextSelector(
+            ctx,
+            ctx.scene.state.actionKeyboard || [],
+          )
+          .inline(),
+      },
+    );
   }
 
   private getRecipientActionButton(

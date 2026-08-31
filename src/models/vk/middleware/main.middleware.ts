@@ -36,6 +36,10 @@ import { MetricsService } from '../../metrics/metrics.service';
 import { RedisService } from '../../redis/redis.service';
 import { ScheduleService } from '../../schedule/schedule.service';
 import { SocialService } from '../../social/social.service';
+import {
+  isBroadcastUnsubscribeEvent,
+  isBroadcastUnsubscribeText,
+} from '../../user/broadcast-preference.util';
 import { UserService } from '../../user/user.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
@@ -548,6 +552,26 @@ export class MainMiddleware {
       if (ctx.state.userSocial.isBlockedBot) {
         ctx.state.userSocial.isBlockedBot = false;
         await this.userService.saveUserSocial(ctx.state.userSocial);
+      }
+
+      const eventPayload =
+        'eventPayload' in ctx
+          ? (ctx.eventPayload as Record<string, unknown>)
+          : undefined;
+      const isUnsubscribeFlow =
+        isBroadcastUnsubscribeText('text' in ctx ? ctx.text : undefined) ||
+        isBroadcastUnsubscribeEvent(eventPayload);
+      if (
+        ctx.isDM &&
+        !isUnsubscribeFlow &&
+        typeof this.userService.restoreBroadcastsIfDisabled === 'function' &&
+        (await this.userService.restoreBroadcastsIfDisabled(
+          ctx.state.userSocial,
+        ))
+      ) {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Broadcast_Notification_SubscriptionsRestored),
+        );
       }
 
       if (ctx.state.user?.isBanned) {

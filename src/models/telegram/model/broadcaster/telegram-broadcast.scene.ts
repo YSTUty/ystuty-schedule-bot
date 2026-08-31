@@ -198,7 +198,9 @@ export class TelegramBroadcastScene extends BaseScene {
     await this.renderSettingsScreen(ctx);
   }
 
-  @Action(/broadcast:wizard:actions:(?<action>select-group|auth|start):toggle/)
+  @Action(
+    /broadcast:wizard:actions:(?<action>select-group|auth|start|unsubscribe):toggle/,
+  )
   async onActionToggle(@Ctx() ctx: IStepCtx) {
     const action = this.getRecipientAction(ctx.match!.groups!.action);
     if (!action) return;
@@ -206,7 +208,9 @@ export class TelegramBroadcastScene extends BaseScene {
     await this.renderActionSettings(ctx);
   }
 
-  @Action(/broadcast:wizard:actions:(?<action>select-group|auth|start):text/)
+  @Action(
+    /broadcast:wizard:actions:(?<action>select-group|auth|start|unsubscribe):text/,
+  )
   async onActionText(@Ctx() ctx: IStepCtx) {
     const action = this.getRecipientAction(ctx.match!.groups!.action);
     if (!action || !this.getRecipientActionButton(ctx.scene.state, action)) {
@@ -909,12 +913,14 @@ export class TelegramBroadcastScene extends BaseScene {
       select_group: 'Выбор группы',
       auth: 'ЯГТУ.ID',
       start: 'Стартовое меню',
+      unsubscribe: 'Отключение уведомлений',
       link: 'Ссылка',
     };
     const defaultTexts: Record<BroadcastRecipientAction | 'link', string> = {
       select_group: 'Выбрать актуальную группу',
       auth: 'Подключить или обновить ЯГТУ.ID',
       start: 'Начать',
+      unsubscribe: '🔕 Отключить уведомления',
       link: 'Открыть',
     };
 
@@ -1197,7 +1203,9 @@ export class TelegramBroadcastScene extends BaseScene {
         ? 'auth'
         : value === 'start'
           ? 'start'
-          : null;
+          : value === 'unsubscribe'
+            ? 'unsubscribe'
+            : null;
   }
 
   private getRecipientActionButton(

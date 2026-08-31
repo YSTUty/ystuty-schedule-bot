@@ -11,6 +11,8 @@ import { BroadcastRecipientAction } from '../../../broadcast/broadcast.types';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../../vk.constants';
 
+import { BroadcastVkUnsubscribeUpdate } from './broadcast-vk-unsubscribe.update';
+
 /** Обрабатывает предустановленные действия получателей без требования прав администратора. */
 @Update()
 @UseFilters(VkExceptionFilter)
@@ -18,6 +20,7 @@ export class BroadcastVkRecipientActionUpdate {
   constructor(
     private readonly broadcastService: BroadcastService,
     private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly unsubscribeUpdate?: BroadcastVkUnsubscribeUpdate,
   ) {}
 
   @OnMessageEvent(
@@ -71,6 +74,9 @@ export class BroadcastVkRecipientActionUpdate {
         await ctx.send(ctx.i18n.t(LocalePhrase.Page_WelcomeFeatures), {
           keyboard: this.keyboardFactory.getWelcomeFeatures(ctx).inline(),
         });
+        return;
+      case 'unsubscribe':
+        await this.unsubscribeUpdate?.showConfirmation(ctx);
         return;
     }
   }

@@ -581,6 +581,14 @@ export class BroadcastService {
     });
   }
 
+  /** Помечает неотправленную delivery пропущенной без повторной попытки. */
+  public async markDeliverySkipped(deliveryId: number, reason: string) {
+    await this.deliveryRepository.update(deliveryId, {
+      status: BroadcastDeliveryStatus.Skipped,
+      error: reason.slice(0, 2000),
+    });
+  }
+
   public async refreshCampaignCounters(campaignId: number) {
     const [sentCount, failedCount, skippedCount, totalCount] =
       await Promise.all([

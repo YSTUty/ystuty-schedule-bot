@@ -161,7 +161,10 @@ export class BroadcastAudienceFilterService {
     social: SocialType,
     filter: BroadcastAudienceFilter,
   ): FindOptionsWhere<UserSocial> {
-    const where: FindOptionsWhere<UserSocial> = { social };
+    const where: FindOptionsWhere<UserSocial> = {
+      social,
+      broadcastDisabledAt: IsNull(),
+    };
 
     if (typeof filter.hasDM === 'boolean') where.hasDM = filter.hasDM;
     if (typeof filter.isBlockedBot === 'boolean') {

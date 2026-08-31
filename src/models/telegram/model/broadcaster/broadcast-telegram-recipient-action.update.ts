@@ -11,6 +11,8 @@ import { BroadcastRecipientAction } from '../../../broadcast/broadcast.types';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../../telegram.constants';
 
+import { BroadcastTelegramUnsubscribeUpdate } from './broadcast-telegram-unsubscribe.update';
+
 /** Обрабатывает предустановленные действия получателей без требования прав администратора. */
 @Update()
 @UseFilters(TelegrafExceptionFilter)
@@ -18,6 +20,7 @@ export class BroadcastTelegramRecipientActionUpdate {
   constructor(
     private readonly broadcastService: BroadcastService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly unsubscribeUpdate?: BroadcastTelegramUnsubscribeUpdate,
   ) {}
 
   @Action(/broadcast:action:(?<deliveryId>\d+):(?<action>[a-z_]+)/)
@@ -64,6 +67,9 @@ export class BroadcastTelegramRecipientActionUpdate {
           ctx.i18n.t(LocalePhrase.Page_WelcomeFeatures),
           this.keyboardFactory.getWelcomeFeatures(ctx),
         );
+        return;
+      case 'unsubscribe':
+        await this.unsubscribeUpdate?.showConfirmation(ctx);
         return;
     }
   }

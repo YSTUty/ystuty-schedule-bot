@@ -125,6 +125,21 @@ export class UserService {
     return await this.userSocialRepository.save(userSocial);
   }
 
+  /** Отключает персональные рассылки для одного профиля мессенджера. */
+  public async disableBroadcasts(userSocial: UserSocial) {
+    userSocial.broadcastDisabledAt = new Date();
+    return await this.saveUserSocial(userSocial);
+  }
+
+  /** Восстанавливает рассылки при новом личном обращении пользователя. */
+  public async restoreBroadcastsIfDisabled(userSocial: UserSocial) {
+    if (!userSocial.broadcastDisabledAt) return false;
+
+    userSocial.broadcastDisabledAt = null;
+    await this.saveUserSocial(userSocial);
+    return true;
+  }
+
   public async unlinkUser(userSocial: UserSocial) {
     await this.socialConnectService.unAuth(
       userSocial.social,

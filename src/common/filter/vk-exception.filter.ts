@@ -43,6 +43,10 @@ export const isVkRateLimitError = (error: APIError) =>
   error.code === APIErrorCode.RATE_LIMIT ||
   error.message.includes('Too Many Requests');
 
+/** Возвращает имя метода VK API из безопасной части ответа об ошибке. */
+export const getVkApiErrorMethod = (error: APIError) =>
+  error.params.find((param) => param.key === 'method')?.value;
+
 @Catch()
 export class VkExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(VkExceptionFilter.name);
@@ -74,8 +78,12 @@ export class VkExceptionFilter implements ExceptionFilter {
       !(exception instanceof ForbiddenException) &&
       !isCCE
     ) {
+      const apiMethod =
+        exception instanceof APIError
+          ? getVkApiErrorMethod(exception)
+          : undefined;
       this.logger.error(
-        `OnUpdateType(${ctx?.type}): ${exception?.message || exception}`,
+        `OnUpdateType(${ctx?.type})${apiMethod ? ` [VK API: ${apiMethod}]` : ''}: ${exception?.message || exception}`,
         exception.stack,
       );
     }

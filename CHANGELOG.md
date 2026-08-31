@@ -1,5 +1,175 @@
 # Changelog
 
+## [0.4.0](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.5...v0.4.0) (2026-08-31)
+
+### 🧹 Chore
+
+* add logger for `uncaughtException` / `unhandledRejection` ([d19f12a](https://github.com/YSTUty/ystuty-schedule-bot/commit/d19f12a87f6b4c89daa2bd81da4cb5c6c279c619))
+* **app:** display messenger services status by env ([8107643](https://github.com/YSTUty/ystuty-schedule-bot/commit/8107643c6d14a31567bf83a1df049b9c868c7e3f))
+* **deps:** update ([7d56863](https://github.com/YSTUty/ystuty-schedule-bot/commit/7d56863cceee185e6407dde73907de0c049dff20))
+* **docker:** run migrations before production startup ([fbb0349](https://github.com/YSTUty/ystuty-schedule-bot/commit/fbb03492771eb1b40d82377646111adb0b14ccaf))
+* **docker:** update `pgadmin4` version ([fda5038](https://github.com/YSTUty/ystuty-schedule-bot/commit/fda50382803489f846b01ba70d7a9a2f57bf82ad))
+* **filter:** update order to switch error content formatter ([66a51e2](https://github.com/YSTUty/ystuty-schedule-bot/commit/66a51e212da04bd940d9d8b3ae3434ece59b4c2f))
+* **fix:** update code after update deps ([d26e844](https://github.com/YSTUty/ystuty-schedule-bot/commit/d26e844664b030a9378b5cff87181bf59736977c))
+* **husky:** update ([2c39c1d](https://github.com/YSTUty/ystuty-schedule-bot/commit/2c39c1d64f3d09a17ba1666df17c8dad3f9f493c))
+* **lint:** resolve safe eslint violations ([d64da9d](https://github.com/YSTUty/ystuty-schedule-bot/commit/d64da9db4661a04b95857a0e08bcb64d7b51ca11))
+* **locale:** correct error message of user not rights change group name ([18edcfd](https://github.com/YSTUty/ystuty-schedule-bot/commit/18edcfde9c463b79f465242a93e87397b00f566b))
+* **locale:** not show empty group ([d6a7066](https://github.com/YSTUty/ystuty-schedule-bot/commit/d6a7066be1458fab8fa4f09617922b08d48156bd))
+* **metrics:** reconcile domain metrics after restart ([a3d53a1](https://github.com/YSTUty/ystuty-schedule-bot/commit/a3d53a1aea93a88bc4810d3a2eaab33f88943ca7))
+* **prettier:** format code with sorting imports ([09e14cc](https://github.com/YSTUty/ystuty-schedule-bot/commit/09e14cc1d0540430675799184b638e71ba96b42f))
+* **readme:** update header ([4b6ef58](https://github.com/YSTUty/ystuty-schedule-bot/commit/4b6ef585154ce68d397e10ff952ab2b9b8a91dec))
+* **social-connect:** add logger for http catchs ([e902102](https://github.com/YSTUty/ystuty-schedule-bot/commit/e902102c444272ce38903f8165586627d7a576df))
+* **social-connect:** set `timeout` `15s` for check auth request ([c68b135](https://github.com/YSTUty/ystuty-schedule-bot/commit/c68b135822e1c65e3949ad64c04ee5dd244eea17))
+* **social:** add chat `status` and `type` (for telegram) ([676bf18](https://github.com/YSTUty/ystuty-schedule-bot/commit/676bf180b3433e0ca3ac7add63635c2784b89673))
+* **telegram:** fix check bot in empty ctx `from` ([6852fa7](https://github.com/YSTUty/ystuty-schedule-bot/commit/6852fa72bfad52c141b4e77fd9aba09e23f5bc7c))
+* **telegram:** improve work with event `my_chat_member`; fix check empty `ctx.from` ([c2fe4bc](https://github.com/YSTUty/ystuty-schedule-bot/commit/c2fe4bca6f464bba280956fbc1d530510696c3be))
+* update docker & makefile ([9820cb4](https://github.com/YSTUty/ystuty-schedule-bot/commit/9820cb41b0c273dd2d6c17b4d4154958f97a7371))
+* **vk:** add dubug for empty `ctx.peerId` ([f6e0736](https://github.com/YSTUty/ystuty-schedule-bot/commit/f6e07366ac27c1b0e1026dbda5995255f446d1c0))
+* **vk:** replace url to app button ([b44d404](https://github.com/YSTUty/ystuty-schedule-bot/commit/b44d40420ec3ed788cb61e0c9781e2c13a40b097))
+* **vk:** update `nestjs-vk` message event decorator ([da04f12](https://github.com/YSTUty/ystuty-schedule-bot/commit/da04f1228ea22e724b1e509203de85a3da1291e3))
+* **vk:** upgrade `nestjs-vk` to `v4.8.0` ([982f621](https://github.com/YSTUty/ystuty-schedule-bot/commit/982f6213276592f0759de0c2b5bbbb2a77dc1325))
+* **workspace:** sync changes ([9da92ad](https://github.com/YSTUty/ystuty-schedule-bot/commit/9da92ad886e4c5f9fc7580fe192ee513868b63cb))
+
+### 🚀 Features
+
+* add `unauth` feature (command) ([4779ddc](https://github.com/YSTUty/ystuty-schedule-bot/commit/4779ddc7ae4c19a8552a0431e0ce228ab1192820))
+* add update profile feature and `isRewoke` state for user ([c822f9a](https://github.com/YSTUty/ystuty-schedule-bot/commit/c822f9a226d1ed3129b32b6d2ac056ac9ddb7504))
+* **bot:** improve private chat onboarding and schedule links ([45c66c3](https://github.com/YSTUty/ystuty-schedule-bot/commit/45c66c3d458d2ac0b0d3248d517a4bc3715a4619))
+* **broadcast:** add audience filters ([6fa18fe](https://github.com/YSTUty/ystuty-schedule-bot/commit/6fa18fe7cd7365ca75edb634f42c7b4638440494))
+* **broadcast:** add audience history and feedback controls ([5e6f720](https://github.com/YSTUty/ystuty-schedule-bot/commit/5e6f7204e682b21a1a6e97c1716e9d38c0478323))
+* **broadcast:** add audience history filters ([d3ae2d6](https://github.com/YSTUty/ystuty-schedule-bot/commit/d3ae2d67e496c1b63c82fe7c639fbe4dc0c9e24a))
+* **broadcast:** add interactive group audience filters ([bc4e7dc](https://github.com/YSTUty/ystuty-schedule-bot/commit/bc4e7dc47afc40c8ed73262d8f37693cf9af01c6))
+* **broadcast:** add managed messenger broadcast module ([7a7167b](https://github.com/YSTUty/ystuty-schedule-bot/commit/7a7167bd3a65aee937c7fb7fe6c8c154c705d56d))
+* **broadcast:** add personal notification opt-out ([69e4607](https://github.com/YSTUty/ystuty-schedule-bot/commit/69e460750fbc15eac59a6e06647e2968c6fbba3e))
+* **broadcast:** add progress reporting, queue controls and delivery mode ([9abf7fe](https://github.com/YSTUty/ystuty-schedule-bot/commit/9abf7fec4babd843cf3e33837a918a9aadc36ed0))
+* **broadcast:** add recipient action buttons ([f1603e3](https://github.com/YSTUty/ystuty-schedule-bot/commit/f1603e35af33a6758fe0c355063d640101a26c32))
+* **broadcast:** add recipient action keyboards ([a62aa70](https://github.com/YSTUty/ystuty-schedule-bot/commit/a62aa709629ed348a944762b142763fcd8e8024c))
+* **broadcast:** add reusable campaign settings and callback safeguards ([1bd4e21](https://github.com/YSTUty/ystuty-schedule-bot/commit/1bd4e21da1b9632d4ed1bff6f563a3e13253dbbc))
+* **broadcast:** add selective recipients and localized controls ([951e8c3](https://github.com/YSTUty/ystuty-schedule-bot/commit/951e8c344857aaa8353e4d674727fee60f4fc90f))
+* **broadcast:** localize notifications ([b59ee7f](https://github.com/YSTUty/ystuty-schedule-bot/commit/b59ee7f65ad80fc3ee055fe221cf7a0579fc948f))
+* **broadcast:** manage campaign history with inline controls ([a0056bd](https://github.com/YSTUty/ystuty-schedule-bot/commit/a0056bd1fad2b781e43594aef65fdaf222384172))
+* **broadcast:** refine audience and feedback wizard flow ([6421359](https://github.com/YSTUty/ystuty-schedule-bot/commit/6421359d1dbb51e75ae1735c71f72be83cc3602b))
+* **broadcast:** refine audience filters and recipient action settings ([44b2a38](https://github.com/YSTUty/ystuty-schedule-bot/commit/44b2a38aefc67630e80912f0f1e392313ebeaf79))
+* **broadcast:** reuse versioned campaign settings safely ([e6a8679](https://github.com/YSTUty/ystuty-schedule-bot/commit/e6a86796f494ffc687836df5da1f6e38269b8f54))
+* **broadcast:** show configured recipient action labels ([7fec8c1](https://github.com/YSTUty/ystuty-schedule-bot/commit/7fec8c1f9e3accf193d0ac93a61c3b87afaf2ee6))
+* **broadcast:** support vk broadcast attachments ([7cdf09f](https://github.com/YSTUty/ystuty-schedule-bot/commit/7cdf09fce8beeb2c5fd247c1dd9ce76458d808dc))
+* **commands:** add help fallback and schedule aliases ([79b38ce](https://github.com/YSTUty/ystuty-schedule-bot/commit/79b38ced7b98b0e6d2be959c7be183d1d14873af))
+* **common:** add html escaping utility ([7298b0c](https://github.com/YSTUty/ystuty-schedule-bot/commit/7298b0c304fd6e3400c8df9f89f7fa3cc705eedb))
+* **concurrency:** add local and distributed synchronization ([5ba507f](https://github.com/YSTUty/ystuty-schedule-bot/commit/5ba507f4052cf39988ff34511476e76b55436bd1))
+* **conversations:** reconcile bot membership in chats ([86f04cb](https://github.com/YSTUty/ystuty-schedule-bot/commit/86f04cb464d8fb87478d56607e20d39f4868c5a9))
+* **database:** add typeorm migrations ([622883a](https://github.com/YSTUty/ystuty-schedule-bot/commit/622883adbfe9f991ef6678edbf3b25b6692f5e1f))
+* **deps:** update `nestjs` to v11 and other modules ([6ce4a64](https://github.com/YSTUty/ystuty-schedule-bot/commit/6ce4a642bc91dc5d08c67a78506338fea13fc351))
+* **feedback:** add guided feedback collection ([73b03c0](https://github.com/YSTUty/ystuty-schedule-bot/commit/73b03c0df4ada11219ee57ab9342c6efc87f2684))
+* **feedback:** add user feedback flow ([e924ad6](https://github.com/YSTUty/ystuty-schedule-bot/commit/e924ad6bb9915834a43a01c2c3fc92e6e67078d9))
+* **schedule-notif:** support conversation schedule notifications ([c3a516c](https://github.com/YSTUty/ystuty-schedule-bot/commit/c3a516c82aa2591191d8c5cf47601718979af2fc))
+* **schedule:** add detailed schedule presentation ([9a6b477](https://github.com/YSTUty/ystuty-schedule-bot/commit/9a6b47721598ac7c64d1a928b1e7308590f97993))
+* **schedule:** add personal schedule notification settings ([4eb17cc](https://github.com/YSTUty/ystuty-schedule-bot/commit/4eb17ccbe94a99e291c79b3313afab481dea6f91))
+* **schedule:** add teacher schedule selection for tg and vk ([fa1acd7](https://github.com/YSTUty/ystuty-schedule-bot/commit/fa1acd75b7ec7f04597c1185404d4c2dffb2625a))
+* **schedule:** add verbal teacher schedule commands ([8b3877a](https://github.com/YSTUty/ystuty-schedule-bot/commit/8b3877ae6c44ba5dd1491f31206d4bd8d53d1700))
+* **schedule:** check schedule result on error for notice ([aaf6b9b](https://github.com/YSTUty/ystuty-schedule-bot/commit/aaf6b9b8da35ff632e74dc0ba56ab1514d2ab605))
+* **schedule:** clarify group and teacher selection ([cea1982](https://github.com/YSTUty/ystuty-schedule-bot/commit/cea1982c4ff4f2c2b255e68855ac446c17669dcc))
+* **schedule:** normalize group names in message handlers ([48ce522](https://github.com/YSTUty/ystuty-schedule-bot/commit/48ce5227cbc96294d7d72f3b04b8337e6b5f1281))
+* **teacher:** add name search fallback for dm ([f0320fb](https://github.com/YSTUty/ystuty-schedule-bot/commit/f0320fb8a5410ee7c8d2bd2a170c652b651147cb))
+* **telegram:** add `sendMessageDraft` ctx method ([a75bea9](https://github.com/YSTUty/ystuty-schedule-bot/commit/a75bea91e97a40fb9cf22a4735f27a7b747b3ce8))
+* **telegram:** add admin send adv message with callback user button ([6d9e94b](https://github.com/YSTUty/ystuty-schedule-bot/commit/6d9e94badd0f49d4a24538c99c99dc5cf0f83c4a))
+* **telegram:** add custom `apiRoot` ([866bdbe](https://github.com/YSTUty/ystuty-schedule-bot/commit/866bdbef629a2edc14f4d67efbb8c0a7c9567bb2))
+* **telegram:** add feature for select group from list (with select institute for filter) ([ed87f6f](https://github.com/YSTUty/ystuty-schedule-bot/commit/ed87f6f123bf5eb13d6ced862455bb7c55ff46d8))
+* **telegram:** add personalized command menus ([f304d75](https://github.com/YSTUty/ystuty-schedule-bot/commit/f304d751e0892d22f30827886dd98501d3443e77))
+* **vk:** acknowledge unhandled callback events ([2659cc1](https://github.com/YSTUty/ystuty-schedule-bot/commit/2659cc12ade00d18d43c7e9fb19e85305ecbab03))
+* **vk:** add institute and group selection flow ([b999ff8](https://github.com/YSTUty/ystuty-schedule-bot/commit/b999ff88ec2be99991d8366a14868889ac92d332))
+* **welcome:** add private chat feature card ([5303fea](https://github.com/YSTUty/ystuty-schedule-bot/commit/5303feaf134b117e29560213d3887971d4215f97))
+
+### 🐛 Bug Fixes
+
+* **bot:** harden telegram and vk middleware error handling ([fa1e2d6](https://github.com/YSTUty/ystuty-schedule-bot/commit/fa1e2d60e16afe5345952a21809ea6a2da308a46))
+* **broadcast:** handle active campaigns and source replies ([2e20b67](https://github.com/YSTUty/ystuty-schedule-bot/commit/2e20b671beab3e6ccc70fbd1d8a9b94387f8c9db))
+* **broadcast:** handle scene callbacks and settings template data ([5e16146](https://github.com/YSTUty/ystuty-schedule-bot/commit/5e16146733704fd0387e3fdc1ae98b89d883936d))
+* **broadcast:** send telegram forward keyboards separately ([83fc624](https://github.com/YSTUty/ystuty-schedule-bot/commit/83fc624ae0631039efab93dcfe79bfffb4bbd472))
+* **broadcast:** split queues by messenger transport ([b8b660b](https://github.com/YSTUty/ystuty-schedule-bot/commit/b8b660b9bc384593cbf06c5e9fa6463dbcf591e2))
+* **broadcast:** support feedback button post-click modes ([d9022be](https://github.com/YSTUty/ystuty-schedule-bot/commit/d9022be11077a4b68b9dee20ac22d1089631cd1f))
+* **common:** add feature suuport `toJSON` for `BigInt` ([ac12a49](https://github.com/YSTUty/ystuty-schedule-bot/commit/ac12a4949cf75966e8b112766d7eede3ff47e542))
+* **conversations:** reconcile recently restored bot memberships ([3721d17](https://github.com/YSTUty/ystuty-schedule-bot/commit/3721d17a603e32487840ac1bd8c61a458449eb78))
+* **conversations:** track bot membership lifecycle ([ab3a575](https://github.com/YSTUty/ystuty-schedule-bot/commit/ab3a57599cf19f3015acefd4c5d0a4fba4122066))
+* **conversation:** track bot removal from vk chats ([b5a5681](https://github.com/YSTUty/ystuty-schedule-bot/commit/b5a56816214fdcc469e5ab22c86817101e6d27a9))
+* **database:** align migrations with entity metadata ([2d51567](https://github.com/YSTUty/ystuty-schedule-bot/commit/2d5156750c6142a0fb764d667ab99ce29fddd72f))
+* **db:** model conversation memberships explicitly ([f3fea87](https://github.com/YSTUty/ystuty-schedule-bot/commit/f3fea871dd6d7d20252a3992d006245eaae46e8c))
+* **deps:** downgrade `@nestjs/typeorm` to `11.0.0` ([9d2f377](https://github.com/YSTUty/ystuty-schedule-bot/commit/9d2f3774bd3c6d8e5cfd8e4a548ed0cb7f1245ee))
+* **entities:** align nullable fields with strict types ([2c7acf3](https://github.com/YSTUty/ystuty-schedule-bot/commit/2c7acf35468a10248276b186d94897b22d3349fa))
+* **husky:** load nvm for git hooks ([38d5c76](https://github.com/YSTUty/ystuty-schedule-bot/commit/38d5c76003cdddabfbba502778c919ebde6e72a5))
+* **oauth:** align auth info response fields ([5ae9678](https://github.com/YSTUty/ystuty-schedule-bot/commit/5ae9678d67eb009251d3cc010f1227e87c095c12))
+* **schedule-notification:** improve editing flows and vk keyboard limits ([1b41ffc](https://github.com/YSTUty/ystuty-schedule-bot/commit/1b41ffc6c01d78ab1dc7843e6f5155b0dc3fc1e4))
+* **schedule-notification:** stabilize notification flows and keyboards ([ebf758f](https://github.com/YSTUty/ystuty-schedule-bot/commit/ebf758f5a40a9b26bf61ce9c103b5d545342b4fa))
+* **schedule-notif:** normalize manual group input ([5e3e991](https://github.com/YSTUty/ystuty-schedule-bot/commit/5e3e991afc2bb1b0a0e93dbad2040905502944ee))
+* **schedule:** deduplicate reference data refresh logs ([deb6c73](https://github.com/YSTUty/ystuty-schedule-bot/commit/deb6c7362293a67a2b561d730ee9c925b5c3e3c0))
+* **schedule:** fix typo in weekly schedule ([58ac676](https://github.com/YSTUty/ystuty-schedule-bot/commit/58ac67680d02eda48e728af5b5e633cc007e4017))
+* **schedule:** format dates in `Moscow` timezone ([cb05a53](https://github.com/YSTUty/ystuty-schedule-bot/commit/cb05a53d58ac9886dbc5aea90a3832adabdf892a))
+* **schedule:** isolate teacher list pagination state ([ac635b5](https://github.com/YSTUty/ystuty-schedule-bot/commit/ac635b5bdd86c9e02facfa3781a222eaa62817f9))
+* **telegram:** acknowledge callbacks before processing ([9906777](https://github.com/YSTUty/ystuty-schedule-bot/commit/9906777f9f82de3421af6b9c1c357a8c863a7aa9))
+* **telegram:** defer unhandled private message fallback ([0b35eab](https://github.com/YSTUty/ystuty-schedule-bot/commit/0b35eabe7bb058b027b40b706276fd348df3cedd))
+* **telegram:** fix undefined last name ([e40d1f0](https://github.com/YSTUty/ystuty-schedule-bot/commit/e40d1f09ba5412dc0c0f42abbc042bed6de43520))
+* **telegram:** handle group selection callbacks ([ce2a40c](https://github.com/YSTUty/ystuty-schedule-bot/commit/ce2a40c6d85b1252f7196621016882ab209f85c8))
+* **telegram:** persist group selected from chat callback ([2f64cfd](https://github.com/YSTUty/ystuty-schedule-bot/commit/2f64cfd1c87f03ba152d2c5b5417705ab7453dae))
+* **transports:** reply only to unhandled private texts ([54f9221](https://github.com/YSTUty/ystuty-schedule-bot/commit/54f92211fd20e765e106017cf8a6726b2d104fe4))
+* **transports:** retry redis session load on transient failures ([f61d879](https://github.com/YSTUty/ystuty-schedule-bot/commit/f61d8792277067268941f5fc375c3fd3f522378e))
+* **user:** preserve nullable social relation ([a0cb317](https://github.com/YSTUty/ystuty-schedule-bot/commit/a0cb317657386b62346dcec9e002fc2f99eb145f))
+* **vk:** continue message event handlers after admin guard skip ([2f7d7fd](https://github.com/YSTUty/ystuty-schedule-bot/commit/2f7d7fd1a428b0eef8ab69f0ce1e96361276096b))
+* **vk:** derive peer context lazily ([ad54a87](https://github.com/YSTUty/ystuty-schedule-bot/commit/ad54a87cfae72eca111a3087d113d182ed5b0427))
+* **vk:** handle scene cancellation from callback events ([16de5b4](https://github.com/YSTUty/ystuty-schedule-bot/commit/16de5b46a39b84790943e59a74c13753291ba61c))
+* **vk:** make message event acknowledgements idempotent ([05ac2e3](https://github.com/YSTUty/ystuty-schedule-bot/commit/05ac2e3f4483f19a5f09fef0f6682d05f44f2b4e))
+* **vk:** normalize peer context in middleware ([7b2a6ba](https://github.com/YSTUty/ystuty-schedule-bot/commit/7b2a6ba55d4f3443d6ef9a6bcd4236ea54c37ca3))
+* **vk:** normalize peer context in middleware if unset ([b5aa2ae](https://github.com/YSTUty/ystuty-schedule-bot/commit/b5aa2ae9575e956adb8029f1608813f50a3c3684))
+* **vk:** recreate sticker broadcasts after feedback ([98736a7](https://github.com/YSTUty/ystuty-schedule-bot/commit/98736a74f1ed6b5abcd534cbbeb63c6b53dca3b1))
+* **vk:** render recipient action scenes on entry ([1dd8314](https://github.com/YSTUty/ystuty-schedule-bot/commit/1dd8314ebd4c5a203ed257675a53b6a8e1d9dc89))
+* **vk:** track message subscription change ([6bbbfd2](https://github.com/YSTUty/ystuty-schedule-bot/commit/6bbbfd23273e2a1720da9a53e36490d1e3432898))
+
+### 🌟 Feature Improvements
+
+* **bot:** defer private text fallback and clarify help guidance ([61c47ea](https://github.com/YSTUty/ystuty-schedule-bot/commit/61c47ea60599ba4ec09d4aac1da7b25af0a6d2a9))
+* **core:** align shared messenger code and strict null checks ([122e798](https://github.com/YSTUty/ystuty-schedule-bot/commit/122e798776d98d7f2665175f9450feb64c521a0a))
+* **guard:** add silent skips and telegram chat type checks ([783b3b9](https://github.com/YSTUty/ystuty-schedule-bot/commit/783b3b99e1ff2917f25be855855e81506aa1ac12))
+* **locales:** polish ru copy and validate templates ([f9730ea](https://github.com/YSTUty/ystuty-schedule-bot/commit/f9730ea7bd89ab068edb6b65f5aed9bfa5a932c5))
+
+### 📖 Documentation
+
+* **project:** add info architecture and todo docs ([2a02bd1](https://github.com/YSTUty/ystuty-schedule-bot/commit/2a02bd1e6b9bff7fc6ab150423f11a8e2e6e548f))
+* refresh project documentation and backlog ([d2c253c](https://github.com/YSTUty/ystuty-schedule-bot/commit/d2c253c0464cdbe2d5581f7c826a5140eaf4b172))
+* **todo:** refresh completed tasks ([75fa86b](https://github.com/YSTUty/ystuty-schedule-bot/commit/75fa86b22bd6e2bbbe0302612253cf8cad72ea85))
+
+### ☯ Styling
+
+* **locales:** add emojis to broadcast and feedback controls ([3255180](https://github.com/YSTUty/ystuty-schedule-bot/commit/3255180a2e722e547715c5f5eb1fcc9db6e7a262))
+* **locales:** simplify help messages ([c95d73f](https://github.com/YSTUty/ystuty-schedule-bot/commit/c95d73fff1bc35fe84a89dd1aa47fd22d1333cbc))
+
+### 🔧 Code Refactoring
+
+* **conversation:** persist selected chat group ([b1cbde1](https://github.com/YSTUty/ystuty-schedule-bot/commit/b1cbde19d47eb3b55210e2b8880e96063266ba49))
+* **keyboard:** split pagination builders by transport ([08e5874](https://github.com/YSTUty/ystuty-schedule-bot/commit/08e58742a9a57af32cd79777a1a2249067272547))
+* **schedule-notif:** shorten module naming ([c26aff9](https://github.com/YSTUty/ystuty-schedule-bot/commit/c26aff907c0c0c4aa4716998dac11e997d31a974))
+* **schedule:** rename ystuty module ([c760666](https://github.com/YSTUty/ystuty-schedule-bot/commit/c7606667c08d84fb29820c46f62a59d46579c61e))
+* update types ([1923436](https://github.com/YSTUty/ystuty-schedule-bot/commit/192343668c251984317f2fc32217d4b6e1457322))
+* **user:** guard inactive messenger auth flow ([ce9af14](https://github.com/YSTUty/ystuty-schedule-bot/commit/ce9af14b47c41557132d9a57bf281ced7c4ed81b))
+
+### 💪 Performance Improvements
+
+* **conversations:** cache transport admin lookups ([d0d3014](https://github.com/YSTUty/ystuty-schedule-bot/commit/d0d30141ac13e3bf1492ad000af8d3a3504da11f))
+
+### 🐱‍💻 Tests
+
+* **concurrency:** cover distributed lock failures ([f929c7e](https://github.com/YSTUty/ystuty-schedule-bot/commit/f929c7e64531c203ee4a24604c64775feab9db4c))
+* **telegram:** add group pattern admin check ([3ef97ea](https://github.com/YSTUty/ystuty-schedule-bot/commit/3ef97ea52937ee888c5bd4e1b8d141bd4ac74d9d))
+* **transports:** expand vk and telegram coverage ([cf31593](https://github.com/YSTUty/ystuty-schedule-bot/commit/cf31593dfa0c407d172db3a825b1133eaa20aeeb))
+
+### 🔨 Build System
+
+* **docker:** upgrade runtime to node 24 ([424333e](https://github.com/YSTUty/ystuty-schedule-bot/commit/424333e78f416085aa1d0db14b133a00456755ed))
+* **release:** replace `standard-version` with `release-it` ([5f620ce](https://github.com/YSTUty/ystuty-schedule-bot/commit/5f620ceaa322a42f23ad0f73a697e732e6c232de))
+
+### 🛠️ CI
+
+* add build and test workflow ([8b5b28c](https://github.com/YSTUty/ystuty-schedule-bot/commit/8b5b28cc5b9151adeeb5bdc9da55a93cab247d04))
+* **deploy:** publish multi-arch docker images to `ghcr.io` ([7f10bdb](https://github.com/YSTUty/ystuty-schedule-bot/commit/7f10bdb81783929ed87ef2621f5d3e505fcafc69))
+* **deploy:** set lower repository name ([7fe5d1c](https://github.com/YSTUty/ystuty-schedule-bot/commit/7fe5d1c55db37f5f19b1c7db1835399c9be073dd))
+
 ### [0.3.5](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.4...v0.3.5) (2024-09-11)
 
 

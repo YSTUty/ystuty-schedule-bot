@@ -3,9 +3,9 @@ import {
   TelegrafArgumentsHost,
   TelegrafException,
   TelegrafExecutionContext,
-} from '@xtcry/nestjs-telegraf';
+} from 'nestjs-telega';
 
-import { TelegramError } from 'telegraf';
+import { TelegramError } from 'telegraf-hardened';
 
 import * as xEnv from '@my-environment';
 
@@ -42,7 +42,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
 
     const telegrafHost = TelegrafArgumentsHost.create(host);
     const ctx = telegrafHost.getContext<IContext>();
-    const next = telegrafHost.getNext();
+    const next = telegrafHost.getNext<() => Promise<void>>();
     const isCCE = isConcurrencyControlError(exception);
 
     if (

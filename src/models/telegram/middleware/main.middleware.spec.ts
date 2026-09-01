@@ -1,4 +1,4 @@
-import { TelegramError } from 'telegraf';
+import { TelegramError } from 'telegraf-hardened';
 
 import { MainMiddleware } from './main.middleware';
 
@@ -49,6 +49,33 @@ describe('Telegram MainMiddleware', () => {
 
     await middleware.middleware()(ctx as never, async () => {
       await expect((ctx as any).tryAnswerCbQuery()).rejects.toBe(error);
+    });
+  });
+
+  it('uses the hardened draft API for streaming messages', async () => {
+    const middleware = createMiddleware();
+    const sendMessageDraft = jest.fn().mockResolvedValue(true);
+    const ctx = {
+      from: { id: 1, is_bot: false },
+      chat: { id: 123 },
+      updateType: 'message',
+      update: { message: {} },
+      state: {},
+      telegram: { sendMessageDraft },
+      assert: jest.fn(),
+    };
+
+    await middleware.middleware()(ctx as never, async () => {
+      await (ctx as any).sendMessageDraft(42, 'Черновик', {
+        parse_mode: 'HTML',
+      });
+    });
+
+    expect(sendMessageDraft).toHaveBeenCalledWith({
+      chat_id: 123,
+      draft_id: 42,
+      text: 'Черновик',
+      parse_mode: 'HTML',
     });
   });
 });

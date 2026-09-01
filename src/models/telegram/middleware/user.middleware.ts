@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 
-import { MiddlewareObj } from 'telegraf/typings/middleware';
+import { MiddlewareObj } from 'telegraf-hardened';
 
 import { SocialType } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';

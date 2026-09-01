@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import * as tg from 'telegraf/typings/core/types/typegram';
-import * as tt from 'telegraf/typings/telegram-types';
-import { TelegramError } from 'telegraf';
-import Context from 'telegraf/typings/context';
-import { FmtString } from 'telegraf/typings/format';
-import { MiddlewareObj } from 'telegraf/typings/middleware';
+import * as tg from 'telegraf-hardened/types';
+import { TelegramError } from 'telegraf-hardened';
+import { Context } from 'telegraf-hardened';
+import { MiddlewareObj } from 'telegraf-hardened';
+import { FmtString } from 'telegraf-hardened/format';
 
 import * as xEnv from '@my-environment';
 import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
@@ -116,7 +115,7 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
       ctx.sendMessage = async (
         text: string | FmtString,
-        extra?: tt.ExtraReplyMessage,
+        extra?: Omit<tg.Opts<'sendMessage'>, 'chat_id' | 'text'>,
       ) => {
         ctx.assert(ctx.chat, 'sendMessage');
         const result = await ctx.telegram.sendMessage(ctx.chat!.id, text, {
@@ -139,15 +138,13 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         extra?,
       ): Promise<boolean> => {
         ctx.assert(ctx.chat, 'sendMessage');
-        // return ctx.telegram.sendMessageDraft(
-        //   { chat_id: ctx.chat!.id, draft_id, text, ...extra },
-        //   signal,
-        // );
-        return ctx.telegram.callApi('sendMessageDraft' as any, {
+        return ctx.telegram.sendMessageDraft({
           chat_id: ctx.chat!.id,
           draft_id,
-          text,
           ...extra,
+          // Повторяем нормализацию Telegram.sendMessage: FmtString передаёт
+          // форматирование через entities, а не как объект в поле text.
+          ...FmtString.normalise(text),
         });
       };
 

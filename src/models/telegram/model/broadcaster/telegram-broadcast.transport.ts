@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 
-import { TelegramError } from 'telegraf';
+import { TelegramError } from 'telegraf-hardened';
 
 import { SocialType } from '@my-common/constants';
 import { i18n as i18nTg } from '@my-common/util/tg';

@@ -1,16 +1,14 @@
-import type * as tg from 'telegraf/typings/core/types/typegram';
+import type * as tg from 'telegraf-hardened/types';
 import type { I18nContext } from '@esindger/telegraf-i18n';
-import type { Context, Scenes } from 'telegraf';
-import type { Deunionize } from 'telegraf/typings/core/helpers/deunionize';
-import type ApiClient from 'telegraf/typings/core/network/client';
+import type { Context, Scenes } from 'telegraf-hardened';
+import type { Telegram } from 'telegraf-hardened';
 import type {
   SceneSessionData,
   SceneSession as TgSceneSession,
   WizardContext,
   WizardContextWizard,
   WizardSessionData,
-} from 'telegraf/typings/scenes';
-import type Telegram from 'telegraf/typings/telegram';
+} from 'telegraf-hardened/scenes';
 
 import type { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 
@@ -21,9 +19,11 @@ import type { User } from '../../models/user/entity/user.entity';
 export type NextFn = (...args: any[]) => Promise<any>;
 export type AnyObj = Record<string, unknown>;
 export type Tail<T> = T extends [unknown, ...infer U] ? U : never;
-type Shorthand<FName extends Exclude<keyof Telegram, keyof ApiClient>> = Tail<
-  Parameters<Telegram[FName]>
->;
+type Shorthand<FName extends keyof Telegram> = Telegram[FName] extends (
+  ...args: infer Args
+) => unknown
+  ? Tail<Args>
+  : never;
 
 export interface ISessionState extends Partial<TgSceneSession> {
   __language_code?: string;
@@ -119,7 +119,7 @@ type CombinedContext = {
 
 export type IContext<
   T = {},
-  U extends Deunionize<tg.Update> = tg.Update,
+  U extends tg.Update = tg.Update,
 > = CombinedContext & OmitT<Context<U>, 'state'> & T;
 
 export interface CommandContextExtn {

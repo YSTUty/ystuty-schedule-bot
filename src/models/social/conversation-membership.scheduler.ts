@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
-import { TelegramError } from 'telegraf';
+import { TelegramError } from 'telegraf-hardened';
 import { APIError } from 'vk-io';
 
 import {

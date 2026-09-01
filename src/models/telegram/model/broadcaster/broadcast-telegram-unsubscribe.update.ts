@@ -1,5 +1,5 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, Hears, Update } from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Hears, Update } from 'nestjs-telega';
 
 import { TelegrafExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';

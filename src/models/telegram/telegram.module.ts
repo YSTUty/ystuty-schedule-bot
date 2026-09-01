@@ -1,5 +1,5 @@
 import { Global, Logger, Module } from '@nestjs/common';
-import { TelegrafModule } from '@xtcry/nestjs-telegraf';
+import { TelegrafModule } from 'nestjs-telega';
 
 import * as RedisSession from 'telegraf-session-redis';
 
@@ -94,7 +94,7 @@ export class TelegramModule {
               options: {
                 telegram: { apiRoot: xEnv.SOCIAL_TELEGRAM_API_ROOT },
               },
-              middlewares: [
+              middlewaresBefore: [
                 mainMiddleware,
                 metricsMiddleware,
                 withRedisSessionLoadRetry(session.middleware(), {

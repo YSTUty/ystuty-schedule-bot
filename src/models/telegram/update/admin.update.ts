@@ -1,5 +1,5 @@
 import { Logger, UseFilters, UseGuards } from '@nestjs/common';
-import { Action, Command, Ctx, Update } from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Update } from 'nestjs-telega';
 
 import {
   SocialType,

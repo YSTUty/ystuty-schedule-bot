@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 
-import { Markup } from 'telegraf';
+import { Markup } from 'telegraf-hardened';
 import {
   InlineKeyboardButton,
   InlineKeyboardMarkup,
   ReplyKeyboardMarkup,
   ReplyKeyboardRemove,
-} from 'telegraf/typings/core/types/typegram';
+} from 'telegraf-hardened/types';
 
 import * as xEnv from '@my-environment';
 

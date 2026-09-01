@@ -1,4 +1,4 @@
-import { Action, Command, Ctx, Update } from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Update } from 'nestjs-telega';
 
 import { TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';

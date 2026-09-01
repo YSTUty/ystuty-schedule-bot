@@ -1,13 +1,6 @@
-import {
-  Action,
-  Command,
-  Ctx,
-  Hears,
-  Wizard,
-  WizardStep,
-} from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
 
-import { Markup } from 'telegraf';
+import { Markup } from 'telegraf-hardened';
 
 import { escapeHTML } from '@my-common';
 import { SocialType } from '@my-common/constants';

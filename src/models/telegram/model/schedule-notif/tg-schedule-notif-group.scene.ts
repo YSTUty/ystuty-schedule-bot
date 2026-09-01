@@ -1,7 +1,7 @@
-import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
 
-import { Markup } from 'telegraf';
-import { InlineKeyboardMarkup } from 'telegraf/typings/types';
+import { Markup } from 'telegraf-hardened';
+import { InlineKeyboardMarkup } from 'telegraf-hardened/types';
 
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';

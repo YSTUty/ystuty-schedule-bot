@@ -5,12 +5,12 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { VkContextType, VkException, VkExecutionContext } from 'nestjs-vk';
 import {
   TelegrafContextType,
   TelegrafException,
   TelegrafExecutionContext,
-} from '@xtcry/nestjs-telegraf';
+} from 'nestjs-telega';
+import { VkContextType, VkException, VkExecutionContext } from 'nestjs-vk';
 
 import * as xEnv from '@my-environment';
 

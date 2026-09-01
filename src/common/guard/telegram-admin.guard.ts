@@ -1,8 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import {
-  TelegrafException,
-  TelegrafExecutionContext,
-} from '@xtcry/nestjs-telegraf';
+import { TelegrafException, TelegrafExecutionContext } from 'nestjs-telega';
 
 import { SOCIAL_TELEGRAM_ADMIN_IDS } from '@my-environment';
 

@@ -4,11 +4,10 @@ import {
   OnApplicationShutdown,
   OnModuleInit,
 } from '@nestjs/common';
-import { InjectBot } from '@xtcry/nestjs-telegraf';
+import { InjectBot } from 'nestjs-telega';
 
-import { Telegraf } from 'telegraf';
-import { ChatMember } from 'telegraf/typings/core/types/typegram';
-import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
+import { Telegraf } from 'telegraf-hardened';
+import { ChatMember, Opts } from 'telegraf-hardened/types';
 
 import * as xEnv from '@my-environment';
 
@@ -37,6 +36,7 @@ type PrivateChatCommandsParams = {
   hasGroup?: boolean;
   teacherId?: number;
 };
+type ExtraReplyMessage = Omit<Opts<'sendMessage'>, 'chat_id' | 'text'>;
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnApplicationShutdown {
@@ -80,6 +80,9 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
             'chat_member',
             'my_chat_member',
           ],
+          polling: {
+            retryOnConflict: true,
+          },
         })
         .catch((err) => this.logger.error(err));
       this.logger.log('[Bot] Started');

@@ -6,7 +6,10 @@ import {
   WeekParityType,
 } from '@my-interfaces';
 
-import { formatScheduleWeekDays } from './schedule-formatter.util';
+import {
+  appendScheduleTargetFooter,
+  formatScheduleWeekDays,
+} from './schedule-formatter.util';
 
 const lesson = (overrides: Partial<Lesson> = {}): Lesson => ({
   number: 2,
@@ -50,6 +53,12 @@ const format = (
   });
 
 describe('formatScheduleWeekDays', () => {
+  it('separates the schedule target from a weekly hashtag', () => {
+    expect(appendScheduleTargetFooter('#НСуббота\n', 'САРД-25')).toBe(
+      '#НСуббота\n\n[САРД-25]',
+    );
+  });
+
   it('formats schedule dates in Moscow timezone independently of the process timezone', () => {
     const originalTimeZone = process.env.TZ;
     process.env.TZ = 'UTC';

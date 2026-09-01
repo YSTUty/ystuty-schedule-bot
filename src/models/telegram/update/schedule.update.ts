@@ -19,6 +19,7 @@ import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/telegram';
 
 import { ScheduleService } from '../../schedule/schedule.service';
+import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
 
@@ -134,7 +135,7 @@ export class ScheduleUpdate {
       }),
       description: cropStr(allowerHtmlTags(messageDay, '')),
       input_message_content: {
-        message_text: `${messageDay}[${groupName}]`,
+        message_text: appendScheduleTargetFooter(messageDay, groupName),
         parse_mode: 'HTML',
       },
       reply_markup,
@@ -148,7 +149,7 @@ export class ScheduleUpdate {
       }),
       description: cropStr(allowerHtmlTags(messageTomorrow, '')),
       input_message_content: {
-        message_text: `${messageTomorrow}[${groupName}]`,
+        message_text: appendScheduleTargetFooter(messageTomorrow, groupName),
         parse_mode: 'HTML',
       },
       reply_markup,
@@ -162,7 +163,7 @@ export class ScheduleUpdate {
       }),
       description: cropStr(allowerHtmlTags(messageWeek, '')),
       input_message_content: {
-        message_text: `${messageWeek}[${groupName}]`,
+        message_text: appendScheduleTargetFooter(messageWeek, groupName),
         parse_mode: 'HTML',
       },
       reply_markup,
@@ -329,7 +330,7 @@ export class ScheduleUpdate {
         ? { type: 'teacher', id: Number(targetId) }
         : { type: 'group', id: String(targetId) },
     );
-    const content = `${message}[${targetName}]`;
+    const content = appendScheduleTargetFooter(message, targetName);
 
     if (ctx.callbackQuery) {
       try {
@@ -479,7 +480,7 @@ export class ScheduleUpdate {
         ? { type: 'teacher', id: Number(targetId) }
         : { type: 'group', id: String(targetId) },
     );
-    const content = `${message}[${targetName}]`;
+    const content = appendScheduleTargetFooter(message, targetName);
 
     if (ctx.callbackQuery) {
       try {

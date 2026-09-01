@@ -6,6 +6,12 @@ import * as scheduleUtil from './schedule.util';
 /** Вариант представления расписания в сообщении. */
 export type SchedulePresentation = 'compact' | 'detailed';
 
+/** Отделяет название группы или преподавателя от последнего дня расписания. */
+export const appendScheduleTargetFooter = (
+  message: string,
+  targetName: string,
+) => `${message.trimEnd()}\n\n[${targetName}]`;
+
 type ScheduleFormatterOptions = {
   week: OneWeek;
   dayNumber?: WeekNumberType | null;

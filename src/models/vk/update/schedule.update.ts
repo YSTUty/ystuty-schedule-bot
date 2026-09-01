@@ -13,6 +13,7 @@ import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext } from '@my-interfaces/vk';
 
 import { ScheduleService } from '../../schedule/schedule.service';
+import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -104,7 +105,9 @@ export class ScheduleUpdate {
           : { type: 'group', id: String(target.id) },
       )
       .inline(true);
-    await ctx.send(`${message}\n[${target.name}]`, { keyboard });
+    await ctx.send(appendScheduleTargetFooter(message, target.name), {
+      keyboard,
+    });
   }
 
   @VkHearsLocale([
@@ -171,7 +174,9 @@ export class ScheduleUpdate {
           : { type: 'group', id: String(target.id) },
       )
       .inline(true);
-    await ctx.send(`${message}\n[${target.name}]`, { keyboard });
+    await ctx.send(appendScheduleTargetFooter(message, target.name), {
+      keyboard,
+    });
   }
 
   /** Определяет преподавателя или учебную группу для текущего запроса. */

@@ -1,6 +1,30 @@
+import { CooldownError, LockBusyError } from '@my-common/exception';
+
 import { MainMiddleware } from './main.middleware';
 
 describe('VK MainMiddleware message subscription', () => {
+  const createFeatureMiddleware = (error: Error) => {
+    const middleware = Object.create(
+      MainMiddleware.prototype,
+    ) as MainMiddleware;
+    Object.defineProperty(middleware, 'concurrencyService', {
+      value: {
+        buildKey: jest.fn().mockReturnValue('mw:update:vk:123'),
+        queueLocal: jest.fn().mockRejectedValue(error),
+      },
+    });
+    Object.defineProperty(middleware, 'debounceRegistryService', {
+      value: {
+        buildKey: jest.fn().mockReturnValue('vk:request-error:123'),
+        checkAndMark: jest.fn().mockReturnValue(true),
+      },
+    });
+    Object.defineProperty(middleware, 'logger', {
+      value: { warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
+    });
+    return middleware;
+  };
+
   it('answers a message event only once', async () => {
     const middleware = Object.create(
       MainMiddleware.prototype,
@@ -8,7 +32,7 @@ describe('VK MainMiddleware message subscription', () => {
     Object.defineProperty(middleware, 'concurrencyService', {
       value: {
         buildKey: jest.fn().mockReturnValue('mw:update:vk:123'),
-        exclusiveLocal: jest.fn(async (_key, callback) => callback()),
+        queueLocal: jest.fn(async (_key, callback) => callback()),
       },
     });
     const originalAnswer = jest.fn().mockResolvedValue(1);
@@ -47,7 +71,7 @@ describe('VK MainMiddleware message subscription', () => {
       Object.defineProperty(middleware, 'concurrencyService', {
         value: {
           buildKey: jest.fn().mockReturnValue('mw:update:vk:183464245'),
-          exclusiveLocal: jest.fn(async (_key, callback) => callback()),
+          queueLocal: jest.fn(async (_key, callback) => callback()),
         },
       });
       const ctx: {
@@ -139,6 +163,56 @@ describe('VK MainMiddleware message subscription', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       '[VK][users.get] Cannot load user profile',
       expect.stringContaining('VK API'),
+    );
+  });
+
+  it('reports queue saturation with a translated fallback before i18n middleware', async () => {
+    const middleware = createFeatureMiddleware(
+      new CooldownError(
+        'Queue is saturated: mw:update:vk:123',
+        'mw:update:vk:123',
+      ),
+    );
+    const reply = jest.fn().mockResolvedValue({});
+    const ctx = {
+      isOutbox: false,
+      type: 'message',
+      peerId: 123,
+      state: {},
+      is: jest.fn().mockReturnValue(false),
+      toJSON: jest.fn().mockReturnValue({}),
+      reply,
+    };
+
+    await middleware['featureMiddleware'](ctx as never, jest.fn());
+
+    expect(reply).toHaveBeenCalledWith(
+      '⚠️ Слишком много запросов подряд. Подождите немного и повторите.',
+    );
+    expect((middleware as any).logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('CooldownError; key=mw:update:vk:123'),
+    );
+  });
+
+  it('reports an occupied resource separately from queue saturation', async () => {
+    const middleware = createFeatureMiddleware(
+      new LockBusyError('Distributed lock is busy', 'schedule:request'),
+    );
+    const reply = jest.fn().mockResolvedValue({});
+    const ctx = {
+      isOutbox: false,
+      type: 'message',
+      peerId: 123,
+      state: {},
+      is: jest.fn().mockReturnValue(false),
+      toJSON: jest.fn().mockReturnValue({}),
+      reply,
+    };
+
+    await middleware['featureMiddleware'](ctx as never, jest.fn());
+
+    expect(reply).toHaveBeenCalledWith(
+      '⏳ Запрос уже обрабатывается. Подождите немного.',
     );
   });
 });

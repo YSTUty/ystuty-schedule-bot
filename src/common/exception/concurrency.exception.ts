@@ -20,7 +20,13 @@ export class CooldownError extends Error {
   }
 }
 
+export const isLockBusyError = (error: unknown): error is LockBusyError =>
+  error instanceof LockBusyError;
+
+export const isCooldownError = (error: unknown): error is CooldownError =>
+  error instanceof CooldownError;
+
 export const isConcurrencyControlError = (
   error: unknown,
 ): error is LockBusyError | CooldownError =>
-  error instanceof LockBusyError || error instanceof CooldownError;
+  isLockBusyError(error) || isCooldownError(error);

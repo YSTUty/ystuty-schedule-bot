@@ -1,4 +1,4 @@
-import { LockBusyError } from '@my-common/exception';
+import { CooldownError, LockBusyError } from '@my-common/exception';
 
 import { ConcurrencyService } from './concurrency.service';
 
@@ -95,6 +95,66 @@ describe('ConcurrencyService', () => {
     ]);
 
     expect(order).toEqual(['first', 'second', 'third']);
+    service.onApplicationShutdown();
+  });
+
+  test('queueLocal creates one queue for simultaneous first updates', async () => {
+    const service = createService();
+    let running = 0;
+    let maxRunning = 0;
+
+    await Promise.all(
+      Array.from({ length: 4 }, () =>
+        service.queueLocal('new-queue-key', async () => {
+          running++;
+          maxRunning = Math.max(maxRunning, running);
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          running--;
+        }),
+      ),
+    );
+
+    expect(maxRunning).toBe(1);
+    service.onApplicationShutdown();
+  });
+
+  test('queueLocal rejects only after the waiting queue is saturated', async () => {
+    const service = createService();
+    let releaseFirst!: () => void;
+    let firstStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      firstStarted = resolve;
+    });
+    const first = service.queueLocal('queue-limit', async () => {
+      firstStarted();
+      await new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+    });
+    await started;
+
+    const second = service.queueLocal('queue-limit', async () => undefined, {
+      maxQueueSize: 3,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const third = service.queueLocal('queue-limit', async () => undefined, {
+      maxQueueSize: 3,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const fourth = service.queueLocal('queue-limit', async () => undefined, {
+      maxQueueSize: 3,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    await expect(
+      service.queueLocal('queue-limit', async () => undefined, {
+        maxQueueSize: 3,
+      }),
+    ).rejects.toBeInstanceOf(CooldownError);
+
+    releaseFirst();
+    await Promise.all([first, second, third, fourth]);
+    service.onApplicationShutdown();
   });
 
   test('onApplicationShutdown disposes registries safely', () => {

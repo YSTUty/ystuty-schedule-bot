@@ -6,6 +6,8 @@ export enum LocalePhrase {
   Common_NoAccess = 'common.no_access',
   Common_Banned = 'common.banned',
   Common_Cooldown = 'common.cooldown',
+  Common_RequestBusy = 'common.request_busy',
+  Common_RequestQueueFull = 'common.request_queue_full',
   Common_Canceled = 'common.canceled',
 
   // Buttons

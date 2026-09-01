@@ -1,16 +1,28 @@
 import { TelegramError } from 'telegraf-hardened';
 
+import { CooldownError, LockBusyError } from '@my-common/exception';
+
 import { MainMiddleware } from './main.middleware';
 
 describe('Telegram MainMiddleware', () => {
-  const createMiddleware = () =>
-    new MainMiddleware(
+  const createMiddleware = (queueLocal?: jest.Mock) => {
+    const middleware = new MainMiddleware(
       {
         buildKey: jest.fn().mockReturnValue('mw:update:tg:1'),
-        exclusiveLocal: jest.fn(async (_key, callback) => callback()),
+        queueLocal:
+          queueLocal ?? jest.fn(async (_key, callback) => await callback()),
       } as never,
-      {} as never,
+      {
+        buildKey: jest.fn().mockReturnValue('tg:request-error:1'),
+        checkAndMark: jest.fn().mockReturnValue(true),
+      } as never,
     );
+    return middleware;
+  };
+
+  const flushAsyncWork = async () => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  };
 
   it('ignores an expired callback query acknowledgement', async () => {
     const middleware = createMiddleware();
@@ -77,5 +89,69 @@ describe('Telegram MainMiddleware', () => {
       text: 'Черновик',
       parse_mode: 'HTML',
     });
+  });
+
+  it('reports queue saturation with a translated fallback before i18n middleware', async () => {
+    const queueLocal = jest
+      .fn()
+      .mockRejectedValue(
+        new CooldownError(
+          'Queue is saturated: mw:update:tg:1',
+          'mw:update:tg:1',
+        ),
+      );
+    const middleware = createMiddleware(queueLocal);
+    const logger = { warn: jest.fn(), error: jest.fn() };
+    Object.defineProperty(middleware, 'logger', { value: logger });
+    const replyWithHTML = jest.fn().mockResolvedValue({});
+    const ctx = {
+      from: { id: 1, is_bot: false },
+      updateType: 'message',
+      update: {},
+      state: {},
+      replyWithHTML,
+    };
+
+    await middleware.middleware()(ctx as never, jest.fn());
+    await flushAsyncWork();
+
+    expect(queueLocal).toHaveBeenCalledWith(
+      'mw:update:tg:1',
+      expect.any(Function),
+      { maxQueueSize: 3 },
+    );
+    expect(replyWithHTML).toHaveBeenCalledWith(
+      '⚠️ Слишком много запросов подряд. Подождите немного и повторите.',
+      {},
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('CooldownError; key=mw:update:tg:1'),
+    );
+  });
+
+  it('reports an occupied resource separately from queue saturation', async () => {
+    const middleware = createMiddleware(
+      jest
+        .fn()
+        .mockRejectedValue(
+          new LockBusyError('Distributed lock is busy', 'schedule:request'),
+        ),
+    );
+    const replyWithHTML = jest.fn().mockResolvedValue({});
+    const ctx = {
+      from: { id: 1, is_bot: false },
+      updateType: 'message',
+      update: {},
+      state: {},
+      replyWithHTML,
+    };
+
+    await middleware.middleware()(ctx as never, jest.fn());
+    await flushAsyncWork();
+
+    expect(replyWithHTML).toHaveBeenCalledWith(
+      '⏳ Запрос уже обрабатывается. Подождите немного.',
+      {},
+    );
   });
 });

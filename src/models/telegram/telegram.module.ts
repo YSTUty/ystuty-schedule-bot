@@ -2,6 +2,7 @@ import { Global, Logger, Module } from '@nestjs/common';
 import { TelegrafModule } from 'nestjs-telega';
 
 import * as RedisSession from 'telegraf-session-redis';
+import type { RedisClient } from 'redis';
 
 import * as xEnv from '@my-environment';
 
@@ -25,6 +26,34 @@ import { ScheduleUpdate } from './update/schedule.update';
 
 const TelegramRedisSession =
   RedisSession as unknown as typeof RedisSession.default;
+
+/**
+ * telegraf-session-redis создаёт собственный legacy node_redis-клиент.
+ * Без listener на `error` EventEmitter пробрасывает сетевую ошибку как
+ * uncaught exception, поэтому диагностируем каждую transport session отдельно.
+ */
+export const attachTelegramRedisSessionDiagnostics = (
+  client: Pick<RedisClient, 'on'>,
+  sessionName: string,
+  logger: Pick<Logger, 'error' | 'log' | 'warn'>,
+) => {
+  const prefix = `[Redis ${sessionName}]`;
+  client.on('error', (error) => {
+    logger.error(`${prefix} client error: ${error.message}`, error.stack);
+  });
+  client.on('connect', () => {
+    logger.log(`${prefix} client connecting`);
+  });
+  client.on('ready', () => {
+    logger.log(`${prefix} client ready`);
+  });
+  client.on('reconnecting', () => {
+    logger.warn(`${prefix} client reconnecting`);
+  });
+  client.on('end', () => {
+    logger.warn(`${prefix} client disconnected`);
+  });
+};
 
 const baseProviders = [TelegramService, TelegramKeyboardFactory];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
@@ -74,6 +103,11 @@ export class TelegramModule {
                   (ctx.from && `${ctx.from.id}:${ctx.from.id}`)
                 }`,
             });
+            attachTelegramRedisSessionDiagnostics(
+              session.client,
+              'session',
+              this.logger,
+            );
             const sessionConversation = new TelegramRedisSession({
               store: {
                 host: xEnv.REDIS_HOST,
@@ -87,6 +121,11 @@ export class TelegramModule {
               getSessionKey: (ctx) =>
                 ctx.chat && `tg:session:conversation:${ctx.chat.id}`,
             });
+            attachTelegramRedisSessionDiagnostics(
+              sessionConversation.client,
+              'conversation session',
+              this.logger,
+            );
 
             return {
               token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,

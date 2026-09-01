@@ -12,6 +12,7 @@ import * as xEnv from '@my-environment';
 import {
   escapeHTMLCodeChars,
   isConcurrencyControlError,
+  isCooldownError,
   UserException,
 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
@@ -60,6 +61,12 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       );
     }
 
+    if (isCCE) {
+      this.logger.warn(
+        `[Concurrency][TG] updateType=${ctx?.updateType} user=${ctx?.from?.id ?? 'unknown'} ${exception.name}; key=${exception.key ?? 'unknown'}`,
+      );
+    }
+
     if (!(exception instanceof Error) || !ctx) {
       return;
     }
@@ -77,7 +84,11 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
         content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
         break;
       case isCCE:
-        content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
+        content = ctx.i18n.t(
+          isCooldownError(exception)
+            ? LocalePhrase.Common_RequestQueueFull
+            : LocalePhrase.Common_RequestBusy,
+        );
         break;
 
       case isAdmin:

@@ -9,9 +9,13 @@ import { FmtString } from 'telegraf-hardened/format';
 import * as xEnv from '@my-environment';
 import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
 
-import { isConcurrencyControlError } from '@my-common/exception';
+import {
+  isConcurrencyControlError,
+  isCooldownError,
+} from '@my-common/exception';
 import {
   allowerHtmlTags,
+  escapeHTMLCodeChars,
   findSmartStreamPositions,
   normalizePartialHtml,
   normalizePartialMarkdown,
@@ -26,7 +30,8 @@ import { DebounceRegistryService } from '../../concurrency/debounce-registry.ser
 
 @Injectable()
 export class MainMiddleware implements MiddlewareObj<IContext> {
-  private static readonly COOLDOWN_MESSAGE_DEBOUNCE_MS = 3e3;
+  private static readonly REQUEST_ERROR_MESSAGE_DEBOUNCE_MS = 3e3;
+  private static readonly MAX_QUEUED_UPDATES_PER_USER = 3;
 
   private readonly logger = new Logger(MainMiddleware.name);
 
@@ -252,10 +257,12 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
       const telegramId = ctx.from.id;
       this.concurrencyService
-        .exclusiveLocal(
+        .queueLocal(
           this.concurrencyService.buildKey('mw:update:tg', telegramId),
           async () => await next?.(),
-          { timeoutMs: 2e3 },
+          // Не задаём timeout: он не отменяет уже запущенный handler и может
+          // нарушить последовательность действий пользователя.
+          { maxQueueSize: MainMiddleware.MAX_QUEUED_UPDATES_PER_USER },
         )
         .catch(async (err: unknown) => {
           if (await this.handleConcurrencyControlError(ctx, err)) {
@@ -341,10 +348,21 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
       return false;
     }
 
-    const isAdmin =
-      ctx.from && xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id);
-    const content =
-      ctx.i18n?.t(LocalePhrase.Common_Cooldown) || LocalePhrase.Common_Cooldown;
+    const isAdmin = !!(
+      ctx.from && xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.includes(ctx.from.id)
+    );
+    const phrase = isCooldownError(error)
+      ? LocalePhrase.Common_RequestQueueFull
+      : LocalePhrase.Common_RequestBusy;
+    const baseContent = this.translate(ctx, phrase);
+    const diagnostic = this.describeConcurrencyError(error);
+    const content = isAdmin
+      ? `${baseContent}\n\n<code>${escapeHTMLCodeChars(diagnostic)}</code>`
+      : baseContent;
+
+    this.logger.warn(
+      `[Concurrency][TG] updateType=${ctx.updateType} user=${ctx.from?.id ?? 'unknown'} ${diagnostic}`,
+    );
 
     try {
       if (await ctx.tryAnswerCbQuery?.(content, { show_alert: isAdmin })) {
@@ -352,13 +370,13 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
       }
 
       const debounceKey = this.debounceRegistryService.buildKey(
-        ['tg', 'cooldown'],
+        ['tg', 'request-error', error.name],
         ctx.from?.id,
       );
       if (
         this.debounceRegistryService.checkAndMark(
           debounceKey,
-          MainMiddleware.COOLDOWN_MESSAGE_DEBOUNCE_MS,
+          MainMiddleware.REQUEST_ERROR_MESSAGE_DEBOUNCE_MS,
         )
       ) {
         await ctx.replyWithHTML(content, {
@@ -370,9 +388,48 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
           }),
         });
       }
-    } catch {}
+    } catch (notificationError) {
+      this.logUserNotificationError(ctx, notificationError);
+    }
 
     return true;
+  }
+
+  /** Перевод нужен и до session/i18n middleware, когда очередь уже переполнена. */
+  private translate(ctx: IContext, phrase: LocalePhrase): string {
+    return (
+      ctx.i18n?.t(phrase) ??
+      i18n
+        .createContext(ctx.from?.language_code ?? i18n.config.defaultLanguage, {
+          ctx,
+          from: ctx.from,
+          chat: ctx.chat,
+        })
+        .t(phrase)
+    );
+  }
+
+  private describeConcurrencyError(
+    error: Error & { key?: string; cause?: unknown },
+  ) {
+    const cause = error.cause;
+    const causeDetails =
+      cause instanceof Error
+        ? `; cause=${cause.name}: ${cause.message}`
+        : cause
+          ? `; cause=${String(cause)}`
+          : '';
+    return `${error.name}; key=${error.key ?? 'unknown'}${causeDetails}`;
+  }
+
+  private logUserNotificationError(ctx: IContext, error: unknown) {
+    const details =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+    this.logger.warn(
+      `[Concurrency][TG] Failed to notify user=${ctx.from?.id ?? 'unknown'}: ${details}`,
+    );
   }
 
   // ?? зачем этот метод, если можно юзать `import { i18n } from '@my-common/util/tg';`

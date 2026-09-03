@@ -10,7 +10,11 @@ import { APIError, APIErrorCode, MessageEventContext } from 'vk-io';
 
 import * as xEnv from '@my-environment';
 
-import { isConcurrencyControlError, UserException } from '@my-common/exception';
+import {
+  isConcurrencyControlError,
+  isCooldownError,
+  UserException,
+} from '@my-common/exception';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
@@ -88,6 +92,12 @@ export class VkExceptionFilter implements ExceptionFilter {
       );
     }
 
+    if (isCCE) {
+      this.logger.warn(
+        `[Concurrency][VK] updateType=${ctx?.type} peer=${ctx?.peerId ?? 'unknown'} ${exception.name}; key=${exception.key ?? 'unknown'}`,
+      );
+    }
+
     if (
       !(exception instanceof Error) ||
       !(ctx.answer || ctx.reply) ||
@@ -110,7 +120,11 @@ export class VkExceptionFilter implements ExceptionFilter {
         content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
         break;
       case isCCE:
-        content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
+        content = ctx.i18n.t(
+          isCooldownError(exception)
+            ? LocalePhrase.Common_RequestQueueFull
+            : LocalePhrase.Common_RequestBusy,
+        );
         break;
 
       case isAdmin:

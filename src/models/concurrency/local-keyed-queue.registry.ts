@@ -63,6 +63,7 @@ class FallbackSerialQueue implements QueueLike {
 /** Registry локальных FIFO-очередей по строковому ключу. */
 export class LocalKeyedQueueRegistry {
   private readonly entries = new Map<string, QueueEntry>();
+  private readonly entryPromises = new Map<string, Promise<QueueEntry>>();
   private queueCtorPromise?: Promise<PQueueClass | null>;
   private readonly cleanupInterval: NodeJS.Timeout;
 
@@ -77,6 +78,7 @@ export class LocalKeyedQueueRegistry {
   public destroy() {
     clearInterval(this.cleanupInterval);
     this.entries.clear();
+    this.entryPromises.clear();
   }
 
   public async add<T>(
@@ -109,17 +111,33 @@ export class LocalKeyedQueueRegistry {
   private async getEntry(key: string) {
     let entry = this.entries.get(key);
     if (!entry) {
+      // Несколько одновременных первых update одного пользователя должны
+      // получить одну очередь, а не создать независимые serial queues.
+      let entryPromise = this.entryPromises.get(key);
+      if (!entryPromise) {
+        entryPromise = this.createEntry(key);
+        this.entryPromises.set(key, entryPromise);
+      }
+      entry = await entryPromise;
+    }
+    this.cleanupIdle();
+    return entry;
+  }
+
+  private async createEntry(key: string): Promise<QueueEntry> {
+    try {
       const PQueue = await this.getQueueConstructor();
-      entry = {
+      const entry: QueueEntry = {
         queue: PQueue
           ? new PQueue({ concurrency: 1 })
           : new FallbackSerialQueue(),
         lastUsedAt: Date.now(),
       };
       this.entries.set(key, entry);
+      return entry;
+    } finally {
+      this.entryPromises.delete(key);
     }
-    this.cleanupIdle();
-    return entry;
   }
 
   private async getQueueConstructor() {

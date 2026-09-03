@@ -8,10 +8,10 @@ import {
   On,
   Start,
   Update,
-} from '@xtcry/nestjs-telegraf';
+} from 'nestjs-telega';
 
-import { Markup, TelegramError } from 'telegraf';
-import type { Update as TgUpdate } from 'telegraf/types';
+import { Markup, TelegramError } from 'telegraf-hardened';
+import type { Update as TgUpdate } from 'telegraf-hardened/types';
 
 import {
   allowerHtmlTags,

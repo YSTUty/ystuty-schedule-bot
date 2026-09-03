@@ -1,32 +1,31 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { InjectBot } from '@xtcry/nestjs-telegraf';
+import { Injectable, UseFilters } from '@nestjs/common';
+import { Ctx, ListenerPhase, On, Update } from 'nestjs-telega';
 
-import { Telegraf } from 'telegraf';
-
+import { TelegrafExceptionFilter } from '@my-common';
+import { AllowedChatTypes } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
-import { IContext } from '@my-interfaces/telegram';
+import { IMessageContext } from '@my-interfaces/telegram';
 
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 
-/** Регистрирует fallback после всех decorator-based Telegram listeners. */
+/** Отвечает на текст, который не обработали основные Telegram-listener-ы. */
 @Injectable()
-export class UnhandledPrivateMessageMiddleware implements OnApplicationBootstrap {
-  constructor(
-    @InjectBot() private readonly bot: Telegraf,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
-  ) {}
+@Update()
+@UseFilters(TelegrafExceptionFilter)
+export class UnhandledPrivateMessageMiddleware {
+  constructor(private readonly keyboardFactory: TelegramKeyboardFactory) {}
 
-  public onApplicationBootstrap() {
-    // @xtcry/nestjs-telegraf регистрирует @On('text') раньше этого lifecycle hook.
-    // Поэтому fallback не перехватывает совпавшие команды и кнопки reply keyboard.
-    this.bot.on('text', async (ctx) => {
-      if (ctx.chat?.type !== 'private') return;
-
-      const context = ctx as IContext;
-      await context.replyWithHTML(
-        context.i18n.t(LocalePhrase.Page_UnknownMessage),
-        this.keyboardFactory.getUnknownMessageHelp(context),
-      );
-    });
+  /**
+   * Fallback-фаза гарантирует регистрацию после обычных обработчиков во всех
+   * модулях, сохраняя для них возможность остановить цепочку через отсутствие next().
+   */
+  @ListenerPhase('fallback')
+  @On('text')
+  @AllowedChatTypes('private')
+  async onUnhandledPrivateMessage(@Ctx() ctx: IMessageContext) {
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Page_UnknownMessage),
+      this.keyboardFactory.getUnknownMessageHelp(ctx),
+    );
   }
 }

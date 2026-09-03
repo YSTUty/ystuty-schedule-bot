@@ -1,4 +1,4 @@
-import { Action, Ctx, On, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, On, Wizard, WizardStep } from 'nestjs-telega';
 
 import * as xEnv from '@my-environment';
 

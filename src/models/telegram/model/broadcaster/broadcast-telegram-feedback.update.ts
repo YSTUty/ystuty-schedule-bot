@@ -1,5 +1,5 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Ctx, Update } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, Update } from 'nestjs-telega';
 
 import { TelegrafExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';

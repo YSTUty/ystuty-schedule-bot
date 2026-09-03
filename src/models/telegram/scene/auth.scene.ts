@@ -1,4 +1,4 @@
-import { Action, Ctx, Hears, Scene, SceneEnter } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, Hears, Scene, SceneEnter } from 'nestjs-telega';
 
 import { SocialType, UserException } from '@my-common';
 import { TgHearsLocale } from '@my-common/decorator/tg';

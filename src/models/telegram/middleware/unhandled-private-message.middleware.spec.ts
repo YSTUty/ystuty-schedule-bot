@@ -4,26 +4,16 @@ import { UnhandledPrivateMessageMiddleware } from './unhandled-private-message.m
 
 describe('UnhandledPrivateMessageMiddleware', () => {
   const createMiddleware = () => {
-    const bot = { on: jest.fn() };
     const keyboardFactory = { getUnknownMessageHelp: jest.fn() };
     const middleware = new UnhandledPrivateMessageMiddleware(
-      bot as any,
       keyboardFactory as any,
     );
 
-    middleware.onApplicationBootstrap();
-    return { bot, keyboardFactory };
+    return { middleware, keyboardFactory };
   };
 
-  it('registers a fallback after application bootstrap', () => {
-    const { bot } = createMiddleware();
-
-    expect(bot.on).toHaveBeenCalledWith('text', expect.any(Function));
-  });
-
   it('replies to unhandled private texts with an inline help button', async () => {
-    const { bot, keyboardFactory } = createMiddleware();
-    const fallback = bot.on.mock.calls[0][1];
+    const { middleware, keyboardFactory } = createMiddleware();
     const keyboard = { reply_markup: { keyboard: [] } };
     keyboardFactory.getUnknownMessageHelp.mockReturnValue(keyboard);
     const ctx = {
@@ -32,7 +22,7 @@ describe('UnhandledPrivateMessageMiddleware', () => {
       replyWithHTML: jest.fn(),
     };
 
-    await fallback(ctx);
+    await middleware.onUnhandledPrivateMessage(ctx as any);
 
     expect(keyboardFactory.getUnknownMessageHelp).toHaveBeenCalledWith(ctx);
     expect(ctx.i18n.t).toHaveBeenCalledWith(LocalePhrase.Page_UnknownMessage);
@@ -40,19 +30,5 @@ describe('UnhandledPrivateMessageMiddleware', () => {
       'Не понял сообщение.',
       keyboard,
     );
-  });
-
-  it('does not answer messages outside private chats', async () => {
-    const { bot, keyboardFactory } = createMiddleware();
-    const fallback = bot.on.mock.calls[0][1];
-    const ctx = {
-      chat: { type: 'group' },
-      replyWithHTML: jest.fn(),
-    };
-
-    await fallback(ctx);
-
-    expect(keyboardFactory.getUnknownMessageHelp).not.toHaveBeenCalled();
-    expect(ctx.replyWithHTML).not.toHaveBeenCalled();
   });
 });

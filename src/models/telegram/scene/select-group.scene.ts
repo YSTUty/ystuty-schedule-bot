@@ -1,11 +1,12 @@
-import { Action, Ctx, Hears, Wizard, WizardStep } from '@xtcry/nestjs-telegraf';
+import { Action, Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
 
-import { Markup } from 'telegraf';
+import { Markup } from 'telegraf-hardened';
 
 import { LocalePhrase } from '@my-interfaces';
 import { ICbQOrMsg, IContext, IStepContext } from '@my-interfaces/telegram';
 
 import { ScheduleService } from '../../schedule/schedule.service';
+import { TelegramButtons } from '../telegram-buttons.util';
 // import { UserService } from '../../user/user.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
@@ -110,15 +111,17 @@ export class SelectGroupScene extends BaseScene {
         // const keyboard = this.keyboardFactory.getCancelInline(ctx);
         const keyboard = Markup.inlineKeyboard([
           [
-            Markup.button.callback(
+            TelegramButtons.callback(
               ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
               'pager:inst-list',
+              { style: 'primary' },
             ),
           ],
           [
-            Markup.button.callback(
+            TelegramButtons.callback(
               ctx.i18n.t(LocalePhrase.Button_Cancel),
               LocalePhrase.Button_Cancel,
+              { style: 'danger' },
             ),
           ],
         ]);
@@ -129,8 +132,17 @@ export class SelectGroupScene extends BaseScene {
       } else {
         // const keyboard = this.keyboardFactory.getCancel(ctx);
         const keyboard = Markup.keyboard([
-          [ctx.i18n.t(LocalePhrase.Button_Cancel)],
-          [ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups)],
+          [
+            TelegramButtons.text(ctx.i18n.t(LocalePhrase.Button_Cancel), {
+              style: 'danger',
+            }),
+          ],
+          [
+            TelegramButtons.text(
+              ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
+              { style: 'primary' },
+            ),
+          ],
         ]).resize();
         await ctx.replyWithHTML(prompt, keyboard);
       }
@@ -190,8 +202,17 @@ export class SelectGroupScene extends BaseScene {
 
     // const keyboard = this.keyboardFactory.getCancel(ctx);
     const keyboard = Markup.keyboard([
-      [ctx.i18n.t(LocalePhrase.Button_Cancel)],
-      [ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups)],
+      [
+        TelegramButtons.text(ctx.i18n.t(LocalePhrase.Button_Cancel), {
+          style: 'danger',
+        }),
+      ],
+      [
+        TelegramButtons.text(
+          ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
+          { style: 'primary' },
+        ),
+      ],
     ]).resize();
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),

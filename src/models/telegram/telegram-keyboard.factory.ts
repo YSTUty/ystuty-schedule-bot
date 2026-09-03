@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 
-import { Markup } from 'telegraf';
+import { Markup } from 'telegraf-hardened';
 import {
   InlineKeyboardButton,
   InlineKeyboardMarkup,
   ReplyKeyboardMarkup,
   ReplyKeyboardRemove,
-} from 'telegraf/typings/core/types/typegram';
+} from 'telegraf-hardened/types';
 
 import * as xEnv from '@my-environment';
 
@@ -21,6 +21,11 @@ import {
 import { FeedbackCategory } from '../feedback/feedback.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
+
+import {
+  TelegramButtonOptions,
+  TelegramButtons,
+} from './telegram-buttons.util';
 
 type Hideable<B> = B & { hide?: boolean };
 export type PaginationItemType =
@@ -60,10 +65,31 @@ export class TelegramKeyboardFactory {
 
     return Markup.keyboard([
       ...(hasGroup
-        ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)]]
+        ? [
+            [
+              TelegramButtons.text(
+                ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule),
+                { style: 'primary' },
+              ),
+            ],
+          ]
         : isPrivate
-          ? [[ctx.i18n.t(LocalePhrase.Button_SelectGroup)]]
-          : [[ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule)]]),
+          ? [
+              [
+                TelegramButtons.text(
+                  ctx.i18n.t(LocalePhrase.Button_SelectGroup),
+                  { style: 'primary' },
+                ),
+              ],
+            ]
+          : [
+              [
+                TelegramButtons.text(
+                  ctx.i18n.t(LocalePhrase.Button_Schedule_Schedule),
+                  { style: 'primary' },
+                ),
+              ],
+            ]),
       ...(isPrivate && !hasTeacher
         ? [[ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher)]]
         : isPrivate && hasTeacher
@@ -88,9 +114,10 @@ export class TelegramKeyboardFactory {
   public getInviteToChat(ctx: IContext) {
     return Markup.inlineKeyboard([
       [
-        Markup.button.url(
+        TelegramButtons.url(
           ctx.i18n.t(LocalePhrase.Button_InviteToChat),
           `https://t.me/${xEnv.SOCIAL_TELEGRAM_BOT_NAME}?startgroup=invite`,
+          { style: 'primary' },
         ),
       ],
     ]);
@@ -100,9 +127,10 @@ export class TelegramKeyboardFactory {
   public getUnknownMessageHelp(ctx: IContext) {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Help),
           'help:open',
+          { style: 'primary' },
         ),
       ],
     ]);
@@ -136,9 +164,10 @@ export class TelegramKeyboardFactory {
         ),
       ],
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Cancel),
           LocalePhrase.Button_Cancel,
+          { style: 'danger' },
         ),
       ],
     ]);
@@ -148,15 +177,17 @@ export class TelegramKeyboardFactory {
   public getFeedbackCollector(ctx: IContext) {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Feedback_Submit),
           'feedback:submit',
+          { style: 'success' },
         ),
       ],
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Cancel),
           LocalePhrase.Button_Cancel,
+          { style: 'danger' },
         ),
       ],
     ]);
@@ -166,9 +197,10 @@ export class TelegramKeyboardFactory {
   public getWelcomeFeatures(ctx: IContext) {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Welcome_SelectGroup),
           LocalePhrase.Button_SelectGroup,
+          { style: 'primary' },
         ),
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Welcome_ScheduleNotif),
@@ -188,19 +220,22 @@ export class TelegramKeyboardFactory {
     return Markup.inlineKeyboard([
       [
         paused
-          ? Markup.button.callback(
+          ? TelegramButtons.callback(
               ctx.i18n.t(LocalePhrase.Button_Broadcast_Resume),
               'broadcast:queue:resume',
+              { style: 'success' },
             )
-          : Markup.button.callback(
+          : TelegramButtons.callback(
               ctx.i18n.t(LocalePhrase.Button_Broadcast_Pause),
               'broadcast:queue:pause',
+              { style: 'primary' },
             ),
       ],
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
           'broadcast:queue:terminate',
+          { style: 'danger' },
         ),
       ],
     ]);
@@ -332,9 +367,10 @@ export class TelegramKeyboardFactory {
         }),
       ),
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
           `scheduleNotif:save:${hour}:${minute}:${targetDayOffset}:${weekdays.join(',')}`,
+          { style: 'success' },
         ),
       ],
       [
@@ -354,31 +390,35 @@ export class TelegramKeyboardFactory {
       notif
         ? [
             [
-              Markup.button.callback(
+              TelegramButtons.callback(
                 ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Edit),
                 `scheduleNotif:edit:${notif.id}`,
+                { style: 'primary' },
               ),
             ],
             [
-              Markup.button.callback(
+              TelegramButtons.callback(
                 notif.isEnabled
                   ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Disable)
                   : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Enable),
                 `scheduleNotif:enabled:${notif.id}:${notif.isEnabled ? '0' : '1'}`,
+                { style: notif.isEnabled ? 'danger' : 'success' },
               ),
             ],
             [
-              Markup.button.callback(
+              TelegramButtons.callback(
                 ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete),
                 `scheduleNotif:deleteConfirm:${notif.id}`,
+                { style: 'danger' },
               ),
             ],
           ]
         : [
             [
-              Markup.button.callback(
+              TelegramButtons.callback(
                 ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
                 'scheduleNotif:create',
+                { style: 'primary' },
               ),
             ],
           ],
@@ -420,15 +460,17 @@ export class TelegramKeyboardFactory {
         }),
       ),
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeGroup),
           `scheduleNotif:changeGroup:${notif.id}:1:edit`,
+          { style: 'primary' },
         ),
       ],
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
           'scheduleNotif:editSave',
+          { style: 'success' },
         ),
       ],
     ]);
@@ -438,9 +480,10 @@ export class TelegramKeyboardFactory {
   public getScheduleNotifDeleteConfirmation(ctx: IContext, notifId: number) {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteConfirm),
           `scheduleNotif:delete:${notifId}`,
+          { style: 'danger' },
         ),
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_DeleteCancel),
@@ -514,31 +557,36 @@ export class TelegramKeyboardFactory {
         ? [
             [
               params.paused
-                ? Markup.button.callback(
+                ? TelegramButtons.callback(
                     ctx.i18n.t(LocalePhrase.Button_Broadcast_Resume),
                     'broadcast:queue:resume',
+                    { style: 'success' },
                   )
-                : Markup.button.callback(
+                : TelegramButtons.callback(
                     ctx.i18n.t(LocalePhrase.Button_Broadcast_Pause),
                     'broadcast:queue:pause',
+                    { style: 'primary' },
                   ),
-              Markup.button.callback(
+              TelegramButtons.callback(
                 ctx.i18n.t(LocalePhrase.Button_Broadcast_Terminate),
                 'broadcast:queue:terminate',
+                { style: 'danger' },
               ),
             ],
           ]
         : []),
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_ApplySettings),
           `broadcast:campaign:apply:${params.campaignId}`,
+          { style: 'primary' },
         ),
       ],
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_Delete),
           `broadcast:campaign:delete:${params.campaignId}`,
+          { style: 'danger' },
         ),
       ],
       [
@@ -635,9 +683,10 @@ export class TelegramKeyboardFactory {
   public getBroadcastUnsubscribeConfirmation(ctx: IContext) {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_UnsubscribeConfirm),
           'broadcast:unsubscribe:confirm',
+          { style: 'danger' },
         ),
       ],
       [
@@ -692,9 +741,10 @@ export class TelegramKeyboardFactory {
 
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback(
+        TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_CreateQueue),
           'broadcast:wizard:send',
+          { style: 'success' },
         ),
       ],
       ...(mode === 'forward' && hasRecipientKeyboard
@@ -1230,15 +1280,20 @@ export class TelegramKeyboardFactory {
         ? Markup.inlineKeyboard([
             [
               authLink
-                ? Markup.button.url(ctx.i18n.t(phrase), authLink)
-                : Markup.button.callback(ctx.i18n.t(phrase), phrase),
+                ? TelegramButtons.url(ctx.i18n.t(phrase), authLink, {
+                    style: 'primary',
+                  })
+                : TelegramButtons.callback(ctx.i18n.t(phrase), phrase, {
+                    style: 'primary',
+                  }),
             ],
             ...(addSelectGroup
               ? [
                   [
-                    Markup.button.callback(
+                    TelegramButtons.callback(
                       ctx.i18n.t(LocalePhrase.Button_SelectGroup),
                       LocalePhrase.Button_SelectGroup,
+                      { style: 'primary' },
                     ),
                     Markup.button.callback(
                       ctx.i18n.t(LocalePhrase.Button_Schedule_Teacher),
@@ -1250,9 +1305,10 @@ export class TelegramKeyboardFactory {
             ...(addCancel
               ? [
                   [
-                    Markup.button.callback(
+                    TelegramButtons.callback(
                       ctx.i18n.t(LocalePhrase.Button_Cancel),
                       LocalePhrase.Button_Cancel,
+                      { style: 'danger' },
                     ),
                   ],
                 ]
@@ -1277,13 +1333,15 @@ export class TelegramKeyboardFactory {
     return Markup.inlineKeyboard([
       [
         groupName
-          ? Markup.button.callback(
+          ? TelegramButtons.callback(
               ctx.i18n.t(LocalePhrase.Button_SelectGroup_X, { groupName }),
               `selectGroup:${groupName}`,
+              { style: 'primary' },
             )
-          : Markup.button.callback(
+          : TelegramButtons.callback(
               ctx.i18n.t(LocalePhrase.Button_SelectGroup),
               LocalePhrase.Button_SelectGroup,
+              { style: 'primary' },
             ),
       ],
     ]);
@@ -1293,21 +1351,25 @@ export class TelegramKeyboardFactory {
     ctx: IContext,
     target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
   ) {
-    const makeButton = (phrase: LocalePhrase) =>
-      Markup.button.callback(
+    const makeButton = (
+      phrase: LocalePhrase,
+      style?: TelegramButtonOptions['style'],
+    ) =>
+      TelegramButtons.callback(
         ctx.i18n.t(phrase),
         target.type === 'teacher'
           ? `${phrase}:teacher:${target.id}`
           : `${phrase}:${target.id}`,
+        { style },
       );
 
     return Markup.inlineKeyboard([
       [
-        makeButton(LocalePhrase.Button_Schedule_ForToday),
+        makeButton(LocalePhrase.Button_Schedule_ForToday, 'primary'),
         makeButton(LocalePhrase.Button_Schedule_ForTomorrow),
       ],
       [
-        makeButton(LocalePhrase.Button_Schedule_ForWeek),
+        makeButton(LocalePhrase.Button_Schedule_ForWeek, 'primary'),
         makeButton(LocalePhrase.Button_Schedule_ForNextWeek),
       ],
     ]);
@@ -1561,9 +1623,10 @@ export class TelegramKeyboardFactory {
     return {
       ...Markup.inlineKeyboard([
         [
-          Markup.button.callback(
+          TelegramButtons.callback(
             ctx.i18n.t(LocalePhrase.Button_Cancel),
             LocalePhrase.Button_Cancel,
+            { style: 'danger' },
           ),
         ],
       ]),

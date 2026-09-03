@@ -17,9 +17,14 @@ import {
 import { RedisStorage } from 'vk-io-redis-storage';
 import { MessagesDeleteParams } from 'vk-io/lib/api/schemas/params';
 
+import * as xEnv from '@my-environment';
+
 import { VkExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
-import { isConcurrencyControlError } from '@my-common/exception';
+import {
+  isConcurrencyControlError,
+  isCooldownError,
+} from '@my-common/exception';
 import { withRedisSessionLoadRetry } from '@my-common/util/redis-session-retry.util';
 import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
@@ -47,7 +52,8 @@ import { SELECT_GROUP_SCENE } from '../vk.constants';
 @Injectable()
 @UseFilters(VkExceptionFilter)
 export class MainMiddleware {
-  private static readonly COOLDOWN_MESSAGE_DEBOUNCE_MS = 3e3;
+  private static readonly REQUEST_ERROR_MESSAGE_DEBOUNCE_MS = 3e3;
+  private static readonly MAX_QUEUED_UPDATES_PER_PEER = 3;
   private readonly logger = new Logger(MainMiddleware.name);
 
   private readonly sessionManager: SessionManager;
@@ -300,10 +306,12 @@ export class MainMiddleware {
 
       const peerId = ctx.peerId;
       await this.concurrencyService
-        .exclusiveLocal(
+        .queueLocal(
           this.concurrencyService.buildKey('mw:update:vk', peerId),
           async () => await next(),
-          { timeoutMs: 2e3 },
+          // Не задаём timeout: он не отменяет уже запущенный handler и может
+          // нарушить последовательность действий пользователя.
+          { maxQueueSize: MainMiddleware.MAX_QUEUED_UPDATES_PER_PEER },
         )
         .catch(async (err: unknown) => {
           if (await this.handleConcurrencyControlError(ctx, err)) {
@@ -361,23 +369,84 @@ export class MainMiddleware {
       return false;
     }
 
-    const content =
-      ctx.i18n?.t(LocalePhrase.Common_Cooldown) || LocalePhrase.Common_Cooldown;
+    const phrase = isCooldownError(error)
+      ? LocalePhrase.Common_RequestQueueFull
+      : LocalePhrase.Common_RequestBusy;
+    const content = this.translate(ctx, phrase);
+    const diagnostic = this.describeConcurrencyError(error);
+
+    this.logger.warn(
+      `[Concurrency][VK] updateType=${ctx.type} peer=${ctx.peerId ?? 'unknown'} ${diagnostic}`,
+    );
 
     try {
       if (ctx.eventPayload && ctx.answer) {
-        await ctx.answer({ type: 'show_snackbar', text: content });
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: this.isAdmin(ctx) ? `${content} [${diagnostic}]` : content,
+        });
       } else if (
         this.debounceRegistryService.checkAndMark(
-          this.debounceRegistryService.buildKey(['vk', 'cooldown'], ctx.peerId),
-          MainMiddleware.COOLDOWN_MESSAGE_DEBOUNCE_MS,
+          this.debounceRegistryService.buildKey(
+            ['vk', 'request-error', error.name],
+            ctx.peerId,
+          ),
+          MainMiddleware.REQUEST_ERROR_MESSAGE_DEBOUNCE_MS,
         )
       ) {
-        await ctx.reply(content);
+        await ctx.reply(
+          this.isAdmin(ctx) ? `${content}\n[${diagnostic}]` : content,
+        );
       }
-    } catch {}
+    } catch (notificationError) {
+      this.logUserNotificationError(ctx, notificationError);
+    }
 
     return true;
+  }
+
+  /** Перевод нужен и до session/i18n middleware, когда очередь уже переполнена. */
+  private translate(ctx: IContext, phrase: LocalePhrase): string {
+    return (
+      ctx.i18n?.t(phrase) ??
+      i18n
+        .createContext(i18n.config.defaultLanguage, {
+          ctx,
+          state: ctx.state,
+          isDM: ctx.isDM,
+        })
+        .t(phrase)
+    );
+  }
+
+  private isAdmin(ctx: IContext) {
+    return (
+      xEnv.SOCIAL_VK_ADMIN_IDS.includes(ctx.senderId || ctx.peerId) ||
+      ctx.state.user?.role === 'admin'
+    );
+  }
+
+  private describeConcurrencyError(
+    error: Error & { key?: string; cause?: unknown },
+  ) {
+    const cause = error.cause;
+    const causeDetails =
+      cause instanceof Error
+        ? `; cause=${cause.name}: ${cause.message}`
+        : cause
+          ? `; cause=${String(cause)}`
+          : '';
+    return `${error.name}; key=${error.key ?? 'unknown'}${causeDetails}`;
+  }
+
+  private logUserNotificationError(ctx: IContext, error: unknown) {
+    const details =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+    this.logger.warn(
+      `[Concurrency][VK] Failed to notify peer=${ctx.peerId ?? 'unknown'}: ${details}`,
+    );
   }
 
   private get safeTextConverstionMiddleware() {

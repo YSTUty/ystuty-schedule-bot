@@ -1,4 +1,4 @@
-import { Hears } from '@xtcry/nestjs-telegraf';
+import { Hears } from 'nestjs-telega';
 
 import { checkLocaleCondition } from '@my-common/util/tg';
 import { LocalePhrase } from '@my-interfaces';

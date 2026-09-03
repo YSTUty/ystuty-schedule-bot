@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { MiddlewareObj } from 'telegraf/typings/middleware';
+import { MiddlewareObj } from 'telegraf-hardened';
 
 import { IContext } from '@my-interfaces/telegram';
 

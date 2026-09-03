@@ -3,15 +3,16 @@ import {
   TelegrafArgumentsHost,
   TelegrafException,
   TelegrafExecutionContext,
-} from '@xtcry/nestjs-telegraf';
+} from 'nestjs-telega';
 
-import { TelegramError } from 'telegraf';
+import { TelegramError } from 'telegraf-hardened';
 
 import * as xEnv from '@my-environment';
 
 import {
   escapeHTMLCodeChars,
   isConcurrencyControlError,
+  isCooldownError,
   UserException,
 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
@@ -42,7 +43,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
 
     const telegrafHost = TelegrafArgumentsHost.create(host);
     const ctx = telegrafHost.getContext<IContext>();
-    const next = telegrafHost.getNext();
+    const next = telegrafHost.getNext<() => Promise<void>>();
     const isCCE = isConcurrencyControlError(exception);
 
     if (
@@ -57,6 +58,12 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       this.logger.error(
         `OnUpdateType(${ctx?.updateType}): ${exception?.message || exception}`,
         exception.stack,
+      );
+    }
+
+    if (isCCE) {
+      this.logger.warn(
+        `[Concurrency][TG] updateType=${ctx?.updateType} user=${ctx?.from?.id ?? 'unknown'} ${exception.name}; key=${exception.key ?? 'unknown'}`,
       );
     }
 
@@ -77,7 +84,11 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
         content = ctx.i18n.t(LocalePhrase.Common_NoAccess);
         break;
       case isCCE:
-        content = ctx.i18n.t(LocalePhrase.Common_Cooldown);
+        content = ctx.i18n.t(
+          isCooldownError(exception)
+            ? LocalePhrase.Common_RequestQueueFull
+            : LocalePhrase.Common_RequestBusy,
+        );
         break;
 
       case isAdmin:

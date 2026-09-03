@@ -52,6 +52,36 @@ describe('TelegramKeyboardFactory', () => {
     ]);
   });
 
+  it('uses Telegram button colors for primary, successful and destructive actions', () => {
+    const factory = new TelegramKeyboardFactory();
+    const feedbackButtons =
+      factory.getFeedbackCollector(ctx).reply_markup.inline_keyboard;
+    const queueButtons = factory.getBroadcastQueueControls(ctx, true)
+      .reply_markup.inline_keyboard;
+    const deleteButtons = factory.getScheduleNotifDeleteConfirmation(ctx, 7)
+      .reply_markup.inline_keyboard;
+    const scheduleButtons = factory.getScheduleInline(ctx, {
+      type: 'group',
+      id: 'ЦИС-46',
+    }).reply_markup.inline_keyboard;
+    const settingsButtons = factory.getScheduleNotifSettings(ctx, {
+      id: 7,
+      isEnabled: true,
+    }).reply_markup.inline_keyboard;
+
+    expect(
+      factory.getUnknownMessageHelp(ctx).reply_markup.inline_keyboard[0][0],
+    ).toMatchObject({ style: 'primary' });
+    expect(feedbackButtons[0][0]).toMatchObject({ style: 'success' });
+    expect(feedbackButtons[1][0]).toMatchObject({ style: 'danger' });
+    expect(queueButtons[0][0]).toMatchObject({ style: 'success' });
+    expect(queueButtons[1][0]).toMatchObject({ style: 'danger' });
+    expect(deleteButtons[0][0]).toMatchObject({ style: 'danger' });
+    expect(scheduleButtons[0][0]).toMatchObject({ style: 'primary' });
+    expect(scheduleButtons[1][0]).toMatchObject({ style: 'primary' });
+    expect(settingsButtons[0][0]).toMatchObject({ style: 'primary' });
+  });
+
   it('opens hour selection before choosing minutes in the notif editor', () => {
     const keyboard = new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 7,

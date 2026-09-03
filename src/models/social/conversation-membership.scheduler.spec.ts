@@ -1,4 +1,4 @@
-import { TelegramError } from 'telegraf';
+import { TelegramError } from 'telegraf-hardened';
 import { APIError, APIErrorCode } from 'vk-io';
 
 import { SocialType } from '@my-common';

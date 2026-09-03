@@ -1653,10 +1653,10 @@
   resolved "https://registry.yarnpkg.com/@sqltools/formatter/-/formatter-1.2.5.tgz#3abc203c79b8c3e90fd6c156a0c62d5403520e12"
   integrity sha512-Uy0+khmZqUrUGm5dmMqVlnvufZRSK0FbYzVgp0UMstm+F5+W2/jnEEQyc9vo1ZR/E5ZI/B1WjjoTqBqwJL6Krw==
 
-"@telegraf/types@^7.1.0":
-  version "7.1.0"
-  resolved "https://registry.yarnpkg.com/@telegraf/types/-/types-7.1.0.tgz#d8bd9b2f5070b4de46971416e890338cd89fc23d"
-  integrity sha512-kGevOIbpMcIlCDeorKGpwZmdH7kHbqlk/Yj6dEpJMKEQw5lk0KVQY0OLXaCswy8GqlIVLd5625OB+rAntP9xVw==
+"@telegraf/types@npm:@telegraf-hardened/types@^9.6.0":
+  version "9.6.0"
+  resolved "https://registry.yarnpkg.com/@telegraf-hardened/types/-/types-9.6.0.tgz#cb143ed9458cad89fd7d39432be0bd82bf066f03"
+  integrity sha512-lIAvpEr4u57ZSNhKDK6Tr3SPyett/sPJrgSOb21cINT82QtR+pBJ57bcbZpX/ZhNw7Dcq48FYsQSzkFMkieIRQ==
 
 "@tokenizer/inflate@^0.4.1":
   version "0.4.1"
@@ -2219,13 +2219,6 @@
   dependencies:
     "@webassemblyjs/ast" "1.14.1"
     "@xtuc/long" "4.2.2"
-
-"@xtcry/nestjs-telegraf@^2.7.1":
-  version "2.7.1"
-  resolved "https://registry.yarnpkg.com/@xtcry/nestjs-telegraf/-/nestjs-telegraf-2.7.1.tgz#216c7ae12b12cc7d21fd0178c59a172cda949dfb"
-  integrity sha512-ZdlsFFJYwfxQIenqXL4EX8E6s8GsHsXjrqyEN3WKmTzjbYMnYrlaWmx3ZrURkFiCDHZmKIyv9ZZPM4RivAIS6g==
-  dependencies:
-    lodash "^4.17.21"
 
 "@xtuc/ieee754@^1.2.0":
   version "1.2.0"
@@ -5978,6 +5971,11 @@ neo-async@^2.6.2:
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.2.tgz#b4aafb93e3aeb2d8174ca53cf163ab7d7308305f"
   integrity sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
 
+nestjs-telega@1.0.0-rc.2:
+  version "1.0.0-rc.2"
+  resolved "https://registry.yarnpkg.com/nestjs-telega/-/nestjs-telega-1.0.0-rc.2.tgz#dbcbba70fd8b1c496a0ee0dbc857f502c7247750"
+  integrity sha512-5M8u2r/tA4XoC/AO5uF6xgORsIdCic4FZ1sJTW2c6jv/j2CgH3DiwkR04XZYVVq1g2l7H4bOS1gFLV07lgBPFg==
+
 nestjs-vk@^4.8.0:
   version "4.8.0"
   resolved "https://registry.yarnpkg.com/nestjs-vk/-/nestjs-vk-4.8.0.tgz#f9e0661fbeb0dde0bdcbaed90c132cf492627307"
@@ -6016,13 +6014,6 @@ node-emoji@1.11.0:
   integrity sha512-wo2DpQkQp7Sjm2A0cq+sN7EHKO6Sl0ctXeBdFZrL9T9+UywORbufTcTZxom8YqpLQt/FqNMUkOpkZrJVYSKD3A==
   dependencies:
     lodash "^4.17.21"
-
-node-fetch@^2.7.0:
-  version "2.7.0"
-  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.7.0.tgz#d0f0fa6e3e2dc1d27efcd8ad99d550bda94d187d"
-  integrity sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==
-  dependencies:
-    whatwg-url "^5.0.0"
 
 node-fetch@^3.3.2:
   version "3.3.2"
@@ -7032,11 +7023,6 @@ safe-compare@^1.1.4:
   resolved "https://registry.yarnpkg.com/safer-buffer/-/safer-buffer-2.1.2.tgz#44fa161b0187b9549dd84bb91802f9bd8385cd6a"
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
 
-sandwich-stream@^2.0.2:
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/sandwich-stream/-/sandwich-stream-2.0.2.tgz#6d1feb6cf7e9fe9fadb41513459a72c2e84000fa"
-  integrity sha512-jLYV0DORrzY3xaz/S9ydJL6Iz7essZeAfnAavsJ+zsJGZ1MOnsS52yRjU3uF3pJa/lla7+wisp//fxOwOH8SKQ==
-
 schema-utils@^3.1.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/schema-utils/-/schema-utils-3.1.1.tgz#bc74c4b6b6995c1d88f76a8b77bea7219e0c8281"
@@ -7554,6 +7540,17 @@ tdigest@^0.1.1:
   dependencies:
     bintrees "1.0.2"
 
+telegraf-hardened@6.0.0:
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/telegraf-hardened/-/telegraf-hardened-6.0.0.tgz#9c91d92536f323760b4cf98befa2ec260f3a1d04"
+  integrity sha512-swsSV05/DtLLaG2NbHNz7kwPNK0VNBhJogdoBD2tvyGaMcj3NraXUe7Si3sdGqVoc8/WoV5WhylehOpEEdJwDA==
+  dependencies:
+    "@telegraf/types" "npm:@telegraf-hardened/types@^9.6.0"
+    debug "^4.4.3"
+    mri "^1.2.0"
+    p-timeout "^4.1.0"
+    safe-compare "^1.1.4"
+
 telegraf-session-redis@^5.1.0:
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/telegraf-session-redis/-/telegraf-session-redis-5.1.0.tgz#f0eb6ff4f433ba97c4ea6d7717c8886b5d347ddb"
@@ -7562,20 +7559,6 @@ telegraf-session-redis@^5.1.0:
     "@types/redis" "^2.8.6"
     debug "^4.1.1"
     redis "^2.6.0-1"
-
-telegraf@^4.16.3:
-  version "4.16.3"
-  resolved "https://registry.yarnpkg.com/telegraf/-/telegraf-4.16.3.tgz#f03fa30482b540a7f9895af8f13ec8f432840a66"
-  integrity sha512-yjEu2NwkHlXu0OARWoNhJlIjX09dRktiMQFsM678BAH/PEPVwctzL67+tvXqLCRQQvm3SDtki2saGO9hLlz68w==
-  dependencies:
-    "@telegraf/types" "^7.1.0"
-    abort-controller "^3.0.0"
-    debug "^4.3.4"
-    mri "^1.2.0"
-    node-fetch "^2.7.0"
-    p-timeout "^4.1.0"
-    safe-compare "^1.1.4"
-    sandwich-stream "^2.0.2"
 
 terser-webpack-plugin@^5.3.17:
   version "5.4.0"
@@ -7693,11 +7676,6 @@ token-types@^6.1.1:
     "@borewit/text-codec" "^0.2.1"
     "@tokenizer/token" "^0.3.0"
     ieee754 "^1.2.1"
-
-tr46@~0.0.3:
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/tr46/-/tr46-0.0.3.tgz#8184fd347dac9cdc185992f3a6622e14b9d9ab6a"
-  integrity sha1-gYT9NH2snNwYWZLzpmIuFLnZq2o=
 
 trim-newlines@^3.0.0:
   version "3.0.1"
@@ -8079,11 +8057,6 @@ web-streams-polyfill@^3.0.3:
   resolved "https://registry.yarnpkg.com/web-streams-polyfill/-/web-streams-polyfill-3.2.0.tgz#a6b74026b38e4885869fb5c589e90b95ccfc7965"
   integrity sha512-EqPmREeOzttaLRm5HS7io98goBgZ7IVz79aDvqjD0kYXLtFZTc0T/U6wHTPKyIjb+MdN7DFIIX6hgdBEpWmfPA==
 
-webidl-conversions@^3.0.0:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/webidl-conversions/-/webidl-conversions-3.0.1.tgz#24534275e2a7bc6be7bc86611cc16ae0a5654871"
-  integrity sha1-JFNCdeKnvGvnvIZhHMFq4KVlSHE=
-
 webpack-node-externals@3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/webpack-node-externals/-/webpack-node-externals-3.0.0.tgz#1a3407c158d547a9feb4229a9e3385b7b60c9917"
@@ -8124,14 +8097,6 @@ webpack@5.106.0:
     terser-webpack-plugin "^5.3.17"
     watchpack "^2.5.1"
     webpack-sources "^3.3.4"
-
-whatwg-url@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/whatwg-url/-/whatwg-url-5.0.0.tgz#966454e8765462e37644d3626f6742ce8b70965d"
-  integrity sha1-lmRU6HZUYuN2RNNib2dCzotwll0=
-  dependencies:
-    tr46 "~0.0.3"
-    webidl-conversions "^3.0.0"
 
 which@^2.0.1:
   version "2.0.2"

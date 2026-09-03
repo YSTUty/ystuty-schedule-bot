@@ -1,15 +1,8 @@
 import { UseFilters } from '@nestjs/common';
-import {
-  Action,
-  Command,
-  Ctx,
-  Hears,
-  On,
-  Update,
-} from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Hears, On, Update } from 'nestjs-telega';
 
-import * as tg from 'telegraf/typings/core/types/typegram';
-import type { Update as TgUpdate } from 'telegraf/types';
+import * as tg from 'telegraf-hardened/types';
+import type { Update as TgUpdate } from 'telegraf-hardened/types';
 
 import {
   allowerHtmlTags,

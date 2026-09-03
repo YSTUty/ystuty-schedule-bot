@@ -1,6 +1,29 @@
 import { TelegramService } from './telegram.service';
 
 describe('TelegramService', () => {
+  it('enables polling conflict retry on launch', async () => {
+    const bot = {
+      catch: jest.fn(),
+      launch: jest.fn().mockResolvedValue(undefined),
+      telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
+    };
+    const service = new TelegramService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'notifyAdmin').mockResolvedValue(false);
+
+    await service.launch();
+
+    expect(bot.launch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        polling: { retryOnConflict: true },
+      }),
+    );
+  });
+
   it('sets an authorization command for an unauthorized private-chat user', async () => {
     const bot = {
       telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },

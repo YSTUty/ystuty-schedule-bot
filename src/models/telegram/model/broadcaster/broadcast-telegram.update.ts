@@ -1,8 +1,8 @@
 import { UseFilters, UseGuards } from '@nestjs/common';
-import { Action, Command, Ctx, Update } from '@xtcry/nestjs-telegraf';
+import { Action, Command, Ctx, Update } from 'nestjs-telega';
 
-import { TelegramError } from 'telegraf';
-import { ExtraEditMessageText } from 'telegraf/typings/telegram-types';
+import { TelegramError } from 'telegraf-hardened';
+import { Opts } from 'telegraf-hardened/types';
 
 import { TelegrafExceptionFilter, TelegramAdminGuard } from '@my-common';
 import { SocialType } from '@my-common/constants';
@@ -17,6 +17,11 @@ import { TELEGRAM_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import { BroadcastCampaignStatus } from '../../../broadcast/broadcast.types';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+
+type ExtraEditMessageText = Omit<
+  Opts<'editMessageText'>,
+  'chat_id' | 'message_id' | 'inline_message_id' | 'text'
+>;
 
 @Update()
 @UseFilters(TelegrafExceptionFilter)

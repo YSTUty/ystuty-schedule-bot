@@ -4,11 +4,16 @@ import { HttpService } from '@nestjs/axios';
 
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
+import * as xEnv from '@my-environment';
+
 import { isConcurrencyControlError, matchGroupName, md5 } from '@my-common';
 import { OneWeek, WeekNumberType } from '@my-interfaces';
 
 import { ConcurrencyService } from '../concurrency/concurrency.service';
-import { MetricsService } from '../metrics/metrics.service';
+import {
+  MetricsService,
+  ScheduleGroupLessonMetric,
+} from '../metrics/metrics.service';
 import { RedisService } from '../redis/redis.service';
 
 import * as scheduleUtil from './util/schedule.util';
@@ -21,6 +26,9 @@ type Teacher = {
   id: number;
   name: string;
 };
+
+const SCHEDULE_AVAILABILITY_CONCURRENCY = 4;
+const SCHEDULE_AVAILABILITY_REQUEST_TIMEOUT_MS = 15e3;
 
 export type GroupInstitute = {
   name: string;
@@ -43,15 +51,22 @@ export class ScheduleService implements OnModuleInit {
   private allTeachersList: Teacher[] = [];
   private groupsChecksum?: string;
   private teachersChecksum?: string;
+  private isScheduleAvailabilityRefreshInProgress = false;
 
   async onModuleInit() {
     this.logger.debug('Start load all groups & teachers');
     await Promise.all([this.loadAllGroups(), this.loadAllTeachers()]);
+    void this.refreshScheduleAvailabilityMetrics();
   }
 
   @Cron(CronExpression.EVERY_10_MINUTES, { waitForCompletion: true })
   protected async onLoadData() {
     await Promise.all([this.loadAllGroups(), this.loadAllTeachers()]);
+  }
+
+  @Cron(CronExpression.EVERY_30_MINUTES, { waitForCompletion: true })
+  protected async onRefreshScheduleAvailabilityMetrics() {
+    await this.refreshScheduleAvailabilityMetrics();
   }
 
   protected async loadAllGroups() {
@@ -74,6 +89,13 @@ export class ScheduleService implements OnModuleInit {
       const isChanged = this.groupsChecksum !== checksum;
       this.allGroupsList = groups;
       this.groupsChecksum = checksum;
+      this.metricsService.setScheduleReferenceCounts({
+        institutesCount: groups.length,
+        groupsCount: groups.reduce(
+          (count, institute) => count + institute.groups.length,
+          0,
+        ),
+      });
 
       if (isInitialLoad || isChanged) {
         this.logger.log(
@@ -494,6 +516,7 @@ export class ScheduleService implements OnModuleInit {
   public async getSchedule(
     targetId: string | number,
     targetType: 'group' | 'teacher',
+    options?: { requestTimeoutMs?: number },
   ) {
     const cacheKey = `schedule:${targetType}:${String(targetId).toLowerCase()}`;
     if (this.allowCaching) {
@@ -514,7 +537,11 @@ export class ScheduleService implements OnModuleInit {
       this.httpService.get<{
         isCache: boolean;
         items: OneWeek[];
-      }>(`/v1/schedule/${targetType}/${encodeURIComponent(targetId)}`),
+      }>(`/v1/schedule/${targetType}/${encodeURIComponent(targetId)}`, {
+        ...(options?.requestTimeoutMs && {
+          timeout: options.requestTimeoutMs,
+        }),
+      }),
     );
 
     if (items.length === 0) {
@@ -549,5 +576,105 @@ export class ScheduleService implements OnModuleInit {
     }
 
     return { isCache, items };
+  }
+
+  /**
+   * Собирает снимок наполненности расписания в фоне, не затрагивая Prometheus scrape.
+   * При частичной ошибке старый согласованный снимок остаётся доступен.
+   */
+  protected async refreshScheduleAvailabilityMetrics() {
+    if (
+      !this.isScheduleAvailabilityMetricsEnabled() ||
+      this.isScheduleAvailabilityRefreshInProgress
+    ) {
+      return;
+    }
+
+    this.isScheduleAvailabilityRefreshInProgress = true;
+    try {
+      const groups = this.allGroupsList.flatMap((institute) =>
+        institute.groups
+          .filter((groupName) => !!groupName?.trim())
+          .map((groupName) => ({
+            groupName,
+            instituteName: institute.name,
+          })),
+      );
+      const failedGroups: string[] = [];
+      const groupLessons = await this.mapWithConcurrency(
+        groups,
+        SCHEDULE_AVAILABILITY_CONCURRENCY,
+        async ({ groupName, instituteName }) => {
+          try {
+            const schedule = await this.getSchedule(groupName, 'group', {
+              requestTimeoutMs: SCHEDULE_AVAILABILITY_REQUEST_TIMEOUT_MS,
+            });
+            return {
+              groupName,
+              instituteName,
+              lessonsCount: this.countRawLessons(schedule?.items || []),
+            } satisfies ScheduleGroupLessonMetric;
+          } catch {
+            failedGroups.push(groupName);
+            return null;
+          }
+        },
+      );
+
+      if (failedGroups.length > 0) {
+        this.logger.warn(
+          `Schedule availability metrics were not updated: ${failedGroups.length}/${groups.length} group requests failed`,
+        );
+        return;
+      }
+
+      this.metricsService.setScheduleGroupLessonCounts(
+        groupLessons.filter(
+          (groupLesson): groupLesson is ScheduleGroupLessonMetric =>
+            groupLesson !== null,
+        ),
+      );
+    } finally {
+      this.isScheduleAvailabilityRefreshInProgress = false;
+    }
+  }
+
+  /** Отдельный getter упрощает unit-тесты без изменения process.env. */
+  protected isScheduleAvailabilityMetricsEnabled() {
+    return xEnv.PROMETHEUS_SCHEDULE_AVAILABILITY_METRICS;
+  }
+
+  private countRawLessons(weeks: readonly OneWeek[]) {
+    return weeks.reduce(
+      (total, week) =>
+        total +
+        week.days.reduce(
+          (weekTotal, day) => weekTotal + (day.lessons?.length || 0),
+          0,
+        ),
+      0,
+    );
+  }
+
+  /** Обрабатывает ограниченное число запросов одновременно, не перегружая Schedule API. */
+  private async mapWithConcurrency<TInput, TResult>(
+    items: readonly TInput[],
+    concurrency: number,
+    callback: (item: TInput) => Promise<TResult>,
+  ) {
+    const result: TResult[] = new Array(items.length);
+    let nextIndex = 0;
+    const workers = Array.from(
+      { length: Math.min(concurrency, items.length) },
+      async () => {
+        while (nextIndex < items.length) {
+          const currentIndex = nextIndex++;
+          result[currentIndex] = await callback(items[currentIndex]);
+        }
+      },
+    );
+
+    await Promise.all(workers);
+    return result;
   }
 }

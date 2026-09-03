@@ -95,6 +95,9 @@ export const PROMETHEUS_PUSHGATEWAY_URL: string =
 /** Включает series с конкретными группами и преподавателями. */
 export const PROMETHEUS_DETAILED_SCHEDULE_TARGET_METRICS: boolean =
   process.env.PROMETHEUS_DETAILED_SCHEDULE_TARGET_METRICS === 'true';
+/** Включает фоновый обход групп для метрик наполненности расписания. */
+export const PROMETHEUS_SCHEDULE_AVAILABILITY_METRICS: boolean =
+  process.env.PROMETHEUS_SCHEDULE_AVAILABILITY_METRICS === 'true';
 
 // * oAuth
 export const OAUTH_URL = process.env.OAUTH_URL || 'http://ystuty_oauth';

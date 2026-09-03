@@ -19,6 +19,7 @@ import * as xEnv from '@my-environment';
 
 import { SocialType } from '@my-common/constants';
 
+import { BroadcastFeedback } from '../broadcast/entity/broadcast-feedback.entity';
 import { Conversation } from '../social/entity/conversation.entity';
 import { UserSocial } from '../user/entity/user-social.entity';
 import { User } from '../user/entity/user.entity';
@@ -37,6 +38,12 @@ const KNOWN_CHAT_STATUSES = new Set([
   'restricted',
 ]);
 
+export type ScheduleGroupLessonMetric = {
+  groupName: string;
+  instituteName: string;
+  lessonsCount: number;
+};
+
 @Injectable()
 export class MetricsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(MetricsService.name);
@@ -49,8 +56,13 @@ export class MetricsService implements OnApplicationBootstrap {
   public readonly userStatusCounter: Gauge;
   public readonly userSocialCounter: Gauge;
   public readonly userSocialStatusCounter: Gauge;
+  public readonly personalNotificationsDisabledCounter: Gauge;
+  public readonly broadcastFeedbackCounter: Gauge;
   public readonly conversationCounter: Gauge;
   public readonly conversationStatusCounter: Gauge;
+  public readonly scheduleReferenceCounter: Gauge;
+  public readonly scheduleGroupLessonCounter: Gauge | null;
+  public readonly scheduleGroupLessonScanTimestamp: Gauge | null;
   public readonly scheduleRequestCounter: CounterMetric;
   public readonly scheduleTargetRequestCounter: CounterMetric | null;
 
@@ -89,6 +101,16 @@ export class MetricsService implements OnApplicationBootstrap {
       help: 'Social profile count by availability, block, and authorization state',
       labelNames: ['social', 'is_blocked', 'has_dm', 'is_authorized'],
     });
+    this.personalNotificationsDisabledCounter = this.promService.getGauge({
+      name: `${this.prefix}personal_notifications_disabled_count`,
+      help: 'Social profiles with personal automatic notifications disabled',
+      labelNames: ['social'],
+    });
+    this.broadcastFeedbackCounter = this.promService.getGauge({
+      name: `${this.prefix}broadcast_feedback_stored_count`,
+      help: 'Stored broadcast feedback clicks by campaign, social, and action',
+      labelNames: ['campaign_id', 'social', 'action'],
+    });
     this.conversationCounter = this.promService.getGauge({
       name: `${this.prefix}conversation_count`,
       help: 'Social conversations counter',
@@ -99,6 +121,27 @@ export class MetricsService implements OnApplicationBootstrap {
       help: 'Conversation count by membership and chat status',
       labelNames: ['social', 'is_leaved', 'chat_status'],
     });
+    this.scheduleReferenceCounter = this.promService.getGauge({
+      name: `${this.prefix}schedule_reference_count`,
+      help: 'Current schedule reference data count',
+      labelNames: ['type'],
+    });
+    this.scheduleGroupLessonCounter =
+      xEnv.PROMETHEUS_SCHEDULE_AVAILABILITY_METRICS
+        ? this.promService.getGauge({
+            name: `${this.prefix}schedule_group_lesson_count`,
+            help: 'Published raw lesson records by group and institute',
+            labelNames: ['group', 'institute'],
+          })
+        : null;
+    this.scheduleGroupLessonScanTimestamp =
+      xEnv.PROMETHEUS_SCHEDULE_AVAILABILITY_METRICS
+        ? this.promService.getGauge({
+            name: `${this.prefix}schedule_group_lesson_scan_timestamp_seconds`,
+            help: 'Unix timestamp of the last complete group lesson scan',
+            labelNames: [],
+          })
+        : null;
     this.scheduleRequestCounter = this.promService.getCounter({
       name: `${this.prefix}schedule_request_total`,
       help: 'Schedule requests by target type',
@@ -152,26 +195,32 @@ export class MetricsService implements OnApplicationBootstrap {
 
   public async refreshDomainGauges() {
     try {
-      const [users, userSocials, conversations] = await Promise.all([
-        this.dataSource.getRepository(User).find({
-          select: { isBanned: true },
-        }),
-        this.dataSource.getRepository(UserSocial).find({
-          select: {
-            social: true,
-            isBlockedBot: true,
-            hasDM: true,
-            userId: true,
-          },
-        }),
-        this.dataSource.getRepository(Conversation).find({
-          select: { social: true, isLeaved: true, chatStatus: true },
-        }),
-      ]);
+      const [users, userSocials, conversations, broadcastFeedbacks] =
+        await Promise.all([
+          this.dataSource.getRepository(User).find({
+            select: { isBanned: true },
+          }),
+          this.dataSource.getRepository(UserSocial).find({
+            select: {
+              social: true,
+              isBlockedBot: true,
+              hasDM: true,
+              userId: true,
+              broadcastDisabledAt: true,
+            },
+          }),
+          this.dataSource.getRepository(Conversation).find({
+            select: { social: true, isLeaved: true, chatStatus: true },
+          }),
+          this.dataSource.getRepository(BroadcastFeedback).find({
+            select: { campaignId: true, social: true, action: true },
+          }),
+        ]);
 
       this.setUserGauges(users);
       this.setUserSocialGauges(userSocials);
       this.setConversationGauges(conversations);
+      this.setBroadcastFeedbackGauges(broadcastFeedbacks);
     } catch (error) {
       const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error('[refreshDomainGauges] Error', stack);
@@ -199,13 +248,16 @@ export class MetricsService implements OnApplicationBootstrap {
   private setUserSocialGauges(
     userSocials: Pick<
       UserSocial,
-      'social' | 'isBlockedBot' | 'hasDM' | 'userId'
+      'social' | 'isBlockedBot' | 'hasDM' | 'userId' | 'broadcastDisabledAt'
     >[],
   ) {
     const totalBySocial = new Map<SocialType, number>(
       Object.values(SocialType).map((social) => [social, 0]),
     );
     const statusCounts = new Map<string, number>();
+    const disabledNotificationsBySocial = new Map<SocialType, number>(
+      Object.values(SocialType).map((social) => [social, 0]),
+    );
 
     for (const userSocial of userSocials) {
       const isBlocked = String(!!userSocial.isBlockedBot);
@@ -220,12 +272,24 @@ export class MetricsService implements OnApplicationBootstrap {
           (totalBySocial.get(userSocial.social) || 0) + 1,
         );
       }
+
+      if (userSocial.broadcastDisabledAt) {
+        disabledNotificationsBySocial.set(
+          userSocial.social,
+          (disabledNotificationsBySocial.get(userSocial.social) || 0) + 1,
+        );
+      }
     }
 
     this.userSocialCounter.reset();
     this.userSocialStatusCounter.reset();
+    this.personalNotificationsDisabledCounter.reset();
     for (const social of Object.values(SocialType)) {
       this.userSocialCounter.set({ social }, totalBySocial.get(social) || 0);
+      this.personalNotificationsDisabledCounter.set(
+        { social },
+        disabledNotificationsBySocial.get(social) || 0,
+      );
       for (const isBlocked of BOOLEAN_LABEL_VALUES) {
         for (const hasDM of BOOLEAN_LABEL_VALUES) {
           for (const isAuthorized of BOOLEAN_LABEL_VALUES) {
@@ -243,6 +307,64 @@ export class MetricsService implements OnApplicationBootstrap {
         }
       }
     }
+  }
+
+  /** Восстанавливает клики по рассылкам из БД, включая события до деплоя метрик. */
+  private setBroadcastFeedbackGauges(
+    feedbacks: Pick<BroadcastFeedback, 'campaignId' | 'social' | 'action'>[],
+  ) {
+    const counts = new Map<string, number>();
+
+    for (const feedback of feedbacks) {
+      const key = `${feedback.campaignId}:${feedback.social}:${feedback.action}`;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+
+    this.broadcastFeedbackCounter.reset();
+    for (const [key, value] of counts) {
+      const [campaignId, social, action] = key.split(':');
+      this.broadcastFeedbackCounter.set(
+        { campaign_id: campaignId, social, action },
+        value,
+      );
+    }
+  }
+
+  /** Обновляет размеры справочника, уже загруженного ScheduleService. */
+  public setScheduleReferenceCounts({
+    institutesCount,
+    groupsCount,
+  }: {
+    institutesCount: number;
+    groupsCount: number;
+  }) {
+    this.scheduleReferenceCounter.reset();
+    this.scheduleReferenceCounter.set({ type: 'institutes' }, institutesCount);
+    this.scheduleReferenceCounter.set({ type: 'groups' }, groupsCount);
+  }
+
+  /** Публикует снимок всех сырых записей занятий только после полного обхода групп. */
+  public setScheduleGroupLessonCounts(
+    groupLessons: readonly ScheduleGroupLessonMetric[],
+  ) {
+    if (
+      !this.scheduleGroupLessonCounter ||
+      !this.scheduleGroupLessonScanTimestamp
+    ) {
+      return;
+    }
+
+    this.scheduleGroupLessonCounter.reset();
+    for (const groupLesson of groupLessons) {
+      this.scheduleGroupLessonCounter.set(
+        {
+          group: groupLesson.groupName,
+          institute: groupLesson.instituteName,
+        },
+        groupLesson.lessonsCount,
+      );
+    }
+    this.scheduleGroupLessonScanTimestamp.set(Date.now() / 1000);
   }
 
   private setConversationGauges(

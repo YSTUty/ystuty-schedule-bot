@@ -1,5 +1,6 @@
 import { SocialType } from '@my-common/constants';
 
+import { BroadcastFeedback } from '../broadcast/entity/broadcast-feedback.entity';
 import { Conversation } from '../social/entity/conversation.entity';
 import { UserSocial } from '../user/entity/user-social.entity';
 import { User } from '../user/entity/user.entity';
@@ -18,8 +19,11 @@ describe('MetricsService', () => {
     const userStatusCounter = createGauge();
     const userSocialCounter = createGauge();
     const userSocialStatusCounter = createGauge();
+    const personalNotificationsDisabledCounter = createGauge();
+    const broadcastFeedbackCounter = createGauge();
     const conversationCounter = createGauge();
     const conversationStatusCounter = createGauge();
+    const scheduleReferenceCounter = createGauge();
     const scheduleRequestCounter = { inc: jest.fn() };
     const telegramRequestCounter = { inc: jest.fn() };
     const vkRequestCounter = { inc: jest.fn() };
@@ -30,8 +34,11 @@ describe('MetricsService', () => {
       .mockReturnValueOnce(userStatusCounter)
       .mockReturnValueOnce(userSocialCounter)
       .mockReturnValueOnce(userSocialStatusCounter)
+      .mockReturnValueOnce(personalNotificationsDisabledCounter)
+      .mockReturnValueOnce(broadcastFeedbackCounter)
       .mockReturnValueOnce(conversationCounter)
-      .mockReturnValueOnce(conversationStatusCounter);
+      .mockReturnValueOnce(conversationStatusCounter)
+      .mockReturnValueOnce(scheduleReferenceCounter);
     const getCounter = jest
       .fn()
       .mockReturnValueOnce(scheduleRequestCounter)
@@ -49,6 +56,7 @@ describe('MetricsService', () => {
           isBlockedBot: false,
           hasDM: true,
           userId: 1,
+          broadcastDisabledAt: new Date('2026-09-03T12:00:00.000Z'),
         },
         {
           social: SocialType.Telegram,
@@ -88,11 +96,36 @@ describe('MetricsService', () => {
         },
       ]),
     };
+    const broadcastFeedbackRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          campaignId: 12,
+          social: SocialType.Telegram,
+          action: 'initial',
+        },
+        {
+          campaignId: 12,
+          social: SocialType.Telegram,
+          action: 'initial',
+        },
+        {
+          campaignId: 12,
+          social: SocialType.Telegram,
+          action: 'repeat',
+        },
+        {
+          campaignId: 18,
+          social: SocialType.Vkontakte,
+          action: 'initial',
+        },
+      ]),
+    };
     const dataSource = {
       getRepository: jest.fn((entity) => {
         if (entity === User) return userRepository;
         if (entity === UserSocial) return userSocialRepository;
         if (entity === Conversation) return conversationRepository;
+        if (entity === BroadcastFeedback) return broadcastFeedbackRepository;
         throw new Error('Unexpected repository');
       }),
     };
@@ -120,6 +153,14 @@ describe('MetricsService', () => {
       1,
     );
     expect(userSocialCounter.set).toHaveBeenCalledWith(
+      { social: SocialType.Vkontakte },
+      0,
+    );
+    expect(personalNotificationsDisabledCounter.set).toHaveBeenCalledWith(
+      { social: SocialType.Telegram },
+      1,
+    );
+    expect(personalNotificationsDisabledCounter.set).toHaveBeenCalledWith(
       { social: SocialType.Vkontakte },
       0,
     );
@@ -160,6 +201,43 @@ describe('MetricsService', () => {
         chat_status: 'other',
       },
       1,
+    );
+    expect(broadcastFeedbackCounter.set).toHaveBeenCalledWith(
+      {
+        campaign_id: '12',
+        social: SocialType.Telegram,
+        action: 'initial',
+      },
+      2,
+    );
+    expect(broadcastFeedbackCounter.set).toHaveBeenCalledWith(
+      {
+        campaign_id: '12',
+        social: SocialType.Telegram,
+        action: 'repeat',
+      },
+      1,
+    );
+    expect(broadcastFeedbackCounter.set).toHaveBeenCalledWith(
+      {
+        campaign_id: '18',
+        social: SocialType.Vkontakte,
+        action: 'initial',
+      },
+      1,
+    );
+
+    metricsService.setScheduleReferenceCounts({
+      institutesCount: 10,
+      groupsCount: 240,
+    });
+    expect(scheduleReferenceCounter.set).toHaveBeenCalledWith(
+      { type: 'institutes' },
+      10,
+    );
+    expect(scheduleReferenceCounter.set).toHaveBeenCalledWith(
+      { type: 'groups' },
+      240,
     );
   });
 

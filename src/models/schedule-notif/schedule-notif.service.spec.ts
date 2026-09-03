@@ -31,20 +31,25 @@ describe('ScheduleNotifService', () => {
     const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
     };
+    const metricsService = {
+      incrementScheduleNotifCreated: jest.fn(),
+    };
 
     return {
       notifRepository,
       deliveryRepository,
+      metricsService,
       service: new ScheduleNotifService(
         notifRepository as any,
         deliveryRepository as any,
         scheduleService as any,
+        metricsService as any,
       ),
     };
   };
 
   it('creates a personal group notif and reserves one delivery per scheduled moment', async () => {
-    const { service, deliveryRepository } = createService();
+    const { service, deliveryRepository, metricsService } = createService();
     const notif = await service.createForUserSocial(userSocial, {
       deliveryHour: 20,
       deliveryMinute: 0,
@@ -59,10 +64,16 @@ describe('ScheduleNotifService', () => {
     expect(notif.targetId).toBe('ЦИС-11');
     expect(first).not.toBeNull();
     expect(repeated).toBeNull();
+    expect(metricsService.incrementScheduleNotifCreated).toHaveBeenCalledWith({
+      social: SocialType.Telegram,
+      scope: 'personal',
+      targetType: 'group',
+      target: 'ЦИС-11',
+    });
   });
 
   it('updates the first-release notif instead of creating a duplicate', async () => {
-    const { service, notifRepository } = createService();
+    const { service, notifRepository, metricsService } = createService();
     const existing = {
       id: 7,
       userSocialId: userSocial.id,
@@ -85,10 +96,11 @@ describe('ScheduleNotifService', () => {
         isEnabled: true,
       }),
     );
+    expect(metricsService.incrementScheduleNotifCreated).not.toHaveBeenCalled();
   });
 
   it('creates one notif for a conversation using its persistent group', async () => {
-    const { service, notifRepository } = createService();
+    const { service, notifRepository, metricsService } = createService();
     const conversation = {
       id: 3,
       social: 'telegram',
@@ -109,6 +121,12 @@ describe('ScheduleNotifService', () => {
         targetId: conversation.groupName,
       }),
     );
+    expect(metricsService.incrementScheduleNotifCreated).toHaveBeenCalledWith({
+      social: conversation.social,
+      scope: 'conversation',
+      targetType: 'group',
+      target: conversation.groupName,
+    });
   });
 
   it('loads due personal and conversation notifs through separate nullable relations', async () => {

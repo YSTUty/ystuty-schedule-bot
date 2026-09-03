@@ -65,6 +65,8 @@ export class MetricsService implements OnApplicationBootstrap {
   public readonly scheduleGroupLessonScanTimestamp: Gauge | null;
   public readonly scheduleRequestCounter: CounterMetric;
   public readonly scheduleTargetRequestCounter: CounterMetric | null;
+  public readonly scheduleNotifCreatedCounter: CounterMetric;
+  public readonly scheduleNotifTargetCreatedCounter: CounterMetric | null;
 
   public readonly telegramRequestCounter: CounterMetric;
   public readonly telegramRequestDurationHistogram: HistogramMetric;
@@ -153,6 +155,19 @@ export class MetricsService implements OnApplicationBootstrap {
             name: `${this.prefix}schedule_target_request_total`,
             help: 'Schedule requests by concrete group or teacher',
             labelNames: ['target_type', 'target'],
+          })
+        : null;
+    this.scheduleNotifCreatedCounter = this.promService.getCounter({
+      name: `${this.prefix}schedule_notif_created_total`,
+      help: 'Created schedule notifications by transport, scope, and target type',
+      labelNames: ['social', 'scope', 'target_type'],
+    });
+    this.scheduleNotifTargetCreatedCounter =
+      xEnv.PROMETHEUS_DETAILED_SCHEDULE_TARGET_METRICS
+        ? this.promService.getCounter({
+            name: `${this.prefix}schedule_notif_target_created_total`,
+            help: 'Created schedule notifications by concrete group or teacher',
+            labelNames: ['social', 'scope', 'target_type', 'target'],
           })
         : null;
 
@@ -420,6 +435,25 @@ export class MetricsService implements OnApplicationBootstrap {
     this.scheduleTargetRequestCounter?.inc({
       target_type: targetType,
       target: String(target),
+    });
+  }
+
+  /** Учитывает только новое сохранённое уведомление, а не его редактирование. */
+  public incrementScheduleNotifCreated(params: {
+    social: SocialType;
+    scope: 'personal' | 'conversation';
+    targetType: 'group' | 'teacher';
+    target: string | number;
+  }) {
+    const labels = {
+      social: params.social,
+      scope: params.scope,
+      target_type: params.targetType,
+    };
+    this.scheduleNotifCreatedCounter.inc(labels);
+    this.scheduleNotifTargetCreatedCounter?.inc({
+      ...labels,
+      target: String(params.target),
     });
   }
 

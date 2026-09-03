@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
 
+import { MetricsService } from '../metrics/metrics.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { Conversation } from '../social/entity/conversation.entity';
 import { UserSocial } from '../user/entity/user-social.entity';
@@ -23,6 +24,7 @@ export class ScheduleNotifService {
     @InjectRepository(ScheduleNotifDelivery)
     private readonly deliveryRepository: Repository<ScheduleNotifDelivery>,
     private readonly scheduleService: ScheduleService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   /** Создаёт подписку на группу, выбранную в личном профиле пользователя. */
@@ -37,7 +39,7 @@ export class ScheduleNotifService {
       throw new Error('Selected group is absent from Schedule API');
     }
 
-    return await this.notifRepository.save(
+    const notif = await this.notifRepository.save(
       this.notifRepository.create({
         userSocialId: userSocial.id,
         transport: userSocial.social,
@@ -51,6 +53,13 @@ export class ScheduleNotifService {
         ...settings,
       }),
     );
+    this.metricsService.incrementScheduleNotifCreated({
+      social: userSocial.social,
+      scope: 'personal',
+      targetType: ScheduleNotifTargetType.Group,
+      target: groupName,
+    });
+    return notif;
   }
 
   /** Обновляет единственную подписку, которую пока создаёт пользовательский UI. */
@@ -101,7 +110,7 @@ export class ScheduleNotifService {
 
     const notif = await this.getFirstConversationNotif(conversation.id);
     if (!notif) {
-      return await this.notifRepository.save(
+      const createdNotif = await this.notifRepository.save(
         this.notifRepository.create({
           conversationId: conversation.id,
           userSocialId: null,
@@ -116,6 +125,13 @@ export class ScheduleNotifService {
           ...settings,
         }),
       );
+      this.metricsService.incrementScheduleNotifCreated({
+        social: conversation.social,
+        scope: 'conversation',
+        targetType: ScheduleNotifTargetType.Group,
+        target: groupName,
+      });
+      return createdNotif;
     }
 
     Object.assign(notif, {

@@ -25,6 +25,7 @@ describe('MetricsService', () => {
     const conversationStatusCounter = createGauge();
     const scheduleReferenceCounter = createGauge();
     const scheduleRequestCounter = { inc: jest.fn() };
+    const scheduleNotifCreatedCounter = { inc: jest.fn() };
     const telegramRequestCounter = { inc: jest.fn() };
     const vkRequestCounter = { inc: jest.fn() };
     const histogram = { startTimer: jest.fn() };
@@ -42,6 +43,7 @@ describe('MetricsService', () => {
     const getCounter = jest
       .fn()
       .mockReturnValueOnce(scheduleRequestCounter)
+      .mockReturnValueOnce(scheduleNotifCreatedCounter)
       .mockReturnValueOnce(telegramRequestCounter)
       .mockReturnValueOnce(vkRequestCounter);
     const userRepository = {
@@ -140,12 +142,24 @@ describe('MetricsService', () => {
 
     await metricsService.refreshDomainGauges();
     metricsService.incrementScheduleRequest('group', 'ЦИС-17');
+    metricsService.incrementScheduleNotifCreated({
+      social: SocialType.Telegram,
+      scope: 'personal',
+      targetType: 'group',
+      target: 'ЦИС-17',
+    });
 
     expect(userCounter.set).toHaveBeenCalledWith(1);
     expect(scheduleRequestCounter.inc).toHaveBeenCalledWith({
       target_type: 'group',
     });
     expect(metricsService.scheduleTargetRequestCounter).toBeNull();
+    expect(metricsService.scheduleNotifTargetCreatedCounter).toBeNull();
+    expect(scheduleNotifCreatedCounter.inc).toHaveBeenCalledWith({
+      social: SocialType.Telegram,
+      scope: 'personal',
+      target_type: 'group',
+    });
     expect(userStatusCounter.set).toHaveBeenCalledWith({ status: 'active' }, 1);
     expect(userStatusCounter.set).toHaveBeenCalledWith({ status: 'banned' }, 1);
     expect(userSocialCounter.set).toHaveBeenCalledWith(

@@ -17,6 +17,7 @@ import { TgScheduleNotifModule } from './model/schedule-notif/tg-schedule-notif.
 import { AuthScene } from './scene/auth.scene';
 import { TelegramFeedbackScene } from './scene/feedback.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
+import { TelegramFeedbackDeliveryService } from './telegram-feedback-delivery.service';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 import { TelegramService } from './telegram.service';
 import { AdminUpdate } from './update/admin.update';
@@ -55,7 +56,11 @@ export const attachTelegramRedisSessionDiagnostics = (
   });
 };
 
-const baseProviders = [TelegramService, TelegramKeyboardFactory];
+const baseProviders = [
+  TelegramService,
+  TelegramKeyboardFactory,
+  TelegramFeedbackDeliveryService,
+];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
 const providers = [
   ...middlewares,

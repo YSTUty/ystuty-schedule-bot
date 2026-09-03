@@ -5,6 +5,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -17,6 +18,8 @@ import {
   FeedbackContent,
   FeedbackDeliveryStatus,
 } from '../feedback.types';
+
+import { FeedbackAdminDelivery } from './feedback-admin-delivery.entity';
 
 /** Подтверждённая пользователем обратная связь и результат её доставки. */
 @Entity()
@@ -59,6 +62,11 @@ export class Feedback {
 
   @Column({ type: 'text', nullable: true })
   public deliveryError: string | null;
+
+  @OneToMany(() => FeedbackAdminDelivery, (delivery) => delivery.feedback, {
+    cascade: ['remove'],
+  })
+  public adminDeliveries: FeedbackAdminDelivery[];
 
   @CreateDateColumn()
   public createdAt: Date;

@@ -1,10 +1,6 @@
 import { UseFilters } from '@nestjs/common';
 import { AddStep, Ctx, Scene } from 'nestjs-vk';
 
-import { getRandomId } from 'vk-io';
-
-import * as xEnv from '@my-environment';
-
 import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
@@ -14,6 +10,7 @@ import {
   FeedbackCategory,
   FeedbackSourceMessage,
 } from '../../feedback/feedback.types';
+import { VkFeedbackDeliveryService } from '../vk-feedback-delivery.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { VK_REACTION_IDS, VkReactionEmoji } from '../vk.constants';
 import { VkService } from '../vk.service';
@@ -37,6 +34,7 @@ type FeedbackSceneState = {
 export class VkFeedbackScene {
   constructor(
     private readonly feedbackService: FeedbackService,
+    private readonly feedbackDeliveryService: VkFeedbackDeliveryService,
     private readonly vkService: VkService,
     private readonly keyboardFactory: VKKeyboardFactory,
   ) {}
@@ -176,7 +174,7 @@ export class VkFeedbackScene {
       return;
     }
 
-    const delivered = await this.forwardToAdmins(ctx, feedback.id, state);
+    const delivered = await this.feedbackDeliveryService.deliver(feedback);
     await ctx.scene.leave();
     await ctx.send(
       ctx.i18n.t(
@@ -226,58 +224,5 @@ export class VkFeedbackScene {
         reaction_id: VK_REACTION_IDS[reaction],
       })
       .catch(() => undefined);
-  }
-
-  private async forwardToAdmins(
-    ctx: IStepContext<FeedbackSceneState>,
-    feedbackId: number,
-    state: FeedbackSceneState,
-  ) {
-    const messageIds = state.messages.map((message) => message.messageId);
-    const errors: string[] = [];
-    let sentCount = 0;
-    if (!xEnv.SOCIAL_VK_ADMIN_IDS.length) {
-      errors.push('No VK feedback administrators configured');
-    }
-    for (const adminId of xEnv.SOCIAL_VK_ADMIN_IDS) {
-      try {
-        const headerMessageId = await this.vkService.sendMessage(
-          adminId,
-          `Обратная связь №${feedbackId}\nКатегория: ${this.getCategoryTitle(ctx, state.category!)}`,
-        );
-        if (!headerMessageId) {
-          errors.push(`Failed to send feedback header to VK admin ${adminId}`);
-          continue;
-        }
-        await this.vkService.bot.api.messages.send({
-          peer_id: adminId,
-          random_id: getRandomId(),
-          forward_messages: messageIds,
-        });
-        sentCount++;
-      } catch (error) {
-        errors.push(error instanceof Error ? error.message : String(error));
-      }
-    }
-    const status = await this.feedbackService.setDeliveryResult(feedbackId, {
-      sentCount,
-      ...(errors.length ? { error: errors.join('; ').slice(0, 2000) } : {}),
-    });
-    return status === 'sent';
-  }
-
-  private getCategoryTitle(
-    ctx: IStepContext<FeedbackSceneState>,
-    category: FeedbackCategory,
-  ) {
-    const phrase = {
-      [FeedbackCategory.Schedule]:
-        LocalePhrase.Button_Feedback_CategorySchedule,
-      [FeedbackCategory.Bot]: LocalePhrase.Button_Feedback_CategoryBot,
-      [FeedbackCategory.Suggestion]:
-        LocalePhrase.Button_Feedback_CategorySuggestion,
-      [FeedbackCategory.Other]: LocalePhrase.Button_Feedback_CategoryOther,
-    }[category];
-    return ctx.i18n.t(phrase);
   }
 }

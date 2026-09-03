@@ -1,7 +1,5 @@
 import { Action, Ctx, On, Wizard, WizardStep } from 'nestjs-telega';
 
-import * as xEnv from '@my-environment';
-
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 
@@ -10,6 +8,7 @@ import {
   FeedbackCategory,
   FeedbackSourceMessage,
 } from '../../feedback/feedback.types';
+import { TelegramFeedbackDeliveryService } from '../telegram-feedback-delivery.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { TelegramService } from '../telegram.service';
 
@@ -31,6 +30,7 @@ type FeedbackSceneState = {
 export class TelegramFeedbackScene extends BaseScene {
   constructor(
     private readonly feedbackService: FeedbackService,
+    private readonly feedbackDeliveryService: TelegramFeedbackDeliveryService,
     private readonly telegramService: TelegramService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
   ) {
@@ -143,7 +143,7 @@ export class TelegramFeedbackScene extends BaseScene {
       return;
     }
 
-    const delivered = await this.forwardToAdmins(ctx, feedback.id, state);
+    const delivered = await this.feedbackDeliveryService.deliver(feedback);
     await this.leaveScene(ctx);
     await ctx.replyWithHTML(
       ctx.i18n.t(
@@ -208,55 +208,5 @@ export class TelegramFeedbackScene extends BaseScene {
           }
         : {}),
     };
-  }
-
-  private async forwardToAdmins(
-    ctx: IStepContext<FeedbackSceneState>,
-    feedbackId: number,
-    state: FeedbackSceneState,
-  ) {
-    const messageIds = state.messages.map((message) => message.messageId);
-    const errors: string[] = [];
-    let sentCount = 0;
-    if (!xEnv.SOCIAL_TELEGRAM_ADMIN_IDS.length) {
-      errors.push('No Telegram feedback administrators configured');
-    }
-    for (const adminId of xEnv.SOCIAL_TELEGRAM_ADMIN_IDS) {
-      try {
-        await this.telegramService.bot.telegram.sendMessage(
-          adminId,
-          `<b>Обратная связь №${feedbackId}</b>\nКатегория: ${this.getCategoryTitle(ctx, state.category!)}`,
-          { parse_mode: 'HTML' },
-        );
-        await this.telegramService.bot.telegram.forwardMessages(
-          adminId,
-          ctx.chat!.id,
-          messageIds,
-        );
-        sentCount++;
-      } catch (error) {
-        errors.push(error instanceof Error ? error.message : String(error));
-      }
-    }
-    const status = await this.feedbackService.setDeliveryResult(feedbackId, {
-      sentCount,
-      ...(errors.length ? { error: errors.join('; ').slice(0, 2000) } : {}),
-    });
-    return status === 'sent';
-  }
-
-  private getCategoryTitle(
-    ctx: IStepContext<FeedbackSceneState>,
-    category: FeedbackCategory,
-  ) {
-    const phrase = {
-      [FeedbackCategory.Schedule]:
-        LocalePhrase.Button_Feedback_CategorySchedule,
-      [FeedbackCategory.Bot]: LocalePhrase.Button_Feedback_CategoryBot,
-      [FeedbackCategory.Suggestion]:
-        LocalePhrase.Button_Feedback_CategorySuggestion,
-      [FeedbackCategory.Other]: LocalePhrase.Button_Feedback_CategoryOther,
-    }[category];
-    return ctx.i18n.t(phrase);
   }
 }

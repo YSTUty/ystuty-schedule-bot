@@ -15,6 +15,14 @@ export enum FeedbackDeliveryStatus {
   Failed = 'failed',
 }
 
+/** Состояние доставки feedback одному конкретному администратору. */
+export enum FeedbackAdminDeliveryStatus {
+  Pending = 'pending',
+  Retrying = 'retrying',
+  Sent = 'sent',
+  Failed = 'failed',
+}
+
 /** Исходное сообщение, которое будет переслано администраторам. */
 export type FeedbackSourceMessage = {
   messageId: number;

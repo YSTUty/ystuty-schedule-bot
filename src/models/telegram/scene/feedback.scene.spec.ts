@@ -1,5 +1,3 @@
-import { FeedbackCategory } from '../../feedback/feedback.types';
-
 import { TelegramFeedbackScene } from './feedback.scene';
 
 jest.mock('@my-environment', () => ({
@@ -23,8 +21,10 @@ describe('TelegramFeedbackScene', () => {
     },
   };
   const feedbackService = { setDeliveryResult: jest.fn() };
+  const feedbackDeliveryService = { deliver: jest.fn() };
   const scene = new TelegramFeedbackScene(
     feedbackService as any,
+    feedbackDeliveryService as any,
     telegramService as any,
     keyboardFactory as any,
   );
@@ -35,6 +35,7 @@ describe('TelegramFeedbackScene', () => {
     telegramService.bot.telegram.sendMessage.mockResolvedValue({});
     telegramService.bot.telegram.forwardMessages.mockResolvedValue([]);
     feedbackService.setDeliveryResult.mockResolvedValue('sent');
+    feedbackDeliveryService.deliver.mockResolvedValue(true);
   });
 
   it('updates the category menu in place after category selection', async () => {
@@ -152,32 +153,6 @@ describe('TelegramFeedbackScene', () => {
 
     expect(ctx.scene.state.messages).toHaveLength(10);
     expect(ctx.react).toHaveBeenLastCalledWith('💔');
-  });
-
-  it('forwards feedback to each Telegram administrator and records delivery', async () => {
-    await (scene as any).forwardToAdmins(
-      {
-        chat: { id: 42 },
-        i18n: { t: jest.fn().mockReturnValue('Ошибка бота') },
-      },
-      7,
-      {
-        category: FeedbackCategory.Bot,
-        messages: [{ messageId: 10 }],
-      },
-    );
-
-    expect(telegramService.bot.telegram.forwardMessages).toHaveBeenCalledTimes(
-      2,
-    );
-    expect(telegramService.bot.telegram.forwardMessages).toHaveBeenCalledWith(
-      100,
-      42,
-      [10],
-    );
-    expect(feedbackService.setDeliveryResult).toHaveBeenCalledWith(7, {
-      sentCount: 2,
-    });
   });
 
   it('removes the feedback menu and returns to the start screen on cancel', async () => {

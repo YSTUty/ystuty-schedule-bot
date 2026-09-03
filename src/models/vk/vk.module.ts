@@ -12,10 +12,11 @@ import { SelectGroupScene } from './scene/select-group.scene';
 import { VkFeedbackUpdate } from './update/feedback.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
+import { VkFeedbackDeliveryService } from './vk-feedback-delivery.service';
 import { VKKeyboardFactory } from './vk-keyboard.factory';
 import { VkService } from './vk.service';
 
-const baseProviders = [VkService, VKKeyboardFactory];
+const baseProviders = [VkService, VKKeyboardFactory, VkFeedbackDeliveryService];
 const middlewares = [MainMiddleware];
 const providers = [
   ...middlewares,

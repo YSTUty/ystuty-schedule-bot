@@ -1,4 +1,3 @@
-import { FeedbackCategory } from '../../feedback/feedback.types';
 import { VK_REACTION_IDS } from '../vk.constants';
 
 import { VkFeedbackScene } from './feedback.scene';
@@ -20,12 +19,14 @@ describe('VkFeedbackScene', () => {
     needInline: jest.fn().mockReturnValue(false),
   };
   const feedbackService = { setDeliveryResult: jest.fn() };
+  const feedbackDeliveryService = { deliver: jest.fn() };
   const vkService = {
     sendMessage: jest.fn(),
     bot: { api: { messages: { send: jest.fn(), sendReaction: jest.fn() } } },
   };
   const scene = new VkFeedbackScene(
     feedbackService as any,
+    feedbackDeliveryService as any,
     vkService as any,
     keyboardFactory as any,
   );
@@ -36,6 +37,7 @@ describe('VkFeedbackScene', () => {
     vkService.bot.api.messages.send.mockResolvedValue(1);
     vkService.bot.api.messages.sendReaction.mockResolvedValue(1);
     feedbackService.setDeliveryResult.mockResolvedValue('sent');
+    feedbackDeliveryService.deliver.mockResolvedValue(true);
   });
 
   it('stores VK attachment metadata instead of its string representation', () => {
@@ -185,28 +187,6 @@ describe('VkFeedbackScene', () => {
     expect(ctx.send).toHaveBeenCalledWith(
       'page.feedback.message_limit_reached',
       { keyboard: 'collector' },
-    );
-  });
-
-  it('does not forward feedback without a delivered VK header', async () => {
-    vkService.sendMessage.mockResolvedValue(false);
-
-    await (scene as any).forwardToAdmins(
-      { i18n: { t: jest.fn().mockReturnValue('Ошибка бота') } },
-      7,
-      {
-        category: FeedbackCategory.Bot,
-        messages: [{ messageId: 10 }],
-      },
-    );
-
-    expect(vkService.bot.api.messages.send).not.toHaveBeenCalled();
-    expect(feedbackService.setDeliveryResult).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({
-        sentCount: 0,
-        error: expect.stringContaining('Failed to send feedback header'),
-      }),
     );
   });
 

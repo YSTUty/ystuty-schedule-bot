@@ -9,8 +9,18 @@ describe('FeedbackService', () => {
     save: jest.fn(),
     update: jest.fn(),
   };
+  const adminDeliveryRepository = {
+    create: jest.fn((value) => value),
+    find: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+  };
   const redis = { del: jest.fn(), set: jest.fn() };
-  const service = new FeedbackService(repository as any, { redis } as any);
+  const service = new FeedbackService(
+    repository as any,
+    adminDeliveryRepository as any,
+    { redis } as any,
+  );
   const params = {
     userSocialId: 11,
     social: SocialType.Telegram,

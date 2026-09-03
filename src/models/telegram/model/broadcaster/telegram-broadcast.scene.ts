@@ -561,6 +561,41 @@ export class TelegramBroadcastScene extends BaseScene {
   }
 
   @WizardStep(2)
+  @Action('broadcast:wizard:filter:rate-limit')
+  async onRateLimitCampaignFilter(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    if (state.filter.retryRateLimitCampaignId) {
+      state.filter.retryRateLimitCampaignId = undefined;
+      this.resetManualRecipients(state);
+      await this.renderFilters(ctx);
+      return;
+    }
+    await this.renderRateLimitCampaignsSelector(ctx, 1);
+  }
+
+  @WizardStep(2)
+  @Action(/broadcast:wizard:filter:rate-limit:campaigns:(?<page>[0-9]+)/)
+  @Action(/pager:broadcast-filter-rate-limit-campaigns:(?<page>[0-9]+)/)
+  async onRateLimitCampaignsPage(@Ctx() ctx: IStepCtx) {
+    await this.renderRateLimitCampaignsSelector(
+      ctx,
+      Number(ctx.match!.groups!.page) || 1,
+    );
+  }
+
+  @WizardStep(2)
+  @Action(/broadcast:wizard:filter:rate-limit:select:(?<campaignId>[0-9]+)/)
+  async onRateLimitCampaignSelect(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.filter.retryRateLimitCampaignId = Number(
+      ctx.match!.groups!.campaignId,
+    );
+    this.resetManualRecipients(state);
+    await this.refreshRecipientsCount(state);
+    await this.renderFilters(ctx);
+  }
+
+  @WizardStep(2)
   @Action('broadcast:wizard:filter:text:cancel')
   async onTextFilterCancel(@Ctx() ctx: IStepCtx) {
     ctx.scene.state.awaitingFilter = undefined;
@@ -1080,6 +1115,7 @@ export class TelegramBroadcastScene extends BaseScene {
       groupsCount: state.filter.groupNames?.length || 0,
       activityText: this.renderActivityFilter(state.filter),
       excludeCampaignIds: state.filter.excludeCampaignIds || [],
+      retryRateLimitCampaignId: state.filter.retryRateLimitCampaignId,
     });
     const keyboard = this.keyboardFactory.getBroadcastFilters(ctx, {
       hasGroups: !!state.filter.groupNames?.length,
@@ -1088,6 +1124,7 @@ export class TelegramBroadcastScene extends BaseScene {
         !!state.filter.lastInteractionAfter ||
         !!state.filter.lastInteractionBefore,
       hasExcludedCampaigns: !!state.filter.excludeCampaignIds?.length,
+      hasRetryRateLimitCampaign: !!state.filter.retryRateLimitCampaignId,
     });
 
     if (ctx.callbackQuery) {
@@ -1334,6 +1371,33 @@ export class TelegramBroadcastScene extends BaseScene {
           items: campaigns.items.map((campaign) => ({
             id: campaign.id,
             selected: selected.has(campaign.id),
+            title: `№${campaign.id} • ${campaign.status}`,
+          })),
+        }),
+      },
+    );
+  }
+
+  private async renderRateLimitCampaignsSelector(ctx: IStepCtx, page: number) {
+    const campaigns = await this.broadcastService.getCampaignsPage({
+      social: SocialType.Telegram,
+      page,
+      limit: 8,
+    });
+    await ctx.tryAnswerCbQuery();
+    await ctx.editMessageText(
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterRetryRateLimit, {
+        currentPage: campaigns.currentPage,
+        totalPages: campaigns.totalPages,
+      }),
+      {
+        parse_mode: 'HTML',
+        ...this.keyboardFactory.getBroadcastRateLimitCampaignsSelector({
+          ctx,
+          currentPage: campaigns.currentPage,
+          totalPages: campaigns.totalPages,
+          items: campaigns.items.map((campaign) => ({
+            id: campaign.id,
             title: `№${campaign.id} • ${campaign.status}`,
           })),
         }),

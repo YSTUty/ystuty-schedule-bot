@@ -1127,6 +1127,32 @@ export class TelegramKeyboardFactory {
     });
   }
 
+  public getBroadcastRateLimitCampaignsSelector(params: {
+    ctx: IContext;
+    items: { id: number; title: string }[];
+    currentPage: number;
+    totalPages: number;
+  }) {
+    return this.getPagination({
+      name: 'broadcast-filter-rate-limit-campaigns',
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((item) => ({
+        title: item.title,
+        payload: String(item.id),
+      })),
+      actionPrefix: 'broadcast:wizard:filter:rate-limit:select:',
+      additionalButtons: [
+        Markup.button.callback(
+          params.ctx.i18n.t(LocalePhrase.Button_Broadcast_Back),
+          'broadcast:wizard:filters',
+        ),
+      ],
+      columnizer: false,
+      sortByLength: false,
+    });
+  }
+
   public getBroadcastFilters(
     ctx: IContext,
     params: {
@@ -1134,6 +1160,7 @@ export class TelegramKeyboardFactory {
       onlyAuthorized?: boolean;
       hasActivityFilter: boolean;
       hasExcludedCampaigns: boolean;
+      hasRetryRateLimitCampaign: boolean;
     },
   ) {
     return Markup.inlineKeyboard([
@@ -1141,6 +1168,13 @@ export class TelegramKeyboardFactory {
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_FilterAuthorized, params),
           'broadcast:wizard:filter:authorized',
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterRetryRateLimit,
+            params,
+          ),
+          'broadcast:wizard:filter:rate-limit',
         ),
       ],
       [

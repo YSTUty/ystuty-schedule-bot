@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   And,
+  FindOperator,
   FindOptionsWhere,
   In,
   IsNull,
@@ -33,6 +34,10 @@ export class BroadcastAudienceFilterService {
     social: SocialType,
     filter: BroadcastAudienceFilter = {},
   ): BroadcastAudienceFilter {
+    const {
+      retryRateLimitCampaignId: rawRetryRateLimitCampaignId,
+      ...filterWithoutRateLimitCampaign
+    } = filter;
     const groupNames = filter.groupNames
       ? [...new Set(filter.groupNames)].sort((first, second) =>
           first.localeCompare(second, 'ru'),
@@ -45,6 +50,12 @@ export class BroadcastAudienceFilterService {
       ?.filter((campaignId) => Number.isInteger(campaignId) && campaignId > 0)
       .filter((campaignId, index, ids) => ids.indexOf(campaignId) === index)
       .sort((first, second) => first - second);
+    const retryRateLimitCampaignId =
+      social === SocialType.Telegram &&
+      Number.isInteger(rawRetryRateLimitCampaignId) &&
+      (rawRetryRateLimitCampaignId || 0) > 0
+        ? rawRetryRateLimitCampaignId
+        : undefined;
     const lastInteractionAfter = this.normalizeDate(
       filter.lastInteractionAfter,
     );
@@ -55,11 +66,12 @@ export class BroadcastAudienceFilterService {
     return {
       hasDM: true,
       isBlockedBot: false,
-      ...filter,
+      ...filterWithoutRateLimitCampaign,
       ...(groupNames && { groupNames }),
       ...(lastInteractionAfter && { lastInteractionAfter }),
       ...(lastInteractionBefore && { lastInteractionBefore }),
       ...(excludeCampaignIds?.length && { excludeCampaignIds }),
+      ...(retryRateLimitCampaignId && { retryRateLimitCampaignId }),
       ...(social === SocialType.Vkontakte && { hasDM: filter.hasDM ?? true }),
     };
   }
@@ -190,10 +202,25 @@ export class BroadcastAudienceFilterService {
           { excludeCampaignIds: filter.excludeCampaignIds },
         )
       : undefined;
-    if (userSocialIdsFilter && excludedCampaignsFilter) {
-      where.id = And(userSocialIdsFilter, excludedCampaignsFilter);
-    } else if (userSocialIdsFilter || excludedCampaignsFilter) {
-      where.id = userSocialIdsFilter || excludedCampaignsFilter;
+    const rateLimitedCampaignFilter = filter.retryRateLimitCampaignId
+      ? Raw(
+          (alias) =>
+            `${alias} IN (SELECT "userSocialId" FROM "broadcast_delivery" WHERE "campaignId" = :retryRateLimitCampaignId AND "status" = 'failed' AND ("failureKind" = 'rate_limit' OR ("failureKind" IS NULL AND "error" ILIKE '%too many requests%')) AND "userSocialId" IS NOT NULL)`,
+          { retryRateLimitCampaignId: filter.retryRateLimitCampaignId },
+        )
+      : undefined;
+    const idFilters = [
+      userSocialIdsFilter,
+      excludedCampaignsFilter,
+      rateLimitedCampaignFilter,
+    ].filter(
+      (filter): filter is FindOperator<number> =>
+        filter instanceof FindOperator,
+    );
+    if (idFilters.length > 1) {
+      where.id = And(...idFilters);
+    } else if (idFilters.length === 1) {
+      where.id = idFilters[0];
     }
     if (filter.lastInteractionAfter && filter.lastInteractionBefore) {
       where.lastInteractionAt = And(

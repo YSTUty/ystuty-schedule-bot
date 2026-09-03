@@ -61,6 +61,7 @@ button:
     filter_activity: '🕒 Активность: ${hasActivityFilter ? "выбрана" : "любая"}'
     filter_exclude_campaigns: '🚫 Исключить: ${hasExcludedCampaigns ? "выбраны" : "нет"}'
     filter_exclude_campaigns_done: '✅ Готово (${selectedCount})'
+    filter_retry_rate_limit: '🔁 Повтор rate limit: ${hasRetryRateLimitCampaign ? "выбран" : "нет"}'
     filter_text_cancel: ❌ Отменить ввод
     feedback_toggle: '💬 Fallback: ${feedbackButton ? feedbackButton.text : "-"}'
     feedback_settings: ⚙️ Настроить fallback
@@ -347,6 +348,11 @@ page:
       Группы: <code>${groupsCount ? groupsCount + ' выбрано' : 'все'}</code>
       Активность: <code>${activityText || 'не ограничена'}</code>
       Исключить кампании: <code>${excludeCampaignIds.length ? excludeCampaignIds.join(', ') : 'нет'}</code>
+      Повторить rate limit кампании: <code>${retryRateLimitCampaignId || 'нет'}</code>
+    filter_retry_rate_limit: |
+      <b>Повтор ошибок Telegram rate limit</b>
+      Выбери кампанию, из которой будут взяты только пользователи с недоставкой из-за <code>429 Too Many Requests</code>.
+      Страница: <code>${currentPage}/${totalPages}</code>
     filter_institutes: |
       <b>Институты с подходящими получателями</b>
       Страница: <code>${currentPage}/${totalPages}</code>

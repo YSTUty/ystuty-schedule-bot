@@ -9,15 +9,22 @@ import {
 import { Repository } from 'typeorm';
 
 import { Job } from 'bull';
+import { TelegramError } from 'telegraf-hardened';
+
+import { isTelegramRateLimitError } from '@my-common';
+import { SocialType } from '@my-common/constants';
 
 import { UserSocial } from '../user/entity/user-social.entity';
 
+import { BroadcastRateLimitError } from './broadcast-rate-limit.exception';
+import { getTelegramBroadcastRateLimitBufferMs } from './broadcast.config';
 import {
   BROADCAST_TELEGRAM_QUEUE_NAME,
   BROADCAST_VK_QUEUE_NAME,
 } from './broadcast.constants';
 import { BroadcastService } from './broadcast.service';
 import {
+  BroadcastDeliveryFailureKind,
   BroadcastJobData,
   normalizeBroadcastActionKeyboard,
 } from './broadcast.types';
@@ -42,8 +49,32 @@ export class BroadcastProcessorBase {
     }
 
     await this.broadcastService.markCampaignRunning(campaign.id);
+    let rateLimitEncountered = false;
 
     try {
+      const campaignRateLimitWaitMs =
+        campaign.social === SocialType.Telegram &&
+        campaign.rateLimitUntil &&
+        campaign.rateLimitUntil > new Date()
+          ? campaign.rateLimitUntil.getTime() - Date.now()
+          : null;
+      if (campaignRateLimitWaitMs != null) {
+        rateLimitEncountered = true;
+        await this.broadcastService.pauseTelegramQueueUntil(
+          campaign.rateLimitUntil!,
+        );
+        await this.broadcastService.markDeliveryRetry({
+          deliveryId: job.data.deliveryId,
+          error: 'Waiting for a previously requested Telegram retry_after',
+          retryAt: campaign.rateLimitUntil!,
+        });
+        throw new BroadcastRateLimitError(
+          campaignRateLimitWaitMs,
+          'Waiting for a previously requested Telegram retry_after',
+        );
+      }
+
+      await this.broadcastService.markDeliveryAttempt(job.data.deliveryId);
       const recipient = await this.userSocialRepository.findOne({
         where: {
           social: job.data.social,
@@ -78,13 +109,55 @@ export class BroadcastProcessorBase {
       );
       return result.messageId;
     } catch (err) {
+      if (err instanceof BroadcastRateLimitError) {
+        throw err;
+      }
+
       const message = this.getErrorMessage(err);
+      const retryAfterMs = this.getTelegramRateLimitRetryAfterMs(
+        job.data.social,
+        err,
+      );
+      if (retryAfterMs != null) {
+        rateLimitEncountered = true;
+        const retryAt = new Date(Date.now() + retryAfterMs);
+        await this.broadcastService.markCampaignRateLimited({
+          campaignId: job.data.campaignId,
+          retryAt,
+          error: message,
+        });
+        await this.broadcastService.pauseTelegramQueueUntil(retryAt);
+        this.logger.warn(
+          `Broadcast delivery #${job.data.deliveryId} rate limited; retry at ${retryAt.toISOString()}`,
+        );
+
+        if (!this.hasRetryAttemptsLeft(job)) {
+          job.discard();
+          await this.broadcastService.markDeliveryFailed(
+            job.data.deliveryId,
+            message,
+            BroadcastDeliveryFailureKind.RateLimit,
+          );
+          throw err;
+        }
+
+        await this.broadcastService.markDeliveryRetry({
+          deliveryId: job.data.deliveryId,
+          error: message,
+          retryAt,
+        });
+        throw new BroadcastRateLimitError(retryAfterMs, message);
+      }
+
+      job.discard();
+      const failureKind = this.getDeliveryFailureKind(message);
       await this.broadcastService.markDeliveryFailed(
         job.data.deliveryId,
         message,
+        failureKind,
       );
 
-      if (this.isBlockedRecipientError(message)) {
+      if (failureKind === BroadcastDeliveryFailureKind.BlockedBot) {
         await this.userSocialRepository.update(
           {
             social: job.data.social,
@@ -103,7 +176,11 @@ export class BroadcastProcessorBase {
         job.data.campaignId,
       );
       if (updatedCampaign) {
-        await this.updateProgressMessage(updatedCampaign, counters);
+        await this.updateProgressMessage(
+          updatedCampaign,
+          counters,
+          rateLimitEncountered,
+        );
       }
     }
   }
@@ -117,6 +194,12 @@ export class BroadcastProcessorBase {
 
   @OnQueueFailed()
   onFailed(job: Job<BroadcastJobData>, err: Error) {
+    if (err instanceof BroadcastRateLimitError) {
+      this.logger.warn(
+        `Delayed broadcast job ${job.id} for campaign #${job.data.campaignId}: ${err.message}`,
+      );
+      return;
+    }
     this.logger.error(
       `Failed broadcast job ${job.id} for campaign #${job.data.campaignId}: ${err.message}`,
       err.stack,
@@ -132,19 +215,47 @@ export class BroadcastProcessorBase {
     return String(err);
   }
 
-  private isBlockedRecipientError(message: string): boolean {
-    return [
-      'bot was blocked',
-      'bot was kicked',
-      'user is deactivated',
-      'chat not found',
-      'peer_id',
-    ].some((part) => message.toLowerCase().includes(part));
+  private hasRetryAttemptsLeft(job: Job<BroadcastJobData>) {
+    return job.attemptsMade + 1 < (job.opts.attempts || 1);
+  }
+
+  private getTelegramRateLimitRetryAfterMs(social: SocialType, error: unknown) {
+    if (
+      social !== SocialType.Telegram ||
+      !(error instanceof TelegramError) ||
+      !isTelegramRateLimitError(error)
+    ) {
+      return null;
+    }
+
+    return (
+      Math.max(1, error.parameters?.retry_after ?? 1) * 1e3 +
+      getTelegramBroadcastRateLimitBufferMs()
+    );
+  }
+
+  private getDeliveryFailureKind(message: string) {
+    const normalized = message.toLowerCase();
+    if (normalized.includes('bot was blocked')) {
+      return BroadcastDeliveryFailureKind.BlockedBot;
+    }
+    if (normalized.includes('user is deactivated')) {
+      return BroadcastDeliveryFailureKind.Deactivated;
+    }
+    if (
+      normalized.includes('bot was kicked') ||
+      normalized.includes('chat not found') ||
+      normalized.includes('peer_id')
+    ) {
+      return BroadcastDeliveryFailureKind.Unavailable;
+    }
+    return BroadcastDeliveryFailureKind.Other;
   }
 
   private async updateProgressMessage(
     campaign: Awaited<ReturnType<BroadcastService['getCampaign']>>,
     counters: Awaited<ReturnType<BroadcastService['refreshCampaignCounters']>>,
+    force = false,
   ) {
     if (!campaign?.sourceMessage.reportMessage) return;
 
@@ -152,6 +263,7 @@ export class BroadcastProcessorBase {
       counters.sentCount + counters.failedCount + counters.skippedCount;
     const finished = doneCount >= counters.totalCount;
     if (
+      !force &&
       !this.broadcastService.shouldUpdateProgress({
         sourceMessage: campaign.sourceMessage,
         doneCount,
@@ -168,12 +280,30 @@ export class BroadcastProcessorBase {
       campaign.social,
     );
 
+    const estimate = this.broadcastService.getCampaignProgressEstimate(
+      campaign,
+      counters,
+    );
     const text = [
       `<b>Рассылка #${campaign.id}</b>`,
       `Готово: <code>${doneCount}/${counters.totalCount}</code>`,
       `Успешно: <code>${counters.sentCount}</code>`,
       `Ошибки: <code>${counters.failedCount}</code>`,
       `Пропущено: <code>${counters.skippedCount}</code>`,
+      ...(estimate
+        ? [
+            `Скорость: <code>до ${estimate.messagesPerSecond} сообщ./с (${estimate.recipientsPerSecond} получ./с)</code>`,
+            `Осталось: <code>~${this.formatDuration(estimate.estimatedRemainingMs)}</code>`,
+          ]
+        : []),
+      `Rate limit: <code>${
+        counters.rateLimitCount
+          ? estimate?.rateLimitWaitingMs
+            ? `⚠️ пауза ещё ${this.formatDuration(estimate.rateLimitWaitingMs)}`
+            : `был (${counters.rateLimitCount})`
+          : 'не было'
+      }</code>`,
+      `Недоступны: <code>заблокировали ${counters.blockedBotCount}, деактивированы ${counters.deactivatedCount}, прочее ${counters.unavailableCount}</code>`,
       `Статус: <code>${counters.status}</code>`,
     ].join('\n');
 
@@ -186,6 +316,18 @@ export class BroadcastProcessorBase {
     if (updated) {
       await this.broadcastService.markProgressUpdated(campaign, doneCount);
     }
+  }
+
+  private formatDuration(durationMs: number) {
+    const totalSeconds = Math.max(0, Math.ceil(durationMs / 1e3));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return [
+      ...(hours ? [`${hours}ч`] : []),
+      ...(minutes || hours ? [`${minutes}м`] : []),
+      `${seconds}с`,
+    ].join(' ');
   }
 }
 

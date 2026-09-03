@@ -62,6 +62,18 @@ export const REDIS_PREFIX: string =
 
 export const BROADCAST_HISTORY_LIMIT: string | undefined =
   process.env.BROADCAST_HISTORY_LIMIT;
+export const TELEGRAM_BROADCAST_MAX_DELIVERIES_PER_SECOND: number | undefined =
+  process.env.TELEGRAM_BROADCAST_MAX_DELIVERIES_PER_SECOND
+    ? Number(process.env.TELEGRAM_BROADCAST_MAX_DELIVERIES_PER_SECOND)
+    : undefined;
+export const TELEGRAM_BROADCAST_RATE_LIMIT_BUFFER_SECONDS: number | undefined =
+  process.env.TELEGRAM_BROADCAST_RATE_LIMIT_BUFFER_SECONDS
+    ? Number(process.env.TELEGRAM_BROADCAST_RATE_LIMIT_BUFFER_SECONDS)
+    : undefined;
+export const TELEGRAM_BROADCAST_MAX_RETRY_ATTEMPTS: number | undefined = process
+  .env.TELEGRAM_BROADCAST_MAX_RETRY_ATTEMPTS
+  ? Number(process.env.TELEGRAM_BROADCAST_MAX_RETRY_ATTEMPTS)
+  : undefined;
 
 // * Socials
 

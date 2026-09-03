@@ -11,7 +11,10 @@ import {
 } from 'typeorm';
 
 import { UserSocial } from '../../user/entity/user-social.entity';
-import { BroadcastDeliveryStatus } from '../broadcast.types';
+import {
+  BroadcastDeliveryFailureKind,
+  BroadcastDeliveryStatus,
+} from '../broadcast.types';
 
 import { BroadcastCampaign } from './broadcast-campaign.entity';
 import { BroadcastFeedback } from './broadcast-feedback.entity';
@@ -49,6 +52,17 @@ export class BroadcastDelivery {
 
   @Column({ type: 'text', nullable: true })
   public error: string | null;
+
+  /** Категория последней ошибки доставки без зависимости от текста transport API. */
+  @Column({ type: 'character varying', length: 32, nullable: true })
+  public failureKind: BroadcastDeliveryFailureKind | null;
+
+  @Column({ type: 'integer', default: 0 })
+  public attempts: number;
+
+  /** Момент следующей попытки после rate limit. */
+  @Column({ type: 'timestamp', nullable: true })
+  public retryAt: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
   public messageDeletedAt: Date | null;

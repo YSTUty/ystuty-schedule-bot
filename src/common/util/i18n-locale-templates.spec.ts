@@ -63,7 +63,9 @@ const localeTemplateData = {
   hasActivityFilter: true,
   hasExcludedCampaigns: true,
   hasGroups: true,
+  includeNoActivity: true,
   hasRecipientKeyboard: true,
+  hasRetryRateLimitCampaign: true,
   instituteName: 'Институт цифровых систем',
   isNextWeek: false,
   items: [
@@ -93,6 +95,7 @@ const localeTemplateData = {
   randomGroupName2: 'ЦИС-47',
   recipientsCount: 10,
   remainingCount: 2,
+  retryRateLimitCampaignId: 12,
   selected: true,
   selectedCampaignIds: [12],
   selectedCount: 2,

@@ -4,6 +4,8 @@ import { BullModule } from '@nestjs/bull';
 
 import { UserSocial } from '../user/entity/user-social.entity';
 
+import { BroadcastRateLimitError } from './broadcast-rate-limit.exception';
+import { getTelegramBroadcastMaxDeliveriesPerSecond } from './broadcast.config';
 import {
   BROADCAST_TELEGRAM_QUEUE_NAME,
   BROADCAST_VK_QUEUE_NAME,
@@ -24,7 +26,20 @@ import { BroadcastTransportRegistry } from './transport/broadcast-transport.regi
 @Module({
   imports: [
     BullModule.registerQueue(
-      { name: BROADCAST_TELEGRAM_QUEUE_NAME },
+      {
+        name: BROADCAST_TELEGRAM_QUEUE_NAME,
+        limiter: {
+          max: getTelegramBroadcastMaxDeliveriesPerSecond(),
+          duration: 1e3,
+        },
+        settings: {
+          guardInterval: 1e3,
+          backoffStrategies: {
+            telegram_rate_limit: (_attempts, error) =>
+              error instanceof BroadcastRateLimitError ? error.retryAfterMs : 0,
+          },
+        },
+      },
       { name: BROADCAST_VK_QUEUE_NAME },
     ),
     TypeOrmModule.forFeature([

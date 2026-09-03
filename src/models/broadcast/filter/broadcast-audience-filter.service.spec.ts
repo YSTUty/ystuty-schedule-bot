@@ -131,6 +131,42 @@ describe('BroadcastAudienceFilterService', () => {
     });
   });
 
+  it('selects only rate-limited recipients of the selected Telegram campaign', async () => {
+    const repository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const service = new BroadcastAudienceFilterService(
+      repository as any,
+      {
+        getGroupInstitutes: jest.fn(),
+      } as any,
+    );
+
+    await service.getRecipients(SocialType.Telegram, {
+      retryRateLimitCampaignId: 4,
+    });
+
+    const [{ where }] = repository.find.mock.calls[0];
+    expect(where.id).toMatchObject({
+      objectLiteralParameters: { retryRateLimitCampaignId: 4 },
+    });
+    expect(where.id._getSql('id')).toContain('"failureKind" = \'rate_limit\'');
+    expect(where.id._getSql('id')).toContain('too many requests');
+  });
+
+  it('ignores the Telegram rate-limit retry filter for VK recipients', () => {
+    const service = new BroadcastAudienceFilterService(
+      {} as any,
+      { getGroupInstitutes: jest.fn() } as any,
+    );
+
+    expect(
+      service.normalizeFilter(SocialType.Vkontakte, {
+        retryRateLimitCampaignId: 4,
+      }),
+    ).not.toHaveProperty('retryRateLimitCampaignId');
+  });
+
   it('accepts an inclusive Moscow date range as a UTC half-open interval', () => {
     const service = new BroadcastAudienceFilterService(
       {} as any,

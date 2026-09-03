@@ -11,9 +11,19 @@ export enum BroadcastCampaignStatus {
 
 export enum BroadcastDeliveryStatus {
   Queued = 'queued',
+  Retrying = 'retrying',
   Sent = 'sent',
   Failed = 'failed',
   Skipped = 'skipped',
+}
+
+/** Причина terminal delivery error для фильтров и короткой статистики кампании. */
+export enum BroadcastDeliveryFailureKind {
+  RateLimit = 'rate_limit',
+  BlockedBot = 'blocked_bot',
+  Deactivated = 'deactivated',
+  Unavailable = 'unavailable',
+  Other = 'other',
 }
 
 export enum BroadcastMessageMode {
@@ -37,6 +47,11 @@ export type BroadcastAudienceFilter = {
   lastInteractionBefore?: string | null;
   /** Исключает пользователей, для которых создавалась delivery указанных кампаний. */
   excludeCampaignIds?: number[];
+  /**
+   * Оставляет только получателей, у которых указанная кампания не доставилась
+   * из-за Telegram rate limit. Используется для аккуратного повторного запуска.
+   */
+  retryRateLimitCampaignId?: number | null;
   profileType?: string | null;
   userSocialIds?: number[];
 };

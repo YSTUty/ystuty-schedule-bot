@@ -8,12 +8,15 @@ import { Queue } from 'bull';
 import { SocialType } from '@my-common/constants';
 import { UserException } from '@my-common/exception';
 
-import { getBroadcastHistoryLimit } from './broadcast.config';
+import {
+  getBroadcastHistoryLimit,
+  getTelegramBroadcastMaxDeliveriesPerSecond,
+  getTelegramBroadcastMaxRetryAttempts,
+} from './broadcast.config';
 import {
   BROADCAST_CAMPAIGN_SETTINGS_VERSION,
   BROADCAST_TELEGRAM_QUEUE_NAME,
   BROADCAST_VK_QUEUE_NAME,
-  DEFAULT_BROADCAST_JOB_DELAY_MS,
   DEFAULT_BROADCAST_PROGRESS_INTERVAL_MS,
   DEFAULT_BROADCAST_PROGRESS_STEP,
 } from './broadcast.constants';
@@ -23,6 +26,7 @@ import {
   BroadcastAudienceGroupsPreview,
   BroadcastCampaignSettingsReuse,
   BroadcastCampaignStatus,
+  BroadcastDeliveryFailureKind,
   BroadcastDeliveryStatus,
   BroadcastFeedbackAction,
   BroadcastFeedbackButton,
@@ -43,6 +47,8 @@ import { BroadcastTransportRegistry } from './transport/broadcast-transport.regi
 @Injectable()
 export class BroadcastService {
   private readonly logger = new Logger(BroadcastService.name);
+  private telegramRateLimitResumeTimer: NodeJS.Timeout | null = null;
+  private telegramRateLimitUntil: Date | null = null;
 
   constructor(
     @InjectRepository(BroadcastCampaign)
@@ -201,8 +207,13 @@ export class BroadcastService {
           targetSocialId: delivery.targetSocialId,
         },
         {
-          attempts: 1,
-          delay: DEFAULT_BROADCAST_JOB_DELAY_MS,
+          attempts:
+            params.social === SocialType.Telegram
+              ? getTelegramBroadcastMaxRetryAttempts()
+              : 1,
+          ...(params.social === SocialType.Telegram && {
+            backoff: { type: 'telegram_rate_limit' },
+          }),
           removeOnComplete: false,
           removeOnFail: false,
         },
@@ -571,13 +582,40 @@ export class BroadcastService {
       status: BroadcastDeliveryStatus.Sent,
       sentMessageId: sentMessageId ?? null,
       error: null,
+      failureKind: null,
+      retryAt: null,
     });
   }
 
-  public async markDeliveryFailed(deliveryId: number, error: string) {
+  public async markDeliveryAttempt(deliveryId: number) {
+    await this.deliveryRepository.update(deliveryId, {
+      attempts: () => '"attempts" + 1',
+    });
+  }
+
+  public async markDeliveryRetry(params: {
+    deliveryId: number;
+    error: string;
+    retryAt: Date;
+  }) {
+    await this.deliveryRepository.update(params.deliveryId, {
+      status: BroadcastDeliveryStatus.Retrying,
+      error: params.error.slice(0, 2000),
+      failureKind: BroadcastDeliveryFailureKind.RateLimit,
+      retryAt: params.retryAt,
+    });
+  }
+
+  public async markDeliveryFailed(
+    deliveryId: number,
+    error: string,
+    failureKind = BroadcastDeliveryFailureKind.Other,
+  ) {
     await this.deliveryRepository.update(deliveryId, {
       status: BroadcastDeliveryStatus.Failed,
       error: error.slice(0, 2000),
+      failureKind,
+      retryAt: null,
     });
   }
 
@@ -586,23 +624,119 @@ export class BroadcastService {
     await this.deliveryRepository.update(deliveryId, {
       status: BroadcastDeliveryStatus.Skipped,
       error: reason.slice(0, 2000),
+      failureKind: null,
+      retryAt: null,
     });
   }
 
+  /** Фиксирует паузу после Telegram retry_after для progress и истории кампании. */
+  public async markCampaignRateLimited(params: {
+    campaignId: number;
+    retryAt: Date;
+    error: string;
+  }) {
+    const campaign = await this.getCampaign(params.campaignId);
+    const rateLimitUntil =
+      campaign?.rateLimitUntil && campaign.rateLimitUntil > params.retryAt
+        ? campaign.rateLimitUntil
+        : params.retryAt;
+    await this.campaignRepository.update(params.campaignId, {
+      rateLimitCount: () => '"rateLimitCount" + 1',
+      rateLimitUntil,
+      lastError: params.error.slice(0, 2000),
+    });
+  }
+
+  /**
+   * Приостанавливает только текущий worker до времени, указанного Telegram.
+   * Это предотвращает лавину одинаковых 429 и оставляет лимит для обычных
+   * ответов бота.
+   */
+  public async pauseTelegramQueueUntil(retryAt: Date) {
+    const now = Date.now();
+    const activeUntil =
+      this.telegramRateLimitUntil && this.telegramRateLimitUntil > retryAt
+        ? this.telegramRateLimitUntil
+        : retryAt;
+
+    // `doNotWaitActive` обязателен: этот метод вызывается из активной job.
+    await this.telegramBroadcastQueue.pause(true, true);
+
+    if (
+      this.telegramRateLimitResumeTimer &&
+      this.telegramRateLimitUntil &&
+      this.telegramRateLimitUntil >= activeUntil
+    ) {
+      return;
+    }
+
+    if (this.telegramRateLimitResumeTimer) {
+      clearTimeout(this.telegramRateLimitResumeTimer);
+    }
+
+    this.telegramRateLimitUntil = activeUntil;
+    this.telegramRateLimitResumeTimer = setTimeout(
+      () => {
+        this.telegramRateLimitResumeTimer = null;
+        this.telegramRateLimitUntil = null;
+        void this.telegramBroadcastQueue.resume(true).catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          this.logger.error(
+            `Could not resume Telegram broadcast queue after rate limit: ${message}`,
+          );
+        });
+      },
+      Math.max(0, activeUntil.getTime() - now),
+    );
+    this.telegramRateLimitResumeTimer.unref();
+  }
+
   public async refreshCampaignCounters(campaignId: number) {
-    const [sentCount, failedCount, skippedCount, totalCount] =
-      await Promise.all([
-        this.deliveryRepository.count({
-          where: { campaignId, status: BroadcastDeliveryStatus.Sent },
-        }),
-        this.deliveryRepository.count({
-          where: { campaignId, status: BroadcastDeliveryStatus.Failed },
-        }),
-        this.deliveryRepository.count({
-          where: { campaignId, status: BroadcastDeliveryStatus.Skipped },
-        }),
-        this.deliveryRepository.count({ where: { campaignId } }),
-      ]);
+    const [
+      sentCount,
+      failedCount,
+      skippedCount,
+      retryingCount,
+      totalCount,
+      blockedBotCount,
+      deactivatedCount,
+      unavailableCount,
+    ] = await Promise.all([
+      this.deliveryRepository.count({
+        where: { campaignId, status: BroadcastDeliveryStatus.Sent },
+      }),
+      this.deliveryRepository.count({
+        where: { campaignId, status: BroadcastDeliveryStatus.Failed },
+      }),
+      this.deliveryRepository.count({
+        where: { campaignId, status: BroadcastDeliveryStatus.Skipped },
+      }),
+      this.deliveryRepository.count({
+        where: { campaignId, status: BroadcastDeliveryStatus.Retrying },
+      }),
+      this.deliveryRepository.count({ where: { campaignId } }),
+      this.deliveryRepository.count({
+        where: {
+          campaignId,
+          status: BroadcastDeliveryStatus.Failed,
+          failureKind: BroadcastDeliveryFailureKind.BlockedBot,
+        },
+      }),
+      this.deliveryRepository.count({
+        where: {
+          campaignId,
+          status: BroadcastDeliveryStatus.Failed,
+          failureKind: BroadcastDeliveryFailureKind.Deactivated,
+        },
+      }),
+      this.deliveryRepository.count({
+        where: {
+          campaignId,
+          status: BroadcastDeliveryStatus.Failed,
+          failureKind: BroadcastDeliveryFailureKind.Unavailable,
+        },
+      }),
+    ]);
 
     const status =
       sentCount + failedCount + skippedCount >= totalCount
@@ -617,7 +751,56 @@ export class BroadcastService {
       status,
     });
 
-    return { sentCount, failedCount, skippedCount, totalCount, status };
+    const campaign = await this.getCampaign(campaignId);
+    return {
+      sentCount,
+      failedCount,
+      skippedCount,
+      retryingCount,
+      totalCount,
+      status,
+      blockedBotCount,
+      deactivatedCount,
+      unavailableCount,
+      rateLimitCount: campaign?.rateLimitCount || 0,
+      rateLimitUntil: campaign?.rateLimitUntil || null,
+    };
+  }
+
+  /** Возвращает консервативную оценку скорости и завершения Telegram-кампании. */
+  public getCampaignProgressEstimate(
+    campaign: BroadcastCampaign,
+    counters: Awaited<ReturnType<BroadcastService['refreshCampaignCounters']>>,
+  ) {
+    if (campaign.social !== SocialType.Telegram) return null;
+
+    const recipientsPerSecond = getTelegramBroadcastMaxDeliveriesPerSecond();
+    const messagesPerRecipient =
+      campaign.mode === BroadcastMessageMode.Text
+        ? 1
+        : campaign.feedbackButton || campaign.actionKeyboard?.length
+          ? 2
+          : 1;
+    const remainingRecipients = Math.max(
+      0,
+      counters.totalCount -
+        counters.sentCount -
+        counters.failedCount -
+        counters.skippedCount,
+    );
+    const waitMs = Math.max(
+      0,
+      (counters.rateLimitUntil?.getTime() || 0) - Date.now(),
+    );
+
+    return {
+      recipientsPerSecond,
+      messagesPerSecond: recipientsPerSecond * messagesPerRecipient,
+      remainingRecipients,
+      estimatedRemainingMs:
+        waitMs + Math.ceil((remainingRecipients / recipientsPerSecond) * 1e3),
+      rateLimitWaitingMs: waitMs,
+    };
   }
 
   public shouldUpdateProgress(params: {
@@ -681,7 +864,7 @@ export class BroadcastService {
 
   public async getQueueStatus(social: SocialType) {
     const queue = this.getQueue(social);
-    const [active, waiting, delayed, failed, completed, paused] =
+    const [active, waiting, delayed, failed, completed, paused, pausedLocal] =
       await Promise.all([
         queue.getActiveCount(),
         queue.getWaitingCount(),
@@ -689,6 +872,7 @@ export class BroadcastService {
         queue.getFailedCount(),
         queue.getCompletedCount(),
         queue.isPaused(),
+        queue.isPaused(true),
       ]);
 
     return {
@@ -697,7 +881,7 @@ export class BroadcastService {
       delayed,
       failed,
       completed,
-      paused,
+      paused: paused || pausedLocal,
       hasPending: active + waiting + delayed > 0,
     };
   }

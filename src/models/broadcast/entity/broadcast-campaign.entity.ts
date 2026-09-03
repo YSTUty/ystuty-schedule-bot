@@ -78,6 +78,14 @@ export class BroadcastCampaign {
   @Column({ type: 'integer', default: 0 })
   public skippedCount: number;
 
+  /** Количество ответов transport API с rate limit за время кампании. */
+  @Column({ type: 'integer', default: 0 })
+  public rateLimitCount: number;
+
+  /** До этого времени очередь ждёт Telegram retry_after с дополнительным запасом. */
+  @Column({ type: 'timestamp', nullable: true })
+  public rateLimitUntil: Date | null;
+
   @Column({ type: 'text', nullable: true })
   public lastError: string | null;
 

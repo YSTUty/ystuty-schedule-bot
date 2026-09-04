@@ -35,6 +35,9 @@ export class MetricsModule implements NestModule {
         metricPath: METRIC_PATH,
         withDefaultsMetrics: true,
         withDefaultController: true,
+        // Встроенный filter библиотеки рассчитан только на HTTP, но в Nest 11
+        // он перехватывает также ошибки обработчиков Telegraf.
+        withExceptionFilter: false,
         defaultLabels: {
           app: xEnv.INSTANCE_NAME,
           // version: '0.1.0',

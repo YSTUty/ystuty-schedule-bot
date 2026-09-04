@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.4.1](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.4.0...v0.4.1) (2026-09-04)
+
+### 🚀 Features
+
+* **broadcast:** add activity audience filters ([a3ddb08](https://github.com/YSTUty/ystuty-schedule-bot/commit/a3ddb0860389b70259d562726bbb66f6a1a4a21f))
+* **metrics:** add broadcast and schedule availability metrics ([3b8b667](https://github.com/YSTUty/ystuty-schedule-bot/commit/3b8b66727c139841fb9eeab6a761468a0d13c280))
+* **metrics:** track schedule notification creation ([524a8a3](https://github.com/YSTUty/ystuty-schedule-bot/commit/524a8a35163a4355866c580a22247e773c759cf8))
+* **telegram:** add styled keyboard buttons ([56e0da1](https://github.com/YSTUty/ystuty-schedule-bot/commit/56e0da1b4e251b8f321ab7518b765a143d8f344f))
+
+### 🐛 Bug Fixes
+
+* **broadcast:** retry telegram rate-limited deliveries ([211d00e](https://github.com/YSTUty/ystuty-schedule-bot/commit/211d00ebfdf6b223e8c2d4843a6590e2a3846cdf))
+* **ci:** serialize docker image publishing ([4344a99](https://github.com/YSTUty/ystuty-schedule-bot/commit/4344a996d38d7017a92be7bbb479c737ecaf22e2))
+* **feedback:** retry admin delivery after rate limits ([bdc96e7](https://github.com/YSTUty/ystuty-schedule-bot/commit/bdc96e750283225fa317f676412285c44ea1f102))
+* **metrics:** disable http exception filter for bot updates ([f306813](https://github.com/YSTUty/ystuty-schedule-bot/commit/f30681318074343f076a4542c40c7d747f969912))
+* **schedule:** separate target footer from weekly schedule ([afd5449](https://github.com/YSTUty/ystuty-schedule-bot/commit/afd544963de24d700fa6a9040e0a7a7adb1e049f))
+* **schedule:** separate target footer from weekly schedule ([35912dd](https://github.com/YSTUty/ystuty-schedule-bot/commit/35912dd2d5b52f71ec3768a97a67d6ead4a88d2b))
+* **transports:** handle redis session outages and queued updates ([ae4c36f](https://github.com/YSTUty/ystuty-schedule-bot/commit/ae4c36f583ba40ff7dc8a1aa2bc97d6c7fd692e4))
+* **vk:** ignore typing activity failures ([88d0b49](https://github.com/YSTUty/ystuty-schedule-bot/commit/88d0b49bcb133a621af83e10af4282cc50a86b6f))
+* **vk:** log failed api methods ([1212778](https://github.com/YSTUty/ystuty-schedule-bot/commit/1212778ec12f4e6b9add22c58ae53297c55e93e9))
+
+### 📖 Documentation
+
+* **monitoring:** add compatible grafana schedule dashboard ([e108ac4](https://github.com/YSTUty/ystuty-schedule-bot/commit/e108ac4b587f54cbf89675ed12102cadd69687c8))
+* **monitoring:** expand schedule bot grafana dashboard ([fc4f393](https://github.com/YSTUty/ystuty-schedule-bot/commit/fc4f393a598fe248f3bf4a24eec1ef084e217036))
+
+### 🔧 Code Refactoring
+
+* **telegram:** migrate to `nestjs-telega` ([a8b7418](https://github.com/YSTUty/ystuty-schedule-bot/commit/a8b74189c20d6ba9a9b0b385c313bfb1632e2e89))
+
+### 🐱‍💻 Tests
+
+* **schedule:** stabilize formatter clock ([58a6470](https://github.com/YSTUty/ystuty-schedule-bot/commit/58a647073003cb6a571fd65d67e4874ce94f8b46))
+
 ## [0.4.0](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.3.5...v0.4.0) (2026-08-31)
 
 ### 🧹 Chore

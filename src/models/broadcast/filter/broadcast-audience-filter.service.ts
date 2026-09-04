@@ -35,8 +35,9 @@ export class BroadcastAudienceFilterService {
     filter: BroadcastAudienceFilter = {},
   ): BroadcastAudienceFilter {
     const {
+      includeNoActivity: rawIncludeNoActivity,
       retryRateLimitCampaignId: rawRetryRateLimitCampaignId,
-      ...filterWithoutRateLimitCampaign
+      ...filterWithoutTransientAudienceOptions
     } = filter;
     const groupNames = filter.groupNames
       ? [...new Set(filter.groupNames)].sort((first, second) =>
@@ -62,14 +63,18 @@ export class BroadcastAudienceFilterService {
     const lastInteractionBefore = this.normalizeDate(
       filter.lastInteractionBefore,
     );
+    const includeNoActivity =
+      rawIncludeNoActivity === true &&
+      !!(lastInteractionAfter || lastInteractionBefore);
 
     return {
       hasDM: true,
       isBlockedBot: false,
-      ...filterWithoutRateLimitCampaign,
+      ...filterWithoutTransientAudienceOptions,
       ...(groupNames && { groupNames }),
       ...(lastInteractionAfter && { lastInteractionAfter }),
       ...(lastInteractionBefore && { lastInteractionBefore }),
+      ...(includeNoActivity && { includeNoActivity }),
       ...(excludeCampaignIds?.length && { excludeCampaignIds }),
       ...(retryRateLimitCampaignId && { retryRateLimitCampaignId }),
       ...(social === SocialType.Vkontakte && { hasDM: filter.hasDM ?? true }),
@@ -222,7 +227,29 @@ export class BroadcastAudienceFilterService {
     } else if (idFilters.length === 1) {
       where.id = idFilters[0];
     }
-    if (filter.lastInteractionAfter && filter.lastInteractionBefore) {
+    if (
+      filter.includeNoActivity &&
+      (filter.lastInteractionAfter || filter.lastInteractionBefore)
+    ) {
+      const params: Record<string, Date> = {};
+      if (filter.lastInteractionAfter) {
+        params.lastInteractionAfter = new Date(filter.lastInteractionAfter);
+      }
+      if (filter.lastInteractionBefore) {
+        params.lastInteractionBefore = new Date(filter.lastInteractionBefore);
+      }
+      where.lastInteractionAt = Raw((alias) => {
+        const conditions = [
+          ...(filter.lastInteractionAfter
+            ? [`${alias} >= :lastInteractionAfter`]
+            : []),
+          ...(filter.lastInteractionBefore
+            ? [`${alias} < :lastInteractionBefore`]
+            : []),
+        ];
+        return `(${alias} IS NULL OR (${conditions.join(' AND ')}))`;
+      }, params);
+    } else if (filter.lastInteractionAfter && filter.lastInteractionBefore) {
       where.lastInteractionAt = And(
         MoreThanOrEqual(new Date(filter.lastInteractionAfter)),
         LessThan(new Date(filter.lastInteractionBefore)),

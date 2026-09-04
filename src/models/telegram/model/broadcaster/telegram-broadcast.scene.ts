@@ -34,7 +34,11 @@ type TelegramBroadcastState = {
   selectedRecipientIds: number[];
   recipientsPage: number;
   manualRecipients: boolean;
-  awaitingFilter?: 'groups' | 'activity_before' | 'activity_range';
+  awaitingFilter?:
+    | 'groups'
+    | 'activity_before'
+    | 'activity_after'
+    | 'activity_range';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
   awaitingActionText?: BroadcastRecipientAction | 'link';
   awaitingActionLinkUrl?: boolean;
@@ -481,17 +485,22 @@ export class TelegramBroadcastScene extends BaseScene {
       ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityMode),
       {
         parse_mode: 'HTML',
-        ...this.keyboardFactory.getBroadcastActivityFilterMenu(ctx),
+        ...this.keyboardFactory.getBroadcastActivityFilterMenu(
+          ctx,
+          !!ctx.scene.state.filter.includeNoActivity,
+        ),
       },
     );
   }
 
-  @Action(/broadcast:wizard:filter:activity:(?<mode>before|range)/)
+  @Action(/broadcast:wizard:filter:activity:(?<mode>before|after|range)/)
   async onActivityFilterMode(@Ctx() ctx: IStepCtx) {
     ctx.scene.state.awaitingFilter =
       ctx.match!.groups!.mode === 'range'
         ? 'activity_range'
-        : 'activity_before';
+        : ctx.match!.groups!.mode === 'after'
+          ? 'activity_after'
+          : 'activity_before';
     await ctx.tryAnswerCbQuery();
     await ctx.editMessageText(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityText),
@@ -507,9 +516,19 @@ export class TelegramBroadcastScene extends BaseScene {
     const state = ctx.scene.state;
     state.filter.lastInteractionAfter = undefined;
     state.filter.lastInteractionBefore = undefined;
+    state.filter.includeNoActivity = undefined;
     state.awaitingFilter = undefined;
     this.resetManualRecipients(state);
     await this.renderFilters(ctx);
+  }
+
+  @WizardStep(2)
+  @Action('broadcast:wizard:filter:activity:include-no-activity')
+  async onActivityFilterIncludeNoActivity(@Ctx() ctx: IStepCtx) {
+    const state = ctx.scene.state;
+    state.filter.includeNoActivity = !state.filter.includeNoActivity;
+    this.resetManualRecipients(state);
+    await this.onActivityFilter(ctx);
   }
 
   @WizardStep(2)
@@ -1173,20 +1192,23 @@ export class TelegramBroadcastScene extends BaseScene {
 
   private parseActivityFilter(
     text: string,
-    mode: 'activity_before' | 'activity_range',
+    mode: 'activity_before' | 'activity_after' | 'activity_range',
   ) {
     const dates = text
       .trim()
       .split(/\s*(?:-|—|–)\s*/)
       .map((value) => this.parseMoscowDate(value));
     if (
-      (mode === 'activity_before' && dates.length !== 1) ||
+      (mode !== 'activity_range' && dates.length !== 1) ||
       dates.some((date) => !date)
     ) {
       return null;
     }
     if (mode === 'activity_before') {
       return { before: this.addMoscowDays(dates[0]!, 1).toISOString() };
+    }
+    if (mode === 'activity_after') {
+      return { after: dates[0]!.toISOString() };
     }
     if (dates.length !== 2 || dates[0]! > dates[1]!) return null;
 
@@ -1213,17 +1235,21 @@ export class TelegramBroadcastScene extends BaseScene {
       new Intl.DateTimeFormat('ru-RU', {
         timeZone: 'Europe/Moscow',
       }).format(new Date(value));
+    let result: string | null = null;
     if (filter.lastInteractionAfter && filter.lastInteractionBefore) {
-      return `с ${format(filter.lastInteractionAfter)} по ${format(
+      result = `с ${format(filter.lastInteractionAfter)} по ${format(
+        new Date(filter.lastInteractionBefore).getTime() - 1,
+      )}`;
+    } else if (filter.lastInteractionAfter) {
+      result = `с ${format(filter.lastInteractionAfter)}`;
+    } else if (filter.lastInteractionBefore) {
+      result = `до ${format(
         new Date(filter.lastInteractionBefore).getTime() - 1,
       )}`;
     }
-    if (filter.lastInteractionBefore) {
-      return `до ${format(
-        new Date(filter.lastInteractionBefore).getTime() - 1,
-      )}`;
-    }
-    return null;
+    return result && filter.includeNoActivity
+      ? `${result}, включая без активности`
+      : result;
   }
 
   private getRecipientAction(value: string): BroadcastRecipientAction | null {

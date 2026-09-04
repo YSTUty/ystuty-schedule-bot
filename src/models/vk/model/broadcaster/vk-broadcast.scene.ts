@@ -35,7 +35,11 @@ type VkBroadcastState = {
   recipientsPage: number;
   manualRecipients: boolean;
   awaitingSource: boolean;
-  awaitingFilter?: 'groups' | 'activity_before' | 'activity_range';
+  awaitingFilter?:
+    | 'groups'
+    | 'activity_before'
+    | 'activity_after'
+    | 'activity_range';
   awaitingFeedbackText?: 'button' | 'response' | 'after';
   awaitingActionText?: BroadcastRecipientAction | 'link';
   awaitingActionLinkUrl?: boolean;
@@ -356,7 +360,9 @@ export class VkBroadcastScene {
       | 'actionLinkText'
       | 'actionLinkUrl'
       | 'filterActivityBefore'
+      | 'filterActivityAfter'
       | 'filterActivityRange'
+      | 'filterActivityIncludeNoActivity'
       | 'filterActivityClear'
       | 'filterExcludeCampaignToggle'
       | 'filterExcludeCampaignDone'
@@ -804,7 +810,10 @@ export class VkBroadcastScene {
         {
           keep_forward_messages: true,
           keyboard: this.keyboardFactory
-            .getBroadcastActivityFilterMenu(ctx)
+            .getBroadcastActivityFilterMenu(
+              ctx,
+              !!ctx.scene.state.filter.includeNoActivity,
+            )
             .inline(),
         },
       );
@@ -815,9 +824,17 @@ export class VkBroadcastScene {
       return true;
     }
 
-    if (action === 'filterActivityBefore' || action === 'filterActivityRange') {
+    if (
+      action === 'filterActivityBefore' ||
+      action === 'filterActivityAfter' ||
+      action === 'filterActivityRange'
+    ) {
       ctx.scene.state.awaitingFilter =
-        action === 'filterActivityRange' ? 'activity_range' : 'activity_before';
+        action === 'filterActivityRange'
+          ? 'activity_range'
+          : action === 'filterActivityAfter'
+            ? 'activity_after'
+            : 'activity_before';
       await this.editCurrentVkMessage(
         ctx,
         ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityText),
@@ -838,9 +855,34 @@ export class VkBroadcastScene {
     if (action === 'filterActivityClear') {
       ctx.scene.state.filter.lastInteractionAfter = undefined;
       ctx.scene.state.filter.lastInteractionBefore = undefined;
+      ctx.scene.state.filter.includeNoActivity = undefined;
       ctx.scene.state.awaitingFilter = undefined;
       this.resetManualRecipients(ctx.scene.state);
       await this.renderFilters(ctx);
+      return true;
+    }
+
+    if (action === 'filterActivityIncludeNoActivity') {
+      ctx.scene.state.filter.includeNoActivity =
+        !ctx.scene.state.filter.includeNoActivity;
+      this.resetManualRecipients(ctx.scene.state);
+      await this.editCurrentVkMessage(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_Broadcast_FilterActivityMode),
+        {
+          keep_forward_messages: true,
+          keyboard: this.keyboardFactory
+            .getBroadcastActivityFilterMenu(
+              ctx,
+              !!ctx.scene.state.filter.includeNoActivity,
+            )
+            .inline(),
+        },
+      );
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Settings),
+      });
       return true;
     }
 
@@ -1238,20 +1280,23 @@ export class VkBroadcastScene {
 
   private parseActivityFilter(
     text: string,
-    mode: 'activity_before' | 'activity_range',
+    mode: 'activity_before' | 'activity_after' | 'activity_range',
   ) {
     const dates = text
       .trim()
       .split(/\s*(?:-|—|–)\s*/)
       .map((value) => this.parseMoscowDate(value));
     if (
-      (mode === 'activity_before' && dates.length !== 1) ||
+      (mode !== 'activity_range' && dates.length !== 1) ||
       dates.some((date) => !date)
     ) {
       return null;
     }
     if (mode === 'activity_before') {
       return { before: this.addMoscowDays(dates[0]!, 1).toISOString() };
+    }
+    if (mode === 'activity_after') {
+      return { after: dates[0]!.toISOString() };
     }
     if (dates.length !== 2 || dates[0]! > dates[1]!) return null;
 
@@ -1278,17 +1323,21 @@ export class VkBroadcastScene {
       new Intl.DateTimeFormat('ru-RU', {
         timeZone: 'Europe/Moscow',
       }).format(new Date(value));
+    let result: string | null = null;
     if (filter.lastInteractionAfter && filter.lastInteractionBefore) {
-      return `с ${format(filter.lastInteractionAfter)} по ${format(
+      result = `с ${format(filter.lastInteractionAfter)} по ${format(
+        new Date(filter.lastInteractionBefore).getTime() - 1,
+      )}`;
+    } else if (filter.lastInteractionAfter) {
+      result = `с ${format(filter.lastInteractionAfter)}`;
+    } else if (filter.lastInteractionBefore) {
+      result = `до ${format(
         new Date(filter.lastInteractionBefore).getTime() - 1,
       )}`;
     }
-    if (filter.lastInteractionBefore) {
-      return `до ${format(
-        new Date(filter.lastInteractionBefore).getTime() - 1,
-      )}`;
-    }
-    return null;
+    return result && filter.includeNoActivity
+      ? `${result}, включая без активности`
+      : result;
   }
 
   private async applyGroupFilter(ctx: IStepCtx, groupNamesText: string) {

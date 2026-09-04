@@ -1046,7 +1046,10 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getBroadcastActivityFilterMenu(ctx: IContext) {
+  public getBroadcastActivityFilterMenu(
+    ctx: IContext,
+    includeNoActivity: boolean,
+  ) {
     return Markup.inlineKeyboard([
       [
         Markup.button.callback(
@@ -1056,8 +1059,23 @@ export class TelegramKeyboardFactory {
       ],
       [
         Markup.button.callback(
+          'Был активен с даты',
+          'broadcast:wizard:filter:activity:after',
+        ),
+      ],
+      [
+        Markup.button.callback(
           'Был активен в диапазоне',
           'broadcast:wizard:filter:activity:range',
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterActivityIncludeNoActivity,
+            { includeNoActivity },
+          ),
+          'broadcast:wizard:filter:activity:include-no-activity',
         ),
       ],
       [

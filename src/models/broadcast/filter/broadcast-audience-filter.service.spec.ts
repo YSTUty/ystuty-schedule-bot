@@ -167,6 +167,34 @@ describe('BroadcastAudienceFilterService', () => {
     ).not.toHaveProperty('retryRateLimitCampaignId');
   });
 
+  it('includes profiles without activity alongside a selected date filter', async () => {
+    const repository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const service = new BroadcastAudienceFilterService(
+      repository as any,
+      { getGroupInstitutes: jest.fn() } as any,
+    );
+
+    await service.getRecipients(SocialType.Telegram, {
+      lastInteractionAfter: '2026-08-31T00:00:00+03:00',
+      includeNoActivity: true,
+    });
+
+    const [{ where }] = repository.find.mock.calls[0];
+    expect(where.lastInteractionAt).toMatchObject({
+      _objectLiteralParameters: {
+        lastInteractionAfter: new Date('2026-08-30T21:00:00.000Z'),
+      },
+    });
+    expect(where.lastInteractionAt._getSql('lastInteractionAt')).toContain(
+      'lastInteractionAt IS NULL',
+    );
+    expect(where.lastInteractionAt._getSql('lastInteractionAt')).toContain(
+      'lastInteractionAt >= :lastInteractionAfter',
+    );
+  });
+
   it('accepts an inclusive Moscow date range as a UTC half-open interval', () => {
     const service = new BroadcastAudienceFilterService(
       {} as any,

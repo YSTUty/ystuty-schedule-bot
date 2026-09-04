@@ -45,6 +45,8 @@ export type BroadcastAudienceFilter = {
   lastInteractionAfter?: string | null;
   /** Верхняя исключающая граница активности в UTC. */
   lastInteractionBefore?: string | null;
+  /** Включает профили без входящего сообщения вместе с выбранным диапазоном активности. */
+  includeNoActivity?: boolean;
   /** Исключает пользователей, для которых создавалась delivery указанных кампаний. */
   excludeCampaignIds?: number[];
   /**

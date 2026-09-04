@@ -1290,7 +1290,10 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getBroadcastActivityFilterMenu(ctx: IContext) {
+  public getBroadcastActivityFilterMenu(
+    ctx: IContext,
+    includeNoActivity: boolean,
+  ) {
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
@@ -1301,8 +1304,25 @@ export class VKKeyboardFactory {
       ],
       [
         Keyboard.callbackButton({
+          label: 'Был активен с даты',
+          payload: { broadcastAction: 'filterActivityAfter' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
           label: 'Был активен в диапазоне',
           payload: { broadcastAction: 'filterActivityRange' },
+          color: Keyboard.SECONDARY_COLOR,
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(
+            LocalePhrase.Button_Broadcast_FilterActivityIncludeNoActivity,
+            { includeNoActivity },
+          ),
+          payload: { broadcastAction: 'filterActivityIncludeNoActivity' },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],

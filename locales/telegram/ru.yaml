@@ -59,6 +59,7 @@ button:
     filter_groups_done: ✅ Готово
     filter_institute_toggle: '${selected ? "➖ Снять институт" : "➕ Выбрать институт"}'
     filter_activity: '🕒 Активность: ${hasActivityFilter ? "выбрана" : "любая"}'
+    filter_activity_include_no_activity: '📭 Без активности: ${includeNoActivity ? "учитывать" : "не учитывать"}'
     filter_exclude_campaigns: '🚫 Исключить: ${hasExcludedCampaigns ? "выбраны" : "нет"}'
     filter_exclude_campaigns_done: '✅ Готово (${selectedCount})'
     filter_retry_rate_limit: '🔁 Повтор rate limit: ${hasRetryRateLimitCampaign ? "выбран" : "нет"}'
@@ -370,7 +371,7 @@ page:
     filter_activity_mode: Выбери правило активности.
     filter_activity_text: |
       Отправь дату или диапазон в формате <code>ДД.ММ.ГГГГ</code> или <code>ДД.ММ.ГГГГ - ДД.ММ.ГГГГ</code>.
-      Для режима «до даты» будут выбраны пользователи, активные до конца указанного дня. Для диапазона обе даты включаются.
+      Для режима «до даты» будут выбраны пользователи, активные до конца указанного дня; для «с даты» — начиная с указанного дня. В диапазоне обе даты включаются.
     action_settings: |
       <b>Дополнительные кнопки</b>
       Включай нужные действия и при необходимости меняй их текст.

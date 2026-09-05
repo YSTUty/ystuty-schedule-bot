@@ -5,6 +5,10 @@
 `grafana/ystuty-schedule-bot.dashboard.json` — импортируемый Grafana
 dashboard для Prometheus-метрик бота.
 
+Полный контракт метрик, labels, feature flags и готовые PromQL-примеры:
+[`metrics-reference.md`](metrics-reference.md). Его следует передавать вместе
+с JSON при дальнейшей доработке dashboard.
+
 Файл сохраняет UID существующего dashboard, но Prometheus datasource выбирается
 через переменную `${DS_PROMETHEUS}`. После импорта выбери источник в верхней
 части dashboard — это позволяет использовать JSON в любой Grafana без замены

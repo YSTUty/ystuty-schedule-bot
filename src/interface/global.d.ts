@@ -23,6 +23,16 @@ declare global {
   type Defined<T> = { [K in keyof T]: undefined extends T[K] ? never : T[K] };
   type DefinedValues<T> = Pick<T, keyof Defined<T>>;
 
+  /** Проверяет эквивалентность типов в compile-time assertions. */
+  type IsLocaleTemplateTypeEqual<Left, Right> =
+    (<Value>() => Value extends Left ? 1 : 2) extends <Value>() =>
+      Value extends Right ? 1 : 2
+      ? true
+      : false;
+
+  /** Завершает сборку, если compile-time assertion для locale-шаблона ложна. */
+  type AssertLocaleTemplateType<Type extends true> = Type;
+
   interface ObjectConstructor {
     keys<T extends object>(o: T): (keyof T)[];
   }

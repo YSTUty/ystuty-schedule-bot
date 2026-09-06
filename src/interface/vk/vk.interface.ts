@@ -14,6 +14,8 @@ import type {
 } from 'vk-io';
 import type { I18nContext } from 'vk-io-i18n';
 
+import type { LocaleI18nContext } from '@my-interfaces';
+
 import type { Conversation } from '../../models/social/entity/conversation.entity';
 import type { UserSocial } from '../../models/user/entity/user-social.entity';
 import type { User } from '../../models/user/entity/user.entity';
@@ -49,7 +51,7 @@ type ContextState = {
 };
 
 type CombinedContext = {
-  readonly i18n: I18nContext;
+  readonly i18n: Omit<I18nContext, 't'> & LocaleI18nContext;
   readonly api: API;
 } & {
   session: ISessionContext & ISessionState;

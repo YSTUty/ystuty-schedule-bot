@@ -27,7 +27,7 @@ export class TelegramBroadcastTransport
   public readonly social = SocialType.Telegram;
   private readonly fakeCtx = {
     i18n: i18nTg.createContext('ru', {}),
-  } as IContext;
+  } as unknown as IContext;
 
   constructor(
     private readonly telegramService: TelegramService,

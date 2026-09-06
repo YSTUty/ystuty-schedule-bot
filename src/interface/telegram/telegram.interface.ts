@@ -10,7 +10,11 @@ import type {
   WizardSessionData,
 } from 'telegraf-hardened/scenes';
 
-import type { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
+import type {
+  LocaleI18nContext,
+  LocalePhrase,
+  TelegramLocalePhrase,
+} from '@my-interfaces';
 
 import type { Conversation } from '../../models/social/entity/conversation.entity';
 import type { UserSocial } from '../../models/user/entity/user-social.entity';
@@ -68,9 +72,11 @@ type CombinedContext = {
     'state'
   > & { state: AnyObj };
 
-  i18n: I18nContext<
-    Record<LocalePhrase | TelegramLocalePhrase, AnyObj | never>
-  >;
+  i18n: Omit<
+    I18nContext<Record<LocalePhrase | TelegramLocalePhrase, AnyObj | never>>,
+    't'
+  > &
+    LocaleI18nContext;
   tryAnswerCbQuery: (
     ...args: Shorthand<'answerCbQuery'>
   ) => Promise<true | null>;

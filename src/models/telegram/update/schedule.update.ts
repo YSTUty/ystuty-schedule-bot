@@ -20,6 +20,11 @@ import { IContext, IMessageContext } from '@my-interfaces/telegram';
 
 import { ScheduleService } from '../../schedule/schedule.service';
 import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
+import {
+  formatScheduleTargetDate,
+  getScheduleTargetDate,
+  getScheduleWeekDateRange,
+} from '../../schedule/util/schedule.util';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
 
@@ -82,7 +87,9 @@ export class ScheduleUpdate {
       if (messageDay === false) {
         messageDay = `${ctx.i18n.t(LocalePhrase.Common_Error)}\n`;
       } else {
-        messageDay = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+        messageDay = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundDate, {
+          date: formatScheduleTargetDate(getScheduleTargetDate()),
+        })}\n`;
       }
     }
 
@@ -93,7 +100,10 @@ export class ScheduleUpdate {
           groupName,
           withTags: true,
         })
-      )[1] || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+      )[1] ||
+      `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundDate, {
+        date: formatScheduleTargetDate(getScheduleTargetDate(1)),
+      })}\n`;
 
     const messageWeek =
       (
@@ -103,7 +113,10 @@ export class ScheduleUpdate {
           isWeek: true,
           withTags: true,
         })
-      )[1] || `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+      )[1] ||
+      `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundWeek, {
+        dateRange: getScheduleWeekDateRange(1),
+      })}\n`;
 
     const reply_markup = {
       inline_keyboard: [
@@ -314,7 +327,9 @@ export class ScheduleUpdate {
     }
 
     if (!message) {
-      message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+      message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundDate, {
+        date: formatScheduleTargetDate(getScheduleTargetDate(skipDays)),
+      })}\n`;
     }
 
     const targetName = allowerHtmlTags(
@@ -434,6 +449,7 @@ export class ScheduleUpdate {
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
     const presentation = ctx.match?.groups?.detailed ? 'detailed' : 'compact';
     const skipDays = isNextWeek ? 7 + 1 : 1;
+    const dateRange = getScheduleWeekDateRange(skipDays);
 
     if (!ctx.callbackQuery) {
       await ctx.sendChatAction('typing');
@@ -461,10 +477,12 @@ export class ScheduleUpdate {
         targetType === 'teacher'
           ? LocalePhrase.Page_Schedule_TeacherWeekTitle
           : LocalePhrase.Page_Schedule_WeekTitle,
-        { isNextWeek },
+        { dateRange, isNextWeek },
       )}\n${message}`;
     } else {
-      message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday)}\n`;
+      message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundWeek, {
+        dateRange,
+      })}\n`;
     }
 
     const targetName = allowerHtmlTags(

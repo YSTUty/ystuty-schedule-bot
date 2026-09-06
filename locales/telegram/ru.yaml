@@ -227,7 +227,8 @@ page:
     nearest_schedule: |
       ⚠️ Ближайшее расписание через ${pluralize(days, 'день', 'дня', 'дней')}:
       ${content}
-    not_found_today: Похоже, на этот день расписания нет. 🐜
+    not_found_date: Похоже, на <b>${date}</b> расписания нет. 🐜
+    not_found_week: Похоже, на неделю <b>${dateRange}</b> расписания нет. 🐜
     teachers_list: |
       <b>Преподаватели</b>
       <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
@@ -248,9 +249,9 @@ page:
     teacher_not_selected: |
       Сначала выбери преподавателя через <code>преподаватель Фамилия</code> или <code>/tlist</code>.
     week_title: |
-      Расписание на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
+      Расписание ${weekTitle || (isNextWeek ? 'на следующую неделю' : 'на текущую неделю')} (${dateRange}):
     teacher_week_title: |
-      Расписание преподавателя на ${isNextWeek ? 'следующую' : 'текущую'} неделю:
+      Расписание преподавателя ${weekTitle || (isNextWeek ? 'на следующую неделю' : 'на текущую неделю')} (${dateRange}):
   schedule_notification:
     settings: |
       <b>Рассылка расписания</b>

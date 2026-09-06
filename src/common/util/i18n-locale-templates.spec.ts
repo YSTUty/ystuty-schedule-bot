@@ -41,6 +41,8 @@ const localeTemplateData = {
   campaignId: 12,
   content: 'Расписание на сегодня',
   currentPage: 1,
+  date: '1 сентября',
+  dateRange: '1–7 сентября',
   days: 2,
   deletedCount: 8,
   doneCount: 9,
@@ -123,6 +125,7 @@ const localeTemplateData = {
   },
   useInline: false,
   webViewLink: 'schedule.example',
+  weekTitle: 'на неделю через 16 недель',
 };
 
 const createTemplateData = (phrase: string, ctx: unknown) =>

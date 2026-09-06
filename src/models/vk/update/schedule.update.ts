@@ -14,6 +14,11 @@ import { IMessageContext } from '@my-interfaces/vk';
 
 import { ScheduleService } from '../../schedule/schedule.service';
 import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
+import {
+  formatScheduleTargetDate,
+  getScheduleTargetDate,
+  getScheduleWeekDateRange,
+} from '../../schedule/util/schedule.util';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
 
@@ -94,7 +99,9 @@ export class ScheduleUpdate {
     }
 
     if (!message) {
-      message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
+      message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundDate, {
+        date: formatScheduleTargetDate(getScheduleTargetDate(skipDays)),
+      });
     }
 
     const keyboard = this.keyboardFactory
@@ -127,6 +134,7 @@ export class ScheduleUpdate {
       ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
     const presentation = ctx.$match?.groups?.detailed ? 'detailed' : 'compact';
     const skipDays = isNextWeek ? 7 + 1 : 1;
+    const dateRange = getScheduleWeekDateRange(skipDays);
     const target = await this.resolveScheduleTarget(
       ctx,
       teacherIdFromPayload ||
@@ -160,10 +168,12 @@ export class ScheduleUpdate {
         target.type === 'teacher'
           ? LocalePhrase.Page_Schedule_TeacherWeekTitle
           : LocalePhrase.Page_Schedule_WeekTitle,
-        { isNextWeek },
+        { dateRange, isNextWeek },
       )}\n${message}`;
     } else {
-      message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundToday);
+      message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundWeek, {
+        dateRange,
+      });
     }
 
     const keyboard = this.keyboardFactory

@@ -85,6 +85,66 @@ export function getTimez(startTime: string, durationMinutes = 90) {
   return `${startTime}-${endTime}`;
 }
 
+const MOSCOW_TIME_ZONE = 'Europe/Moscow';
+
+/**
+ * Возвращает календарную дату Москвы в UTC-представлении. Время намеренно
+ * не используется: далее нужны только день, месяц и год для подписи.
+ */
+export function getMoscowCalendarDate(date: Date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MOSCOW_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value]),
+  );
+
+  return new Date(
+    Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)),
+  );
+}
+
+/** Формирует дату запроса с учётом календарного дня в Москве. */
+export function getScheduleTargetDate(skipDays = 0, now: Date = new Date()) {
+  const date = getMoscowCalendarDate(now);
+  date.setUTCDate(date.getUTCDate() + skipDays);
+  return date;
+}
+
+/** Форматирует календарную дату для пользовательских сообщений. */
+export function formatScheduleTargetDate(date: Date) {
+  return date.toLocaleDateString('ru-RU', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
+/** Возвращает диапазон понедельник–воскресенье для недели целевой даты. */
+export function getScheduleWeekDateRange(skipDays = 0, now: Date = new Date()) {
+  const start = getScheduleTargetDate(skipDays, now);
+  const day = start.getUTCDay() || 7;
+  start.setUTCDate(start.getUTCDate() - day + 1);
+
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+
+  const startLabel = formatScheduleTargetDate(start);
+  const endLabel = formatScheduleTargetDate(end);
+  const isSameMonth =
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth();
+
+  return isSameMonth
+    ? `${start.getUTCDate()}–${endLabel}`
+    : `${startLabel} — ${endLabel}`;
+}
+
 export function short2Long2(e: number, q: 0 | 1 | 2 = 0) {
   switch (e) {
     case 0:

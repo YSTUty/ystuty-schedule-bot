@@ -125,7 +125,7 @@ const localeTemplateData = {
   },
   useInline: false,
   webViewLink: 'schedule.example',
-  weekTitle: 'на неделю через 16 недель',
+  weekTitle: undefined,
 };
 
 const createTemplateData = (phrase: string, ctx: unknown) =>
@@ -209,6 +209,16 @@ describe.each([
         );
       }
     }
+  });
+
+  it('supports an explicit title for a future week', () => {
+    expect(
+      i18n.t('ru', 'page.schedule.week_title', {
+        dateRange: '1–7 декабря',
+        isNextWeek: false,
+        weekTitle: 'на неделю через 16 недель',
+      }),
+    ).toBe('Расписание на неделю через 16 недель (1–7 декабря):\n');
   });
 });
 

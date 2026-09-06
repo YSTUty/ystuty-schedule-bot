@@ -168,7 +168,7 @@ export class ScheduleUpdate {
         target.type === 'teacher'
           ? LocalePhrase.Page_Schedule_TeacherWeekTitle
           : LocalePhrase.Page_Schedule_WeekTitle,
-        { dateRange, isNextWeek },
+        { dateRange, isNextWeek, weekTitle: null },
       )}\n${message}`;
     } else {
       message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundWeek, {

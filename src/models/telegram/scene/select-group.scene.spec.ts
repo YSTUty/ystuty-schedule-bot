@@ -2,7 +2,9 @@ import { SelectGroupScene } from './select-group.scene';
 
 describe('SelectGroupScene', () => {
   it('saves a group selected by an authorized group-chat callback', async () => {
-    const keyboardFactory = { getStart: jest.fn().mockReturnValue({}) };
+    const keyboardFactory = {
+      getScheduleInline: jest.fn().mockReturnValue('schedule keyboard'),
+    };
     const scheduleService = {
       getGroupByName: jest.fn().mockReturnValue('ЦИС-17'),
       parseGroupName: jest.fn(),
@@ -31,7 +33,57 @@ describe('SelectGroupScene', () => {
 
     expect(ctx.conversation.groupName).toBe('ЦИС-17');
     expect(ctx.scene.leave).toHaveBeenCalledTimes(1);
-    expect(ctx.replyWithHTML).toHaveBeenCalledTimes(1);
+    expect(ctx.replyWithHTML).toHaveBeenCalledWith(
+      'Группа выбрана',
+      'schedule keyboard',
+    );
+  });
+
+  it('restores the private reply keyboard after sending the schedule shortcuts', async () => {
+    const keyboardFactory = {
+      getScheduleInline: jest.fn().mockReturnValue('schedule keyboard'),
+      getStart: jest.fn().mockReturnValue('start keyboard'),
+    };
+    const telegramService = {
+      isAdmin: jest.fn().mockReturnValue(false),
+      syncPrivateChatCommands: jest.fn(),
+    };
+    const scene = new SelectGroupScene(
+      keyboardFactory as any,
+      {
+        getGroupByName: jest.fn().mockReturnValue('ЦИС-17'),
+        parseGroupName: jest.fn(),
+      } as any,
+      telegramService as any,
+      {} as any,
+    );
+    const ctx = {
+      chat: { id: 1, type: 'private' },
+      from: { id: 1 },
+      session: {},
+      user: null,
+      userSocial: {},
+      state: {},
+      scene: {
+        state: { groupName: 'ЦИС-17', firstTime: false },
+        leave: jest.fn(),
+      },
+      i18n: { t: jest.fn((phrase) => phrase) },
+      replyWithHTML: jest.fn(),
+    };
+
+    await scene.step1(ctx as any);
+
+    expect(ctx.replyWithHTML).toHaveBeenNthCalledWith(
+      1,
+      'page.select_group.selected',
+      'schedule keyboard',
+    );
+    expect(ctx.replyWithHTML).toHaveBeenNthCalledWith(
+      2,
+      'page.select_group.keyboard_updated',
+      'start keyboard',
+    );
   });
 
   it('shows the current personal group in the initial prompt', async () => {

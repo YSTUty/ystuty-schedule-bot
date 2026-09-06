@@ -63,12 +63,12 @@ describe('VK SelectGroupScene', () => {
       getGroupByName: jest.fn().mockReturnValue('ДПО'),
       parseGroupName: jest.fn(),
     };
-    const keyboard = { inline: jest.fn().mockReturnValue('keyboard') };
+    const keyboard = { inline: jest.fn().mockReturnValue('schedule keyboard') };
     const scene = new SelectGroupScene(
       scheduleService as any,
       {
-        getStart: jest.fn().mockReturnValue(keyboard),
-        needInline: jest.fn().mockReturnValue(true),
+        getSchedule: jest.fn().mockReturnValue(keyboard),
+        getStart: jest.fn().mockReturnValue('start keyboard'),
       } as any,
       {} as any,
     );
@@ -77,6 +77,7 @@ describe('VK SelectGroupScene', () => {
       is: jest.fn((types: string[]) => types.includes('message_event')),
       isMessageEventContext: jest.fn().mockReturnValue(true),
       isChat: false,
+      isDM: true,
       state: { userSocial: {} as { groupName?: string } },
       scene: {
         state: {},
@@ -85,6 +86,7 @@ describe('VK SelectGroupScene', () => {
       },
       i18n: { t: jest.fn().mockReturnValue('Группа выбрана') },
       editMessage: jest.fn(),
+      send: jest.fn(),
     };
 
     await scene.step1(ctx as any);
@@ -93,7 +95,10 @@ describe('VK SelectGroupScene', () => {
     expect(ctx.state.userSocial.groupName).toBe('ДПО');
     expect(ctx.editMessage).toHaveBeenCalledWith({
       message: 'Группа выбрана',
-      keyboard: 'keyboard',
+      keyboard: 'schedule keyboard',
+    });
+    expect(ctx.send).toHaveBeenCalledWith('Группа выбрана', {
+      keyboard: 'start keyboard',
     });
     expect(ctx.scene.leave).toHaveBeenCalledTimes(1);
   });

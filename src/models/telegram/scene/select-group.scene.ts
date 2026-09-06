@@ -189,13 +189,22 @@ export class SelectGroupScene extends BaseScene {
         // await this.userService.saveUserSocial(ctx.userSocial);
       }
 
-      const keyboard = this.keyboardFactory.getStart(ctx);
+      const keyboard = this.keyboardFactory.getScheduleInline(ctx, {
+        type: 'group',
+        id: selectedGroupName,
+      });
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
           selectedGroupName,
         }),
         keyboard,
       );
+      if (ctx.chat?.type === 'private') {
+        await ctx.replyWithHTML(
+          ctx.i18n.t(LocalePhrase.Page_SelectGroup_KeyboardUpdated),
+          this.keyboardFactory.getStart(ctx),
+        );
+      }
       await ctx.scene.leave();
       return;
     }

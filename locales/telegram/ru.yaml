@@ -290,6 +290,7 @@ page:
       Страница: ${currentPage}/${totalPages}
     selected: |
       Выбрана группа: <code>${selectedGroupName}</code>
+    keyboard_updated: Основное меню обновлено.
     not_found: |
       <b>Ошибка:</b> Группа <code>${groupName}</code> не найдена
       Напиши другое название, <code>Отмена</code> или <code>/cancel</code>.

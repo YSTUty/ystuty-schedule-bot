@@ -291,6 +291,7 @@ page:
       Страница: ${currentPage}/${totalPages}
     selected: |
       Выбрана группа: ${selectedGroupName}
+    keyboard_updated: Основное меню обновлено.
     not_found: |
       Ошибка: Группа "${groupName}" не найдена
       Напиши другое название, Отмена или /cancel.

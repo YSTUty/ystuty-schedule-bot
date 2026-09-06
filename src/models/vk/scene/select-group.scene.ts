@@ -120,8 +120,8 @@ export class SelectGroupScene {
       }
 
       const keyboard = this.keyboardFactory
-        .getStart(ctx)
-        .inline(this.keyboardFactory.needInline(ctx));
+        .getSchedule(ctx, { type: 'group', id: selectedGroupName })
+        .inline();
       if (ctx.isMessageEventContext() && !state.forceNewMessage) {
         await ctx.editMessage({
           message: ctx.i18n.t(LocalePhrase.Page_SelectGroup_Selected, {
@@ -135,6 +135,12 @@ export class SelectGroupScene {
             selectedGroupName,
           }),
           { keyboard },
+        );
+      }
+      if (ctx.isDM) {
+        await ctx.send(
+          ctx.i18n.t(LocalePhrase.Page_SelectGroup_KeyboardUpdated),
+          { keyboard: this.keyboardFactory.getStart(ctx) },
         );
       }
       return ctx.scene.leave();

@@ -83,6 +83,7 @@ describe('VkFeedbackScene', () => {
       id: 11,
       scene: {
         state: {
+          category: 'bot',
           messages: [
             { messageId: 10, text: 'Основная текстовка', isPrimary: true },
           ],
@@ -107,6 +108,33 @@ describe('VkFeedbackScene', () => {
     expect(ctx.send).not.toHaveBeenCalled();
   });
 
+  it('prompts to select a category before accepting feedback messages', async () => {
+    const ctx = {
+      isMessageEventContext: jest.fn().mockReturnValue(false),
+      isMessageContext: jest.fn().mockReturnValue(true),
+      attachments: [],
+      text: 'Не должен стать текстом отзыва',
+      id: 10,
+      scene: {
+        state: { messages: [], mediaCount: 0 },
+        step: { firstTime: false },
+      },
+      send: jest.fn(),
+      i18n: { t: jest.fn((phrase) => phrase) },
+    };
+
+    await scene.step(ctx as any);
+
+    expect(ctx.scene.state.messages).toEqual([]);
+    expect(ctx.send).toHaveBeenCalledWith('page.feedback.category_required', {
+      keyboard: 'categories',
+    });
+    expect(vkService.bot.api.messages.sendReaction).not.toHaveBeenCalled();
+
+    await scene.step(ctx as any);
+    expect(ctx.send).toHaveBeenCalledTimes(1);
+  });
+
   it('marks accepted and rejected feedback messages with VK reactions', async () => {
     const ctx = {
       isMessageEventContext: jest.fn().mockReturnValue(false),
@@ -117,7 +145,11 @@ describe('VkFeedbackScene', () => {
       peerId: 20,
       conversationMessageId: 30,
       scene: {
-        state: { messages: [] as { messageId: number }[], mediaCount: 0 },
+        state: {
+          category: 'bot',
+          messages: [] as { messageId: number }[],
+          mediaCount: 0,
+        },
         step: { firstTime: false },
       },
       send: jest.fn(),
@@ -171,6 +203,7 @@ describe('VkFeedbackScene', () => {
       conversationMessageId: 30,
       scene: {
         state: {
+          category: 'bot',
           messages: Array.from({ length: 9 }, (_, index) => ({
             messageId: index + 1,
           })),

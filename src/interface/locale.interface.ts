@@ -158,6 +158,7 @@ export enum LocalePhrase {
   Page_ScheduleNotif_SelectGroup = 'page.schedule_notification.select_group',
   Page_ScheduleNotif_ConfirmDelete = 'page.schedule_notification.confirm_delete',
   Page_Feedback_SelectCategory = 'page.feedback.select_category',
+  Page_Feedback_CategoryRequired = 'page.feedback.category_required',
   Page_Feedback_EnterContent = 'page.feedback.enter_content',
   Page_Feedback_FirstMessage = 'page.feedback.first_message',
   Page_Feedback_MessageLimitReached = 'page.feedback.message_limit_reached',

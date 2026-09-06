@@ -484,6 +484,22 @@ export class MainMiddleware {
         return next();
       }
 
+      if (this.isSceneEscapeNavigation(ctx)) {
+        const sceneState = ctx.scene.state as { menuMessageId?: number };
+        if (sceneState.menuMessageId) {
+          await ctx.api.messages
+            .delete({
+              message_ids: sceneState.menuMessageId,
+              delete_for_all: true,
+            })
+            .catch(() => undefined);
+        }
+        await ctx.scene.leave({ silent: true });
+        // После выхода важно передать исходное сообщение HearManager: так
+        // нажатая кнопка нижнего меню сразу выполняет выбранное действие.
+        return next();
+      }
+
       const payloadPhrase = ctx.eventPayload?.phrase as
         | LocalePhrase
         | undefined;
@@ -535,6 +551,48 @@ export class MainMiddleware {
 
       return ctx.scene.reenter();
     };
+  }
+
+  /**
+   * Нижняя клавиатура VK остаётся видимой во время inline-сцен. Точное
+   * совпадение с её действиями должно быть выходом из сцены, а не её вводом.
+   */
+  private isSceneEscapeNavigation(ctx: IMessageContext | IMessageEventContext) {
+    if (!ctx.isMessageContext()) return false;
+
+    const menuPhrases = new Set<LocalePhrase>([
+      LocalePhrase.Button_SelectGroup,
+      LocalePhrase.Button_Schedule_Schedule,
+      LocalePhrase.Button_Schedule_Teacher,
+      LocalePhrase.Button_Schedule_MyTeacher,
+      LocalePhrase.Button_Profile,
+      LocalePhrase.Button_ScheduleNotif,
+      LocalePhrase.Button_Feedback,
+    ]);
+    if (menuPhrases.has(ctx.messagePayload?.phrase as LocalePhrase)) {
+      return true;
+    }
+
+    const text = ctx.text?.trim().toLocaleLowerCase('ru');
+    return [
+      '/start',
+      'start',
+      '/help',
+      'help',
+      'помощь',
+      '/feedback',
+      '/auth',
+      'login',
+      'войти',
+      '/profile',
+      '/institutes',
+      '/groups',
+      '/glist',
+      '/tlist',
+      '/tday',
+      '/tweek',
+      '/broadcast',
+    ].includes(text || '');
   }
 
   private get userMiddleware() {

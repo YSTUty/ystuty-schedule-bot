@@ -18,12 +18,14 @@ import { VkService } from '../vk.service';
 export const VK_FEEDBACK_SCENE = 'VK_FEEDBACK_SCENE';
 const MAX_FEEDBACK_MESSAGES = 10;
 const MAX_FEEDBACK_MEDIA = 10;
+const CATEGORY_HINT_DEBOUNCE_MS = 10e3;
 const categories = new Set(Object.values(FeedbackCategory));
 
 type FeedbackSceneState = {
   category?: FeedbackCategory;
   messages: FeedbackSourceMessage[];
   mediaCount: number;
+  categoryHintShownAt?: number;
   /** Возвращает стартовый экран, если отмена перехвачена общим middleware. */
   cancelToStartScreen?: boolean;
   menuMessageId?: number;
@@ -86,6 +88,13 @@ export class VkFeedbackScene {
     }
     if (ctx.isMessageEventContext()) return;
 
+    // До выбора категории сцена не принимает содержимое, но объясняет, почему
+    // нижняя клавиатура и произвольный текст пока не дают ожидаемого действия.
+    if (!state.category) {
+      await this.showCategoryRequired(ctx);
+      return;
+    }
+
     const input = this.getSourceMessage(ctx);
     if (!input) return;
 
@@ -129,6 +138,7 @@ export class VkFeedbackScene {
   ) {
     if (!categories.has(value as FeedbackCategory)) return;
     ctx.scene.state.category = value as FeedbackCategory;
+    delete ctx.scene.state.categoryHintShownAt;
     if (ctx.isMessageEventContext()) {
       await ctx.answer({ type: 'show_snackbar', text: 'Категория выбрана' });
       await ctx.editMessage({
@@ -209,6 +219,24 @@ export class VkFeedbackScene {
       ...(text ? { text } : {}),
       ...(attachments.length ? { attachments } : {}),
     };
+  }
+
+  private async showCategoryRequired(ctx: IStepContext<FeedbackSceneState>) {
+    const input = this.getSourceMessage(ctx);
+    const state = ctx.scene.state;
+    const now = Date.now();
+    if (
+      !input ||
+      (state.categoryHintShownAt &&
+        now - state.categoryHintShownAt < CATEGORY_HINT_DEBOUNCE_MS)
+    ) {
+      return;
+    }
+
+    state.categoryHintShownAt = now;
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_Feedback_CategoryRequired), {
+      keyboard: this.keyboardFactory.getFeedbackCategories(ctx),
+    });
   }
 
   /** Отмечает сообщение реакцией, но не прерывает сценарий при ошибке VK API. */

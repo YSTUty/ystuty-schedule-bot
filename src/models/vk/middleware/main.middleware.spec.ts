@@ -215,4 +215,56 @@ describe('VK MainMiddleware message subscription', () => {
       '⏳ Запрос уже обрабатывается. Подождите немного.',
     );
   });
+
+  it('leaves an active scene and forwards a lower-menu action to its handler', async () => {
+    const middleware = Object.create(
+      MainMiddleware.prototype,
+    ) as MainMiddleware;
+    const next = jest.fn();
+    const ctx = {
+      isMessageContext: jest.fn().mockReturnValue(true),
+      messagePayload: { phrase: 'button.schedule.schedule' },
+      scene: {
+        current: { slug: 'VK_FEEDBACK_SCENE' },
+        state: { menuMessageId: 42 },
+        leave: jest.fn(),
+        reenter: jest.fn(),
+      },
+      api: { messages: { delete: jest.fn().mockResolvedValue({}) } },
+    };
+
+    await middleware['sceneInterceptMiddleware']()(ctx as any, next);
+
+    expect(ctx.api.messages.delete).toHaveBeenCalledWith({
+      message_ids: 42,
+      delete_for_all: true,
+    });
+    expect(ctx.scene.leave).toHaveBeenCalledWith({ silent: true });
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(ctx.scene.reenter).not.toHaveBeenCalled();
+  });
+
+  it('keeps non-navigation messages in the active scene', async () => {
+    const middleware = Object.create(
+      MainMiddleware.prototype,
+    ) as MainMiddleware;
+    const next = jest.fn();
+    const ctx = {
+      isMessageContext: jest.fn().mockReturnValue(true),
+      text: 'Обычный текст отзыва',
+      i18n: { t: jest.fn().mockReturnValue('Отмена') },
+      scene: {
+        current: { slug: 'VK_FEEDBACK_SCENE' },
+        state: {},
+        leave: jest.fn(),
+        reenter: jest.fn(),
+      },
+    };
+
+    await middleware['sceneInterceptMiddleware']()(ctx as any, next);
+
+    expect(ctx.scene.reenter).toHaveBeenCalledTimes(1);
+    expect(ctx.scene.leave).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+  });
 });

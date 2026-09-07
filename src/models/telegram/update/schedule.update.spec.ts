@@ -1,6 +1,22 @@
-import { ScheduleUpdate } from './schedule.update';
+import { LocalePhrase } from '@my-interfaces';
+
+import {
+  createGroupScheduleActionRegExp,
+  ScheduleUpdate,
+} from './schedule.update';
 
 describe('Telegram ScheduleUpdate', () => {
+  it('matches a callback with a nonstandard long group name', () => {
+    const match = createGroupScheduleActionRegExp(
+      LocalePhrase.Button_Schedule_ForWeek,
+    ).exec('button.schedule.for_week:Научно-исслед сем');
+
+    expect(match?.groups).toMatchObject({
+      phrase: 'button.schedule.for_week',
+      groupName: 'Научно-исслед сем',
+    });
+  });
+
   const createUpdate = () => {
     const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),

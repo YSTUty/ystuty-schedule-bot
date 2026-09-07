@@ -1,6 +1,15 @@
-import { ScheduleUpdate } from './schedule.update';
+import { ScheduleUpdate, vkScheduleWeekTextPhrases } from './schedule.update';
 
 describe('VK ScheduleUpdate', () => {
+  it('does not register dynamic week navigation labels as text commands', () => {
+    expect(vkScheduleWeekTextPhrases).not.toContain(
+      'button.schedule.previous_week',
+    );
+    expect(vkScheduleWeekTextPhrases).not.toContain(
+      'button.schedule.next_week',
+    );
+  });
+
   it('uses the persistent conversation group for a chat schedule', async () => {
     const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),

@@ -17,6 +17,7 @@ import {
   allowerHtmlTags,
   md5,
   patternGroupName,
+  selectGroupCommandRegExp,
   teacherListCommandRegExp,
   teacherSearchCommandRegExp,
   TelegrafExceptionFilter,
@@ -661,6 +662,7 @@ export class MainUpdate {
     LocalePhrase.RegExp_Schedule_SelectGroup,
     LocalePhrase.Button_SelectGroup,
   ])
+  @Hears(selectGroupCommandRegExp)
   @Action(/selectGroup:(?<groupName>(.*))/i)
   async hearSelectGroup(@Ctx() ctx: ICbQOrMsg) {
     const { from, chat, state, conversation, userSocial } = ctx;
@@ -782,6 +784,12 @@ export class MainUpdate {
     if (!('text' in ctx.message)) return next();
 
     const query = ctx.message.text.trim();
+    const groupName = this.scheduleService.getGroupByName(query);
+    if (groupName) {
+      await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
+      return;
+    }
+
     if (!this.scheduleService.isTeacherSearchFallbackQuery(query))
       return next();
 

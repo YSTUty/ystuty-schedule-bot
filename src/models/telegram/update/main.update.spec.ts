@@ -6,9 +6,10 @@ import { MainUpdate } from './main.update';
 describe('Telegram MainUpdate', () => {
   const openTeachersList = jest.fn();
   const isTeacherSearchFallbackQuery = jest.fn();
+  const getGroupByName = jest.fn();
   const update = new MainUpdate(
     {} as any,
-    { isTeacherSearchFallbackQuery } as any,
+    { getGroupByName, isTeacherSearchFallbackQuery } as any,
     {} as any,
     {} as any,
     {} as any,
@@ -16,6 +17,7 @@ describe('Telegram MainUpdate', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    getGroupByName.mockReset();
     (update as any).openTeachersList = openTeachersList;
   });
 
@@ -121,6 +123,26 @@ describe('Telegram MainUpdate', () => {
     await update.onTeacherNameFallback(ctx, next);
 
     expect(openTeachersList).toHaveBeenCalledWith(ctx, 'Шулев');
+  });
+
+  it('opens group selection for an exact long group name in a private message', async () => {
+    getGroupByName.mockReturnValue('Научно-исслед сем');
+    const scene = { enter: jest.fn() };
+    const next = jest.fn();
+
+    await update.onTeacherNameFallback(
+      {
+        message: { text: 'Научно-исслед сем' },
+        scene,
+      } as any,
+      next,
+    );
+
+    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
+      groupName: 'Научно-исслед сем',
+    });
+    expect(openTeachersList).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
   });
 
   it('does not open a list for unrelated private text', async () => {

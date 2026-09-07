@@ -8,7 +8,6 @@ import {
   allowerHtmlTags,
   isPersonalTeacherScheduleCommand,
   isPersonalTeacherWeekCommand,
-  patternGroupName,
   patternTeacherId,
   personalTeacherScheduleCommandRegExp,
   personalTeacherWeekCommandRegExp,
@@ -29,6 +28,16 @@ import {
 } from '../../schedule/util/schedule.util';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
+
+/**
+ * Группа в callback — значение из клавиатуры, а не текстовая команда.
+ * Допускаем любое имя без разделителя `:`, включая нестандартные группы.
+ */
+export const createGroupScheduleActionRegExp = (phrase: LocalePhrase) =>
+  new RegExp(
+    `^(?<phrase>${phrase.replaceAll('.', '\\.')})(?::(?<groupName>[^:]+))?$`,
+    'i',
+  );
 
 @Update()
 @UseFilters(TelegrafExceptionFilter)
@@ -206,13 +215,7 @@ export class ScheduleUpdate {
       LocalePhrase.Button_Schedule_Schedule,
       LocalePhrase.Button_Schedule_ForToday,
       LocalePhrase.Button_Schedule_ForTomorrow,
-    ].map(
-      (e) =>
-        new RegExp(
-          `^(?<phrase>${e.replaceAll('.', '\\.')})(?::${patternGroupName})?$`,
-          'i',
-        ),
-    ),
+    ].map(createGroupScheduleActionRegExp),
   )
   @Action(
     [
@@ -374,13 +377,7 @@ export class ScheduleUpdate {
     [
       LocalePhrase.Button_Schedule_ForWeek,
       LocalePhrase.Button_Schedule_ForNextWeek,
-    ].map(
-      (e) =>
-        new RegExp(
-          `^(?<phrase>${e.replaceAll('.', '\\.')})(?::${patternGroupName})?$`,
-          'i',
-        ),
-    ),
+    ].map(createGroupScheduleActionRegExp),
   )
   @Action(
     [

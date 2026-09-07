@@ -18,10 +18,11 @@ const getMessageEventCondition = (target: object, methodName: string) => {
 describe('VK MainUpdate', () => {
   const openTeachersList = jest.fn();
   const isTeacherSearchFallbackQuery = jest.fn();
+  const getGroupByName = jest.fn();
   const update = new MainUpdate(
     {} as any,
     {} as any,
-    { isTeacherSearchFallbackQuery } as any,
+    { getGroupByName, isTeacherSearchFallbackQuery } as any,
     {} as any,
     {} as any,
     {} as any,
@@ -29,6 +30,7 @@ describe('VK MainUpdate', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    getGroupByName.mockReset();
     (update as any).openTeachersList = openTeachersList;
   });
 
@@ -191,6 +193,24 @@ describe('VK MainUpdate', () => {
     await update.onHearFallback(ctx);
 
     expect(openTeachersList).toHaveBeenCalledWith(ctx, 'Шулев');
+  });
+
+  it('opens group selection for an exact long group name in a VK DM', async () => {
+    getGroupByName.mockReturnValue('Научно-исслед сем');
+    const scene = { enter: jest.fn() };
+    const ctx = {
+      isDM: true,
+      isMessageContext: jest.fn().mockReturnValue(true),
+      text: 'Научно-исслед сем',
+      scene,
+    } as any;
+
+    await update.onHearFallback(ctx);
+
+    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
+      state: { groupName: 'Научно-исслед сем' },
+    });
+    expect(openTeachersList).not.toHaveBeenCalled();
   });
 
   it('ignores fallback text in a VK group chat', async () => {

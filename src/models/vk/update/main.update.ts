@@ -13,6 +13,7 @@ import { APIError, VK } from 'vk-io';
 
 import {
   md5,
+  selectGroupCommandRegExp,
   teacherListCommandRegExp,
   teacherSearchCommandRegExp,
   teacherSearchSlashCommandRegExp,
@@ -583,6 +584,7 @@ export class MainUpdate {
     LocalePhrase.RegExp_Schedule_SelectGroup,
     LocalePhrase.Button_SelectGroup,
   ])
+  @Hears(selectGroupCommandRegExp)
   async hearSelectGroup(@Ctx() ctx: IMessageContext) {
     const { senderId, peerId, state } = ctx;
 
@@ -655,6 +657,14 @@ export class MainUpdate {
 
     const query = ctx.text?.trim();
     if (!query) {
+      return;
+    }
+
+    const groupName = this.scheduleService.getGroupByName(query);
+    if (groupName) {
+      await ctx.scene.enter(SELECT_GROUP_SCENE, {
+        state: { groupName },
+      });
       return;
     }
 

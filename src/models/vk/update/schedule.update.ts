@@ -31,6 +31,13 @@ type SchedulePayload = {
   weekNumber?: unknown;
 };
 
+/** Динамические подписи перехода недель маршрутизируются только по payload. */
+export const vkScheduleWeekTextPhrases: LocalePhrase[] = [
+  LocalePhrase.RegExp_Schedule_For_Week,
+  LocalePhrase.Button_Schedule_ForWeek,
+  LocalePhrase.Button_Schedule_ForNextWeek,
+];
+
 @Update()
 @UseFilters(VkExceptionFilter)
 export class ScheduleUpdate {
@@ -127,13 +134,7 @@ export class ScheduleUpdate {
     });
   }
 
-  @VkHearsLocale([
-    LocalePhrase.RegExp_Schedule_For_Week,
-    LocalePhrase.Button_Schedule_ForWeek,
-    LocalePhrase.Button_Schedule_ForNextWeek,
-    LocalePhrase.Button_Schedule_PreviousWeek,
-    LocalePhrase.Button_Schedule_NextWeek,
-  ])
+  @VkHearsLocale(vkScheduleWeekTextPhrases)
   @Hears('/tweek')
   @Hears(personalTeacherWeekCommandRegExp)
   /** Обрабатывает inline-переход между доступными неделями расписания. */

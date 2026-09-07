@@ -176,6 +176,8 @@ export enum LocalePhrase {
 
   Page_Auth_NeedAuth = 'page.auth.need_auth',
   Page_Auth_Done = 'page.auth.done',
+  Page_Auth_Refreshed = 'page.auth.refreshed',
+  Page_Auth_IdentityMismatch = 'page.auth.identity_mismatch',
   Page_Auth_Cancel = 'page.auth.cancel',
   Page_Auth_Fail = 'page.auth.fail',
 

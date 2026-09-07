@@ -27,6 +27,10 @@ import { VkService } from '../vk/vk.service';
 import { UserSocial } from './entity/user-social.entity';
 import { User } from './entity/user.entity';
 
+type AuthUserSocialResult =
+  | { status: 'linked' | 'refreshed'; userSocial: UserSocial }
+  | { status: 'profile_not_found' | 'invalid_token' | 'identity_mismatch' };
+
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -214,105 +218,117 @@ export class UserService {
     }
 
     const [session, close] = await socialService.emulateSession(socialId);
-
-    if (auth) {
-      const userSocial = await this.authUserSocial(socialType, socialId, auth);
-      if (userSocial === false) {
-        await socialService.sendMessage(
+    try {
+      if (auth) {
+        const authResult = await this.authUserSocial(
+          socialType,
           socialId,
-          i18n.t(LocalePhrase.Page_Auth_Fail),
+          auth,
         );
-      }
-      if (!userSocial) {
-        return false;
-      }
-
-      const linkedUser = userSocial.user;
-      if (!linkedUser) {
-        return false;
-      }
-
-      await socialService.sendMessage(
-        socialId,
-        i18n.t(LocalePhrase.Page_Auth_Done, {
-          user: linkedUser,
-        }),
-      );
-
-      if (socialType === SocialType.Telegram) {
-        await this.telegramService.syncPrivateChatCommands({
-          chatId: socialId,
-          isAuthorized: true,
-          isAdmin: this.telegramService.isAdmin(socialId, linkedUser.role),
-          hasGroup: !!userSocial.groupName,
-          teacherId: (session as TgISessionState | null)?.teacherId,
-        });
-      }
-
-      if (
-        linkedUser.groupName &&
-        linkedUser.groupName !== userSocial.groupName
-      ) {
-        if (socialType === SocialType.Telegram) {
-          const keyboard = this.tgKeyboardFactory.getSelectGroupInline(
-            { i18n } as any,
-            linkedUser.groupName,
-          );
+        if (authResult.status === 'identity_mismatch') {
           await socialService.sendMessage(
             socialId,
-            '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴',
-            keyboard,
+            i18n.t(LocalePhrase.Page_Auth_IdentityMismatch),
           );
-        } else if (socialType === SocialType.Vkontakte) {
-          const keyboard = this.vkKeyboardFactory
-            .getSelectGroup({ i18n } as any, linkedUser.groupName)
-            .inline();
-          await this.vkService.sendMessage(socialId, '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴', {
-            keyboard,
+          return false;
+        }
+
+        if (
+          authResult.status !== 'linked' &&
+          authResult.status !== 'refreshed'
+        ) {
+          await socialService.sendMessage(
+            socialId,
+            i18n.t(LocalePhrase.Page_Auth_Fail),
+          );
+          return false;
+        }
+
+        const { userSocial } = authResult;
+        const linkedUser = userSocial.user;
+        if (!linkedUser) {
+          return false;
+        }
+
+        await socialService.sendMessage(
+          socialId,
+          authResult.status === 'refreshed'
+            ? i18n.t(LocalePhrase.Page_Auth_Refreshed)
+            : i18n.t(LocalePhrase.Page_Auth_Done, { user: linkedUser }),
+        );
+
+        if (socialType === SocialType.Telegram) {
+          await this.telegramService.syncPrivateChatCommands({
+            chatId: socialId,
+            isAuthorized: true,
+            isAdmin: this.telegramService.isAdmin(socialId, linkedUser.role),
+            hasGroup: !!userSocial.groupName,
+            teacherId: (session as TgISessionState | null)?.teacherId,
           });
         }
-      }
-    } else {
-      await socialService.sendMessage(
-        socialId,
-        i18n.t(LocalePhrase.Page_Auth_Cancel),
-      );
-    }
 
-    // * Force exit from auth scene
-    try {
-      if (socialType === SocialType.Telegram) {
-        const sess = session as TgISessionState;
-        if (sess.__scenes?.current === tgConstants.AUTH_SCENE) {
-          delete sess.__scenes;
+        if (
+          linkedUser.groupName &&
+          linkedUser.groupName !== userSocial.groupName
+        ) {
+          if (socialType === SocialType.Telegram) {
+            const keyboard = this.tgKeyboardFactory.getSelectGroupInline(
+              { i18n } as any,
+              linkedUser.groupName,
+            );
+            await socialService.sendMessage(
+              socialId,
+              '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴',
+              keyboard,
+            );
+          } else if (socialType === SocialType.Vkontakte) {
+            const keyboard = this.vkKeyboardFactory
+              .getSelectGroup({ i18n } as any, linkedUser.groupName)
+              .inline();
+            await this.vkService.sendMessage(socialId, '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴', {
+              keyboard,
+            });
+          }
         }
-      } else if (socialType === SocialType.Vkontakte) {
-        const sess = session as VkISessionState;
-        if (sess?.__scene?.current === vkConstants.AUTH_SCENE) {
-          delete sess.__scene;
-        }
+      } else {
+        await socialService.sendMessage(
+          socialId,
+          i18n.t(LocalePhrase.Page_Auth_Cancel),
+        );
       }
+      return true;
+    } finally {
+      // Фоновый auth-flow берёт Redlock через emulateSession: его нужно
+      // освобождать и при невалидном токене, и при несовпадении аккаунта.
+      try {
+        if (socialType === SocialType.Telegram) {
+          const sess = session as TgISessionState;
+          if (sess?.__scenes?.current === tgConstants.AUTH_SCENE) {
+            delete sess.__scenes;
+          }
+        } else if (socialType === SocialType.Vkontakte) {
+          const sess = session as VkISessionState;
+          if (sess?.__scene?.current === vkConstants.AUTH_SCENE) {
+            delete sess.__scene;
+          }
+        }
 
-      await close();
-    } catch (err) {
-      this.logger.debug(`Error on [auth] emulate session`);
-      console.error(err);
+        await close();
+      } catch (err) {
+        this.logger.error('Failed to close auth session', err);
+      }
     }
-    return true;
   }
 
   async authUserSocial(
     socialType: SocialType,
     socialId: number,
     auth: { code?: string; access_token?: string; refresh_token?: string },
-  ) {
+  ): Promise<AuthUserSocialResult> {
     const userSocial = await this.findBySocialId(socialType, socialId);
 
-    if (!userSocial || userSocial.userId) {
-      console.log(
-        `Fail: userSocial (social ${!userSocial ? 'empty' : 'exists'})`,
-      );
-      return false;
+    if (!userSocial) {
+      return { status: 'profile_not_found' };
     }
 
     if (auth.code) {
@@ -336,7 +352,7 @@ export class UserService {
     }
 
     if (!auth.access_token) {
-      return false;
+      return { status: 'invalid_token' };
     }
 
     const oauthData = await new Promise<{
@@ -352,18 +368,29 @@ export class UserService {
     );
 
     if (oauthData.err?.statusCode === 403) {
-      return false;
+      return { status: 'invalid_token' };
     }
 
     if (!oauthData.result) {
-      return null;
+      return { status: 'invalid_token' };
     }
 
     let userData: IOAuthCheck_auth_info;
     try {
       userData = JSON.parse(oauthData.result as string).auth_info;
     } catch {
-      return false;
+      return { status: 'invalid_token' };
+    }
+
+    const linkedUser = userSocial.user;
+    if (userSocial.userId && !linkedUser) {
+      return { status: 'profile_not_found' };
+    }
+
+    // Повторная авторизация допустима только для того же ЯГТУ.ID: иначе
+    // подтверждение из другого аккаунта не должно перезаписать существующую связь.
+    if (linkedUser && linkedUser.externalId !== userData.user.id) {
+      return { status: 'identity_mismatch' };
     }
 
     const user = await this.save({
@@ -384,7 +411,10 @@ export class UserService {
     //   userSocial.groupName = userData.user.groupName;
     // }
     await this.saveUserSocial(userSocial);
-    return userSocial;
+    return {
+      status: linkedUser ? 'refreshed' : 'linked',
+      userSocial,
+    };
   }
 
   async updateUserData(userSocial: UserSocial, update = true) {

@@ -1,3 +1,4 @@
+import { ScheduleNotifPeriod } from './schedule-notif.types';
 import {
   assertScheduleNotifSettings,
   ScheduleNotifTargetDayOffset,
@@ -9,6 +10,7 @@ describe('assertScheduleNotifSettings', () => {
       assertScheduleNotifSettings({
         deliveryHour: 20,
         deliveryMinute: 0,
+        period: ScheduleNotifPeriod.Day,
         targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
         weekdays: [1, 2, 3, 4, 5, 6, 7],
       }),
@@ -20,6 +22,7 @@ describe('assertScheduleNotifSettings', () => {
       assertScheduleNotifSettings({
         deliveryHour: hour,
         deliveryMinute: 0,
+        period: ScheduleNotifPeriod.Day,
         targetDayOffset: ScheduleNotifTargetDayOffset.Today,
         weekdays: [1],
       }),
@@ -31,6 +34,7 @@ describe('assertScheduleNotifSettings', () => {
       assertScheduleNotifSettings({
         deliveryHour: 10,
         deliveryMinute: 0,
+        period: ScheduleNotifPeriod.Day,
         targetDayOffset: ScheduleNotifTargetDayOffset.Today,
         weekdays: [1, 1],
       }),
@@ -42,9 +46,34 @@ describe('assertScheduleNotifSettings', () => {
       assertScheduleNotifSettings({
         deliveryHour: 10,
         deliveryMinute: 15,
+        period: ScheduleNotifPeriod.Day,
         targetDayOffset: ScheduleNotifTargetDayOffset.Today,
         weekdays: [1],
       }),
     ).toThrow('deliveryMinute');
+  });
+
+  it('accepts a current-week notif without a day offset', () => {
+    expect(() =>
+      assertScheduleNotifSettings({
+        deliveryHour: 10,
+        deliveryMinute: 0,
+        period: ScheduleNotifPeriod.Week,
+        targetDayOffset: null,
+        weekdays: [1],
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects a day offset for a current-week notif', () => {
+    expect(() =>
+      assertScheduleNotifSettings({
+        deliveryHour: 10,
+        deliveryMinute: 0,
+        period: ScheduleNotifPeriod.Week,
+        targetDayOffset: ScheduleNotifTargetDayOffset.Today,
+        weekdays: [1],
+      }),
+    ).toThrow('targetDayOffset');
   });
 });

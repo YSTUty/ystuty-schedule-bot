@@ -114,6 +114,9 @@ button:
     back: Назад
     previous_page: ◀
     next_page: ▶
+    target_current_day: Текущий день
+    target_next_day: Следующий день
+    target_current_week: Текущая неделя
   feedback:
     title: 💬 Оставить обратную связь
     category_schedule: 🗓️ Ошибка в расписании
@@ -267,11 +270,15 @@ page:
   schedule_notification:
     settings: |
       <b>Рассылка расписания</b>
-      ${notif ? ('Группа: <code>' + notif.targetId + '</code>\nВремя: <code>' + String(notif.deliveryHour).padStart(2, '0') + ':' + String(notif.deliveryMinute).padStart(2, '0') + '</code>\nРасписание: <code>' + (notif.targetDayOffset ? 'на завтра' : 'на сегодня') + '</code>\nДни: <code>' + notif.weekdaysLabel + '</code>\nСтатус: <code>' + (notif.isEnabled ? 'включена' : 'выключена') + '</code>') : 'Рассылка пока не настроена.'}
+      ${notif ? ('Группа: <code>' + notif.targetId + '</code>\nВремя: <code>' + String(notif.deliveryHour).padStart(2, '0') + ':' + String(notif.deliveryMinute).padStart(2, '0') + '</code>\nРасписание: <code>' + notif.targetPeriodLabel + '</code>\nДни: <code>' + notif.weekdaysLabel + '</code>\nСтатус: <code>' + (notif.isEnabled ? 'включена' : 'выключена') + '</code>') : 'Рассылка пока не настроена.'}
     select_hour: Выбери время отправки.
     select_minute: Выбери минуты отправки.
-    select_target_day: Выбери, расписание на какой день получать в это время.
+    select_target: Выбери, какое расписание получать в это время.
     select_weekdays: Выбери дни недели. По умолчанию включены все дни.
+    select_weekdays_for_week: Выбери дни отправки. Для текущей недели обычно достаточно одного дня.
+    target_current_day: текущий день
+    target_next_day: следующий день
+    target_current_week: текущая неделя
     need_group: Сначала выбери учебную группу, затем настрой рассылку.
     saved: Настройки рассылки сохранены.
     select_group: Выбери группу для этой рассылки.

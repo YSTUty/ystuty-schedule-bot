@@ -7,7 +7,10 @@ import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 
-import { getWeekdaysLabel } from '../../../schedule-notif/schedule-notif-ui.util';
+import {
+  getScheduleNotifTargetPhrase,
+  getWeekdaysLabel,
+} from '../../../schedule-notif/schedule-notif-ui.util';
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
 import { ScheduleService } from '../../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
@@ -208,6 +211,9 @@ export class VkScheduleNotifGroupScene {
         notif: {
           ...notif,
           weekdaysLabel: getWeekdaysLabel(notif.weekdays),
+          targetPeriodLabel: ctx.i18n.t(
+            getScheduleNotifTargetPhrase(notif.period, notif.targetDayOffset),
+          ),
         },
       }),
       this.keyboardFactory.getScheduleNotifEditor(ctx, notif),

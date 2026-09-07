@@ -17,7 +17,7 @@ type LocaleScheduleNotifTemplate = {
   targetId: string;
   deliveryHour: number;
   deliveryMinute: number;
-  targetDayOffset: number;
+  targetPeriodLabel: string;
   weekdaysLabel: string;
   isEnabled: boolean;
 };

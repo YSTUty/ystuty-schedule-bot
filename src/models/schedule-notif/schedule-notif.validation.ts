@@ -1,4 +1,5 @@
 import {
+  ScheduleNotifPeriod,
   ScheduleNotifSettings,
   ScheduleNotifTargetDayOffset,
 } from './schedule-notif.types';
@@ -26,12 +27,24 @@ export const assertScheduleNotifSettings = (
     throw new Error('deliveryMinute must be a ten-minute interval');
   }
 
+  if (!Object.values(ScheduleNotifPeriod).includes(settings.period)) {
+    throw new Error('period must be day or week');
+  }
+
   if (
+    settings.period === ScheduleNotifPeriod.Day &&
     !Object.values(ScheduleNotifTargetDayOffset).includes(
-      settings.targetDayOffset,
+      settings.targetDayOffset as ScheduleNotifTargetDayOffset,
     )
   ) {
-    throw new Error('targetDayOffset must be today or tomorrow');
+    throw new Error('targetDayOffset must be today or tomorrow for day period');
+  }
+
+  if (
+    settings.period === ScheduleNotifPeriod.Week &&
+    settings.targetDayOffset !== null
+  ) {
+    throw new Error('targetDayOffset must be null for week period');
   }
 
   if (

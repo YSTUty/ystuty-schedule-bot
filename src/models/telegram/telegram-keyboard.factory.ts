@@ -21,7 +21,14 @@ import {
 } from '../broadcast/broadcast.types';
 import { FeedbackCategory } from '../feedback/feedback.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
-import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
+import {
+  getScheduleNotifTargetPhrase,
+  SCHEDULE_NOTIFICATION_MINUTES,
+} from '../schedule-notif/schedule-notif-ui.util';
+import {
+  ScheduleNotifPeriod,
+  ScheduleNotifTargetDayOffset,
+} from '../schedule-notif/schedule-notif.types';
 import type { ScheduleWeekView } from '../schedule/schedule.service';
 
 import {
@@ -331,20 +338,22 @@ export class TelegramKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotifTargetDay(
-    ctx: IContext,
-    hour: number,
-    minute: number,
-  ) {
+  public getScheduleNotifTarget(ctx: IContext, hour: number, minute: number) {
     return Markup.inlineKeyboard([
       [
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
-          `scheduleNotif:day:${hour}:${minute}:0`,
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentDay),
+          `scheduleNotif:target:${hour}:${minute}:day:0`,
         ),
         Markup.button.callback(
-          ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
-          `scheduleNotif:day:${hour}:${minute}:1`,
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetNextDay),
+          `scheduleNotif:target:${hour}:${minute}:day:1`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentWeek),
+          `scheduleNotif:target:${hour}:${minute}:week`,
         ),
       ],
     ]);
@@ -354,7 +363,8 @@ export class TelegramKeyboardFactory {
     ctx: IContext,
     hour: number,
     minute: number,
-    targetDayOffset: number,
+    period: 'day' | 'week',
+    targetDayOffset: number | null,
     weekdays: number[],
   ) {
     const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -364,14 +374,14 @@ export class TelegramKeyboardFactory {
           const weekday = startIndex + index + 1;
           return Markup.button.callback(
             `${weekdays.includes(weekday) ? '✅' : '☐'} ${label}`,
-            `scheduleNotif:weekday:${hour}:${minute}:${targetDayOffset}:${weekday}:${weekdays.join(',')}`,
+            `scheduleNotif:weekday:${hour}:${minute}:${period}:${targetDayOffset ?? 'none'}:${weekday}:${weekdays.join(',')}`,
           );
         }),
       ),
       [
         TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
-          `scheduleNotif:save:${hour}:${minute}:${targetDayOffset}:${weekdays.join(',')}`,
+          `scheduleNotif:save:${hour}:${minute}:${period}:${targetDayOffset ?? 'none'}:${weekdays.join(',')}`,
           { style: 'success' },
         ),
       ],
@@ -434,7 +444,8 @@ export class TelegramKeyboardFactory {
       id: number;
       deliveryHour: number;
       deliveryMinute: number;
-      targetDayOffset: number;
+      period: 'day' | 'week';
+      targetDayOffset: number | null;
       weekdays: number[];
     },
   ) {
@@ -448,8 +459,13 @@ export class TelegramKeyboardFactory {
       ],
       [
         Markup.button.callback(
-          `Расписание: ${notif.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
-          `scheduleNotif:editDay:${notif.id}:${notif.targetDayOffset ? 0 : 1}`,
+          `Расписание: ${ctx.i18n.t(
+            getScheduleNotifTargetPhrase(
+              notif.period as ScheduleNotifPeriod,
+              notif.targetDayOffset as ScheduleNotifTargetDayOffset | null,
+            ),
+          )}`,
+          `scheduleNotif:editTarget:${notif.id}`,
         ),
       ],
       ...[0, 3, 6].map((startIndex) =>
@@ -473,6 +489,34 @@ export class TelegramKeyboardFactory {
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
           'scheduleNotif:editSave',
           { style: 'success' },
+        ),
+      ],
+    ]);
+  }
+
+  /** Выбор содержимого для уже сохранённой рассылки. */
+  public getScheduleNotifEditorTarget(ctx: IContext, notif: { id: number }) {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentDay),
+          `scheduleNotif:editPeriod:${notif.id}:day:0`,
+        ),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetNextDay),
+          `scheduleNotif:editPeriod:${notif.id}:day:1`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentWeek),
+          `scheduleNotif:editPeriod:${notif.id}:week:none`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+          `scheduleNotif:edit:${notif.id}`,
         ),
       ],
     ]);

@@ -155,6 +155,7 @@ describe('TelegramKeyboardFactory', () => {
       id: 7,
       deliveryHour: 8,
       deliveryMinute: 30,
+      period: 'day',
       targetDayOffset: 0,
       weekdays: [1],
     });
@@ -162,6 +163,25 @@ describe('TelegramKeyboardFactory', () => {
     expect(keyboard.reply_markup.inline_keyboard[0][0]).toMatchObject({
       callback_data: 'scheduleNotif:editTime:7',
     });
+  });
+
+  it('offers the current week as a schedule-notification target', () => {
+    const keyboard = new TelegramKeyboardFactory().getScheduleNotifTarget(
+      ctx,
+      8,
+      30,
+    );
+    const callbacks = keyboard.reply_markup.inline_keyboard
+      .flat()
+      .map((button) => ('callback_data' in button ? button.callback_data : ''));
+
+    expect(callbacks).toEqual(
+      expect.arrayContaining([
+        'scheduleNotif:target:8:30:day:0',
+        'scheduleNotif:target:8:30:day:1',
+        'scheduleNotif:target:8:30:week',
+      ]),
+    );
   });
 
   it('opens the audience filters editor from broadcast settings', () => {

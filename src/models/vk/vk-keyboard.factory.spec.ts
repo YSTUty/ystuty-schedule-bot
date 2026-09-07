@@ -1,5 +1,7 @@
 import { LocalePhrase } from '@my-interfaces';
 
+import { ScheduleNotifPeriod } from '../schedule-notif/schedule-notif.types';
+
 import { VKKeyboardFactory } from './vk-keyboard.factory';
 
 describe('VKKeyboardFactory', () => {
@@ -124,6 +126,7 @@ describe('VKKeyboardFactory', () => {
       id: 1,
       deliveryHour: 8,
       deliveryMinute: 30,
+      period: ScheduleNotifPeriod.Day,
       targetDayOffset: 0,
       weekdays: [1, 2, 3, 4, 5, 6, 7],
     });
@@ -153,6 +156,7 @@ describe('VKKeyboardFactory', () => {
       id: 7,
       deliveryHour: 8,
       deliveryMinute: 30,
+      period: ScheduleNotifPeriod.Day,
       targetDayOffset: 0,
       weekdays: [1],
     });
@@ -162,6 +166,24 @@ describe('VKKeyboardFactory', () => {
       JSON.parse(renderedKeyboard.buttons[0][0].action.payload)
         .scheduleNotifAction,
     ).toBe('editTime');
+  });
+
+  it('offers the current week as a schedule-notification target', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifTarget(ctx, 8, 30);
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+    const payloads = renderedKeyboard.buttons
+      .flat()
+      .map((button: any) => JSON.parse(button.action.payload));
+
+    expect(payloads).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scheduleNotifAction: 'target',
+          period: 'week',
+          targetDayOffset: null,
+        }),
+      ]),
+    );
   });
 
   it('asks for deletion confirmation instead of deleting immediately', () => {

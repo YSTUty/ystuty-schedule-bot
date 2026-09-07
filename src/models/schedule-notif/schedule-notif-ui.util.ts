@@ -1,3 +1,10 @@
+import { LocalePhrase } from '@my-interfaces';
+
+import {
+  ScheduleNotifPeriod,
+  ScheduleNotifTargetDayOffset,
+} from './schedule-notif.types';
+
 export const SCHEDULE_NOTIFICATION_MINUTES = [0, 10, 20, 30, 40, 50] as const;
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -30,3 +37,17 @@ export const getWeekdaysLabel = (weekdays: number[]) =>
     .map((weekday) => WEEKDAY_LABELS[weekday - 1])
     .filter(Boolean)
     .join(', ');
+
+/** Возвращает ключ локали для краткого описания выбранного содержимого рассылки. */
+export const getScheduleNotifTargetPhrase = (
+  period: ScheduleNotifPeriod | undefined,
+  targetDayOffset: ScheduleNotifTargetDayOffset | null,
+) => {
+  if (period === ScheduleNotifPeriod.Week) {
+    return LocalePhrase.Page_ScheduleNotif_TargetCurrentWeek;
+  }
+
+  return targetDayOffset === ScheduleNotifTargetDayOffset.Tomorrow
+    ? LocalePhrase.Page_ScheduleNotif_TargetNextDay
+    : LocalePhrase.Page_ScheduleNotif_TargetCurrentDay;
+};

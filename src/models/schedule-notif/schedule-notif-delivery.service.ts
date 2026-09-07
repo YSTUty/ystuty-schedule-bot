@@ -8,6 +8,8 @@ import { ScheduleNotifDelivery } from './entity/schedule-notif-delivery.entity';
 import { ScheduleNotif } from './entity/schedule-notif.entity';
 import {
   ScheduleNotifDeliveryStatus,
+  ScheduleNotifPeriod,
+  ScheduleNotifTargetDayOffset,
   ScheduleNotifTargetType,
 } from './schedule-notif.types';
 import { ScheduleNotifTransportRegistry } from './transport/schedule-notif-transport.registry';
@@ -71,7 +73,13 @@ export class ScheduleNotifDeliveryService {
 
       const [, schedule] = await this.scheduleService.findNext({
         ...target.scheduleTarget,
-        skipDays: notif.targetDayOffset,
+        ...(notif.period === ScheduleNotifPeriod.Week
+          ? { isWeek: true }
+          : {
+              // Старые записи без period остаются дневными до применения миграции.
+              skipDays:
+                notif.targetDayOffset ?? ScheduleNotifTargetDayOffset.Today,
+            }),
       });
       const text = `${
         schedule || 'На этот день нету расписания'

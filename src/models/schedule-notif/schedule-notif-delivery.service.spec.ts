@@ -7,6 +7,7 @@ import { ScheduleNotif } from './entity/schedule-notif.entity';
 import { ScheduleNotifDeliveryService } from './schedule-notif-delivery.service';
 import {
   ScheduleNotifDeliveryStatus,
+  ScheduleNotifPeriod,
   ScheduleNotifTargetDayOffset,
   ScheduleNotifTargetType,
 } from './schedule-notif.types';
@@ -25,6 +26,7 @@ describe('ScheduleNotifDeliveryService', () => {
     transport: SocialType.Telegram,
     targetType: ScheduleNotifTargetType.Group,
     targetId: 'ЦИС-11',
+    period: ScheduleNotifPeriod.Day,
     targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
     isEnabled: true,
     userSocial,
@@ -66,6 +68,8 @@ describe('ScheduleNotifDeliveryService', () => {
     Object.assign(notif, {
       targetType: ScheduleNotifTargetType.Group,
       targetId: 'ЦИС-11',
+      period: ScheduleNotifPeriod.Day,
+      targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
       isEnabled: true,
       missingTargetAttempts: 0,
       lastError: null,
@@ -111,6 +115,24 @@ describe('ScheduleNotifDeliveryService', () => {
     });
     expect(delivery.status).toBe(ScheduleNotifDeliveryStatus.Sent);
     expect(delivery.sentMessageId).toBe('42');
+  });
+
+  it('sends the current schedule week without a day offset', async () => {
+    const { service, scheduleService, transport } = createService();
+    Object.assign(notif, {
+      period: ScheduleNotifPeriod.Week,
+      targetDayOffset: null,
+    });
+    scheduleService.getGroupByName.mockReturnValue('ЦИС-11');
+    scheduleService.findNext.mockResolvedValue([0, '<b>Week</b>']);
+    transport.sendScheduleNotif.mockResolvedValue({ messageId: '42' });
+
+    await service.deliver(notif, delivery);
+
+    expect(scheduleService.findNext).toHaveBeenCalledWith({
+      groupName: 'ЦИС-11',
+      isWeek: true,
+    });
   });
 
   it('delivers a conversation notif to its persistent messenger conversation id', async () => {

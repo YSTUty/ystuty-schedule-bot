@@ -9,12 +9,16 @@ import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import {
+  getScheduleNotifTargetPhrase,
   getWeekdaysLabel,
   parseWeekdays,
   toggleWeekday,
 } from '../../../schedule-notif/schedule-notif-ui.util';
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
-import { ScheduleNotifTargetDayOffset } from '../../../schedule-notif/schedule-notif.types';
+import {
+  ScheduleNotifPeriod,
+  ScheduleNotifTargetDayOffset,
+} from '../../../schedule-notif/schedule-notif.types';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { VkService } from '../../vk.service';
 
@@ -126,11 +130,34 @@ export class VkScheduleNotifUpdate {
         deliveryHour: Number(ctx.eventPayload.hour),
         deliveryMinute: Number(ctx.eventPayload.minute),
       });
-    } else if (action === 'editDay') {
+    } else if (action === 'editTarget' || action === 'editDay') {
+      const notif = await this.getNotif(ctx);
+      if (!notif || notif.id !== Number(ctx.eventPayload.notifId)) {
+        await ctx.answer({
+          type: 'show_snackbar',
+          text: 'Рассылка не найдена',
+        });
+        await this.openSettings(ctx, true);
+        return;
+      }
+      await this.editStep(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTarget),
+        this.keyboardFactory.getScheduleNotifEditorTarget(ctx, notif).inline(),
+      );
+    } else if (action === 'editPeriod') {
+      const period =
+        ctx.eventPayload.period === ScheduleNotifPeriod.Week
+          ? ScheduleNotifPeriod.Week
+          : ScheduleNotifPeriod.Day;
       await this.updateEditorSettings(ctx, Number(ctx.eventPayload.notifId), {
-        targetDayOffset: Number(
-          ctx.eventPayload.targetDayOffset,
-        ) as ScheduleNotifTargetDayOffset,
+        period,
+        targetDayOffset:
+          period === ScheduleNotifPeriod.Week
+            ? null
+            : (Number(
+                ctx.eventPayload.targetDayOffset,
+              ) as ScheduleNotifTargetDayOffset),
       });
     } else if (action === 'editWeekdays') {
       const notif = await this.getNotif(ctx);
@@ -138,10 +165,7 @@ export class VkScheduleNotifUpdate {
         await this.editStep(
           ctx,
           ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
-            notif: {
-              ...notif,
-              weekdaysLabel: getWeekdaysLabel(notif.weekdays),
-            },
+            notif: this.getNotifView(ctx, notif),
           }),
           this.keyboardFactory
             .getScheduleNotifEditorWeekdays(ctx, notif)
@@ -189,18 +213,25 @@ export class VkScheduleNotifUpdate {
       }
       await this.editStep(
         ctx,
-        ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTargetDay),
-        this.keyboardFactory
-          .getScheduleNotifTargetDay(ctx, hour, minute)
-          .inline(),
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTarget),
+        this.keyboardFactory.getScheduleNotifTarget(ctx, hour, minute).inline(),
       );
-    } else if (action === 'day') {
+    } else if (action === 'target' || action === 'day') {
+      const period =
+        action === 'day'
+          ? ScheduleNotifPeriod.Day
+          : ctx.eventPayload.period === ScheduleNotifPeriod.Week
+            ? ScheduleNotifPeriod.Week
+            : ScheduleNotifPeriod.Day;
       await this.showWeekdays(
         ctx,
         Number(ctx.eventPayload.hour),
         Number(ctx.eventPayload.minute),
-        Number(ctx.eventPayload.targetDayOffset),
-        [1, 2, 3, 4, 5, 6, 7],
+        period,
+        period === ScheduleNotifPeriod.Week
+          ? null
+          : Number(ctx.eventPayload.targetDayOffset),
+        period === ScheduleNotifPeriod.Week ? [1] : [1, 2, 3, 4, 5, 6, 7],
       );
     } else if (action === 'weekday') {
       const weekdays = toggleWeekday(
@@ -211,7 +242,12 @@ export class VkScheduleNotifUpdate {
         ctx,
         Number(ctx.eventPayload.hour),
         Number(ctx.eventPayload.minute),
-        Number(ctx.eventPayload.targetDayOffset),
+        ctx.eventPayload.period === ScheduleNotifPeriod.Week
+          ? ScheduleNotifPeriod.Week
+          : ScheduleNotifPeriod.Day,
+        ctx.eventPayload.period === ScheduleNotifPeriod.Week
+          ? null
+          : Number(ctx.eventPayload.targetDayOffset),
         weekdays,
       );
     } else if (action === 'save') {
@@ -219,9 +255,16 @@ export class VkScheduleNotifUpdate {
         await this.upsertNotif(ctx, {
           deliveryHour: Number(ctx.eventPayload.hour),
           deliveryMinute: Number(ctx.eventPayload.minute),
-          targetDayOffset: Number(
-            ctx.eventPayload.targetDayOffset,
-          ) as ScheduleNotifTargetDayOffset,
+          period:
+            ctx.eventPayload.period === ScheduleNotifPeriod.Week
+              ? ScheduleNotifPeriod.Week
+              : ScheduleNotifPeriod.Day,
+          targetDayOffset:
+            ctx.eventPayload.period === ScheduleNotifPeriod.Week
+              ? null
+              : (Number(
+                  ctx.eventPayload.targetDayOffset,
+                ) as ScheduleNotifTargetDayOffset),
           weekdays: parseWeekdays(ctx.eventPayload.weekdays),
         });
         await ctx.answer({ type: 'show_snackbar', text: 'Сохранено' });
@@ -285,10 +328,7 @@ export class VkScheduleNotifUpdate {
     }
 
     const notif = await this.getNotif(ctx);
-    const notifView = notif && {
-      ...notif,
-      weekdaysLabel: getWeekdaysLabel(notif.weekdays),
-    };
+    const notifView = this.getNotifView(ctx, notif);
     const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
       notif: notifView,
     });
@@ -306,14 +346,26 @@ export class VkScheduleNotifUpdate {
     ctx: IMessageEventContext,
     hour: number,
     minute: number,
-    targetDayOffset: number,
+    period: ScheduleNotifPeriod,
+    targetDayOffset: number | null,
     weekdays: number[],
   ) {
     await this.editStep(
       ctx,
-      ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectWeekdays),
+      ctx.i18n.t(
+        period === ScheduleNotifPeriod.Week
+          ? LocalePhrase.Page_ScheduleNotif_SelectWeekdaysForWeek
+          : LocalePhrase.Page_ScheduleNotif_SelectWeekdays,
+      ),
       this.keyboardFactory
-        .getScheduleNotifWeekdays(ctx, hour, minute, targetDayOffset, weekdays)
+        .getScheduleNotifWeekdays(
+          ctx,
+          hour,
+          minute,
+          period,
+          targetDayOffset,
+          weekdays,
+        )
         .inline(),
     );
   }
@@ -328,10 +380,7 @@ export class VkScheduleNotifUpdate {
     await this.editStep(
       ctx,
       ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
-        notif: {
-          ...notif,
-          weekdaysLabel: getWeekdaysLabel(notif.weekdays),
-        },
+        notif: this.getNotifView(ctx, notif),
       }),
       this.keyboardFactory.getScheduleNotifEditor(ctx, notif).inline(),
     );
@@ -343,7 +392,8 @@ export class VkScheduleNotifUpdate {
     changes: Partial<{
       deliveryHour: number;
       deliveryMinute: number;
-      targetDayOffset: ScheduleNotifTargetDayOffset;
+      period: ScheduleNotifPeriod;
+      targetDayOffset: ScheduleNotifTargetDayOffset | null;
       weekdays: number[];
     }>,
   ) {
@@ -356,7 +406,11 @@ export class VkScheduleNotifUpdate {
     await this.updateSettings(ctx, notifId, {
       deliveryHour: changes.deliveryHour ?? notif.deliveryHour,
       deliveryMinute: changes.deliveryMinute ?? notif.deliveryMinute,
-      targetDayOffset: changes.targetDayOffset ?? notif.targetDayOffset,
+      period: changes.period ?? notif.period ?? ScheduleNotifPeriod.Day,
+      targetDayOffset:
+        changes.targetDayOffset !== undefined
+          ? changes.targetDayOffset
+          : notif.targetDayOffset,
       weekdays: changes.weekdays ?? notif.weekdays,
     });
     await this.openEditor(ctx, notifId);
@@ -368,6 +422,21 @@ export class VkScheduleNotifUpdate {
     keyboard: any,
   ) {
     await ctx.editMessage({ message, keyboard });
+  }
+
+  private getNotifView(
+    ctx: IMessageContext | IMessageEventContext,
+    notif: Awaited<ReturnType<typeof this.getNotif>>,
+  ) {
+    return (
+      notif && {
+        ...notif,
+        weekdaysLabel: getWeekdaysLabel(notif.weekdays),
+        targetPeriodLabel: ctx.i18n.t(
+          getScheduleNotifTargetPhrase(notif.period, notif.targetDayOffset),
+        ),
+      }
+    );
   }
 
   private async canManage(ctx: IMessageContext | IMessageEventContext) {

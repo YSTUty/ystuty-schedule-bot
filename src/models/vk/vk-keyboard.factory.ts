@@ -16,7 +16,14 @@ import {
 } from '../broadcast/broadcast.types';
 import { FeedbackCategory } from '../feedback/feedback.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
-import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
+import {
+  getScheduleNotifTargetPhrase,
+  SCHEDULE_NOTIFICATION_MINUTES,
+} from '../schedule-notif/schedule-notif-ui.util';
+import {
+  ScheduleNotifPeriod,
+  ScheduleNotifTargetDayOffset,
+} from '../schedule-notif/schedule-notif.types';
 import type { ScheduleWeekView } from '../schedule/schedule.service';
 
 export type VKPaginationItem =
@@ -392,29 +399,45 @@ export class VKKeyboardFactory {
     ]);
   }
 
-  public getScheduleNotifTargetDay(
-    ctx: IContext,
-    hour: number,
-    minute: number,
-  ) {
+  public getScheduleNotifTarget(ctx: IContext, hour: number, minute: number) {
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentDay),
+          ),
           payload: {
-            scheduleNotifAction: 'day',
+            scheduleNotifAction: 'target',
             hour,
             minute,
+            period: ScheduleNotifPeriod.Day,
             targetDayOffset: 0,
           },
         }),
         Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetNextDay),
+          ),
           payload: {
-            scheduleNotifAction: 'day',
+            scheduleNotifAction: 'target',
             hour,
             minute,
+            period: ScheduleNotifPeriod.Day,
             targetDayOffset: 1,
+          },
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentWeek),
+          ),
+          payload: {
+            scheduleNotifAction: 'target',
+            hour,
+            minute,
+            period: ScheduleNotifPeriod.Week,
+            targetDayOffset: null,
           },
         }),
       ],
@@ -425,7 +448,8 @@ export class VKKeyboardFactory {
     ctx: IContext,
     hour: number,
     minute: number,
-    targetDayOffset: number,
+    period: ScheduleNotifPeriod,
+    targetDayOffset: number | null,
     weekdays: number[],
   ) {
     const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -439,6 +463,7 @@ export class VKKeyboardFactory {
               scheduleNotifAction: 'weekday',
               hour,
               minute,
+              period,
               targetDayOffset,
               weekday,
               weekdays,
@@ -453,6 +478,7 @@ export class VKKeyboardFactory {
             scheduleNotifAction: 'save',
             hour,
             minute,
+            period,
             targetDayOffset,
             weekdays,
           },
@@ -527,7 +553,8 @@ export class VKKeyboardFactory {
       id: number;
       deliveryHour: number;
       deliveryMinute: number;
-      targetDayOffset: number;
+      period: ScheduleNotifPeriod;
+      targetDayOffset: number | null;
       weekdays: number[];
     },
   ) {
@@ -546,12 +573,16 @@ export class VKKeyboardFactory {
       [
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            `Расписание: ${notif.targetDayOffset ? 'на завтра' : 'на сегодня'}`,
+            `Расписание: ${ctx.i18n.t(
+              getScheduleNotifTargetPhrase(
+                notif.period,
+                notif.targetDayOffset as ScheduleNotifTargetDayOffset | null,
+              ),
+            )}`,
           ),
           payload: {
-            scheduleNotifAction: 'editDay',
+            scheduleNotifAction: 'editTarget',
             notifId: notif.id,
-            targetDayOffset: notif.targetDayOffset ? 0 : 1,
           },
         }),
       ],
@@ -581,6 +612,55 @@ export class VKKeyboardFactory {
           ),
           payload: { scheduleNotifAction: 'editSave' },
           color: Keyboard.POSITIVE_COLOR,
+        }),
+      ],
+    ]);
+  }
+
+  /** Выбор содержимого для уже сохранённой рассылки. */
+  public getScheduleNotifEditorTarget(ctx: IContext, notif: { id: number }) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentDay),
+          ),
+          payload: {
+            scheduleNotifAction: 'editPeriod',
+            notifId: notif.id,
+            period: ScheduleNotifPeriod.Day,
+            targetDayOffset: ScheduleNotifTargetDayOffset.Today,
+          },
+        }),
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetNextDay),
+          ),
+          payload: {
+            scheduleNotifAction: 'editPeriod',
+            notifId: notif.id,
+            period: ScheduleNotifPeriod.Day,
+            targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
+          },
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetCurrentWeek),
+          ),
+          payload: {
+            scheduleNotifAction: 'editPeriod',
+            notifId: notif.id,
+            period: ScheduleNotifPeriod.Week,
+            targetDayOffset: null,
+          },
+        }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+          payload: { scheduleNotifAction: 'edit', notifId: notif.id },
         }),
       ],
     ]);

@@ -76,6 +76,41 @@ describe('VkScheduleNotifUpdate', () => {
     );
   });
 
+  it('saves a current-week notif without a day offset', async () => {
+    const notifService = { upsertFirstNotif: jest.fn() };
+    const update = new VkScheduleNotifUpdate(
+      notifService as any,
+      {} as any,
+      {} as any,
+    );
+    (update as any).openSettings = jest.fn();
+    const ctx = {
+      eventPayload: {
+        scheduleNotifAction: 'save',
+        hour: 8,
+        minute: 30,
+        period: 'week',
+        targetDayOffset: null,
+        weekdays: [1],
+      },
+      isDM: true,
+      state: { userSocial: { id: 1 } },
+      answer: jest.fn(),
+      i18n: { t: jest.fn().mockReturnValue('Сохранено') },
+    };
+
+    await update.onMessageEvent(ctx as any);
+
+    expect(notifService.upsertFirstNotif).toHaveBeenCalledWith(
+      ctx.state.userSocial,
+      expect.objectContaining({
+        period: 'week',
+        targetDayOffset: null,
+        weekdays: [1],
+      }),
+    );
+  });
+
   it('checks conversation admin via cached vk service members', async () => {
     const vkService = {
       getCachedConvMembers: jest

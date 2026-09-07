@@ -3,7 +3,10 @@ import { SocialType } from '@my-common/constants';
 import { UserSocial } from '../user/entity/user-social.entity';
 
 import { ScheduleNotifService } from './schedule-notif.service';
-import { ScheduleNotifTargetDayOffset } from './schedule-notif.types';
+import {
+  ScheduleNotifPeriod,
+  ScheduleNotifTargetDayOffset,
+} from './schedule-notif.types';
 
 describe('ScheduleNotifService', () => {
   const userSocial = new UserSocial({
@@ -53,6 +56,7 @@ describe('ScheduleNotifService', () => {
     const notif = await service.createForUserSocial(userSocial, {
       deliveryHour: 20,
       deliveryMinute: 0,
+      period: ScheduleNotifPeriod.Day,
       targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
       weekdays: [1, 2, 3, 4, 5, 6, 7],
     });
@@ -85,6 +89,7 @@ describe('ScheduleNotifService', () => {
     await service.upsertFirstNotif(userSocial, {
       deliveryHour: 21,
       deliveryMinute: 0,
+      period: ScheduleNotifPeriod.Day,
       targetDayOffset: ScheduleNotifTargetDayOffset.Today,
       weekdays: [1, 2],
     });
@@ -110,6 +115,7 @@ describe('ScheduleNotifService', () => {
     await service.upsertFirstConversationNotif(conversation as any, {
       deliveryHour: 8,
       deliveryMinute: 30,
+      period: ScheduleNotifPeriod.Day,
       targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
       weekdays: [1, 2, 3, 4, 5],
     });
@@ -179,6 +185,7 @@ describe('ScheduleNotifService', () => {
     const changed = await service.updateSettings(userSocial.id, 7, {
       deliveryHour: 7,
       deliveryMinute: 30,
+      period: ScheduleNotifPeriod.Day,
       targetDayOffset: ScheduleNotifTargetDayOffset.Today,
       weekdays: [1, 3, 5],
     });
@@ -189,6 +196,7 @@ describe('ScheduleNotifService', () => {
       {
         deliveryHour: 7,
         deliveryMinute: 30,
+        period: ScheduleNotifPeriod.Day,
         targetDayOffset: ScheduleNotifTargetDayOffset.Today,
         weekdays: [1, 3, 5],
         lastError: null,

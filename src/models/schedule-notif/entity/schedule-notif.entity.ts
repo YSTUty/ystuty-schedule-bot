@@ -14,6 +14,7 @@ import { SocialType } from '@my-common/constants';
 import { Conversation } from '../../social/entity/conversation.entity';
 import { UserSocial } from '../../user/entity/user-social.entity';
 import {
+  ScheduleNotifPeriod,
   ScheduleNotifTargetDayOffset,
   ScheduleNotifTargetType,
 } from '../schedule-notif.types';
@@ -54,8 +55,16 @@ export class ScheduleNotif {
   @Column({ type: 'smallint', default: 0 })
   public deliveryMinute: number;
 
-  @Column({ type: 'smallint' })
-  public targetDayOffset: ScheduleNotifTargetDayOffset;
+  @Column({
+    type: 'enum',
+    enum: ScheduleNotifPeriod,
+    default: ScheduleNotifPeriod.Day,
+  })
+  public period: ScheduleNotifPeriod;
+
+  /** Для недельной рассылки нет смещения дня. */
+  @Column({ type: 'smallint', nullable: true })
+  public targetDayOffset: ScheduleNotifTargetDayOffset | null;
 
   @Column({ type: 'smallint', array: true })
   public weekdays: number[];

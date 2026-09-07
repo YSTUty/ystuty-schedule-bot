@@ -5,12 +5,16 @@ import { LocalePhrase } from '@my-interfaces';
 import { ICallbackQueryContext, ICbQOrMsg } from '@my-interfaces/telegram';
 
 import {
+  getScheduleNotifTargetPhrase,
   getWeekdaysLabel,
   parseWeekdays,
   toggleWeekday,
 } from '../../../schedule-notif/schedule-notif-ui.util';
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
-import { ScheduleNotifTargetDayOffset } from '../../../schedule-notif/schedule-notif.types';
+import {
+  ScheduleNotifPeriod,
+  ScheduleNotifTargetDayOffset,
+} from '../../../schedule-notif/schedule-notif.types';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TelegramService } from '../../telegram.service';
 
@@ -112,9 +116,31 @@ export class TgScheduleNotifUpdate {
       });
       return;
     }
-    if (action === 'editDay') {
+    if (action === 'editTarget') {
+      const notif = await this.getNotif(ctx);
+      if (!notif || notif.id !== Number(params[0])) {
+        await ctx.tryAnswerCbQuery('Рассылка не найдена');
+        await this.openSettings(ctx, true);
+        return;
+      }
+      await this.editStep(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTarget),
+        this.keyboardFactory.getScheduleNotifEditorTarget(ctx, notif),
+      );
+      return;
+    }
+    if (action === 'editPeriod') {
+      const period =
+        params[1] === ScheduleNotifPeriod.Week
+          ? ScheduleNotifPeriod.Week
+          : ScheduleNotifPeriod.Day;
       await this.updateEditorSettings(ctx, Number(params[0]), {
-        targetDayOffset: Number(params[1]) as ScheduleNotifTargetDayOffset,
+        period,
+        targetDayOffset:
+          period === ScheduleNotifPeriod.Week
+            ? null
+            : (Number(params[2]) as ScheduleNotifTargetDayOffset),
       });
       return;
     }
@@ -164,23 +190,43 @@ export class TgScheduleNotifUpdate {
       }
       await this.editStep(
         ctx,
-        ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTargetDay),
-        this.keyboardFactory.getScheduleNotifTargetDay(ctx, hour, minute),
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTarget),
+        this.keyboardFactory.getScheduleNotifTarget(ctx, hour, minute),
       );
       return;
     }
-    if (action === 'day') {
+    if (action === 'target' || action === 'day') {
+      const period =
+        action === 'day'
+          ? ScheduleNotifPeriod.Day
+          : params[2] === ScheduleNotifPeriod.Week
+            ? ScheduleNotifPeriod.Week
+            : ScheduleNotifPeriod.Day;
       await this.showWeekdays(
         ctx,
         Number(params[0]),
         Number(params[1]),
-        Number(params[2]),
-        [1, 2, 3, 4, 5, 6, 7],
+        period,
+        period === ScheduleNotifPeriod.Week
+          ? null
+          : Number(action === 'day' ? params[2] : params[3]),
+        period === ScheduleNotifPeriod.Week ? [1] : [1, 2, 3, 4, 5, 6, 7],
       );
       return;
     }
     if (action === 'weekday') {
-      const [hour, minute, targetDayOffset, weekday, rawWeekdays] = params;
+      const isLegacyPayload = params.length === 5;
+      const [hour, minute, period, targetDayOffset, weekday, rawWeekdays] =
+        isLegacyPayload
+          ? [
+              params[0],
+              params[1],
+              ScheduleNotifPeriod.Day,
+              params[2],
+              params[3],
+              params[4],
+            ]
+          : params;
       const weekdays = toggleWeekday(
         parseWeekdays(rawWeekdays),
         Number(weekday),
@@ -189,20 +235,38 @@ export class TgScheduleNotifUpdate {
         ctx,
         Number(hour),
         Number(minute),
-        Number(targetDayOffset),
+        period === ScheduleNotifPeriod.Week
+          ? ScheduleNotifPeriod.Week
+          : ScheduleNotifPeriod.Day,
+        period === ScheduleNotifPeriod.Week ? null : Number(targetDayOffset),
         weekdays,
       );
       return;
     }
     if (action === 'save') {
-      const [hour, minute, targetDayOffset, rawWeekdays] = params;
+      const isLegacyPayload = params.length === 4;
+      const [hour, minute, period, targetDayOffset, rawWeekdays] =
+        isLegacyPayload
+          ? [
+              params[0],
+              params[1],
+              ScheduleNotifPeriod.Day,
+              params[2],
+              params[3],
+            ]
+          : params;
       try {
         await this.upsertNotif(ctx, {
           deliveryHour: Number(hour),
           deliveryMinute: Number(minute),
-          targetDayOffset: Number(
-            targetDayOffset,
-          ) as ScheduleNotifTargetDayOffset,
+          period:
+            period === ScheduleNotifPeriod.Week
+              ? ScheduleNotifPeriod.Week
+              : ScheduleNotifPeriod.Day,
+          targetDayOffset:
+            period === ScheduleNotifPeriod.Week
+              ? null
+              : (Number(targetDayOffset) as ScheduleNotifTargetDayOffset),
           weekdays: parseWeekdays(rawWeekdays),
         });
         await ctx.tryAnswerCbQuery(
@@ -265,10 +329,7 @@ export class TgScheduleNotifUpdate {
     }
 
     const notif = await this.getNotif(ctx);
-    const notifView = notif && {
-      ...notif,
-      weekdaysLabel: getWeekdaysLabel(notif.weekdays),
-    };
+    const notifView = this.getNotifView(ctx, notif);
     const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
       notif: notifView,
     });
@@ -287,16 +348,22 @@ export class TgScheduleNotifUpdate {
     ctx: ICallbackQueryContext,
     hour: number,
     minute: number,
-    targetDayOffset: number,
+    period: ScheduleNotifPeriod,
+    targetDayOffset: number | null,
     weekdays: number[],
   ) {
     await this.editStep(
       ctx,
-      ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectWeekdays),
+      ctx.i18n.t(
+        period === ScheduleNotifPeriod.Week
+          ? LocalePhrase.Page_ScheduleNotif_SelectWeekdaysForWeek
+          : LocalePhrase.Page_ScheduleNotif_SelectWeekdays,
+      ),
       this.keyboardFactory.getScheduleNotifWeekdays(
         ctx,
         hour,
         minute,
+        period,
         targetDayOffset,
         weekdays,
       ),
@@ -313,10 +380,7 @@ export class TgScheduleNotifUpdate {
     await this.editStep(
       ctx,
       ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
-        notif: {
-          ...notif,
-          weekdaysLabel: getWeekdaysLabel(notif.weekdays),
-        },
+        notif: this.getNotifView(ctx, notif),
       }),
       this.keyboardFactory.getScheduleNotifEditor(ctx, notif),
     );
@@ -328,7 +392,8 @@ export class TgScheduleNotifUpdate {
     changes: Partial<{
       deliveryHour: number;
       deliveryMinute: number;
-      targetDayOffset: ScheduleNotifTargetDayOffset;
+      period: ScheduleNotifPeriod;
+      targetDayOffset: ScheduleNotifTargetDayOffset | null;
       weekdays: number[];
     }>,
   ) {
@@ -341,7 +406,11 @@ export class TgScheduleNotifUpdate {
     await this.updateSettings(ctx, notifId, {
       deliveryHour: changes.deliveryHour ?? notif.deliveryHour,
       deliveryMinute: changes.deliveryMinute ?? notif.deliveryMinute,
-      targetDayOffset: changes.targetDayOffset ?? notif.targetDayOffset,
+      period: changes.period ?? notif.period ?? ScheduleNotifPeriod.Day,
+      targetDayOffset:
+        changes.targetDayOffset !== undefined
+          ? changes.targetDayOffset
+          : notif.targetDayOffset,
       weekdays: changes.weekdays ?? notif.weekdays,
     });
     await this.openEditor(ctx, notifId);
@@ -356,6 +425,21 @@ export class TgScheduleNotifUpdate {
       parse_mode: 'HTML',
       ...keyboard,
     });
+  }
+
+  private getNotifView(
+    ctx: ICbQOrMsg,
+    notif: Awaited<ReturnType<typeof this.getNotif>>,
+  ) {
+    return (
+      notif && {
+        ...notif,
+        weekdaysLabel: getWeekdaysLabel(notif.weekdays),
+        targetPeriodLabel: ctx.i18n.t(
+          getScheduleNotifTargetPhrase(notif.period, notif.targetDayOffset),
+        ),
+      }
+    );
   }
 
   private isConv(ctx: ICbQOrMsg) {

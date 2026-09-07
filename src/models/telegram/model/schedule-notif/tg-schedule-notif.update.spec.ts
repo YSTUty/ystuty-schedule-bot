@@ -51,6 +51,34 @@ describe('TgScheduleNotifUpdate', () => {
     );
   });
 
+  it('saves a current-week notif without a day offset', async () => {
+    const notifService = { upsertFirstNotif: jest.fn() };
+    const update = new TgScheduleNotifUpdate(
+      notifService as any,
+      {} as any,
+      {} as any,
+    );
+    (update as any).openSettings = jest.fn();
+    const ctx = {
+      chat: { type: 'private' },
+      match: { groups: { action: 'save', params: '8:30:week:none:1' } },
+      userSocial: { id: 1 },
+      i18n: { t: jest.fn().mockReturnValue('Сохранено') },
+      tryAnswerCbQuery: jest.fn(),
+    };
+
+    await update.onAction(ctx as any);
+
+    expect(notifService.upsertFirstNotif).toHaveBeenCalledWith(
+      ctx.userSocial,
+      expect.objectContaining({
+        period: 'week',
+        targetDayOffset: null,
+        weekdays: [1],
+      }),
+    );
+  });
+
   it('checks conversation admin via cached telegram service admins', async () => {
     const telegramService = {
       getCachedChatAdmins: jest

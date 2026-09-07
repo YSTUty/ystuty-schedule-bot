@@ -15,9 +15,17 @@ export enum ScheduleNotifTargetDayOffset {
   Tomorrow = 1,
 }
 
+/** Определяет, приходит ли отдельный день или расписание текущей недели. */
+export enum ScheduleNotifPeriod {
+  Day = 'day',
+  Week = 'week',
+}
+
 export type ScheduleNotifSettings = {
   deliveryHour: number;
   deliveryMinute: number;
-  targetDayOffset: ScheduleNotifTargetDayOffset;
+  period: ScheduleNotifPeriod;
+  /** Смещение используется только для рассылки отдельного дня. */
+  targetDayOffset: ScheduleNotifTargetDayOffset | null;
   weekdays: number[];
 };

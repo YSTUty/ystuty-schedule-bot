@@ -106,6 +106,7 @@ describe('Telegram ScheduleUpdate', () => {
         presentation: 'compact',
       });
       expect(ctx.i18n.t).toHaveBeenCalledWith('page.schedule.week_title', {
+        weekNumber: 3,
         dateRange: '21–27 сентября',
         isNextWeek: false,
         weekTitle: 'page.schedule.week_title_future',

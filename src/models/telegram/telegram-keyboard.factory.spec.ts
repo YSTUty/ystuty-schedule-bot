@@ -2,7 +2,7 @@ import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 
 describe('TelegramKeyboardFactory', () => {
   const ctx = {
-    i18n: { t: (phrase: string) => phrase },
+    i18n: { t: jest.fn((phrase: string) => phrase) },
   } as any;
 
   it('shows all notif hours when creating a notif', () => {
@@ -94,12 +94,20 @@ describe('TelegramKeyboardFactory', () => {
       expect.arrayContaining([
         expect.objectContaining({
           callback_data: 'button.schedule.previous_week:ЦИС-46:week:4',
+          text: 'button.schedule.previous_week',
         }),
         expect.objectContaining({
           callback_data: 'button.schedule.next_week:ЦИС-46:week:6',
+          text: 'button.schedule.next_week',
         }),
       ]),
     );
+    expect(ctx.i18n.t).toHaveBeenCalledWith('button.schedule.previous_week', {
+      weekNumber: 4,
+    });
+    expect(ctx.i18n.t).toHaveBeenCalledWith('button.schedule.next_week', {
+      weekNumber: 6,
+    });
   });
 
   it('opens hour selection before choosing minutes in the notif editor', () => {

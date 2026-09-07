@@ -1421,7 +1421,9 @@ export class TelegramKeyboardFactory {
     if (weekView?.previousWeekNumber !== undefined) {
       navigationButtons.push(
         TelegramButtons.callback(
-          ctx.i18n.t(LocalePhrase.Button_Schedule_PreviousWeek),
+          ctx.i18n.t(LocalePhrase.Button_Schedule_PreviousWeek, {
+            weekNumber: weekView.previousWeekNumber,
+          }),
           target.type === 'teacher'
             ? `${LocalePhrase.Button_Schedule_PreviousWeek}:teacher:${target.id}:week:${weekView.previousWeekNumber}`
             : `${LocalePhrase.Button_Schedule_PreviousWeek}:${target.id}:week:${weekView.previousWeekNumber}`,
@@ -1431,7 +1433,9 @@ export class TelegramKeyboardFactory {
     if (weekView?.nextWeekNumber !== undefined) {
       navigationButtons.push(
         TelegramButtons.callback(
-          ctx.i18n.t(LocalePhrase.Button_Schedule_NextWeek),
+          ctx.i18n.t(LocalePhrase.Button_Schedule_NextWeek, {
+            weekNumber: weekView.nextWeekNumber,
+          }),
           target.type === 'teacher'
             ? `${LocalePhrase.Button_Schedule_NextWeek}:teacher:${target.id}:week:${weekView.nextWeekNumber}`
             : `${LocalePhrase.Button_Schedule_NextWeek}:${target.id}:week:${weekView.nextWeekNumber}`,

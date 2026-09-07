@@ -502,7 +502,7 @@ export class ScheduleUpdate {
         targetType === 'teacher'
           ? LocalePhrase.Page_Schedule_TeacherWeekTitle
           : LocalePhrase.Page_Schedule_WeekTitle,
-        { dateRange, isNextWeek, weekTitle },
+        { weekNumber: weekView.weekNumber, dateRange, isNextWeek, weekTitle },
       )}\n${weekView.message}`;
     } else {
       message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundWeek, {

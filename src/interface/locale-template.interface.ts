@@ -82,6 +82,8 @@ type LocaleQueueStatusTemplate = {
  * ключей в типы `ctx.i18n.t`.
  */
 export type LocalePhraseParams = {
+  [LocalePhrase.Button_Schedule_PreviousWeek]: { weekNumber: number };
+  [LocalePhrase.Button_Schedule_NextWeek]: { weekNumber: number };
   [LocalePhrase.Button_SelectGroup_X]: { groupName: string };
   [LocalePhrase.Button_Broadcast_DeleteSelected]: { selectedCount: number };
   [LocalePhrase.Button_Broadcast_ModeToggle]: {
@@ -156,12 +158,14 @@ export type LocalePhraseParams = {
   };
   [LocalePhrase.Page_Schedule_TeacherNotFound]: { query: string | number };
   [LocalePhrase.Page_Schedule_WeekTitle]: {
+    weekNumber: number;
     dateRange: string;
     isNextWeek: boolean;
     /** Пока дальние недели не реализованы, передаётся как `null`. */
     weekTitle: string | null;
   };
   [LocalePhrase.Page_Schedule_TeacherWeekTitle]: {
+    weekNumber: number;
     dateRange: string;
     isNextWeek: boolean;
     /** Пока дальние недели не реализованы, передаётся как `null`. */

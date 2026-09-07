@@ -2,7 +2,7 @@ import { VKKeyboardFactory } from './vk-keyboard.factory';
 
 describe('VKKeyboardFactory', () => {
   const ctx = {
-    i18n: { t: (phrase: string) => phrase },
+    i18n: { t: jest.fn((phrase: string) => phrase) },
   } as any;
 
   it('limits schedule notif group labels to 40 characters', () => {
@@ -84,6 +84,12 @@ describe('VKKeyboardFactory', () => {
         },
       ]),
     );
+    expect(ctx.i18n.t).toHaveBeenCalledWith('button.schedule.previous_week', {
+      weekNumber: 4,
+    });
+    expect(ctx.i18n.t).toHaveBeenCalledWith('button.schedule.next_week', {
+      weekNumber: 6,
+    });
   });
 
   it('creates a schedule notif editor within VK inline keyboard limits', () => {

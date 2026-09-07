@@ -1840,7 +1840,9 @@ export class VKKeyboardFactory {
     const navigationButtons = [
       weekView?.previousWeekNumber !== undefined
         ? Keyboard.callbackButton({
-            label: ctx.i18n.t(LocalePhrase.Button_Schedule_PreviousWeek),
+            label: ctx.i18n.t(LocalePhrase.Button_Schedule_PreviousWeek, {
+              weekNumber: weekView.previousWeekNumber,
+            }),
             payload: {
               ...payload(LocalePhrase.Button_Schedule_PreviousWeek),
               weekNumber: weekView.previousWeekNumber,
@@ -1850,7 +1852,9 @@ export class VKKeyboardFactory {
         : null,
       weekView?.nextWeekNumber !== undefined
         ? Keyboard.callbackButton({
-            label: ctx.i18n.t(LocalePhrase.Button_Schedule_NextWeek),
+            label: ctx.i18n.t(LocalePhrase.Button_Schedule_NextWeek, {
+              weekNumber: weekView.nextWeekNumber,
+            }),
             payload: {
               ...payload(LocalePhrase.Button_Schedule_NextWeek),
               weekNumber: weekView.nextWeekNumber,

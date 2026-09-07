@@ -20,10 +20,10 @@ button:
   invite_to_chat: Пригласить бота в беседу
   welcome:
     select_group: 🎓 Выбрать группу
-    schedule_notification: 🔔 Настроить рассылку
+    schedule_notification: 🔔 Рассылка расписания
     invite_to_chat: 👥 Добавить в беседу
   broadcast:
-    title: 📣 Рассылки
+    title: 📣 [A] Рассылки
     create: ✍️ Создать рассылку
     status: 📊 Статус очереди
     current: 🔄 Текущая рассылка
@@ -98,7 +98,8 @@ button:
     teacher: Выбрать преподавателя
     my_teacher: Расписание преподавателя
   schedule_notification:
-    title: Настройки рассылки
+    title: 🔔 Рассылка расписания
+    legacy_title: Настройки рассылки
     create: Настроить рассылку
     edit: Редактировать
     change_group: Изменить группу

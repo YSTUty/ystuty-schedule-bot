@@ -87,6 +87,7 @@ export enum LocalePhrase {
   Button_Broadcast_Back = 'button.broadcast.back',
   Button_Broadcast_BackToSettings = 'button.broadcast.back_to_settings',
   Button_ScheduleNotif = 'button.schedule_notification.title',
+  Button_ScheduleNotif_Legacy = 'button.schedule_notification.legacy_title',
   Button_ScheduleNotif_Create = 'button.schedule_notification.create',
   Button_ScheduleNotif_Edit = 'button.schedule_notification.edit',
   Button_ScheduleNotif_Done = 'button.schedule_notification.done',

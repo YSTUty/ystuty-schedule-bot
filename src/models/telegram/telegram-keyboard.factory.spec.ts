@@ -1,4 +1,5 @@
 import { md5 } from '@my-common';
+import { LocalePhrase } from '@my-interfaces';
 
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 
@@ -37,6 +38,25 @@ describe('TelegramKeyboardFactory', () => {
         expect.objectContaining({
           url: expect.stringContaining('?startgroup=invite'),
         }),
+      ]),
+    );
+    expect(keyboard.reply_markup.inline_keyboard[0]).toHaveLength(1);
+    expect(keyboard.reply_markup.inline_keyboard[1]).toHaveLength(1);
+  });
+
+  it('puts the schedule notification on its own row in the private keyboard', () => {
+    const keyboard = new TelegramKeyboardFactory().getStart({
+      chat: { type: 'private' },
+      from: { id: 42 },
+      user: {},
+      session: {},
+      i18n: { t: (phrase: string) => phrase },
+    } as any);
+
+    expect(keyboard.reply_markup.keyboard).toEqual(
+      expect.arrayContaining([
+        [LocalePhrase.Button_Profile],
+        [LocalePhrase.Button_ScheduleNotif],
       ]),
     );
   });

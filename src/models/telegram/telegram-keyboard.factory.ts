@@ -99,10 +99,8 @@ export class TelegramKeyboardFactory {
           : []),
       ...(isPrivate
         ? [
-            [
-              ...(ctx.user ? [ctx.i18n.t(LocalePhrase.Button_Profile)] : []),
-              ctx.i18n.t(LocalePhrase.Button_ScheduleNotif),
-            ],
+            ...(ctx.user ? [[ctx.i18n.t(LocalePhrase.Button_Profile)]] : []),
+            [ctx.i18n.t(LocalePhrase.Button_ScheduleNotif)],
           ]
         : []),
       ...(isPrivate ? [[ctx.i18n.t(LocalePhrase.Button_Feedback)]] : []),
@@ -204,6 +202,8 @@ export class TelegramKeyboardFactory {
           LocalePhrase.Button_SelectGroup,
           { style: 'primary' },
         ),
+      ],
+      [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Welcome_ScheduleNotif),
           LocalePhrase.Button_ScheduleNotif,

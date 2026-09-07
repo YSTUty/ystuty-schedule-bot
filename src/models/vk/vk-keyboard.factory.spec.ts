@@ -1,3 +1,5 @@
+import { LocalePhrase } from '@my-interfaces';
+
 import { VKKeyboardFactory } from './vk-keyboard.factory';
 
 describe('VKKeyboardFactory', () => {
@@ -47,6 +49,31 @@ describe('VKKeyboardFactory', () => {
         }),
       ]),
     );
+    expect(JSON.parse(String(keyboard.inline())).buttons[0]).toHaveLength(1);
+    expect(JSON.parse(String(keyboard.inline())).buttons[1]).toHaveLength(1);
+  });
+
+  it('puts the schedule notification on its own row in the private keyboard', () => {
+    const keyboard = new VKKeyboardFactory().getStart({
+      ...ctx,
+      isDM: true,
+      peerId: 42,
+      senderId: 42,
+      session: {},
+      state: { user: {}, userSocial: {} },
+    });
+    const buttons = JSON.parse(String(keyboard)).buttons;
+
+    const profileRow = buttons.find(
+      (row: any[]) => row[0]?.action.label === LocalePhrase.Button_Profile,
+    );
+    const notificationRow = buttons.find(
+      (row: any[]) =>
+        row[0]?.action.label === LocalePhrase.Button_ScheduleNotif,
+    );
+
+    expect(profileRow).toHaveLength(1);
+    expect(notificationRow).toHaveLength(1);
   });
 
   it('builds the fallback help button as an inline callback', () => {

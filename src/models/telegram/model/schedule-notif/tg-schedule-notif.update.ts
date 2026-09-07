@@ -24,7 +24,10 @@ export class TgScheduleNotifUpdate {
     private readonly telegramService: TelegramService,
   ) {}
 
-  @TgHearsLocale(LocalePhrase.Button_ScheduleNotif)
+  @TgHearsLocale([
+    LocalePhrase.Button_ScheduleNotif,
+    LocalePhrase.Button_ScheduleNotif_Legacy,
+  ])
   @Command('notif')
   @Action(LocalePhrase.Button_ScheduleNotif)
   async openFromMenu(@Ctx() ctx: ICbQOrMsg) {

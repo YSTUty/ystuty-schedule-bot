@@ -59,6 +59,47 @@ describe('VK MainMiddleware message subscription', () => {
     expect(ctx.state).toEqual({ eventAnswered: true });
   });
 
+  it('marks an edited callback message as handled without a snackbar', async () => {
+    const middleware = Object.create(
+      MainMiddleware.prototype,
+    ) as MainMiddleware;
+    Object.defineProperty(middleware, 'concurrencyService', {
+      value: {
+        buildKey: jest.fn().mockReturnValue('mw:update:vk:123'),
+        queueLocal: jest.fn(async (_key, callback) => callback()),
+      },
+    });
+    const edit = jest.fn().mockResolvedValue(1);
+    const answer = jest.fn();
+    const ctx = {
+      isOutbox: false,
+      type: 'message_event',
+      peerId: 123,
+      conversationMessageId: 45,
+      state: {},
+      answer,
+      api: { messages: { edit } },
+      is: jest.fn((types: string[]) => types.includes('message_event')),
+      toJSON: jest.fn().mockReturnValue({}),
+    };
+
+    await middleware['featureMiddleware'](ctx as never, async () => {
+      await (ctx as any).editMessage({
+        message: 'Следующая страница',
+        keyboard: '{}',
+      });
+    });
+
+    expect(edit).toHaveBeenCalledWith({
+      peer_id: 123,
+      cmid: 45,
+      message: 'Следующая страница',
+      keyboard: '{}',
+    });
+    expect(answer).not.toHaveBeenCalled();
+    expect(ctx.state).toEqual({ eventAnswered: true });
+  });
+
   it.each([
     ['message_allow', true, false],
     ['message_deny', false, true],

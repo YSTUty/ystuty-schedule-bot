@@ -198,12 +198,16 @@ export class MainMiddleware {
         if (!ctx.isMessageEventContext()) {
           return;
         }
-        return ctx.api.messages.edit({
+        const result = await ctx.api.messages.edit({
           peer_id: ctx.peerId,
           cmid: ctx.conversationMessageId,
           message,
           keyboard,
         });
+        // Редактирование — видимый результат callback; не даём global fallback
+        // отправить технический snackbar «Nope» после успешно обработанного действия.
+        ctx.state.eventAnswered = true;
+        return result;
       };
 
       // * redefine vk-io ctx features

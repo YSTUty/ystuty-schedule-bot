@@ -1,3 +1,5 @@
+import { md5 } from '@my-common';
+
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 
 describe('TelegramKeyboardFactory', () => {
@@ -93,11 +95,11 @@ describe('TelegramKeyboardFactory', () => {
     expect(buttons).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          callback_data: 'button.schedule.previous_week:ЦИС-46:week:4',
+          callback_data: `button.schedule.previous_week:g:${md5('ЦИС-46').slice(0, 12)}:week:4`,
           text: 'button.schedule.previous_week',
         }),
         expect.objectContaining({
-          callback_data: 'button.schedule.next_week:ЦИС-46:week:6',
+          callback_data: `button.schedule.next_week:g:${md5('ЦИС-46').slice(0, 12)}:week:6`,
           text: 'button.schedule.next_week',
         }),
       ]),
@@ -108,6 +110,24 @@ describe('TelegramKeyboardFactory', () => {
     expect(ctx.i18n.t).toHaveBeenCalledWith('button.schedule.next_week', {
       weekNumber: 6,
     });
+  });
+
+  it('keeps schedule callback data within Telegram limits for a long group', () => {
+    const buttons = new TelegramKeyboardFactory()
+      .getScheduleInline(
+        ctx,
+        { type: 'group', id: 'Научно-исслед сем' },
+        { previousWeekNumber: 4, nextWeekNumber: 6 },
+      )
+      .reply_markup.inline_keyboard.flat();
+
+    for (const button of buttons) {
+      if ('callback_data' in button) {
+        expect(
+          Buffer.byteLength(button.callback_data, 'utf8'),
+        ).toBeLessThanOrEqual(64);
+      }
+    }
   });
 
   it('opens hour selection before choosing minutes in the notif editor', () => {

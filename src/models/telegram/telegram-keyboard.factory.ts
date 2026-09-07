@@ -10,6 +10,7 @@ import {
 
 import * as xEnv from '@my-environment';
 
+import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
@@ -1405,6 +1406,10 @@ export class TelegramKeyboardFactory {
     target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
     weekView?: Pick<ScheduleWeekView, 'previousWeekNumber' | 'nextWeekNumber'>,
   ) {
+    // callback_data Telegram ограничен 64 байтами, поэтому группу передаём
+    // коротким hash, а не её полным динамическим названием.
+    const groupTarget =
+      target.type === 'group' ? `g:${md5(target.id).slice(0, 12)}` : null;
     const makeButton = (
       phrase: LocalePhrase,
       style?: TelegramButtonOptions['style'],
@@ -1413,7 +1418,7 @@ export class TelegramKeyboardFactory {
         ctx.i18n.t(phrase),
         target.type === 'teacher'
           ? `${phrase}:teacher:${target.id}`
-          : `${phrase}:${target.id}`,
+          : `${phrase}:${groupTarget}`,
         { style },
       );
 
@@ -1426,7 +1431,7 @@ export class TelegramKeyboardFactory {
           }),
           target.type === 'teacher'
             ? `${LocalePhrase.Button_Schedule_PreviousWeek}:teacher:${target.id}:week:${weekView.previousWeekNumber}`
-            : `${LocalePhrase.Button_Schedule_PreviousWeek}:${target.id}:week:${weekView.previousWeekNumber}`,
+            : `${LocalePhrase.Button_Schedule_PreviousWeek}:${groupTarget}:week:${weekView.previousWeekNumber}`,
         ),
       );
     }
@@ -1438,7 +1443,7 @@ export class TelegramKeyboardFactory {
           }),
           target.type === 'teacher'
             ? `${LocalePhrase.Button_Schedule_NextWeek}:teacher:${target.id}:week:${weekView.nextWeekNumber}`
-            : `${LocalePhrase.Button_Schedule_NextWeek}:${target.id}:week:${weekView.nextWeekNumber}`,
+            : `${LocalePhrase.Button_Schedule_NextWeek}:${groupTarget}:week:${weekView.nextWeekNumber}`,
         ),
       );
     }

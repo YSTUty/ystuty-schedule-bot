@@ -31,11 +31,21 @@ import { SELECT_GROUP_SCENE } from '../telegram.constants';
 
 /**
  * Группа в callback — значение из клавиатуры, а не текстовая команда.
- * Допускаем любое имя без разделителя `:`, включая нестандартные группы.
+ * Новые кнопки передают hash, старые — полное имя без разделителя `:`.
  */
+const groupCallbackTargetPattern = 'g:[a-f0-9]{12}|[^:]+';
+
 export const createGroupScheduleActionRegExp = (phrase: LocalePhrase) =>
   new RegExp(
-    `^(?<phrase>${phrase.replaceAll('.', '\\.')})(?::(?<groupName>[^:]+))?$`,
+    `^(?<phrase>${phrase.replaceAll('.', '\\.')})(?::(?<groupTarget>${groupCallbackTargetPattern}))?$`,
+    'i',
+  );
+
+export const createGroupScheduleWeekNavigationActionRegExp = (
+  phrase: LocalePhrase,
+) =>
+  new RegExp(
+    `^(?<phrase>${phrase.replaceAll('.', '\\.')}):(?<groupTarget>${groupCallbackTargetPattern}):week:(?<weekNumber>-?\\d+)$`,
     'i',
   );
 
@@ -261,15 +271,16 @@ export class ScheduleUpdate {
         return;
       }
 
-      const groupNameFromMath = ctx.match?.groups?.groupName;
+      const groupNameFromMatch =
+        ctx.match?.groups?.groupTarget || ctx.match?.groups?.groupName;
       const selectedGroupName = this.getSelectedGroupName(ctx);
-      const groupName = this.resolveGroupName(ctx, groupNameFromMath);
+      const groupName = this.resolveGroupName(ctx, groupNameFromMatch);
 
       if (!groupName) {
         if (selectedGroupName) {
           await ctx.replyWithHTML(
             ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-              groupName: groupNameFromMath,
+              groupName: groupNameFromMatch,
             }),
           );
           return;
@@ -400,10 +411,7 @@ export class ScheduleUpdate {
         `^(?<phrase>${phrase.replaceAll('.', '\\.')}):teacher:${patternTeacherId}:week:(?<weekNumber>-?\\d+)$`,
         'i',
       ),
-      new RegExp(
-        `^(?<phrase>${phrase.replaceAll('.', '\\.')}):(?<groupName>[^:]+):week:(?<weekNumber>-?\\d+)$`,
-        'i',
-      ),
+      createGroupScheduleWeekNavigationActionRegExp(phrase),
     ]),
   )
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
@@ -437,15 +445,16 @@ export class ScheduleUpdate {
         return;
       }
 
-      const groupNameFromMath = ctx.match?.groups?.groupName;
+      const groupNameFromMatch =
+        ctx.match?.groups?.groupTarget || ctx.match?.groups?.groupName;
       const selectedGroupName = this.getSelectedGroupName(ctx);
-      const groupName = this.resolveGroupName(ctx, groupNameFromMath);
+      const groupName = this.resolveGroupName(ctx, groupNameFromMatch);
 
       if (!groupName) {
         if (selectedGroupName) {
           await ctx.replyWithHTML(
             ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-              groupName: groupNameFromMath,
+              groupName: groupNameFromMatch,
             }),
           );
           return;
@@ -552,9 +561,17 @@ export class ScheduleUpdate {
     );
   }
 
-  /** Находит группу из команды или постоянной настройки текущего чата. */
-  private resolveGroupName(ctx: IMessageContext, groupNameFromMatch?: string) {
-    const groupNameQuery = groupNameFromMatch || this.getSelectedGroupName(ctx);
+  /** Находит группу из команды, callback или постоянной настройки текущего чата. */
+  private resolveGroupName(ctx: IMessageContext, groupTarget?: string) {
+    const groupNameQuery = groupTarget || this.getSelectedGroupName(ctx);
+    const groupHash = groupTarget
+      ? /^g:(?<hash>[a-f0-9]{12})$/i.exec(groupTarget)?.groups?.hash
+      : undefined;
+
+    if (groupHash) {
+      return this.scheduleService.groupNameByHash(groupHash);
+    }
+
     return (
       groupNameQuery &&
       (this.scheduleService.getGroupByName(groupNameQuery) ||

@@ -2,6 +2,7 @@ import { LocalePhrase } from '@my-interfaces';
 
 import {
   createGroupScheduleActionRegExp,
+  createGroupScheduleWeekNavigationActionRegExp,
   ScheduleUpdate,
 } from './schedule.update';
 
@@ -13,13 +14,25 @@ describe('Telegram ScheduleUpdate', () => {
 
     expect(match?.groups).toMatchObject({
       phrase: 'button.schedule.for_week',
-      groupName: 'Научно-исслед сем',
+      groupTarget: 'Научно-исслед сем',
+    });
+  });
+
+  it('matches a hashed group target in a week navigation callback', () => {
+    const match = createGroupScheduleWeekNavigationActionRegExp(
+      LocalePhrase.Button_Schedule_NextWeek,
+    ).exec('button.schedule.next_week:g:1a2b3c4d5e6f:week:4');
+
+    expect(match?.groups).toMatchObject({
+      groupTarget: 'g:1a2b3c4d5e6f',
+      weekNumber: '4',
     });
   });
 
   const createUpdate = () => {
     const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
+      groupNameByHash: jest.fn(),
       parseGroupName: jest.fn(),
       findNext: jest.fn(),
       getScheduleWeekView: jest.fn(),
@@ -47,6 +60,23 @@ describe('Telegram ScheduleUpdate', () => {
 
     expect(scheduleService.getGroupByName).toHaveBeenCalledWith('ЦИС-21');
     expect(ctx.scene.enter).not.toHaveBeenCalled();
+  });
+
+  it('resolves a hashed group callback target', () => {
+    const { update, scheduleService } = createUpdate();
+    scheduleService.groupNameByHash.mockReturnValue('Научно-исслед сем');
+    const ctx = {
+      chat: { type: 'private' },
+      userSocial: { groupName: null },
+    } as any;
+
+    const groupName = (update as any).resolveGroupName(ctx, 'g:1a2b3c4d5e6f');
+
+    expect(groupName).toBe('Научно-исслед сем');
+    expect(scheduleService.groupNameByHash).toHaveBeenCalledWith(
+      '1a2b3c4d5e6f',
+    );
+    expect(scheduleService.getGroupByName).not.toHaveBeenCalled();
   });
 
   it('names the requested date when the daily schedule is unavailable', async () => {

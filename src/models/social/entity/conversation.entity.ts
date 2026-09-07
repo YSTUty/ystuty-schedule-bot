@@ -48,7 +48,7 @@ export class Conversation {
   public isLeaved: boolean;
 
   @Expose()
-  @Column({ type: 'character varying', length: 16, nullable: true })
+  @Column({ type: 'character varying', length: 128, nullable: true })
   public groupName?: string | null;
 
   @Expose()

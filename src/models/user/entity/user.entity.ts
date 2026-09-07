@@ -32,7 +32,7 @@ export class User {
   public login: string;
 
   @Expose()
-  @Column({ type: 'character varying', length: 32, nullable: true })
+  @Column({ type: 'character varying', length: 128, nullable: true })
   public groupName: string | null;
 
   @Expose()

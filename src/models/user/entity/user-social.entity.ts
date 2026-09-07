@@ -59,7 +59,7 @@ export class UserSocial {
   public avatarUrl: string | null;
 
   @Expose()
-  @Column({ type: 'character varying', length: 16, nullable: true })
+  @Column({ type: 'character varying', length: 128, nullable: true })
   public groupName?: string | null;
 
   @Column({ type: 'boolean', default: false })

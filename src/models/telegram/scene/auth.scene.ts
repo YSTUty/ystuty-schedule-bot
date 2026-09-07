@@ -70,6 +70,7 @@ export class AuthScene extends BaseScene {
     );
 
     if ('error' in result) {
+      await ctx.scene.leave();
       throw new UserException(result.error);
     }
 
@@ -89,6 +90,9 @@ export class AuthScene extends BaseScene {
         }),
         keyboard,
       );
+      // Сцена не ожидает пользовательский ввод: дальнейшие updates не должны
+      // снова запускать requestAuth до истечения его собственного rate limit.
+      await ctx.scene.leave();
       return;
     }
 
@@ -100,5 +104,6 @@ export class AuthScene extends BaseScene {
           : LocalePhrase.Page_SocialConnect_Other;
 
     await ctx.replyWithHTML(ctx.i18n.t(message, { botName: result.botName }));
+    await ctx.scene.leave();
   }
 }

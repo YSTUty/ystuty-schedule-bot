@@ -46,6 +46,7 @@ export class AuthScene {
     );
 
     if ('error' in result) {
+      await ctx.scene.leave({ silent: true });
       throw new UserException(result.error);
     }
 
@@ -59,6 +60,9 @@ export class AuthScene {
         }),
         { keyboard },
       );
+      // Сцена не ожидает пользовательский ввод: callback ссылки должен попасть
+      // в MainUpdate.onAuthLink(), а не повторно вызвать requestAuth.
+      await ctx.scene.leave({ silent: true });
       return;
     }
 
@@ -70,5 +74,6 @@ export class AuthScene {
           : LocalePhrase.Page_SocialConnect_Other;
 
     await ctx.send(ctx.i18n.t(message, { botName: result.botName }));
+    await ctx.scene.leave({ silent: true });
   }
 }

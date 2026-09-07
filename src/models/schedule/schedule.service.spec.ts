@@ -1,5 +1,7 @@
 import { of, throwError } from 'rxjs';
 
+import { WeekNumberType } from '@my-interfaces';
+
 import { ScheduleService } from './schedule.service';
 
 describe('ScheduleService', () => {
@@ -206,6 +208,79 @@ describe('ScheduleService', () => {
       expect(
         metricsService.setScheduleGroupLessonCounts,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('weekly navigation', () => {
+    it('returns only adjacent weeks that have calendar dates in the schedule', async () => {
+      const metricsService = { incrementScheduleRequest: jest.fn() };
+      service = new ScheduleService(
+        {} as any,
+        {} as any,
+        {} as any,
+        metricsService as any,
+      );
+      jest.spyOn(service, 'getSchedule').mockResolvedValue({
+        isCache: true,
+        items: [
+          {
+            number: 1,
+            days: [
+              {
+                info: {
+                  type: WeekNumberType.Monday,
+                  date: '2026-09-07T00:00:00+03:00',
+                  weekNumber: 1,
+                },
+                lessons: [],
+              },
+            ],
+          },
+          {
+            number: 2,
+            days: [
+              {
+                info: {
+                  type: WeekNumberType.Monday,
+                  date: '2026-09-14T00:00:00+03:00',
+                  weekNumber: 2,
+                },
+                lessons: [],
+              },
+            ],
+          },
+          {
+            number: 3,
+            days: [
+              {
+                info: {
+                  type: WeekNumberType.Monday,
+                  date: '2026-09-21T00:00:00+03:00',
+                  weekNumber: 3,
+                },
+                lessons: [],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await service.getScheduleWeekView({
+        targetId: 'ЦИС-46',
+        targetType: 'group',
+        requestedWeekNumber: 2,
+      });
+
+      expect(result).toMatchObject({
+        weekNumber: 2,
+        dateRange: '14–20 сентября',
+        previousWeekNumber: 1,
+        nextWeekNumber: 3,
+      });
+      expect(metricsService.incrementScheduleRequest).toHaveBeenCalledWith(
+        'group',
+        'ЦИС-46',
+      );
     });
   });
 });

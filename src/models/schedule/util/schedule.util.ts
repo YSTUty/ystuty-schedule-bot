@@ -116,6 +116,26 @@ export function getScheduleTargetDate(skipDays = 0, now: Date = new Date()) {
   return date;
 }
 
+/** Возвращает понедельник недели для даты с учётом московского календаря. */
+export function getScheduleWeekStartDate(date: Date) {
+  const start = getMoscowCalendarDate(date);
+  const day = start.getUTCDay() || 7;
+  start.setUTCDate(start.getUTCDate() - day + 1);
+  return start;
+}
+
+/** Вычисляет учебный номер недели для конкретной календарной даты. */
+export function getScheduleAcademicWeekNumber(date: Date) {
+  return getWeekNumber(date) - getWeekOffsetByYear(date);
+}
+
+/** Возвращает смещение целевой недели относительно опорной в неделях. */
+export function getScheduleWeekDistance(targetDate: Date, referenceDate: Date) {
+  const target = getScheduleWeekStartDate(targetDate);
+  const reference = getScheduleWeekStartDate(referenceDate);
+  return Math.round((target.getTime() - reference.getTime()) / (7 * 864e5));
+}
+
 /** Форматирует календарную дату для пользовательских сообщений. */
 export function formatScheduleTargetDate(date: Date) {
   return date.toLocaleDateString('ru-RU', {
@@ -127,9 +147,12 @@ export function formatScheduleTargetDate(date: Date) {
 
 /** Возвращает диапазон понедельник–воскресенье для недели целевой даты. */
 export function getScheduleWeekDateRange(skipDays = 0, now: Date = new Date()) {
-  const start = getScheduleTargetDate(skipDays, now);
-  const day = start.getUTCDay() || 7;
-  start.setUTCDate(start.getUTCDate() - day + 1);
+  return getScheduleWeekDateRangeForDate(getScheduleTargetDate(skipDays, now));
+}
+
+/** Возвращает диапазон понедельник–воскресенье для уже известной даты недели. */
+export function getScheduleWeekDateRangeForDate(date: Date) {
+  const start = getScheduleWeekStartDate(date);
 
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 6);

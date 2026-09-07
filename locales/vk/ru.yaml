@@ -93,6 +93,8 @@ button:
     for_tomorrow: На завтра
     for_week: На неделю
     for_next_week: На следующую
+    previous_week: ◀ Предыдущая неделя
+    next_week: Следующая неделя ▶
     teacher: Выбрать преподавателя
     my_teacher: Расписание преподавателя
   schedule_notification:
@@ -250,6 +252,9 @@ page:
       Расписание ${weekTitle || (isNextWeek ? 'на следующую неделю' : 'на текущую неделю')} (${dateRange}):
     teacher_week_title: |
       Расписание преподавателя ${weekTitle || (isNextWeek ? 'на следующую неделю' : 'на текущую неделю')} (${dateRange}):
+    week_title_previous: на прошлую неделю
+    week_title_past: на неделю ${pluralize(weeks, 'неделю', 'недели', 'недель')} назад
+    week_title_future: на неделю через ${pluralize(weeks, 'неделю', 'недели', 'недель')}
   schedule_notification:
     settings: |
       Рассылка расписания

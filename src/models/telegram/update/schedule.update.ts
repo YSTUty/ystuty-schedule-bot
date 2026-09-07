@@ -22,8 +22,10 @@ import { ScheduleService } from '../../schedule/schedule.service';
 import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
 import {
   formatScheduleTargetDate,
+  getScheduleAcademicWeekNumber,
   getScheduleTargetDate,
   getScheduleWeekDateRange,
+  getScheduleWeekDistance,
 } from '../../schedule/util/schedule.util';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';
@@ -392,6 +394,21 @@ export class ScheduleUpdate {
         ),
     ),
   )
+  @Action(
+    [
+      LocalePhrase.Button_Schedule_PreviousWeek,
+      LocalePhrase.Button_Schedule_NextWeek,
+    ].flatMap((phrase) => [
+      new RegExp(
+        `^(?<phrase>${phrase.replaceAll('.', '\\.')}):teacher:${patternTeacherId}:week:(?<weekNumber>-?\\d+)$`,
+        'i',
+      ),
+      new RegExp(
+        `^(?<phrase>${phrase.replaceAll('.', '\\.')}):(?<groupName>[^:]+):week:(?<weekNumber>-?\\d+)$`,
+        'i',
+      ),
+    ]),
+  )
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
     const isPersonalTeacherCommand =
@@ -444,41 +461,49 @@ export class ScheduleUpdate {
       targetType = 'group';
     }
 
-    const isNextWeek =
+    const initialIsNextWeek =
       !!ctx.match?.groups?.next ||
       ctx.match?.groups?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
     const presentation = ctx.match?.groups?.detailed ? 'detailed' : 'compact';
-    const skipDays = isNextWeek ? 7 + 1 : 1;
-    const dateRange = getScheduleWeekDateRange(skipDays);
+    const skipDays = initialIsNextWeek ? 7 + 1 : 1;
+    const weekNumberFromMatch = Number(ctx.match?.groups?.weekNumber);
+    const requestedWeekNumber = Number.isInteger(weekNumberFromMatch)
+      ? weekNumberFromMatch
+      : getScheduleAcademicWeekNumber(getScheduleTargetDate(skipDays));
 
     if (!ctx.callbackQuery) {
       await ctx.sendChatAction('typing');
     }
 
-    const [days, scheduleMessage] = await this.scheduleService.findNext({
+    const weekView = await this.scheduleService.getScheduleWeekView({
       targetId,
       targetType,
-      skipDays,
-      isWeek: true,
+      requestedWeekNumber,
       withTags: true,
       presentation,
     });
-    let message = scheduleMessage;
+    let message: string;
+    let dateRange = getScheduleWeekDateRange(skipDays);
+    let isNextWeek = initialIsNextWeek;
+    let weekTitle: string | null = null;
 
-    if (message) {
-      if (days - 1 > skipDays) {
-        message = ctx.i18n.t(LocalePhrase.Page_Schedule_NearestSchedule, {
-          days,
-          content: message,
-        });
-      }
+    if (weekView === false) {
+      message = `${ctx.i18n.t(LocalePhrase.Common_Error)}\n`;
+    } else if (weekView) {
+      const weekDistance = getScheduleWeekDistance(
+        weekView.weekStartDate,
+        getScheduleTargetDate(1),
+      );
+      dateRange = weekView.dateRange;
+      isNextWeek = weekDistance === 1;
+      weekTitle = this.getWeekTitle(ctx, weekDistance);
 
       message = `${ctx.i18n.t(
         targetType === 'teacher'
           ? LocalePhrase.Page_Schedule_TeacherWeekTitle
           : LocalePhrase.Page_Schedule_WeekTitle,
-        { dateRange, isNextWeek, weekTitle: null },
-      )}\n${message}`;
+        { dateRange, isNextWeek, weekTitle },
+      )}\n${weekView.message}`;
     } else {
       message = `${ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundWeek, {
         dateRange,
@@ -497,6 +522,7 @@ export class ScheduleUpdate {
       targetType === 'teacher'
         ? { type: 'teacher', id: Number(targetId) }
         : { type: 'group', id: String(targetId) },
+      weekView || undefined,
     );
     const content = appendScheduleTargetFooter(message, targetName);
 
@@ -544,5 +570,21 @@ export class ScheduleUpdate {
     return ctx.chat.type === 'private'
       ? ctx.userSocial.groupName
       : ctx.conversation?.groupName;
+  }
+
+  /** Формирует локализованный заголовок для недели вне текущей и следующей. */
+  private getWeekTitle(ctx: IMessageContext, weekDistance: number) {
+    if (weekDistance === 0 || weekDistance === 1) return null;
+    if (weekDistance === -1) {
+      return ctx.i18n.t(LocalePhrase.Page_Schedule_WeekTitle_Previous);
+    }
+
+    return weekDistance < 0
+      ? ctx.i18n.t(LocalePhrase.Page_Schedule_WeekTitle_Past, {
+          weeks: Math.abs(weekDistance),
+        })
+      : ctx.i18n.t(LocalePhrase.Page_Schedule_WeekTitle_Future, {
+          weeks: weekDistance,
+        });
   }
 }

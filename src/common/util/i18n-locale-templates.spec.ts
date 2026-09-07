@@ -125,6 +125,7 @@ const localeTemplateData = {
   },
   useInline: false,
   webViewLink: 'schedule.example',
+  weeks: 2,
   weekTitle: undefined,
 };
 

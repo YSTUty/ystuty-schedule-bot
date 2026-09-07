@@ -82,6 +82,26 @@ describe('TelegramKeyboardFactory', () => {
     expect(settingsButtons[0][0]).toMatchObject({ style: 'primary' });
   });
 
+  it('adds week navigation only for available neighboring weeks', () => {
+    const keyboard = new TelegramKeyboardFactory().getScheduleInline(
+      ctx,
+      { type: 'group', id: 'ЦИС-46' },
+      { previousWeekNumber: 4, nextWeekNumber: 6 },
+    );
+    const buttons = keyboard.reply_markup.inline_keyboard.flat();
+
+    expect(buttons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          callback_data: 'button.schedule.previous_week:ЦИС-46:week:4',
+        }),
+        expect.objectContaining({
+          callback_data: 'button.schedule.next_week:ЦИС-46:week:6',
+        }),
+      ]),
+    );
+  });
+
   it('opens hour selection before choosing minutes in the notif editor', () => {
     const keyboard = new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 7,

@@ -1,5 +1,5 @@
 import { UseFilters } from '@nestjs/common';
-import { Ctx, Hears, Update } from 'nestjs-vk';
+import { Ctx, Hears, OnMessageEvent, Update } from 'nestjs-vk';
 
 import {
   isPersonalTeacherScheduleCommand,
@@ -10,17 +10,26 @@ import {
 } from '@my-common';
 import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
-import { IMessageContext } from '@my-interfaces/vk';
+import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { ScheduleService } from '../../schedule/schedule.service';
 import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
 import {
   formatScheduleTargetDate,
+  getScheduleAcademicWeekNumber,
   getScheduleTargetDate,
   getScheduleWeekDateRange,
+  getScheduleWeekDistance,
 } from '../../schedule/util/schedule.util';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
+
+type SchedulePayload = {
+  phrase?: LocalePhrase;
+  teacherId?: unknown;
+  groupName?: unknown;
+  weekNumber?: unknown;
+};
 
 @Update()
 @UseFilters(VkExceptionFilter)
@@ -53,6 +62,7 @@ export class ScheduleUpdate {
       ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
     const target = await this.resolveScheduleTarget(
       ctx,
+      ctx.messagePayload,
       teacherIdFromPayload ||
         (isPersonalTeacherRequest ? this.getPersonalTeacherId(ctx) : undefined),
       isPersonalTeacherRequest,
@@ -121,22 +131,44 @@ export class ScheduleUpdate {
     LocalePhrase.RegExp_Schedule_For_Week,
     LocalePhrase.Button_Schedule_ForWeek,
     LocalePhrase.Button_Schedule_ForNextWeek,
+    LocalePhrase.Button_Schedule_PreviousWeek,
+    LocalePhrase.Button_Schedule_NextWeek,
   ])
   @Hears('/tweek')
   @Hears(personalTeacherWeekCommandRegExp)
-  async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
-    const teacherIdFromPayload = Number(ctx.messagePayload?.teacherId);
+  /** Обрабатывает inline-переход между доступными неделями расписания. */
+  @OnMessageEvent(
+    (payload) =>
+      [
+        LocalePhrase.Button_Schedule_PreviousWeek,
+        LocalePhrase.Button_Schedule_NextWeek,
+      ].includes(payload.phrase as LocalePhrase) &&
+      Number.isInteger(Number(payload.weekNumber)) &&
+      (typeof payload.groupName === 'string' ||
+        Number.isSafeInteger(Number(payload.teacherId))),
+  )
+  async onScheduleWeekNavigation(
+    @Ctx() ctx: IMessageContext | IMessageEventContext,
+  ) {
+    const payload: SchedulePayload | undefined =
+      ctx.messagePayload || ctx.eventPayload;
+
+    const teacherIdFromPayload = Number(payload?.teacherId);
     const isPersonalTeacherRequest =
-      ctx.text?.trim().toLowerCase() === '/tweek' ||
-      isPersonalTeacherWeekCommand(ctx.text);
-    const isNextWeek =
+      ('text' in ctx && ctx.text?.trim().toLowerCase() === '/tweek') ||
+      isPersonalTeacherWeekCommand('text' in ctx ? ctx.text : undefined);
+    const initialIsNextWeek =
       !!ctx.$match?.groups?.next ||
-      ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
+      payload?.phrase === LocalePhrase.Button_Schedule_ForNextWeek;
     const presentation = ctx.$match?.groups?.detailed ? 'detailed' : 'compact';
-    const skipDays = isNextWeek ? 7 + 1 : 1;
-    const dateRange = getScheduleWeekDateRange(skipDays);
+    const skipDays = initialIsNextWeek ? 7 + 1 : 1;
+    const weekNumberFromPayload = Number(payload?.weekNumber);
+    const requestedWeekNumber = Number.isInteger(weekNumberFromPayload)
+      ? weekNumberFromPayload
+      : getScheduleAcademicWeekNumber(getScheduleTargetDate(skipDays));
     const target = await this.resolveScheduleTarget(
       ctx,
+      payload,
       teacherIdFromPayload ||
         (isPersonalTeacherRequest ? this.getPersonalTeacherId(ctx) : undefined),
       isPersonalTeacherRequest,
@@ -147,29 +179,34 @@ export class ScheduleUpdate {
       await ctx.setActivity();
     } catch {}
 
-    const [days, scheduleMessage] = await this.scheduleService.findNext({
-      skipDays,
+    const weekView = await this.scheduleService.getScheduleWeekView({
       targetId: target.id,
       targetType: target.type,
-      isWeek: true,
+      requestedWeekNumber,
       presentation,
     });
-    let message = scheduleMessage;
+    let message: string;
+    let dateRange = getScheduleWeekDateRange(skipDays);
+    let isNextWeek = initialIsNextWeek;
+    let weekTitle: string | null = null;
 
-    if (message) {
-      if (days - 1 > skipDays) {
-        message = ctx.i18n.t(LocalePhrase.Page_Schedule_NearestSchedule, {
-          days,
-          content: message,
-        });
-      }
+    if (weekView === false) {
+      message = ctx.i18n.t(LocalePhrase.Common_Error);
+    } else if (weekView) {
+      const weekDistance = getScheduleWeekDistance(
+        weekView.weekStartDate,
+        getScheduleTargetDate(1),
+      );
+      dateRange = weekView.dateRange;
+      isNextWeek = weekDistance === 1;
+      weekTitle = this.getWeekTitle(ctx, weekDistance);
 
       message = `${ctx.i18n.t(
         target.type === 'teacher'
           ? LocalePhrase.Page_Schedule_TeacherWeekTitle
           : LocalePhrase.Page_Schedule_WeekTitle,
-        { dateRange, isNextWeek, weekTitle: null },
-      )}\n${message}`;
+        { dateRange, isNextWeek, weekTitle },
+      )}\n${weekView.message}`;
     } else {
       message = ctx.i18n.t(LocalePhrase.Page_Schedule_NotFoundWeek, {
         dateRange,
@@ -182,16 +219,21 @@ export class ScheduleUpdate {
         target.type === 'teacher'
           ? { type: 'teacher', id: Number(target.id) }
           : { type: 'group', id: String(target.id) },
+        weekView || undefined,
       )
       .inline(true);
-    await ctx.send(appendScheduleTargetFooter(message, target.name), {
-      keyboard,
-    });
+    const content = appendScheduleTargetFooter(message, target.name);
+    if ('eventPayload' in ctx) {
+      await ctx.editMessage({ message: content, keyboard });
+      return;
+    }
+    await ctx.send(content, { keyboard });
   }
 
   /** Определяет преподавателя или учебную группу для текущего запроса. */
   private async resolveScheduleTarget(
-    ctx: IMessageContext,
+    ctx: IMessageContext | IMessageEventContext,
+    payload: SchedulePayload | undefined,
     teacherId: number | undefined,
     isPersonalTeacherRequest: boolean,
   ): Promise<
@@ -222,8 +264,10 @@ export class ScheduleUpdate {
       ? ctx.state.userSocial.groupName
       : ctx.state.conversation?.groupName;
     const groupNameFromMatch = ctx.$match?.groups?.groupName;
+    const groupNameFromPayload =
+      typeof payload?.groupName === 'string' ? payload.groupName : undefined;
     const groupNameQuery =
-      groupNameFromMatch || ctx.messagePayload?.groupName || selectedGroupName;
+      groupNameFromMatch || groupNameFromPayload || selectedGroupName;
     const groupName =
       groupNameQuery &&
       (this.scheduleService.getGroupByName(groupNameQuery) ||
@@ -247,10 +291,29 @@ export class ScheduleUpdate {
   }
 
   /** Использует ручной выбор либо однозначное совпадение ФИО профиля с расписанием. */
-  private getPersonalTeacherId(ctx: IMessageContext) {
+  private getPersonalTeacherId(ctx: IMessageContext | IMessageEventContext) {
     return (
       ctx.session.teacherId ??
       this.scheduleService.getTeacherByExactName(ctx.state.user?.fullname)?.id
     );
+  }
+
+  /** Формирует локализованный заголовок для недели вне текущей и следующей. */
+  private getWeekTitle(
+    ctx: IMessageContext | IMessageEventContext,
+    weekDistance: number,
+  ) {
+    if (weekDistance === 0 || weekDistance === 1) return null;
+    if (weekDistance === -1) {
+      return ctx.i18n.t(LocalePhrase.Page_Schedule_WeekTitle_Previous);
+    }
+
+    return weekDistance < 0
+      ? ctx.i18n.t(LocalePhrase.Page_Schedule_WeekTitle_Past, {
+          weeks: Math.abs(weekDistance),
+        })
+      : ctx.i18n.t(LocalePhrase.Page_Schedule_WeekTitle_Future, {
+          weeks: weekDistance,
+        });
   }
 }

@@ -59,6 +59,33 @@ describe('VKKeyboardFactory', () => {
     });
   });
 
+  it('adds week navigation with the target and selected week in callback payload', () => {
+    const keyboard = new VKKeyboardFactory().getSchedule(
+      ctx,
+      { type: 'teacher', id: 42 },
+      { previousWeekNumber: 4, nextWeekNumber: 6 },
+    );
+    const buttons = JSON.parse(String(keyboard.inline())).buttons.flat();
+    const payloads = buttons.map((button: any) =>
+      JSON.parse(button.action.payload),
+    );
+
+    expect(payloads).toEqual(
+      expect.arrayContaining([
+        {
+          phrase: 'button.schedule.previous_week',
+          teacherId: 42,
+          weekNumber: 4,
+        },
+        {
+          phrase: 'button.schedule.next_week',
+          teacherId: 42,
+          weekNumber: 6,
+        },
+      ]),
+    );
+  });
+
   it('creates a schedule notif editor within VK inline keyboard limits', () => {
     const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 1,

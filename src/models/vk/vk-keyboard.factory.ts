@@ -17,6 +17,7 @@ import {
 import { FeedbackCategory } from '../feedback/feedback.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
+import type { ScheduleWeekView } from '../schedule/schedule.service';
 
 export type VKPaginationItem =
   | string
@@ -1827,6 +1828,7 @@ export class VKKeyboardFactory {
   public getSchedule(
     ctx: IContext,
     target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
+    weekView?: Pick<ScheduleWeekView, 'previousWeekNumber' | 'nextWeekNumber'>,
   ) {
     const payload = (phrase: LocalePhrase) => ({
       phrase,
@@ -1834,6 +1836,29 @@ export class VKKeyboardFactory {
         ? { teacherId: target.id }
         : { groupName: target.id }),
     });
+
+    const navigationButtons = [
+      weekView?.previousWeekNumber !== undefined
+        ? Keyboard.callbackButton({
+            label: ctx.i18n.t(LocalePhrase.Button_Schedule_PreviousWeek),
+            payload: {
+              ...payload(LocalePhrase.Button_Schedule_PreviousWeek),
+              weekNumber: weekView.previousWeekNumber,
+            },
+            color: Keyboard.SECONDARY_COLOR,
+          })
+        : null,
+      weekView?.nextWeekNumber !== undefined
+        ? Keyboard.callbackButton({
+            label: ctx.i18n.t(LocalePhrase.Button_Schedule_NextWeek),
+            payload: {
+              ...payload(LocalePhrase.Button_Schedule_NextWeek),
+              weekNumber: weekView.nextWeekNumber,
+            },
+            color: Keyboard.PRIMARY_COLOR,
+          })
+        : null,
+    ].filter((button): button is IKeyboardProxyButton => button !== null);
 
     return Keyboard.keyboard([
       [
@@ -1860,6 +1885,7 @@ export class VKKeyboardFactory {
           color: Keyboard.PRIMARY_COLOR,
         }),
       ],
+      ...(navigationButtons.length ? [navigationButtons] : []),
     ]);
   }
 

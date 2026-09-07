@@ -167,6 +167,8 @@ export type LocalePhraseParams = {
     /** Пока дальние недели не реализованы, передаётся как `null`. */
     weekTitle: string | null;
   };
+  [LocalePhrase.Page_Schedule_WeekTitle_Past]: { weeks: number };
+  [LocalePhrase.Page_Schedule_WeekTitle_Future]: { weeks: number };
 
   [LocalePhrase.Page_ScheduleNotif_Settings]: {
     notif: LocaleScheduleNotifTemplate | null | undefined;

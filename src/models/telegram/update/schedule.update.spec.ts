@@ -6,6 +6,7 @@ describe('Telegram ScheduleUpdate', () => {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
       findNext: jest.fn(),
+      getScheduleWeekView: jest.fn(),
     };
 
     return {
@@ -60,6 +61,59 @@ describe('Telegram ScheduleUpdate', () => {
       expect(ctx.replyWithHTML).toHaveBeenCalledWith(
         'Нет расписания: 7 сентября\n\n[ЦИС-46]',
         {},
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('shows neighboring available weeks and a relative title for a group', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-09-07T09:00:00.000Z'));
+
+    try {
+      const { update, scheduleService } = createUpdate();
+      const weekView = {
+        weekNumber: 3,
+        weekStartDate: new Date('2026-09-21T00:00:00.000Z'),
+        dateRange: '21–27 сентября',
+        message: '#НПн',
+        previousWeekNumber: 2,
+      };
+      scheduleService.getScheduleWeekView.mockResolvedValue(weekView);
+      const keyboardFactory = {
+        getScheduleInline: jest.fn(() => ({})),
+      };
+      (update as any).keyboardFactory = keyboardFactory;
+      const ctx = {
+        chat: { type: 'private' },
+        callbackQuery: {},
+        userSocial: { groupName: 'ЦИС-46' },
+        match: { groups: { groupName: 'ЦИС-46', weekNumber: '3' } },
+        scene: { enter: jest.fn() },
+        editMessageText: jest.fn(),
+        answerCbQuery: jest.fn(),
+        i18n: { t: jest.fn((phrase) => phrase) },
+      } as any;
+
+      await update.hearSchedul_Week(ctx);
+
+      expect(scheduleService.getScheduleWeekView).toHaveBeenCalledWith({
+        targetId: 'ЦИС-46',
+        targetType: 'group',
+        requestedWeekNumber: 3,
+        withTags: true,
+        presentation: 'compact',
+      });
+      expect(ctx.i18n.t).toHaveBeenCalledWith('page.schedule.week_title', {
+        dateRange: '21–27 сентября',
+        isNextWeek: false,
+        weekTitle: 'page.schedule.week_title_future',
+      });
+      expect(keyboardFactory.getScheduleInline).toHaveBeenCalledWith(
+        ctx,
+        { type: 'group', id: 'ЦИС-46' },
+        weekView,
       );
     } finally {
       jest.useRealTimers();

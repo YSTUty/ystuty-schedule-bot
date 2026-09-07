@@ -21,6 +21,7 @@ import {
 import { FeedbackCategory } from '../feedback/feedback.types';
 import { buildScheduleNotifPage } from '../schedule-notif/schedule-notif-keyboard.util';
 import { SCHEDULE_NOTIFICATION_MINUTES } from '../schedule-notif/schedule-notif-ui.util';
+import type { ScheduleWeekView } from '../schedule/schedule.service';
 
 import {
   TelegramButtonOptions,
@@ -1402,6 +1403,7 @@ export class TelegramKeyboardFactory {
   public getScheduleInline(
     ctx: IContext,
     target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
+    weekView?: Pick<ScheduleWeekView, 'previousWeekNumber' | 'nextWeekNumber'>,
   ) {
     const makeButton = (
       phrase: LocalePhrase,
@@ -1415,6 +1417,28 @@ export class TelegramKeyboardFactory {
         { style },
       );
 
+    const navigationButtons: ReturnType<typeof TelegramButtons.callback>[] = [];
+    if (weekView?.previousWeekNumber !== undefined) {
+      navigationButtons.push(
+        TelegramButtons.callback(
+          ctx.i18n.t(LocalePhrase.Button_Schedule_PreviousWeek),
+          target.type === 'teacher'
+            ? `${LocalePhrase.Button_Schedule_PreviousWeek}:teacher:${target.id}:week:${weekView.previousWeekNumber}`
+            : `${LocalePhrase.Button_Schedule_PreviousWeek}:${target.id}:week:${weekView.previousWeekNumber}`,
+        ),
+      );
+    }
+    if (weekView?.nextWeekNumber !== undefined) {
+      navigationButtons.push(
+        TelegramButtons.callback(
+          ctx.i18n.t(LocalePhrase.Button_Schedule_NextWeek),
+          target.type === 'teacher'
+            ? `${LocalePhrase.Button_Schedule_NextWeek}:teacher:${target.id}:week:${weekView.nextWeekNumber}`
+            : `${LocalePhrase.Button_Schedule_NextWeek}:${target.id}:week:${weekView.nextWeekNumber}`,
+        ),
+      );
+    }
+
     return Markup.inlineKeyboard([
       [
         makeButton(LocalePhrase.Button_Schedule_ForToday, 'primary'),
@@ -1424,6 +1448,7 @@ export class TelegramKeyboardFactory {
         makeButton(LocalePhrase.Button_Schedule_ForWeek, 'primary'),
         makeButton(LocalePhrase.Button_Schedule_ForNextWeek),
       ],
+      ...(navigationButtons.length ? [navigationButtons] : []),
     ]);
   }
 

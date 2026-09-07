@@ -35,6 +35,16 @@ export type GroupInstitute = {
   groups: string[];
 };
 
+/** Сформированная доступная неделя и номера соседних недель для навигации. */
+export type ScheduleWeekView = {
+  weekNumber: number;
+  weekStartDate: Date;
+  dateRange: string;
+  message: string;
+  previousWeekNumber?: number;
+  nextWeekNumber?: number;
+};
+
 @Injectable()
 export class ScheduleService implements OnModuleInit {
   private readonly logger = new Logger(ScheduleService.name);
@@ -454,11 +464,9 @@ export class ScheduleService implements OnModuleInit {
   }) {
     // // ! for test
     // const now = new Date(2024, 0, 12);
-    const now = new Date();
-    now.setDate(now.getDate() + skipDays);
+    const now = scheduleUtil.getScheduleTargetDate(skipDays);
 
-    const weekNumber =
-      scheduleUtil.getWeekNumber(now) - scheduleUtil.getWeekOffsetByYear(now);
+    const weekNumber = scheduleUtil.getScheduleAcademicWeekNumber(now);
     const dayNumber: WeekNumberType | null = isWeek
       ? null
       : ((day) => (day > 0 ? day - 1 : 6))(now.getDay());
@@ -507,6 +515,91 @@ export class ScheduleService implements OnModuleInit {
       }
       this.logger.error(
         'Failed to load formatted schedule',
+        error instanceof Error ? error.stack : String(error),
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Находит ближайшую доступную неделю не раньше запрошенной и формирует
+   * метаданные для перехода между неделями одного target.
+   */
+  public async getScheduleWeekView({
+    targetId,
+    targetType,
+    requestedWeekNumber,
+    withTags = false,
+    presentation = 'compact',
+  }: {
+    targetId: string | number;
+    targetType: 'group' | 'teacher';
+    requestedWeekNumber: number;
+    withTags?: boolean;
+    presentation?: SchedulePresentation;
+  }): Promise<ScheduleWeekView | null | false> {
+    this.metricsService.incrementScheduleRequest(targetType, targetId);
+
+    try {
+      const response = await this.getSchedule(targetId, targetType);
+      if (!response) return null;
+
+      const weeks = response.items
+        .map((week) => {
+          const dates = week.days
+            .map((day) => new Date(day.info.date))
+            .filter((date) => !Number.isNaN(date.getTime()));
+          const firstDate = dates.sort(
+            (first, second) => first.getTime() - second.getTime(),
+          )[0];
+
+          return firstDate
+            ? {
+                week,
+                weekStartDate: scheduleUtil.getScheduleWeekStartDate(firstDate),
+              }
+            : null;
+        })
+        .filter(
+          (week): week is { week: OneWeek; weekStartDate: Date } =>
+            week !== null,
+        )
+        .sort(
+          (first, second) =>
+            first.weekStartDate.getTime() - second.weekStartDate.getTime(),
+        );
+      const weekIndex = weeks.findIndex(
+        (item) => item.week.number === requestedWeekNumber,
+      );
+      const selectedIndex =
+        weekIndex >= 0
+          ? weekIndex
+          : weeks.findIndex((item) => item.week.number > requestedWeekNumber);
+      if (selectedIndex < 0) return null;
+
+      const selected = weeks[selectedIndex];
+      const message = formatScheduleWeekDays({
+        week: selected.week,
+        addHashTag: true,
+        withTags,
+        targetType,
+        presentation,
+      });
+      if (!message) return null;
+
+      return {
+        weekNumber: selected.week.number,
+        weekStartDate: selected.weekStartDate,
+        dateRange: scheduleUtil.getScheduleWeekDateRangeForDate(
+          selected.weekStartDate,
+        ),
+        message,
+        previousWeekNumber: weeks[selectedIndex - 1]?.week.number,
+        nextWeekNumber: weeks[selectedIndex + 1]?.week.number,
+      };
+    } catch (error) {
+      this.logger.error(
+        'Failed to load schedule week view',
         error instanceof Error ? error.stack : String(error),
       );
       return false;

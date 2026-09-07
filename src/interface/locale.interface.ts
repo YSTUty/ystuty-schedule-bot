@@ -112,6 +112,8 @@ export enum LocalePhrase {
   Button_Schedule_ForTomorrow = 'button.schedule.for_tomorrow',
   Button_Schedule_ForWeek = 'button.schedule.for_week',
   Button_Schedule_ForNextWeek = 'button.schedule.for_next_week',
+  Button_Schedule_PreviousWeek = 'button.schedule.previous_week',
+  Button_Schedule_NextWeek = 'button.schedule.next_week',
   Button_Schedule_Teacher = 'button.schedule.teacher',
   Button_Schedule_MyTeacher = 'button.schedule.my_teacher',
 
@@ -149,6 +151,9 @@ export enum LocalePhrase {
   Page_Schedule_TeacherNotSelected = 'page.schedule.teacher_not_selected',
   Page_Schedule_WeekTitle = 'page.schedule.week_title',
   Page_Schedule_TeacherWeekTitle = 'page.schedule.teacher_week_title',
+  Page_Schedule_WeekTitle_Previous = 'page.schedule.week_title_previous',
+  Page_Schedule_WeekTitle_Past = 'page.schedule.week_title_past',
+  Page_Schedule_WeekTitle_Future = 'page.schedule.week_title_future',
   Page_ScheduleNotif_Settings = 'page.schedule_notification.settings',
   Page_ScheduleNotif_SelectHour = 'page.schedule_notification.select_hour',
   Page_ScheduleNotif_SelectMinute = 'page.schedule_notification.select_minute',

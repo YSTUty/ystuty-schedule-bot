@@ -186,22 +186,59 @@ describe('VKKeyboardFactory', () => {
     );
   });
 
-  it('asks for deletion confirmation instead of deleting immediately', () => {
-    const keyboard = new VKKeyboardFactory().getScheduleNotifSettings(ctx, {
-      id: 7,
-      isEnabled: true,
-    });
+  it('builds the notif deletion confirmation keyboard', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifDeleteConfirmation(
+      {
+        i18n: { t: () => 'Подтвердить' },
+      } as any,
+      7,
+    );
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const deleteButton = renderedKeyboard.buttons
       .flat()
       .find(
         (button: any) =>
-          button.action.label === 'button.schedule_notification.delete',
+          JSON.parse(button.action.payload).scheduleNotifAction === 'delete',
       );
 
-    expect(JSON.parse(deleteButton.action.payload).scheduleNotifAction).toBe(
-      'deleteConfirm',
+    expect(JSON.parse(deleteButton.action.payload)).toEqual({
+      scheduleNotifAction: 'delete',
+      notifId: 7,
+    });
+  });
+
+  it('paginates eight personal notifs within VK inline limits', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifSettings(
+      ctx,
+      Array.from({ length: 8 }, (_, index) => ({
+        id: index + 1,
+        isEnabled: index % 2 === 0,
+        targetLabel: `Группа: ЦИС-${index + 1}`,
+      })),
+      false,
     );
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons).toHaveLength(5);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(7);
+  });
+
+  it('adds a back button when changing an existing notif target', () => {
+    const keyboard = new VKKeyboardFactory().getScheduleNotifTargetType(
+      {
+        i18n: { t: () => 'Назад' },
+      } as any,
+      { notifId: 7 },
+    );
+    const buttons = JSON.parse(String(keyboard.inline())).buttons.flat();
+    const payloads = buttons.map((button: any) =>
+      JSON.parse(button.action.payload),
+    );
+
+    expect(payloads).toContainEqual({
+      scheduleNotifAction: 'edit',
+      notifId: 7,
+    });
   });
 
   it('uses a compact three-button pager for notif hours', () => {

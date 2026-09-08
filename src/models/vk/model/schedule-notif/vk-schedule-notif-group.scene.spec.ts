@@ -1,6 +1,84 @@
 import { VkScheduleNotifGroupScene } from './vk-schedule-notif-group.scene';
 
 describe('VkScheduleNotifGroupScene', () => {
+  it('creates a group notification from a draft selected in the picker', async () => {
+    const notifService = {
+      createForUserSocial: jest.fn().mockResolvedValue({ id: 7 }),
+      getNotif: jest.fn().mockResolvedValue({
+        id: 7,
+        targetId: 'ЦИС-11',
+        deliveryHour: 8,
+        deliveryMinute: 30,
+        period: 'day',
+        targetDayOffset: 0,
+        weekdays: [1],
+        isEnabled: true,
+      }),
+    };
+    const draftService = {
+      consume: jest.fn().mockResolvedValue({
+        userSocialId: 2,
+        settings: {
+          deliveryHour: 8,
+          deliveryMinute: 30,
+          period: 'day',
+          targetDayOffset: 0,
+          weekdays: [1],
+        },
+      }),
+    };
+    const scheduleService = {
+      getGroupByName: jest.fn().mockReturnValue('ЦИС-11'),
+      parseGroupName: jest.fn(),
+    };
+    const scene = new VkScheduleNotifGroupScene(
+      notifService as any,
+      draftService as any,
+      {} as any,
+      scheduleService as any,
+      {
+        getScheduleNotifEditor: jest
+          .fn()
+          .mockReturnValue({ inline: jest.fn().mockReturnValue({}) }),
+      } as any,
+    );
+    const ctx = {
+      isDM: true,
+      eventPayload: {
+        scheduleNotifGroupAction: 'select',
+        groupName: 'ЦИС-11',
+      },
+      senderId: 5,
+      peerId: 10,
+      state: { userSocial: { id: 2 } },
+      scene: {
+        state: { draftId: '0123456789ab' },
+        step: { firstTime: false },
+        leave: jest.fn(async () => {
+          ctx.scene.state = {} as any;
+        }),
+      },
+      i18n: { t: jest.fn().mockReturnValue('Настройки рассылки') },
+      isMessageEventContext: jest.fn().mockReturnValue(true),
+      answer: jest.fn(),
+      editMessage: jest.fn(),
+    } as any;
+
+    await scene.step(ctx);
+
+    expect(draftService.consume).toHaveBeenCalledWith('0123456789ab', {
+      transport: 'vkontakte',
+      ownerId: 5,
+      peerId: 10,
+    });
+    expect(notifService.createForUserSocial).toHaveBeenCalledWith(
+      ctx.state.userSocial,
+      { type: 'group', id: 'ЦИС-11' },
+      expect.objectContaining({ deliveryHour: 8, deliveryMinute: 30 }),
+    );
+    expect(notifService.getNotif).toHaveBeenCalledWith(2, 7);
+  });
+
   it('renders institutes once when the scene first receives the source callback', async () => {
     const groupPicker = {
       renderInstitutes: jest.fn().mockReturnValue({
@@ -10,6 +88,7 @@ describe('VkScheduleNotifGroupScene', () => {
       renderGroups: jest.fn(),
     };
     const scene = new VkScheduleNotifGroupScene(
+      {} as any,
       {} as any,
       groupPicker as any,
       {} as any,
@@ -51,6 +130,7 @@ describe('VkScheduleNotifGroupScene', () => {
     };
     const scene = new VkScheduleNotifGroupScene(
       {} as any,
+      {} as any,
       groupPicker as any,
       {} as any,
       keyboardFactory as any,
@@ -87,7 +167,7 @@ describe('VkScheduleNotifGroupScene', () => {
   it('extracts a group name from manual input before changing the notif', async () => {
     const notifService = {
       changeGroup: jest.fn().mockResolvedValue(true),
-      getFirstNotif: jest.fn().mockResolvedValue(null),
+      getNotif: jest.fn().mockResolvedValue(null),
     };
     const scheduleService = {
       getGroupByName: jest.fn().mockReturnValue(undefined),
@@ -95,6 +175,7 @@ describe('VkScheduleNotifGroupScene', () => {
     };
     const scene = new VkScheduleNotifGroupScene(
       notifService as any,
+      {} as any,
       {} as any,
       scheduleService as any,
       { getScheduleNotifEditor: jest.fn() } as any,
@@ -123,7 +204,7 @@ describe('VkScheduleNotifGroupScene', () => {
   it('returns a conversation notif picker callback to the conversation editor', async () => {
     const notifService = {
       changeConversationGroup: jest.fn().mockResolvedValue(true),
-      getFirstConversationNotif: jest.fn().mockResolvedValue({
+      getConversationNotif: jest.fn().mockResolvedValue({
         id: 7,
         weekdays: [1, 2, 3],
       }),
@@ -135,6 +216,7 @@ describe('VkScheduleNotifGroupScene', () => {
     };
     const scene = new VkScheduleNotifGroupScene(
       notifService as any,
+      {} as any,
       {} as any,
       scheduleService as any,
       {
@@ -173,7 +255,7 @@ describe('VkScheduleNotifGroupScene', () => {
       7,
       'ЦИС-11',
     );
-    expect(notifService.getFirstConversationNotif).toHaveBeenCalledWith(3);
+    expect(notifService.getConversationNotif).toHaveBeenCalledWith(3, 7);
     expect(notifService.getFirstNotif).not.toHaveBeenCalled();
     expect(ctx.editMessage).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Настройки рассылки' }),

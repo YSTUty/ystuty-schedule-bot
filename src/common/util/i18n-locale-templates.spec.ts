@@ -81,6 +81,7 @@ const localeTemplateData = {
   ],
   mode: 'manual',
   nextMode: 'all',
+  notifsText: '1. Группа: ЦИС-46\nВремя: 08:30 · текущий день',
   notif: {
     deliveryHour: 8,
     deliveryMinute: 30,
@@ -116,6 +117,7 @@ const localeTemplateData = {
   },
   teacher: { name: 'Иванов И. И.' },
   totalCount: 10,
+  targetName: 'Группа: ЦИС-46',
   totalPages: 3,
   user: {
     fullname: 'Иванов Иван Иванович',

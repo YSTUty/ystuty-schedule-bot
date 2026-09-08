@@ -105,6 +105,10 @@ button:
     create: Настроить рассылку
     edit: Редактировать
     change_group: Изменить группу
+    change_target: Изменить цель
+    add: Добавить рассылку
+    target_group: Группа
+    target_teacher: Преподаватель
     done: Готово
     enable: Включить
     disable: Выключить
@@ -270,7 +274,7 @@ page:
   schedule_notification:
     settings: |
       <b>Рассылка расписания</b>
-      ${notif ? ('Группа: <code>' + notif.targetId + '</code>\nВремя: <code>' + String(notif.deliveryHour).padStart(2, '0') + ':' + String(notif.deliveryMinute).padStart(2, '0') + '</code>\nРасписание: <code>' + notif.targetPeriodLabel + '</code>\nДни: <code>' + notif.weekdaysLabel + '</code>\nСтатус: <code>' + (notif.isEnabled ? 'включена' : 'выключена') + '</code>') : 'Рассылка пока не настроена.'}
+      ${notifsText || 'Рассылка пока не настроена.'}
     select_hour: Выбери время отправки.
     select_minute: Выбери минуты отправки.
     select_target: Выбери, какое расписание получать в это время.
@@ -282,7 +286,10 @@ page:
     need_group: Сначала выбери учебную группу, затем настрой рассылку.
     saved: Настройки рассылки сохранены.
     select_group: Выбери группу для этой рассылки.
-    confirm_delete: Удалить рассылку расписания для группы <code>${groupName}</code>? Это действие нельзя отменить.
+    select_target_type: Выбери, чьё расписание будет приходить в этой рассылке.
+    select_teacher: Выбери преподавателя или напиши его фамилию.
+    teacher_not_found: Преподаватель по запросу <code>${query}</code> не найден. Попробуй изменить запрос.
+    confirm_delete: Удалить рассылку расписания для <code>${targetName}</code>? Это действие нельзя отменить.
   feedback:
     select_category: |
       <b>Обратная связь</b>

@@ -1,29 +1,42 @@
 import { Action, Command, Ctx, Update } from 'nestjs-telega';
 
+import { TelegramError } from 'telegraf-hardened';
+
+import { SocialType } from '@my-common/constants';
 import { TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { ICallbackQueryContext, ICbQOrMsg } from '@my-interfaces/telegram';
 
+import { ScheduleNotifDraftService } from '../../../schedule-notif/schedule-notif-draft.service';
 import {
   getScheduleNotifTargetPhrase,
   getWeekdaysLabel,
   parseWeekdays,
   toggleWeekday,
 } from '../../../schedule-notif/schedule-notif-ui.util';
+import {
+  CONVERSATION_SCHEDULE_NOTIF_LIMIT,
+  PERSONAL_SCHEDULE_NOTIF_LIMIT,
+} from '../../../schedule-notif/schedule-notif.constants';
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
 import {
   ScheduleNotifPeriod,
   ScheduleNotifTargetDayOffset,
+  ScheduleNotifTargetType,
 } from '../../../schedule-notif/schedule-notif.types';
+import { ScheduleService } from '../../../schedule/schedule.service';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TelegramService } from '../../telegram.service';
 
 import { TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE } from './tg-schedule-notif-group.scene';
+import { TELEGRAM_SCHEDULE_NOTIFICATION_TEACHER_SCENE } from './tg-schedule-notif-teacher.scene';
 
 @Update()
 export class TgScheduleNotifUpdate {
   constructor(
     private readonly notifService: ScheduleNotifService,
+    private readonly draftService: ScheduleNotifDraftService,
+    private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
     private readonly telegramService: TelegramService,
   ) {}
@@ -79,6 +92,40 @@ export class TgScheduleNotifUpdate {
       });
       return;
     }
+    if (action === 'changeTarget') {
+      const notif = await this.getNotif(ctx, Number(params[0]));
+      if (!notif) {
+        await this.openSettings(ctx, true);
+        return;
+      }
+      await this.editStep(
+        ctx,
+        ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTargetType),
+        this.keyboardFactory.getScheduleNotifTargetType(
+          ctx,
+          `scheduleNotif:targetType:${notif.id}`,
+          true,
+          `scheduleNotif:edit:${notif.id}`,
+        ),
+      );
+      return;
+    }
+    if (action === 'targetType') {
+      const notifId = Number(params[0]);
+      const targetType = params[1];
+      if (targetType === ScheduleNotifTargetType.Group) {
+        await ctx.scene.enter(TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE, {
+          notifId,
+        });
+        return;
+      }
+      if (targetType === ScheduleNotifTargetType.Teacher) {
+        await ctx.scene.enter(TELEGRAM_SCHEDULE_NOTIFICATION_TEACHER_SCENE, {
+          notifId,
+        });
+      }
+      return;
+    }
     if (action === 'editTime') {
       await this.editStep(
         ctx,
@@ -117,8 +164,8 @@ export class TgScheduleNotifUpdate {
       return;
     }
     if (action === 'editTarget') {
-      const notif = await this.getNotif(ctx);
-      if (!notif || notif.id !== Number(params[0])) {
+      const notif = await this.getNotif(ctx, Number(params[0]));
+      if (!notif) {
         await ctx.tryAnswerCbQuery('Рассылка не найдена');
         await this.openSettings(ctx, true);
         return;
@@ -145,8 +192,8 @@ export class TgScheduleNotifUpdate {
       return;
     }
     if (action === 'editWeekday') {
-      const notif = await this.getNotif(ctx);
-      if (!notif || notif.id !== Number(params[0])) {
+      const notif = await this.getNotif(ctx, Number(params[0]));
+      if (!notif) {
         await ctx.tryAnswerCbQuery('Рассылка не найдена');
         await this.openSettings(ctx, true);
         return;
@@ -256,7 +303,7 @@ export class TgScheduleNotifUpdate {
             ]
           : params;
       try {
-        await this.upsertNotif(ctx, {
+        const settings = {
           deliveryHour: Number(hour),
           deliveryMinute: Number(minute),
           period:
@@ -268,16 +315,42 @@ export class TgScheduleNotifUpdate {
               ? null
               : (Number(targetDayOffset) as ScheduleNotifTargetDayOffset),
           weekdays: parseWeekdays(rawWeekdays),
+        };
+        const draftId = await this.draftService.create({
+          transport: SocialType.Telegram,
+          ownerId: ctx.from.id,
+          peerId: ctx.chat!.id,
+          userSocialId: ctx.userSocial.id,
+          settings,
         });
-        await ctx.tryAnswerCbQuery(
-          ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Saved),
+        await this.editStep(
+          ctx,
+          ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_SelectTargetType),
+          this.keyboardFactory.getScheduleNotifTargetType(
+            ctx,
+            `scheduleNotif:createTarget:${draftId}`,
+            true,
+          ),
         );
+        return;
       } catch (error) {
         await ctx.tryAnswerCbQuery(
           error instanceof Error ? error.message : String(error),
         );
       }
-      await this.openSettings(ctx, true);
+      return;
+    }
+    if (action === 'createTarget') {
+      const [draftId, targetType] = params;
+      if (targetType === ScheduleNotifTargetType.Teacher) {
+        await ctx.scene.enter(TELEGRAM_SCHEDULE_NOTIFICATION_TEACHER_SCENE, {
+          draftId,
+        });
+        return;
+      }
+      await ctx.scene.enter(TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE, {
+        draftId,
+      });
       return;
     }
     if (action === 'enabled') {
@@ -286,8 +359,8 @@ export class TgScheduleNotifUpdate {
       return;
     }
     if (action === 'deleteConfirm') {
-      const notif = await this.getNotif(ctx);
-      if (!notif || notif.id !== Number(params[0])) {
+      const notif = await this.getNotif(ctx, Number(params[0]));
+      if (!notif) {
         await ctx.tryAnswerCbQuery('Рассылка не найдена');
         await this.openSettings(ctx, true);
         return;
@@ -295,7 +368,7 @@ export class TgScheduleNotifUpdate {
       await this.editStep(
         ctx,
         ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_ConfirmDelete, {
-          groupName: notif.targetId,
+          targetName: this.getTargetLabel(notif),
         }),
         this.keyboardFactory.getScheduleNotifDeleteConfirmation(ctx, notif.id),
       );
@@ -308,34 +381,17 @@ export class TgScheduleNotifUpdate {
   }
 
   private async openSettings(ctx: ICbQOrMsg, edit = false) {
-    if (
-      !(this.isConv(ctx)
-        ? ctx.conversation?.groupName
-        : ctx.userSocial.groupName)
-    ) {
-      const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_NeedGroup);
-      if (edit && ctx.updateType === 'callback_query') {
-        await ctx.editMessageText(
-          text,
-          this.keyboardFactory.getSelectGroupInline(ctx),
-        );
-      } else {
-        await ctx.replyWithHTML(
-          text,
-          this.keyboardFactory.getSelectGroupInline(ctx),
-        );
-      }
-      return;
-    }
-
-    const notif = await this.getNotif(ctx);
-    const notifView = this.getNotifView(ctx, notif);
-    const text = ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
-      notif: notifView,
-    });
+    const notifs = this.isConv(ctx)
+      ? await this.notifService.getConversationNotifs(ctx.conversation!.id)
+      : await this.notifService.getNotifs(ctx.userSocial.id);
+    const notifViews = notifs.map((notif) => this.getNotifView(ctx, notif));
+    const text = this.getSettingsText(ctx, notifViews);
     const keyboard = this.keyboardFactory.getScheduleNotifSettings(
       ctx,
-      notif ?? undefined,
+      notifViews,
+      this.isConv(ctx)
+        ? notifs.length < CONVERSATION_SCHEDULE_NOTIF_LIMIT
+        : notifs.length < PERSONAL_SCHEDULE_NOTIF_LIMIT,
     );
     if (edit && ctx.updateType === 'callback_query') {
       await this.editStep(ctx, text, keyboard);
@@ -371,17 +427,15 @@ export class TgScheduleNotifUpdate {
   }
 
   private async openEditor(ctx: ICallbackQueryContext, notifId: number) {
-    const notif = await this.getNotif(ctx);
-    if (!notif || notif.id !== notifId) {
+    const notif = await this.getNotif(ctx, notifId);
+    if (!notif) {
       await ctx.tryAnswerCbQuery('Рассылка не найдена');
       await this.openSettings(ctx, true);
       return;
     }
     await this.editStep(
       ctx,
-      ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
-        notif: this.getNotifView(ctx, notif),
-      }),
+      this.getSettingsText(ctx, [this.getNotifView(ctx, notif)]),
       this.keyboardFactory.getScheduleNotifEditor(ctx, notif),
     );
   }
@@ -397,8 +451,8 @@ export class TgScheduleNotifUpdate {
       weekdays: number[];
     }>,
   ) {
-    const notif = await this.getNotif(ctx);
-    if (!notif || notif.id !== notifId) {
+    const notif = await this.getNotif(ctx, notifId);
+    if (!notif) {
       await ctx.tryAnswerCbQuery('Рассылка не найдена');
       await this.openSettings(ctx, true);
       return;
@@ -421,25 +475,60 @@ export class TgScheduleNotifUpdate {
     text: string,
     keyboard: Parameters<ICallbackQueryContext['editMessageText']>[1],
   ) {
-    await ctx.editMessageText(text, {
-      parse_mode: 'HTML',
-      ...keyboard,
-    });
+    try {
+      await ctx.editMessageText(text, {
+        parse_mode: 'HTML',
+        ...keyboard,
+      });
+    } catch (error) {
+      if (
+        error instanceof TelegramError &&
+        error.code === 400 &&
+        error.description.includes('message is not modified')
+      ) {
+        return;
+      }
+      throw error;
+    }
   }
 
   private getNotifView(
     ctx: ICbQOrMsg,
-    notif: Awaited<ReturnType<typeof this.getNotif>>,
+    notif: NonNullable<Awaited<ReturnType<typeof this.getNotif>>>,
   ) {
-    return (
-      notif && {
-        ...notif,
-        weekdaysLabel: getWeekdaysLabel(notif.weekdays),
-        targetPeriodLabel: ctx.i18n.t(
-          getScheduleNotifTargetPhrase(notif.period, notif.targetDayOffset),
-        ),
-      }
-    );
+    return {
+      ...notif,
+      targetLabel: this.getTargetLabel(notif),
+      weekdaysLabel: getWeekdaysLabel(notif.weekdays),
+      targetPeriodLabel: ctx.i18n.t(
+        getScheduleNotifTargetPhrase(notif.period, notif.targetDayOffset),
+      ),
+    };
+  }
+
+  private getTargetLabel(notif: {
+    targetType: ScheduleNotifTargetType;
+    targetId: string;
+  }) {
+    if (notif.targetType === ScheduleNotifTargetType.Teacher) {
+      return `Преподаватель: ${this.scheduleService.getTeacherName(Number(notif.targetId)) || notif.targetId}`;
+    }
+    return `Группа: ${notif.targetId}`;
+  }
+
+  private getSettingsText(
+    ctx: ICbQOrMsg,
+    notifs: ReturnType<TgScheduleNotifUpdate['getNotifView']>[],
+  ) {
+    const notifsText = notifs
+      .map(
+        (notif, index) =>
+          `${index + 1}. ${notif.targetLabel}\nВремя: <code>${String(notif.deliveryHour).padStart(2, '0')}:${String(notif.deliveryMinute).padStart(2, '0')}</code> · ${notif.targetPeriodLabel}\nДни: ${notif.weekdaysLabel} · ${notif.isEnabled ? 'включена' : 'выключена'}`,
+      )
+      .join('\n\n');
+    return ctx.i18n.t(LocalePhrase.Page_ScheduleNotif_Settings, {
+      notifsText,
+    });
   }
 
   private isConv(ctx: ICbQOrMsg) {
@@ -472,22 +561,19 @@ export class TgScheduleNotifUpdate {
     await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Common_NoAccess));
   }
 
-  private async getNotif(ctx: ICbQOrMsg) {
+  private async getNotif(ctx: ICbQOrMsg, notifId?: number) {
     return this.isConv(ctx)
-      ? await this.notifService.getFirstConversationNotif(ctx.conversation!.id)
-      : await this.notifService.getFirstNotif(ctx.userSocial.id);
-  }
-
-  private async upsertNotif(
-    ctx: ICbQOrMsg,
-    settings: Parameters<ScheduleNotifService['upsertFirstNotif']>[1],
-  ) {
-    return this.isConv(ctx)
-      ? await this.notifService.upsertFirstConversationNotif(
-          ctx.conversation!,
-          settings,
-        )
-      : await this.notifService.upsertFirstNotif(ctx.userSocial, settings);
+      ? notifId
+        ? await this.notifService.getConversationNotif(
+            ctx.conversation!.id,
+            notifId,
+          )
+        : await this.notifService.getFirstConversationNotif(
+            ctx.conversation!.id,
+          )
+      : notifId
+        ? await this.notifService.getNotif(ctx.userSocial.id, notifId)
+        : await this.notifService.getFirstNotif(ctx.userSocial.id);
   }
 
   private async setEnabled(

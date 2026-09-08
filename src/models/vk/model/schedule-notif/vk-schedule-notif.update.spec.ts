@@ -6,7 +6,13 @@ import { VkScheduleNotifUpdate } from './vk-schedule-notif.update';
 
 describe('VkScheduleNotifUpdate', () => {
   it('acknowledges the welcome-card notification callback', async () => {
-    const update = new VkScheduleNotifUpdate({} as any, {} as any, {} as any);
+    const update = new VkScheduleNotifUpdate(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
     (update as any).openSettings = jest.fn();
     const ctx = {
       eventPayload: { phrase: LocalePhrase.Button_ScheduleNotif },
@@ -44,8 +50,9 @@ describe('VkScheduleNotifUpdate', () => {
 
   it('shows the notif group before confirming deletion', async () => {
     const notifService = {
-      getFirstNotif: jest.fn().mockResolvedValue({
+      getNotif: jest.fn().mockResolvedValue({
         id: 7,
+        targetType: 'group',
         targetId: 'ЦИС-11',
       }),
     };
@@ -56,6 +63,8 @@ describe('VkScheduleNotifUpdate', () => {
     };
     const update = new VkScheduleNotifUpdate(
       notifService as any,
+      {} as any,
+      { getTeacherName: jest.fn() } as any,
       keyboardFactory as any,
       {} as any,
     );
@@ -72,14 +81,16 @@ describe('VkScheduleNotifUpdate', () => {
 
     expect(t).toHaveBeenCalledWith(
       LocalePhrase.Page_ScheduleNotif_ConfirmDelete,
-      { groupName: 'ЦИС-11' },
+      { targetName: 'Группа: ЦИС-11' },
     );
   });
 
   it('saves a current-week notif without a day offset', async () => {
-    const notifService = { upsertFirstNotif: jest.fn() };
+    const draftService = { create: jest.fn().mockResolvedValue('draft') };
     const update = new VkScheduleNotifUpdate(
-      notifService as any,
+      {} as any,
+      draftService as any,
+      {} as any,
       {} as any,
       {} as any,
     );
@@ -101,14 +112,71 @@ describe('VkScheduleNotifUpdate', () => {
 
     await update.onMessageEvent(ctx as any);
 
-    expect(notifService.upsertFirstNotif).toHaveBeenCalledWith(
-      ctx.state.userSocial,
+    expect(draftService.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        period: 'week',
-        targetDayOffset: null,
-        weekdays: [1],
+        settings: expect.objectContaining({
+          period: 'week',
+          targetDayOffset: null,
+          weekdays: [1],
+        }),
       }),
     );
+  });
+
+  it('keeps the weekday selector open after changing a weekday', async () => {
+    const notif = {
+      id: 7,
+      targetType: 'group',
+      targetId: 'ЦИС-11',
+      deliveryHour: 8,
+      deliveryMinute: 30,
+      period: 'week',
+      targetDayOffset: null,
+      weekdays: [1],
+      isEnabled: true,
+    };
+    const notifService = {
+      getNotif: jest.fn().mockResolvedValue(notif),
+      updateSettings: jest.fn(),
+    };
+    const keyboardFactory = {
+      getScheduleNotifEditorWeekdays: jest
+        .fn()
+        .mockReturnValue({ inline: () => ({}) }),
+    };
+    const update = new VkScheduleNotifUpdate(
+      notifService as any,
+      {} as any,
+      {} as any,
+      keyboardFactory as any,
+      {} as any,
+    );
+    const ctx = {
+      eventPayload: {
+        scheduleNotifAction: 'editWeekday',
+        notifId: notif.id,
+        weekday: 2,
+      },
+      isDM: true,
+      state: { userSocial: { id: 1 } },
+      i18n: { t: jest.fn((phrase) => phrase) },
+      editMessage: jest.fn(),
+    };
+
+    await update.onMessageEvent(ctx as any);
+
+    expect(notifService.updateSettings).toHaveBeenCalledWith(1, notif.id, {
+      deliveryHour: 8,
+      deliveryMinute: 30,
+      period: 'week',
+      targetDayOffset: null,
+      weekdays: [1, 2],
+    });
+    expect(keyboardFactory.getScheduleNotifEditorWeekdays).toHaveBeenCalledWith(
+      ctx,
+      expect.objectContaining({ id: notif.id, weekdays: [1, 2] }),
+    );
+    expect(ctx.editMessage).toHaveBeenCalled();
   });
 
   it('checks conversation admin via cached vk service members', async () => {
@@ -118,6 +186,8 @@ describe('VkScheduleNotifUpdate', () => {
         .mockResolvedValue([{ member_id: 5, is_admin: true }]),
     };
     const update = new VkScheduleNotifUpdate(
+      {} as any,
+      {} as any,
       {} as any,
       {} as any,
       vkService as any,

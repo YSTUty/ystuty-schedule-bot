@@ -13,15 +13,6 @@ type LocaleUserTemplate = {
 
 type LocaleTeacherTemplate = { name: string };
 
-type LocaleScheduleNotifTemplate = {
-  targetId: string;
-  deliveryHour: number;
-  deliveryMinute: number;
-  targetPeriodLabel: string;
-  weekdaysLabel: string;
-  isEnabled: boolean;
-};
-
 type LocaleBroadcastFilterTemplate = {
   hasDM?: boolean;
   isBlockedBot?: boolean;
@@ -174,10 +165,9 @@ export type LocalePhraseParams = {
   [LocalePhrase.Page_Schedule_WeekTitle_Past]: { weeks: number };
   [LocalePhrase.Page_Schedule_WeekTitle_Future]: { weeks: number };
 
-  [LocalePhrase.Page_ScheduleNotif_Settings]: {
-    notif: LocaleScheduleNotifTemplate | null | undefined;
-  };
-  [LocalePhrase.Page_ScheduleNotif_ConfirmDelete]: { groupName: string };
+  [LocalePhrase.Page_ScheduleNotif_Settings]: { notifsText: string };
+  [LocalePhrase.Page_ScheduleNotif_ConfirmDelete]: { targetName: string };
+  [LocalePhrase.Page_ScheduleNotif_TeacherNotFound]: { query: string };
 
   [LocalePhrase.Page_Feedback_Submitted]: { feedbackId: number };
   [LocalePhrase.Page_Feedback_DeliveryPending]: { feedbackId: number };

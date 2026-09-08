@@ -103,6 +103,10 @@ button:
     create: Настроить рассылку
     edit: Редактировать
     change_group: Изменить группу
+    change_target: Изменить цель
+    add: Добавить рассылку
+    target_group: Группа
+    target_teacher: Преподаватель
     done: Готово
     enable: Включить
     disable: Выключить
@@ -268,7 +272,7 @@ page:
   schedule_notification:
     settings: |
       Рассылка расписания
-      ${notif ? ('Группа: ' + notif.targetId + '\nВремя: ' + String(notif.deliveryHour).padStart(2, '0') + ':' + String(notif.deliveryMinute).padStart(2, '0') + '\nРасписание: ' + notif.targetPeriodLabel + '\nДни: ' + notif.weekdaysLabel + '\nСтатус: ' + (notif.isEnabled ? 'включена' : 'выключена')) : 'Рассылка пока не настроена.'}
+      ${notifsText || 'Рассылка пока не настроена.'}
     select_hour: Выбери время отправки.
     select_minute: Выбери минуты отправки.
     select_target: Выбери, какое расписание получать в это время.
@@ -280,7 +284,10 @@ page:
     need_group: Сначала выбери учебную группу, затем настрой рассылку.
     saved: Настройки рассылки сохранены.
     select_group: Выбери группу для этой рассылки.
-    confirm_delete: Удалить рассылку расписания для группы ${groupName}? Это действие нельзя отменить.
+    select_target_type: Выбери, чьё расписание будет приходить в этой рассылке.
+    select_teacher: Выбери преподавателя или напиши его фамилию.
+    teacher_not_found: Преподаватель по запросу ${query} не найден. Попробуй изменить запрос.
+    confirm_delete: Удалить рассылку расписания для ${targetName}? Это действие нельзя отменить.
   feedback:
     select_category: |
       Обратная связь

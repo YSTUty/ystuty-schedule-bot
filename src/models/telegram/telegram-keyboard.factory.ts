@@ -396,45 +396,35 @@ export class TelegramKeyboardFactory {
 
   public getScheduleNotifSettings(
     ctx: IContext,
-    notif?: { id: number; isEnabled: boolean },
+    notifs: {
+      id: number;
+      isEnabled: boolean;
+      targetLabel: string;
+    }[],
+    canCreate: boolean,
   ) {
-    return Markup.inlineKeyboard(
-      notif
+    return Markup.inlineKeyboard([
+      ...notifs.map((notif, index) => [
+        TelegramButtons.callback(
+          `${index + 1}. ${notif.targetLabel}`,
+          `scheduleNotif:edit:${notif.id}`,
+          { style: notif.isEnabled ? 'primary' : undefined },
+        ),
+      ]),
+      ...(canCreate
         ? [
             [
               TelegramButtons.callback(
-                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Edit),
-                `scheduleNotif:edit:${notif.id}`,
-                { style: 'primary' },
-              ),
-            ],
-            [
-              TelegramButtons.callback(
-                notif.isEnabled
-                  ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Disable)
-                  : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Enable),
-                `scheduleNotif:enabled:${notif.id}:${notif.isEnabled ? '0' : '1'}`,
-                { style: notif.isEnabled ? 'danger' : 'success' },
-              ),
-            ],
-            [
-              TelegramButtons.callback(
-                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete),
-                `scheduleNotif:deleteConfirm:${notif.id}`,
-                { style: 'danger' },
+                notifs.length
+                  ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Add)
+                  : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
+                'scheduleNotif:create',
+                { style: 'success' },
               ),
             ],
           ]
-        : [
-            [
-              TelegramButtons.callback(
-                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
-                'scheduleNotif:create',
-                { style: 'primary' },
-              ),
-            ],
-          ],
-    );
+        : []),
+    ]);
   }
 
   /** Клавиатура редактирования сохраняет каждое изменение сразу. */
@@ -479,8 +469,8 @@ export class TelegramKeyboardFactory {
       ),
       [
         TelegramButtons.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeGroup),
-          `scheduleNotif:changeGroup:${notif.id}:1:edit`,
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeTarget),
+          `scheduleNotif:changeTarget:${notif.id}`,
           { style: 'primary' },
         ),
       ],
@@ -537,6 +527,71 @@ export class TelegramKeyboardFactory {
         ),
       ],
     ]);
+  }
+
+  public getScheduleNotifTargetType(
+    ctx: IContext,
+    callbackPrefix: string,
+    canSelectGroup: boolean,
+    backCallback?: string,
+  ) {
+    return Markup.inlineKeyboard([
+      [
+        ...(canSelectGroup
+          ? [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetGroup),
+                `${callbackPrefix}:group`,
+              ),
+            ]
+          : []),
+        Markup.button.callback(
+          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetTeacher),
+          `${callbackPrefix}:teacher`,
+        ),
+      ],
+      ...(backCallback
+        ? [
+            [
+              Markup.button.callback(
+                ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+                backCallback,
+              ),
+            ],
+          ]
+        : []),
+    ]);
+  }
+
+  /** Список преподавателей для выбора цели рассылки без смены session.teacherId. */
+  public getScheduleNotifTeachersList(
+    ctx: IContext,
+    params: {
+      items: { id: number; name: string }[];
+      currentPage: number;
+      totalPages: number;
+    },
+  ) {
+    return this.getPagination({
+      name: 'sched-notif-teachers',
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((teacher) => ({
+        title: teacher.name,
+        payload: String(teacher.id),
+      })),
+      actionPrefix: 'sched-notif-teacher:select:',
+      columnizer: true,
+      sortByLength: false,
+      additionalButtons: [
+        [
+          Markup.button.callback(
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+            'sched-notif-teacher:cancel',
+          ),
+        ],
+      ],
+    });
   }
 
   public getBroadcastMenu(ctx: IContext, hasCurrent = false) {

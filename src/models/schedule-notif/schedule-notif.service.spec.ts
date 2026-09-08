@@ -6,6 +6,7 @@ import { ScheduleNotifService } from './schedule-notif.service';
 import {
   ScheduleNotifPeriod,
   ScheduleNotifTargetDayOffset,
+  ScheduleNotifTargetType,
 } from './schedule-notif.types';
 
 describe('ScheduleNotifService', () => {
@@ -24,6 +25,7 @@ describe('ScheduleNotifService', () => {
       create: jest.fn((value) => value),
       findOne: jest.fn().mockResolvedValue(undefined),
       find: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
       save: jest.fn(async (value) => ({ id: 1, ...value })),
       update: jest.fn(),
     };
@@ -53,13 +55,20 @@ describe('ScheduleNotifService', () => {
 
   it('creates a personal group notif and reserves one delivery per scheduled moment', async () => {
     const { service, deliveryRepository, metricsService } = createService();
-    const notif = await service.createForUserSocial(userSocial, {
-      deliveryHour: 20,
-      deliveryMinute: 0,
-      period: ScheduleNotifPeriod.Day,
-      targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
-      weekdays: [1, 2, 3, 4, 5, 6, 7],
-    });
+    const notif = await service.createForUserSocial(
+      userSocial,
+      {
+        type: ScheduleNotifTargetType.Group,
+        id: 'ЦИС-11',
+      },
+      {
+        deliveryHour: 20,
+        deliveryMinute: 0,
+        period: ScheduleNotifPeriod.Day,
+        targetDayOffset: ScheduleNotifTargetDayOffset.Tomorrow,
+        weekdays: [1, 2, 3, 4, 5, 6, 7],
+      },
+    );
 
     const first = await service.reserveDelivery(notif.id, scheduledFor);
     deliveryRepository.save.mockRejectedValueOnce({ code: '23505' });
@@ -76,35 +85,42 @@ describe('ScheduleNotifService', () => {
     });
   });
 
-  it('updates the first-release notif instead of creating a duplicate', async () => {
+  it('creates a personal teacher notif without requiring a selected group', async () => {
     const { service, notifRepository, metricsService } = createService();
-    const existing = {
-      id: 7,
-      userSocialId: userSocial.id,
-      isEnabled: false,
-      targetId: 'ЦИС-11',
-    };
-    notifRepository.findOne.mockResolvedValue(existing);
-
-    await service.upsertFirstNotif(userSocial, {
-      deliveryHour: 21,
-      deliveryMinute: 0,
-      period: ScheduleNotifPeriod.Day,
-      targetDayOffset: ScheduleNotifTargetDayOffset.Today,
-      weekdays: [1, 2],
+    const teacherOnlySocial = new UserSocial({
+      ...userSocial,
+      groupName: null,
+    });
+    const scheduleService = (service as any).scheduleService;
+    scheduleService.getTeacher = jest.fn().mockReturnValue({
+      id: 42,
+      name: 'Иванов И. И.',
     });
 
-    expect(notifRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 7,
+    await service.createForUserSocial(
+      teacherOnlySocial,
+      { type: ScheduleNotifTargetType.Teacher, id: '42' },
+      {
         deliveryHour: 21,
-        isEnabled: true,
+        deliveryMinute: 0,
+        period: ScheduleNotifPeriod.Day,
+        targetDayOffset: ScheduleNotifTargetDayOffset.Today,
+        weekdays: [1, 2],
+      },
+    );
+
+    expect(notifRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: ScheduleNotifTargetType.Teacher,
+        targetId: '42',
       }),
     );
-    expect(metricsService.incrementScheduleNotifCreated).not.toHaveBeenCalled();
+    expect(metricsService.incrementScheduleNotifCreated).toHaveBeenCalledWith(
+      expect.objectContaining({ targetType: ScheduleNotifTargetType.Teacher }),
+    );
   });
 
-  it('creates one notif for a conversation using its persistent group', async () => {
+  it('keeps legacy creation of one notif for a conversation using its persistent group', async () => {
     const { service, notifRepository, metricsService } = createService();
     const conversation = {
       id: 3,
@@ -133,6 +149,66 @@ describe('ScheduleNotifService', () => {
       targetType: 'group',
       target: conversation.groupName,
     });
+  });
+
+  it('creates a conversation teacher notif without a selected chat group', async () => {
+    const { service, notifRepository, metricsService } = createService();
+    const scheduleService = (service as any).scheduleService;
+    scheduleService.getTeacher = jest.fn().mockReturnValue({
+      id: 42,
+      name: 'Иванов И. И.',
+    });
+    const conversation = {
+      id: 3,
+      social: SocialType.Telegram,
+      groupName: null,
+    };
+
+    await service.createForConversation(
+      conversation as any,
+      { type: ScheduleNotifTargetType.Teacher, id: '42' },
+      {
+        deliveryHour: 8,
+        deliveryMinute: 30,
+        period: ScheduleNotifPeriod.Day,
+        targetDayOffset: ScheduleNotifTargetDayOffset.Today,
+        weekdays: [1, 2, 3],
+      },
+    );
+
+    expect(notifRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 3,
+        userSocialId: null,
+        targetType: ScheduleNotifTargetType.Teacher,
+        targetId: '42',
+      }),
+    );
+    expect(metricsService.incrementScheduleNotifCreated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'conversation',
+        targetType: ScheduleNotifTargetType.Teacher,
+      }),
+    );
+  });
+
+  it('does not create more than six notifs for one conversation', async () => {
+    const { service, notifRepository } = createService();
+    notifRepository.count.mockResolvedValue(6);
+
+    await expect(
+      service.createForConversation(
+        { id: 3, social: SocialType.Telegram } as any,
+        { type: ScheduleNotifTargetType.Group, id: 'ЦИС-11' },
+        {
+          deliveryHour: 8,
+          deliveryMinute: 30,
+          period: ScheduleNotifPeriod.Day,
+          targetDayOffset: ScheduleNotifTargetDayOffset.Today,
+          weekdays: [1],
+        },
+      ),
+    ).rejects.toThrow('Schedule notification limit (6) reached');
   });
 
   it('loads due personal and conversation notifs through separate nullable relations', async () => {
@@ -214,9 +290,9 @@ describe('ScheduleNotifService', () => {
       {
         id: 7,
         userSocialId: userSocial.id,
-        targetType: 'group',
       },
       {
+        targetType: 'group',
         targetId: 'ЦИС-21',
         lastError: null,
         missingTargetAttempts: 0,

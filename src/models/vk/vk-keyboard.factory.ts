@@ -496,54 +496,48 @@ export class VKKeyboardFactory {
 
   public getScheduleNotifSettings(
     ctx: IContext,
-    notif?: { id: number; isEnabled: boolean },
+    notifs: {
+      id: number;
+      isEnabled: boolean;
+      targetLabel: string;
+    }[],
+    canCreate: boolean,
+    page = 1,
   ) {
-    const buttons = notif
-      ? [
-          [
-            Keyboard.callbackButton({
-              label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Edit),
-              payload: {
-                scheduleNotifAction: 'edit',
-                notifId: notif.id,
-              },
-              color: Keyboard.PRIMARY_COLOR,
-            }),
-          ],
-          [
-            Keyboard.callbackButton({
-              label: notif.isEnabled
-                ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Disable)
-                : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Enable),
-              payload: {
-                scheduleNotifAction: 'enabled',
-                notifId: notif.id,
-                isEnabled: !notif.isEnabled,
-              },
-            }),
-          ],
-          [
-            Keyboard.callbackButton({
-              label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete),
-              payload: {
-                scheduleNotifAction: 'deleteConfirm',
-                notifId: notif.id,
-              },
-              color: Keyboard.NEGATIVE_COLOR,
-            }),
-          ],
-        ]
-      : [];
-    if (!notif) {
-      buttons.push([
-        Keyboard.callbackButton({
-          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
-          payload: { scheduleNotifAction: 'create' },
-          color: Keyboard.POSITIVE_COLOR,
+    // Четыре настройки, pager и действие создания укладываются в шесть рядов VK.
+    const notifPage = buildScheduleNotifPage(notifs, page, 4, 1);
+    return this.getPagination({
+      currentPage: notifPage.currentPage,
+      totalPages: notifPage.totalPages,
+      items: notifPage.rows.map((row) =>
+        row.map((notif) => {
+          const index = notifs.findIndex((item) => item.id === notif.id) + 1;
+          return {
+            title: `${index}. ${notif.targetLabel}`,
+            payload: { scheduleNotifAction: 'edit', notifId: notif.id },
+            selected: notif.isEnabled,
+          };
         }),
-      ]);
-    }
-    return Keyboard.keyboard(buttons);
+      ),
+      getPagePayload: (nextPage) => ({
+        scheduleNotifAction: 'settings',
+        page: nextPage,
+      }),
+      additionalButtons: canCreate
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: notifs.length
+                  ? ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Add)
+                  : ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Create),
+                payload: { scheduleNotifAction: 'create' },
+                color: Keyboard.POSITIVE_COLOR,
+              }),
+            ],
+          ]
+        : [],
+      pagerMode: 'compact',
+    });
   }
 
   /** Клавиатура редактирования сохраняет каждое изменение сразу. */
@@ -598,10 +592,10 @@ export class VKKeyboardFactory {
       [
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeGroup),
+            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeTarget),
           ),
           payload: {
-            scheduleNotifAction: 'changeGroup',
+            scheduleNotifAction: 'changeTarget',
             notifId: notif.id,
           },
           color: Keyboard.SECONDARY_COLOR,
@@ -720,6 +714,78 @@ export class VKKeyboardFactory {
         }),
       ],
     ]);
+  }
+
+  public getScheduleNotifTargetType(
+    ctx: IContext,
+    params: { notifId?: number; draftId?: string },
+  ) {
+    return Keyboard.keyboard([
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetGroup),
+          payload: {
+            scheduleNotifAction: 'targetType',
+            targetType: 'group',
+            ...params,
+          },
+        }),
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_TargetTeacher),
+          payload: {
+            scheduleNotifAction: 'targetType',
+            targetType: 'teacher',
+            ...params,
+          },
+        }),
+      ],
+      ...(params.notifId
+        ? [
+            [
+              Keyboard.callbackButton({
+                label: ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+                payload: {
+                  scheduleNotifAction: 'edit',
+                  notifId: params.notifId,
+                },
+              }),
+            ],
+          ]
+        : []),
+    ]);
+  }
+
+  /** Список преподавателей для цели рассылки, не изменяющий teacherId session. */
+  public getScheduleNotifTeachersList(params: {
+    ctx: IContext;
+    items: { id: number; name: string }[];
+    currentPage: number;
+    totalPages: number;
+  }) {
+    return this.getPagination({
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((teacher) => ({
+        title: teacher.name,
+        payload: {
+          scheduleNotifTeacherAction: 'select',
+          teacherId: teacher.id,
+        },
+      })),
+      getPagePayload: (page) => ({
+        scheduleNotifTeacherAction: 'page',
+        page,
+      }),
+      additionalButtons: [
+        [
+          Keyboard.callbackButton({
+            label: params.ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Back),
+            payload: { scheduleNotifTeacherAction: 'cancel' },
+          }),
+        ],
+      ],
+      pagerMode: 'compact',
+    });
   }
 
   public getBroadcastMenu(ctx: IContext, hasCurrent = false) {

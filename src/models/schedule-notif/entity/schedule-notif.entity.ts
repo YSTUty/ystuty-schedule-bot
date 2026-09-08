@@ -21,6 +21,7 @@ import {
 
 @Entity('schedule_notification')
 @Index(['userSocialId', 'isEnabled'])
+@Index(['conversationId', 'isEnabled'])
 export class ScheduleNotif {
   @PrimaryGeneratedColumn()
   public id: number;
@@ -36,8 +37,7 @@ export class ScheduleNotif {
   @JoinColumn()
   public conversation: Conversation | null;
 
-  /** Для беседы допустима ровно одна текущая рассылка. */
-  @Column({ nullable: true, unique: true })
+  @Column({ nullable: true })
   public conversationId: number | null;
 
   @Column({ type: 'enum', enum: SocialType })

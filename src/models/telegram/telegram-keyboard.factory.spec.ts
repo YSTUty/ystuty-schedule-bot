@@ -86,10 +86,11 @@ describe('TelegramKeyboardFactory', () => {
       type: 'group',
       id: 'ЦИС-46',
     }).reply_markup.inline_keyboard;
-    const settingsButtons = factory.getScheduleNotifSettings(ctx, {
-      id: 7,
-      isEnabled: true,
-    }).reply_markup.inline_keyboard;
+    const settingsButtons = factory.getScheduleNotifSettings(
+      ctx,
+      [{ id: 7, isEnabled: true, targetLabel: 'Группа: ЦИС-11' }],
+      true,
+    ).reply_markup.inline_keyboard;
 
     expect(
       factory.getUnknownMessageHelp(ctx).reply_markup.inline_keyboard[0][0],
@@ -182,6 +183,20 @@ describe('TelegramKeyboardFactory', () => {
         'scheduleNotif:target:8:30:week',
       ]),
     );
+  });
+
+  it('adds a back button when changing an existing notif target', () => {
+    const keyboard = new TelegramKeyboardFactory().getScheduleNotifTargetType(
+      ctx,
+      'scheduleNotif:targetType:7',
+      true,
+      'scheduleNotif:edit:7',
+    );
+    const callbacks = keyboard.reply_markup.inline_keyboard
+      .flat()
+      .map((button) => ('callback_data' in button ? button.callback_data : ''));
+
+    expect(callbacks).toContain('scheduleNotif:edit:7');
   });
 
   it('opens the audience filters editor from broadcast settings', () => {

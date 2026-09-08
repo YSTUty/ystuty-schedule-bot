@@ -29,3 +29,9 @@ export type ScheduleNotifSettings = {
   targetDayOffset: ScheduleNotifTargetDayOffset | null;
   weekdays: number[];
 };
+
+/** Цель рассылки хранится отдельно от её времени и периодичности. */
+export type ScheduleNotifTarget = {
+  type: ScheduleNotifTargetType;
+  id: string;
+};

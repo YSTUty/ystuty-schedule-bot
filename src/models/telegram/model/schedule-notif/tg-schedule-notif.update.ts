@@ -1,9 +1,9 @@
-import { Action, Command, Ctx, Update } from 'nestjs-telega';
+import { Command, Ctx, Update } from 'nestjs-telega';
 
 import { TelegramError } from 'telegraf-hardened';
 
 import { SocialType } from '@my-common/constants';
-import { TgHearsLocale } from '@my-common/decorator/tg';
+import { Action, TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { ICallbackQueryContext, ICbQOrMsg } from '@my-interfaces/telegram';
 

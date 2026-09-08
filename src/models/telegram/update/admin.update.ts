@@ -1,5 +1,5 @@
 import { Logger, UseFilters, UseGuards } from '@nestjs/common';
-import { Action, Command, Ctx, Update } from 'nestjs-telega';
+import { Command, Ctx, Update } from 'nestjs-telega';
 
 import {
   SocialType,
@@ -7,6 +7,7 @@ import {
   TelegramAdminGuard,
 } from '@my-common';
 import { escapeHTML, matchGroupName } from '@my-common';
+import { Action } from '@my-common/decorator/tg';
 import {
   ICallbackQueryContext,
   IMessageContext,

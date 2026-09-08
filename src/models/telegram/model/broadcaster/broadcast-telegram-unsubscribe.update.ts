@@ -1,7 +1,8 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, Hears, Update } from 'nestjs-telega';
+import { Command, Ctx, Hears, Update } from 'nestjs-telega';
 
 import { TelegrafExceptionFilter } from '@my-common';
+import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import {
   ICallbackQueryContext,

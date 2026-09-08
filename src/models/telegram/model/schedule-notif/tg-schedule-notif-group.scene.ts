@@ -1,16 +1,10 @@
-import {
-  Action,
-  Ctx,
-  Hears,
-  SceneEnter,
-  Wizard,
-  WizardStep,
-} from 'nestjs-telega';
+import { Ctx, Hears, SceneEnter, Wizard, WizardStep } from 'nestjs-telega';
 
-import { Markup } from 'telegraf-hardened';
+import type { Markup as TelegrafMarkup } from 'telegraf-hardened';
 import { InlineKeyboardMarkup } from 'telegraf-hardened/types';
 
 import { SocialType } from '@my-common/constants';
+import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 
@@ -23,6 +17,7 @@ import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.ser
 import { ScheduleNotifTargetType } from '../../../schedule-notif/schedule-notif.types';
 import { ScheduleService } from '../../../schedule/schedule.service';
 import { BaseScene } from '../../scene/base.scene';
+import { TelegramMarkup as Markup } from '../../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TgGroupPicker } from '../tg-group-picker';
 
@@ -319,7 +314,7 @@ export class TgScheduleNotifGroupScene extends BaseScene {
   private async editOrReply(
     ctx: IStepContext<ScheduleNotifGroupSceneState>,
     text: string,
-    keyboard: Markup.Markup<InlineKeyboardMarkup>,
+    keyboard: TelegrafMarkup.Markup<InlineKeyboardMarkup>,
   ) {
     if (ctx.callbackQuery) {
       await ctx.editMessageText(text, { parse_mode: 'HTML', ...keyboard });

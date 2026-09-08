@@ -151,6 +151,24 @@ describe('TelegramKeyboardFactory', () => {
     }
   });
 
+  it('uses a compact callback for a long selected group', () => {
+    const groupName = 'Очень длинное название учебной группы для проверки';
+    const button = new TelegramKeyboardFactory().getSelectGroupInline(
+      ctx,
+      groupName,
+    ).reply_markup.inline_keyboard[0][0];
+
+    expect(button).toMatchObject({
+      callback_data: `selectGroup:${md5(groupName).slice(0, 12)}`,
+    });
+    expect('callback_data' in button).toBe(true);
+    if ('callback_data' in button) {
+      expect(
+        Buffer.byteLength(button.callback_data, 'utf8'),
+      ).toBeLessThanOrEqual(64);
+    }
+  });
+
   it('opens hour selection before choosing minutes in the notif editor', () => {
     const keyboard = new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 7,

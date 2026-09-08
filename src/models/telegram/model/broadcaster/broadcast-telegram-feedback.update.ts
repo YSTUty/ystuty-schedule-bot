@@ -1,8 +1,9 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Ctx, Update } from 'nestjs-telega';
+import { Ctx, Update } from 'nestjs-telega';
 
 import { TelegrafExceptionFilter } from '@my-common';
 import { SocialType } from '@my-common/constants';
+import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { ICallbackQueryContext } from '@my-interfaces/telegram';
 

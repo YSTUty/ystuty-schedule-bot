@@ -7,9 +7,14 @@ describe('Telegram MainUpdate', () => {
   const openTeachersList = jest.fn();
   const isTeacherSearchFallbackQuery = jest.fn();
   const getGroupByName = jest.fn();
+  const groupNameByHash = jest.fn();
   const update = new MainUpdate(
     {} as any,
-    { getGroupByName, isTeacherSearchFallbackQuery } as any,
+    {
+      getGroupByName,
+      groupNameByHash,
+      isTeacherSearchFallbackQuery,
+    } as any,
     {} as any,
     {} as any,
     {} as any,
@@ -18,6 +23,7 @@ describe('Telegram MainUpdate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     getGroupByName.mockReset();
+    groupNameByHash.mockReset();
     (update as any).openTeachersList = openTeachersList;
   });
 
@@ -209,6 +215,29 @@ describe('Telegram MainUpdate', () => {
     });
     expect(ctx.tryAnswerCbQuery).toHaveBeenCalledTimes(1);
     expect(ctx.deleteMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves a compact group callback before opening the selector', async () => {
+    groupNameByHash.mockReturnValue('Длинное название учебной группы');
+    const scene = { enter: jest.fn() };
+    const ctx = {
+      from: { id: 7 },
+      chat: { type: 'private' },
+      state: {},
+      userSocial: { id: 3 },
+      match: { groups: { groupName: '0123456789ab' } },
+      callbackQuery: { data: 'selectGroup:0123456789ab' },
+      scene,
+      tryAnswerCbQuery: jest.fn(),
+      deleteMessage: jest.fn(),
+    } as any;
+
+    await update.hearSelectGroup(ctx);
+
+    expect(groupNameByHash).toHaveBeenCalledWith('0123456789ab');
+    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
+      groupName: 'Длинное название учебной группы',
+    });
   });
 
   it('acknowledges an institute-list callback before editing its message', async () => {

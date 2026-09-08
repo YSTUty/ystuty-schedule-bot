@@ -16,6 +16,7 @@ export * from './util/other.util';
 export * from './util/scheduler.util';
 export * from './util/text.util';
 export * from './util/schedule.util';
+export * from './util/telegram-callback-data.util';
 
 export * from './constants';
 export * from './exception';

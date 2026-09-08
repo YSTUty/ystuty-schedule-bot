@@ -33,5 +33,20 @@ module.exports = {
         varsIgnorePattern: '^_',
       },
     ],
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector:
+          "ImportDeclaration[source.value='telegraf-hardened'] > ImportSpecifier[imported.name='Markup'][local.name='Markup']",
+        message:
+          'Use TelegramMarkup instead so callback_data is checked against the Telegram byte limit.',
+      },
+      {
+        selector:
+          "ImportDeclaration[source.value='nestjs-telega'] > ImportSpecifier[imported.name='Action'][local.name='Action']",
+        message:
+          'Use the local Action decorator so callback_data triggers are validated.',
+      },
+    ],
   },
 };

@@ -1,12 +1,14 @@
-import { Action, Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
+import { Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
 
-import { Markup } from 'telegraf-hardened';
-
+import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { ICbQOrMsg, IContext, IStepContext } from '@my-interfaces/telegram';
 
 import { ScheduleService } from '../../schedule/schedule.service';
-import { TelegramButtons } from '../telegram-buttons.util';
+import {
+  TelegramMarkup as Markup,
+  TelegramButtons,
+} from '../telegram-buttons.util';
 // import { UserService } from '../../user/user.service';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../telegram.constants';

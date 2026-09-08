@@ -1,16 +1,7 @@
 import { Logger, UseFilters, UseGuards } from '@nestjs/common';
-import {
-  Action,
-  Command,
-  Ctx,
-  Hears,
-  Next,
-  On,
-  Start,
-  Update,
-} from 'nestjs-telega';
+import { Command, Ctx, Hears, Next, On, Start, Update } from 'nestjs-telega';
 
-import { Markup, TelegramError } from 'telegraf-hardened';
+import { TelegramError } from 'telegraf-hardened';
 import type { Update as TgUpdate } from 'telegraf-hardened/types';
 
 import {
@@ -24,7 +15,11 @@ import {
   TelegramAdminGuard,
   xs,
 } from '@my-common';
-import { AllowedChatTypes, TgHearsLocale } from '@my-common/decorator/tg';
+import {
+  Action,
+  AllowedChatTypes,
+  TgHearsLocale,
+} from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import {
   ICallbackQueryContext,
@@ -36,6 +31,7 @@ import {
 import { ScheduleService } from '../../schedule/schedule.service';
 import { TeacherListStateService } from '../../schedule/teacher-list-state.service';
 import { UserService } from '../../user/user.service';
+import { TelegramMarkup as Markup } from '../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
 import { TelegramService } from '../telegram.service';
@@ -459,7 +455,10 @@ export class MainUpdate {
       name: `glist${instituteHash ? `:${instituteHash}` : ''}-${count}`,
       currentPage,
       totalPages,
-      items,
+      items: items.map((groupName) => ({
+        title: groupName,
+        payload: md5(groupName).slice(0, 12),
+      })),
       actionPrefix: 'selectGroup:',
       additionalButtons: [
         ...(instituteHash
@@ -666,7 +665,13 @@ export class MainUpdate {
   @Action(/selectGroup:(?<groupName>(.*))/i)
   async hearSelectGroup(@Ctx() ctx: ICbQOrMsg) {
     const { from, chat, state, conversation, userSocial } = ctx;
-    const groupName = ctx.match?.groups?.groupName;
+    const callbackGroupName = ctx.match?.groups?.groupName;
+    // Старые сообщения ещё содержат полное имя группы; новые передают hash,
+    // чтобы не превысить лимит callback_data в Telegram.
+    const groupName = callbackGroupName
+      ? this.scheduleService.groupNameByHash(callbackGroupName) ||
+        callbackGroupName
+      : undefined;
     const withTrigger = !!ctx.match?.groups?.trigger;
 
     if (!chat || chat.type !== 'private') {

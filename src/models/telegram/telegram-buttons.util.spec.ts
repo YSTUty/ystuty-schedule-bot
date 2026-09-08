@@ -1,4 +1,7 @@
-import { TelegramButtons } from './telegram-buttons.util';
+import {
+  assertTelegramCallbackData,
+  TelegramButtons,
+} from './telegram-buttons.util';
 
 describe('TelegramButtons', () => {
   it('extends a native callback button with Bot API 9.6 appearance fields', () => {
@@ -39,5 +42,12 @@ describe('TelegramButtons', () => {
       url: 'https://ystuty.ru/',
       style: 'primary',
     });
+  });
+
+  it('validates callback size in UTF-8 bytes before building the button', () => {
+    expect(() => assertTelegramCallbackData('a'.repeat(64))).not.toThrow();
+    expect(() => TelegramButtons.callback('Тест', 'я'.repeat(33))).toThrow(
+      'received 66',
+    );
   });
 });

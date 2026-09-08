@@ -1,9 +1,8 @@
-import { Action, Command, Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
-
-import { Markup } from 'telegraf-hardened';
+import { Command, Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
 
 import { escapeHTML } from '@my-common';
 import { SocialType } from '@my-common/constants';
+import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 
@@ -23,6 +22,7 @@ import {
 import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/broadcast-audience-group-filter.service';
 import { ScheduleService } from '../../../schedule/schedule.service';
 import { BaseScene } from '../../scene/base.scene';
+import { TelegramMarkup as Markup } from '../../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 
 type TelegramBroadcastState = {

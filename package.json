@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@esindger/telegraf-i18n": "^0.5.5",
+    "@eslint-community/regexpp": "^4.12.2",
     "@khaledez/nestjs-prom": "^1.0.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/bull": "^11.0.4",

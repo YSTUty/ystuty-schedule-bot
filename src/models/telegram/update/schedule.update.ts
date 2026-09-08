@@ -1,5 +1,5 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, Hears, On, Update } from 'nestjs-telega';
+import { Command, Ctx, Hears, On, Update } from 'nestjs-telega';
 
 import * as tg from 'telegraf-hardened/types';
 import type { Update as TgUpdate } from 'telegraf-hardened/types';
@@ -13,7 +13,7 @@ import {
   personalTeacherWeekCommandRegExp,
   TelegrafExceptionFilter,
 } from '@my-common';
-import { TgHearsLocale } from '@my-common/decorator/tg';
+import { Action, TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/telegram';
 

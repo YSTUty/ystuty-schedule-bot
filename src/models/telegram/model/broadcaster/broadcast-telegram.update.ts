@@ -1,12 +1,12 @@
 import { UseFilters, UseGuards } from '@nestjs/common';
-import { Action, Command, Ctx, Update } from 'nestjs-telega';
+import { Command, Ctx, Update } from 'nestjs-telega';
 
 import { TelegramError } from 'telegraf-hardened';
 import { Opts } from 'telegraf-hardened/types';
 
 import { TelegrafExceptionFilter, TelegramAdminGuard } from '@my-common';
 import { SocialType } from '@my-common/constants';
-import { TgHearsLocale } from '@my-common/decorator/tg';
+import { Action, TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import {
   ICallbackQueryContext,

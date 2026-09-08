@@ -1,5 +1,6 @@
-import { Action, Ctx, On, Wizard, WizardStep } from 'nestjs-telega';
+import { Ctx, On, Wizard, WizardStep } from 'nestjs-telega';
 
+import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 

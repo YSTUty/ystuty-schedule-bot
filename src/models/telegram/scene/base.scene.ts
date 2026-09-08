@@ -1,8 +1,8 @@
 import { UseFilters } from '@nestjs/common';
-import { Action, Command, Ctx, Next } from 'nestjs-telega';
+import { Command, Ctx, Next } from 'nestjs-telega';
 
 import { TelegrafExceptionFilter } from '@my-common';
-import { TgHearsLocale } from '@my-common/decorator/tg';
+import { Action, TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IStepContext } from '@my-interfaces/telegram';
 

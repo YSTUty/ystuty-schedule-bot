@@ -1,9 +1,11 @@
-import { Markup } from 'telegraf-hardened';
+import { Markup as NativeMarkup } from 'telegraf-hardened';
 import type {
   InlineKeyboardButton,
   KeyboardButtonRequestChat,
   KeyboardButtonRequestUsers,
 } from 'telegraf-hardened/types';
+
+import { assertTelegramCallbackData } from '@my-common';
 
 /** Дополнительное оформление кнопки, доступное в Telegram Bot API 9.6. */
 export type TelegramButtonOptions = {
@@ -18,6 +20,27 @@ export type TelegramButtonOptions = {
 type StyledButton = {
   icon_custom_emoji_id?: string;
   style?: InlineKeyboardButton['style'];
+};
+
+export { assertTelegramCallbackData } from '@my-common';
+
+/**
+ * Обёртка над Markup для inline callback-кнопок.
+ *
+ * Все Telegram-модули используют её вместо native `Markup`, чтобы callback не
+ * мог обойти централизованную проверку лимита Telegram Bot API.
+ */
+export const TelegramMarkup = {
+  inlineKeyboard: NativeMarkup.inlineKeyboard,
+  keyboard: NativeMarkup.keyboard,
+  removeKeyboard: NativeMarkup.removeKeyboard,
+  button: {
+    ...NativeMarkup.button,
+    callback: (text: string, callbackData: string, hide?: boolean) => {
+      assertTelegramCallbackData(callbackData);
+      return NativeMarkup.button.callback(text, callbackData, hide);
+    },
+  },
 };
 
 /**
@@ -45,20 +68,29 @@ const withOptions = <T extends StyledButton>(
  */
 export const TelegramButtons = {
   text: (text: string, options?: TelegramButtonOptions) =>
-    withOptions(Markup.button.text(text, options?.hide), options),
+    withOptions(NativeMarkup.button.text(text, options?.hide), options),
 
   contactRequest: (text: string, options?: TelegramButtonOptions) =>
-    withOptions(Markup.button.contactRequest(text, options?.hide), options),
+    withOptions(
+      NativeMarkup.button.contactRequest(text, options?.hide),
+      options,
+    ),
 
   locationRequest: (text: string, options?: TelegramButtonOptions) =>
-    withOptions(Markup.button.locationRequest(text, options?.hide), options),
+    withOptions(
+      NativeMarkup.button.locationRequest(text, options?.hide),
+      options,
+    ),
 
   pollRequest: (
     text: string,
     type?: 'quiz' | 'regular',
     options?: TelegramButtonOptions,
   ) =>
-    withOptions(Markup.button.pollRequest(text, type, options?.hide), options),
+    withOptions(
+      NativeMarkup.button.pollRequest(text, type, options?.hide),
+      options,
+    ),
 
   userRequest: (
     text: string,
@@ -67,7 +99,7 @@ export const TelegramButtons = {
     options?: TelegramButtonOptions,
   ) =>
     withOptions(
-      Markup.button.userRequest(text, requestId, extra, options?.hide),
+      NativeMarkup.button.userRequest(text, requestId, extra, options?.hide),
       options,
     ),
 
@@ -81,7 +113,7 @@ export const TelegramButtons = {
     options?: TelegramButtonOptions,
   ) =>
     withOptions(
-      Markup.button.botRequest(text, requestId, extra, options?.hide),
+      NativeMarkup.button.botRequest(text, requestId, extra, options?.hide),
       options,
     ),
 
@@ -92,7 +124,7 @@ export const TelegramButtons = {
     options?: TelegramButtonOptions,
   ) =>
     withOptions(
-      Markup.button.groupRequest(text, requestId, extra, options?.hide),
+      NativeMarkup.button.groupRequest(text, requestId, extra, options?.hide),
       options,
     ),
 
@@ -106,22 +138,23 @@ export const TelegramButtons = {
     options?: TelegramButtonOptions,
   ) =>
     withOptions(
-      Markup.button.channelRequest(text, requestId, extra, options?.hide),
+      NativeMarkup.button.channelRequest(text, requestId, extra, options?.hide),
       options,
     ),
 
   url: (text: string, url: string, options?: TelegramButtonOptions) =>
-    withOptions(Markup.button.url(text, url, options?.hide), options),
+    withOptions(NativeMarkup.button.url(text, url, options?.hide), options),
 
   callback: (
     text: string,
     callbackData: string,
     options?: TelegramButtonOptions,
-  ) =>
-    withOptions(
-      Markup.button.callback(text, callbackData, options?.hide),
+  ) => {
+    return withOptions(
+      TelegramMarkup.button.callback(text, callbackData, options?.hide),
       options,
-    ),
+    );
+  },
 
   switchToChat: (
     text: string,
@@ -129,7 +162,7 @@ export const TelegramButtons = {
     options?: TelegramButtonOptions,
   ) =>
     withOptions(
-      Markup.button.switchToChat(text, value, options?.hide),
+      NativeMarkup.button.switchToChat(text, value, options?.hide),
       options,
     ),
 
@@ -139,15 +172,15 @@ export const TelegramButtons = {
     options?: TelegramButtonOptions,
   ) =>
     withOptions(
-      Markup.button.switchToCurrentChat(text, value, options?.hide),
+      NativeMarkup.button.switchToCurrentChat(text, value, options?.hide),
       options,
     ),
 
   game: (text: string, options?: TelegramButtonOptions) =>
-    withOptions(Markup.button.game(text, options?.hide), options),
+    withOptions(NativeMarkup.button.game(text, options?.hide), options),
 
   pay: (text: string, options?: TelegramButtonOptions) =>
-    withOptions(Markup.button.pay(text, options?.hide), options),
+    withOptions(NativeMarkup.button.pay(text, options?.hide), options),
 
   login: (
     text: string,
@@ -160,10 +193,10 @@ export const TelegramButtons = {
     options?: TelegramButtonOptions,
   ) =>
     withOptions(
-      Markup.button.login(text, url, loginOptions, options?.hide),
+      NativeMarkup.button.login(text, url, loginOptions, options?.hide),
       options,
     ),
 
   webApp: (text: string, url: string, options?: TelegramButtonOptions) =>
-    withOptions(Markup.button.webApp(text, url, options?.hide), options),
+    withOptions(NativeMarkup.button.webApp(text, url, options?.hide), options),
 } as const;

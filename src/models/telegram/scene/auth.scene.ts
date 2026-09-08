@@ -1,7 +1,7 @@
-import { Action, Ctx, Hears, Scene, SceneEnter } from 'nestjs-telega';
+import { Ctx, Hears, Scene, SceneEnter } from 'nestjs-telega';
 
 import { SocialType, UserException } from '@my-common';
-import { TgHearsLocale } from '@my-common/decorator/tg';
+import { Action, TgHearsLocale } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 

@@ -1,9 +1,10 @@
-import { Action, Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
+import { Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
 
-import { Markup } from 'telegraf-hardened';
+import type { Markup as TelegrafMarkup } from 'telegraf-hardened';
 import { InlineKeyboardMarkup } from 'telegraf-hardened/types';
 
 import { SocialType } from '@my-common/constants';
+import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/telegram';
 
@@ -190,7 +191,7 @@ export class TgScheduleNotifTeacherScene extends BaseScene {
   private async editOrReply(
     ctx: IStepContext<ScheduleNotifTeacherSceneState>,
     text: string,
-    keyboard: Markup.Markup<InlineKeyboardMarkup>,
+    keyboard: TelegrafMarkup.Markup<InlineKeyboardMarkup>,
   ) {
     if (ctx.callbackQuery) {
       await ctx.editMessageText(text, { parse_mode: 'HTML', ...keyboard });

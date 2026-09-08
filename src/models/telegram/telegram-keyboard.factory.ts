@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { Markup } from 'telegraf-hardened';
+import type { Markup as TelegrafMarkup } from 'telegraf-hardened';
 import {
   InlineKeyboardButton,
   InlineKeyboardMarkup,
@@ -32,6 +32,7 @@ import {
 import type { ScheduleWeekView } from '../schedule/schedule.service';
 
 import {
+  TelegramMarkup as Markup,
   TelegramButtonOptions,
   TelegramButtons,
 } from './telegram-buttons.util';
@@ -1408,7 +1409,7 @@ export class TelegramKeyboardFactory {
     addSelectGroup?: boolean,
     addCancel?: boolean,
     authLink?: string,
-  ): Markup.Markup<InlineKeyboardMarkup>;
+  ): TelegrafMarkup.Markup<InlineKeyboardMarkup>;
   public getAuth(
     ctx: IContext,
     inline: false,
@@ -1416,7 +1417,7 @@ export class TelegramKeyboardFactory {
     addSelectGroup?: boolean,
     addCancel?: boolean,
     authLink?: string,
-  ): Markup.Markup<ReplyKeyboardMarkup>;
+  ): TelegrafMarkup.Markup<ReplyKeyboardMarkup>;
   public getAuth(
     ctx: IContext,
     social = false,
@@ -1488,7 +1489,7 @@ export class TelegramKeyboardFactory {
         groupName
           ? TelegramButtons.callback(
               ctx.i18n.t(LocalePhrase.Button_SelectGroup_X, { groupName }),
-              `selectGroup:${groupName}`,
+              `selectGroup:${md5(groupName).slice(0, 12)}`,
               { style: 'primary' },
             )
           : TelegramButtons.callback(
@@ -1790,8 +1791,8 @@ export class TelegramKeyboardFactory {
     return Markup.inlineKeyboard(buttonsItems);
   }
 
-  public getClear(inline?: true): Markup.Markup<InlineKeyboardMarkup>;
-  public getClear(inline: false): Markup.Markup<ReplyKeyboardRemove>;
+  public getClear(inline?: true): TelegrafMarkup.Markup<InlineKeyboardMarkup>;
+  public getClear(inline: false): TelegrafMarkup.Markup<ReplyKeyboardRemove>;
   public getClear(inline = true) {
     return {
       ...(inline ? Markup.inlineKeyboard([]) : Markup.removeKeyboard()),

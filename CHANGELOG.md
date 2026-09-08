@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.4.2](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.4.1...v0.4.2) (2026-09-08)
+
+### 🚀 Features
+
+* **broadcast:** paginate campaign lists ([68420b1](https://github.com/YSTUty/ystuty-schedule-bot/commit/68420b11165e46884d1a76dbc1fc53472b3dc599))
+* **i18n:** type locale template parameters ([625f32b](https://github.com/YSTUty/ystuty-schedule-bot/commit/625f32b8241313c15e9b9d2de2dbca1c3a4b1942))
+* **schedule-notif:** add current week delivery option ([b1910a9](https://github.com/YSTUty/ystuty-schedule-bot/commit/b1910a9fbafa4fdc5261f22ad9cd0f8f526861fd))
+* **schedule-notif:** queue deliveries with retry policy ([2d64b6c](https://github.com/YSTUty/ystuty-schedule-bot/commit/2d64b6c2c15b77fc65ed4174314659eae1362eb4))
+* **schedule-notif:** support multiple notification targets ([e9bd3b3](https://github.com/YSTUty/ystuty-schedule-bot/commit/e9bd3b3ba7b3276a7a6b6ac7fed3aebe50c62652))
+* **schedule:** add week navigation and locale contracts ([c7bdf8a](https://github.com/YSTUty/ystuty-schedule-bot/commit/c7bdf8a6042a78a8eb91929572ffe460dc37f7c1))
+* **schedule:** add week navigation and locale contracts ([c025372](https://github.com/YSTUty/ystuty-schedule-bot/commit/c0253728370786ae746fa58fea46582cc0d09512))
+* **schedule:** clarify empty schedule date ranges ([ce4828a](https://github.com/YSTUty/ystuty-schedule-bot/commit/ce4828a91180daf990224cd45220c837f6aa1905))
+* **select-group:** add schedule shortcuts after selection ([69fdcd6](https://github.com/YSTUty/ystuty-schedule-bot/commit/69fdcd6b5bead18261e0fe694775aa7796e5b06c))
+
+### 🐛 Bug Fixes
+
+* **auth:** leave one-step scenes after link creation ([c61c29e](https://github.com/YSTUty/ystuty-schedule-bot/commit/c61c29e3573b765c3ee8d28dd15d89951b3766ad))
+* **auth:** refresh matching ystu-id authorization ([ad9ef9f](https://github.com/YSTUty/ystuty-schedule-bot/commit/ad9ef9f61cd1e28e96412c8a611d2750c2e64e6b))
+* **database:** expand stored group name length ([e0caa12](https://github.com/YSTUty/ystuty-schedule-bot/commit/e0caa12cc6c801f0f53ffdd3d8be6cad6d2cb2b7))
+* **locale:** explicit `weekTitle` ([f023261](https://github.com/YSTUty/ystuty-schedule-bot/commit/f023261811111df77716d67bbc8a69f0b00f31e8))
+* **messaging:** ignore stale callback message deletion errors ([74caf09](https://github.com/YSTUty/ystuty-schedule-bot/commit/74caf099421e1feaea374271aab9f01952c322a6))
+* **schedule:** support nonstandard group names ([c2dde3e](https://github.com/YSTUty/ystuty-schedule-bot/commit/c2dde3efb60f3814d1c0d9c467ab60871e87965d))
+* **telegram:** guard callback data length ([b287927](https://github.com/YSTUty/ystuty-schedule-bot/commit/b2879279e245cb4c12863e5f0eadee2edfbc9331))
+* **telegram:** handle stale callback queries ([cd15268](https://github.com/YSTUty/ystuty-schedule-bot/commit/cd15268cfca3184759bc069a49947f98640ff3bc))
+* **telegram:** match locale button labels literally ([ff61857](https://github.com/YSTUty/ystuty-schedule-bot/commit/ff6185719c9d37116829fc402a96a1559e80fbcd))
+* **telegram:** shorten schedule group callbacks ([d72a627](https://github.com/YSTUty/ystuty-schedule-bot/commit/d72a627f1510a606aad9938cdd5262ad69bc108b))
+* **vk:** allow menu actions to leave active scenes ([4f8818c](https://github.com/YSTUty/ystuty-schedule-bot/commit/4f8818cdcdc2a2e0ca87577d8bdee9b2df304eda))
+* **vk:** suppress fallback after editing callbacks ([dc6f262](https://github.com/YSTUty/ystuty-schedule-bot/commit/dc6f262e966aa4382a5f7fa62a7038829904b52d))
+
+### 🌟 Feature Improvements
+
+* **keyboard:** clarify broadcast controls ([082813e](https://github.com/YSTUty/ystuty-schedule-bot/commit/082813e411f9016e5a14c6e0d7562cfaed5bf4a1))
+
+### 📖 Documentation
+
+* **monitoring:** add metrics reference ([3951136](https://github.com/YSTUty/ystuty-schedule-bot/commit/395113642fc9411d047c6809e12ad35e45cc2ef3))
+* **todo:** reconcile completed work ([bbec630](https://github.com/YSTUty/ystuty-schedule-bot/commit/bbec630c95da25661ad9656cc7467629f58818d9))
+
 ## [0.4.1](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.4.0...v0.4.1) (2026-09-04)
 
 ### 🚀 Features

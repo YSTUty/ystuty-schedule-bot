@@ -41,7 +41,10 @@ export const checkLocaleCondition =
 
         // By keyboard button
         if (value === phrase) {
-          pass = value.match(phrase) as RegExpExecArray;
+          // В тексте кнопки могут быть символы RegExp, например `[A]` у
+          // админской кнопки рассылок. Значение уже сравнили буквально,
+          // поэтому нельзя передавать строку в String.match().
+          pass = /[\s\S]+/.exec(value)!;
           return true;
         }
 

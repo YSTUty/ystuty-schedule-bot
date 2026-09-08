@@ -64,6 +64,47 @@ describe('Telegram MainMiddleware', () => {
     });
   });
 
+  it('ignores deletion of a stale callback message', async () => {
+    const middleware = createMiddleware();
+    const ctx = {
+      from: { id: 1, is_bot: false },
+      updateType: 'callback_query',
+      answerCbQuery: jest.fn(),
+      deleteMessage: jest.fn().mockRejectedValue(
+        new TelegramError({
+          error_code: 400,
+          description: "Bad Request: message can't be deleted for everyone",
+        }),
+      ),
+      state: {},
+      update: {},
+    };
+
+    await middleware.middleware()(ctx as never, async () => {
+      await expect((ctx as any).deleteMessage()).resolves.toBe(true);
+    });
+  });
+
+  it('rethrows an unexpected callback message deletion error', async () => {
+    const middleware = createMiddleware();
+    const error = new TelegramError({
+      error_code: 403,
+      description: 'Forbidden: bot was blocked by the user',
+    });
+    const ctx = {
+      from: { id: 1, is_bot: false },
+      updateType: 'callback_query',
+      answerCbQuery: jest.fn(),
+      deleteMessage: jest.fn().mockRejectedValue(error),
+      state: {},
+      update: {},
+    };
+
+    await middleware.middleware()(ctx as never, async () => {
+      await expect((ctx as any).deleteMessage()).rejects.toBe(error);
+    });
+  });
+
   it('uses the hardened draft API for streaming messages', async () => {
     const middleware = createMiddleware();
     const sendMessageDraft = jest.fn().mockResolvedValue(true);

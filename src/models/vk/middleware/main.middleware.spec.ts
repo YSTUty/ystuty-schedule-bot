@@ -100,6 +100,41 @@ describe('VK MainMiddleware message subscription', () => {
     expect(ctx.state).toEqual({ eventAnswered: true });
   });
 
+  it('ignores deletion failure for an old callback message', async () => {
+    const middleware = Object.create(
+      MainMiddleware.prototype,
+    ) as MainMiddleware;
+    Object.defineProperty(middleware, 'concurrencyService', {
+      value: {
+        buildKey: jest.fn().mockReturnValue('mw:update:vk:123'),
+        queueLocal: jest.fn(async (_key, callback) => callback()),
+      },
+    });
+    const remove = jest.fn().mockRejectedValue(new Error('VK API error'));
+    const ctx = {
+      isOutbox: false,
+      type: 'message_event',
+      id: 101,
+      peerId: 123,
+      state: {},
+      answer: jest.fn(),
+      api: { messages: { delete: remove } },
+      is: jest.fn((types: string[]) => types.includes('message_event')),
+      toJSON: jest.fn().mockReturnValue({}),
+    };
+
+    await middleware['featureMiddleware'](ctx as never, async () => {
+      await expect(
+        (ctx as any).deleteMessage({ delete_for_all: true }),
+      ).resolves.toEqual({});
+    });
+
+    expect(remove).toHaveBeenCalledWith({
+      delete_for_all: true,
+      message_ids: 101,
+    });
+  });
+
   it.each([
     ['message_allow', true, false],
     ['message_deny', false, true],

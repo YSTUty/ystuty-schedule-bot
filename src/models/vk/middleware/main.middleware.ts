@@ -280,11 +280,15 @@ export class MainMiddleware {
           const target = !!convMid
             ? { peer_id: ctx.peerId, cmids: convMid }
             : { message_ids: ctx.id };
-          const messageIds = await ctx.api.messages.delete({
-            ...options,
-            ...target,
-          });
-          return messageIds;
+          try {
+            return await ctx.api.messages.delete({
+              ...options,
+              ...target,
+            });
+          } catch {
+            // Старое callback-сообщение может уже нельзя удалить для всех.
+            return {};
+          }
         };
       } else if (ctx.is(['message'])) {
         // ...

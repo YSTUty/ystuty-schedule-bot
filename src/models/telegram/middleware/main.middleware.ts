@@ -118,6 +118,29 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
         }
       };
 
+      if (ctx.deleteMessage) {
+        const deleteMessage = ctx.deleteMessage.bind(ctx);
+        ctx.deleteMessage = async () => {
+          try {
+            return await deleteMessage();
+          } catch (err) {
+            if (
+              err instanceof TelegramError &&
+              err.code === 400 &&
+              (err.description.includes(
+                "message can't be deleted for everyone",
+              ) ||
+                err.description.includes('message to delete not found'))
+            ) {
+              // Старую inline-кнопку можно нажать, когда её сообщение уже
+              // недоступно для удаления. Cleanup не должен ломать сценарий.
+              return true;
+            }
+            throw err;
+          }
+        };
+      }
+
       ctx.sendMessage = async (
         text: string | FmtString,
         extra?: Omit<tg.Opts<'sendMessage'>, 'chat_id' | 'text'>,

@@ -155,7 +155,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
 
     try {
       if (ctx.callbackQuery) {
-        await ctx.answerCbQuery(content, { show_alert: isAdmin });
+        await ctx.tryAnswerCbQuery(content, { show_alert: isAdmin });
       } else {
         await ctx.replyWithHTML(content, {
           ...(ctx.message?.message_id && {

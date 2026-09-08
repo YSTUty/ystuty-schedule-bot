@@ -138,7 +138,7 @@ describe('Telegram ScheduleUpdate', () => {
         match: { groups: { groupName: 'ЦИС-46', weekNumber: '3' } },
         scene: { enter: jest.fn() },
         editMessageText: jest.fn(),
-        answerCbQuery: jest.fn(),
+        tryAnswerCbQuery: jest.fn(),
         i18n: { t: jest.fn((phrase) => phrase) },
       } as any;
 
@@ -162,6 +162,7 @@ describe('Telegram ScheduleUpdate', () => {
         { type: 'group', id: 'ЦИС-46' },
         weekView,
       );
+      expect(ctx.tryAnswerCbQuery).toHaveBeenCalledTimes(1);
     } finally {
       jest.useRealTimers();
     }

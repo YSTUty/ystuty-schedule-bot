@@ -654,7 +654,7 @@ export class MainUpdate {
   @Action(LocalePhrase.Button_SelectGroup)
   async onSelectGroup(@Ctx() ctx: ICallbackQueryContext) {
     await ctx.scene.enter(SELECT_GROUP_SCENE);
-    await ctx.answerCbQuery();
+    await ctx.tryAnswerCbQuery();
   }
 
   @TgHearsLocale([

@@ -370,7 +370,7 @@ export class ScheduleUpdate {
           parse_mode: 'HTML',
         });
       } catch {}
-      await ctx.answerCbQuery();
+      await ctx.tryAnswerCbQuery();
     } else {
       await ctx.replyWithHTML(content, keyboard);
     }
@@ -539,7 +539,7 @@ export class ScheduleUpdate {
           parse_mode: 'HTML',
         });
       } catch {}
-      await ctx.answerCbQuery();
+      await ctx.tryAnswerCbQuery();
     } else {
       // Use stream message for example
       if (Math.random() > 0.5) {

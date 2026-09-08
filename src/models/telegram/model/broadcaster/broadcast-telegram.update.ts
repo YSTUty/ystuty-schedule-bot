@@ -72,12 +72,15 @@ export class BroadcastTelegramUpdate {
 
   @Command('broadcast_list')
   async onBroadcastList(@Ctx() ctx: IMessageContext) {
-    const items = await this.broadcastService.getRecentCampaigns(
-      SocialType.Telegram,
-    );
+    const campaigns = await this.broadcastService.getCampaignsPage({
+      social: SocialType.Telegram,
+      limit: 8,
+    });
     await ctx.replyWithHTML(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, { items }),
-      this.keyboardFactory.getBroadcastCampaignsList(ctx, items),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, {
+        items: campaigns.items,
+      }),
+      this.keyboardFactory.getBroadcastCampaignsList(ctx, campaigns),
     );
   }
 
@@ -163,10 +166,26 @@ export class BroadcastTelegramUpdate {
     await this.editCampaignsList(ctx);
   }
 
-  @Action(/broadcast:campaign:detail:(?<campaignId>\d+)/)
+  @Action(/pager:broadcast-campaigns:(?<page>\d+)/)
+  async onBroadcastCampaignsPager(@Ctx() ctx: ICallbackQueryContext) {
+    await ctx.tryAnswerCbQuery();
+    await this.editCampaignsList(ctx, Number(ctx.match!.groups!.page));
+  }
+
+  @Action(/broadcast:campaign:list:(?<page>\d+)/)
+  async onBroadcastCampaignsList(@Ctx() ctx: ICallbackQueryContext) {
+    await ctx.tryAnswerCbQuery();
+    await this.editCampaignsList(ctx, Number(ctx.match!.groups!.page));
+  }
+
+  @Action(/broadcast:campaign:detail:(?<campaignId>\d+)(:(?<page>\d+))?/)
   async onBroadcastCampaignDetails(@Ctx() ctx: ICallbackQueryContext) {
     await ctx.tryAnswerCbQuery();
-    await this.editCampaignDetails(ctx, Number(ctx.match!.groups!.campaignId));
+    await this.editCampaignDetails(
+      ctx,
+      Number(ctx.match!.groups!.campaignId),
+      Number(ctx.match!.groups!.page) || 1,
+    );
   }
 
   @Action(/broadcast:campaign:apply:(?<campaignId>\d+)/)
@@ -359,16 +378,20 @@ export class BroadcastTelegramUpdate {
     );
   }
 
-  private async editCampaignsList(ctx: ICallbackQueryContext) {
-    const items = await this.broadcastService.getRecentCampaigns(
-      SocialType.Telegram,
-    );
+  private async editCampaignsList(ctx: ICallbackQueryContext, page = 1) {
+    const campaigns = await this.broadcastService.getCampaignsPage({
+      social: SocialType.Telegram,
+      page,
+      limit: 8,
+    });
     await this.safeEditMessageText(
       ctx,
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, { items }),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, {
+        items: campaigns.items,
+      }),
       {
         parse_mode: 'HTML',
-        ...this.keyboardFactory.getBroadcastCampaignsList(ctx, items),
+        ...this.keyboardFactory.getBroadcastCampaignsList(ctx, campaigns),
       },
     );
   }
@@ -376,6 +399,7 @@ export class BroadcastTelegramUpdate {
   private async editCampaignDetails(
     ctx: ICallbackQueryContext,
     campaignId: number,
+    page = 1,
   ) {
     const [campaign, status] = await Promise.all([
       this.broadcastService.getCampaignForSocial(
@@ -411,6 +435,7 @@ export class BroadcastTelegramUpdate {
         parse_mode: 'HTML',
         ...this.keyboardFactory.getBroadcastCampaignDetails(ctx, {
           campaignId: campaign.id,
+          page,
           active,
           paused: status.paused,
         }),

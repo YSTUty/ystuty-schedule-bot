@@ -74,6 +74,47 @@ describe('TelegramKeyboardFactory', () => {
     ]);
   });
 
+  it('keeps the broadcast campaigns page in detail and back callbacks', () => {
+    const keyboard = new TelegramKeyboardFactory().getBroadcastCampaignsList(
+      ctx,
+      {
+        items: Array.from({ length: 8 }, (_, index) => ({
+          id: index + 1,
+          status: 'completed',
+        })),
+        currentPage: 2,
+        totalPages: 3,
+      },
+    );
+    const buttons = keyboard.reply_markup.inline_keyboard.flat();
+    const detailsKeyboard = new TelegramKeyboardFactory()
+      .getBroadcastCampaignDetails(ctx, {
+        campaignId: 12,
+        page: 2,
+        active: false,
+        paused: false,
+      })
+      .reply_markup.inline_keyboard.flat();
+
+    expect(buttons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          callback_data: 'broadcast:campaign:detail:1:2',
+        }),
+        expect.objectContaining({
+          callback_data: 'pager:broadcast-campaigns:3',
+        }),
+      ]),
+    );
+    expect(detailsKeyboard).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          callback_data: 'broadcast:campaign:list:2',
+        }),
+      ]),
+    );
+  });
+
   it('uses Telegram button colors for primary, successful and destructive actions', () => {
     const factory = new TelegramKeyboardFactory();
     const feedbackButtons =

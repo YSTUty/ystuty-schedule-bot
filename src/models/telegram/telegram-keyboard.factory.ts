@@ -632,27 +632,40 @@ export class TelegramKeyboardFactory {
 
   public getBroadcastCampaignsList(
     ctx: IContext,
-    items: { id: number; status: string }[],
+    params: {
+      items: { id: number; status: string }[];
+      currentPage: number;
+      totalPages: number;
+    },
   ) {
-    return Markup.inlineKeyboard([
-      ...items.map((item) => [
-        Markup.button.callback(
-          `№${item.id} • ${item.status}`,
-          `broadcast:campaign:detail:${item.id}`,
-        ),
-      ]),
-      [
+    return this.getPagination({
+      name: 'broadcast-campaigns',
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((item) => ({
+        title: `№${item.id} • ${item.status}`,
+        payload: `${item.id}:${params.currentPage}`,
+      })),
+      actionPrefix: 'broadcast:campaign:detail:',
+      additionalButtons: [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToMenu),
           'broadcast:menu:panel',
         ),
       ],
-    ]);
+      columnizer: false,
+      sortByLength: false,
+    });
   }
 
   public getBroadcastCampaignDetails(
     ctx: IContext,
-    params: { campaignId: number; active: boolean; paused: boolean },
+    params: {
+      campaignId: number;
+      page: number;
+      active: boolean;
+      paused: boolean;
+    },
   ) {
     return Markup.inlineKeyboard([
       ...(params.active
@@ -694,7 +707,7 @@ export class TelegramKeyboardFactory {
       [
         Markup.button.callback(
           ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToList),
-          'broadcast:menu:list',
+          `broadcast:campaign:list:${params.page}`,
         ),
       ],
     ]);

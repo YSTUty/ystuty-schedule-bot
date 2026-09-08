@@ -822,27 +822,45 @@ export class VKKeyboardFactory {
 
   public getBroadcastCampaignsList(
     ctx: IContext,
-    items: { id: number; status: string }[],
+    params: {
+      items: { id: number; status: string }[];
+      currentPage: number;
+      totalPages: number;
+    },
   ) {
-    return this.getActioner(ctx, [
-      ...items.map((item) => [
-        {
-          title: `№${item.id} • ${item.status}`,
-          payload: { broadcastAction: 'detail', campaignId: item.id },
+    return this.getPagination({
+      currentPage: params.currentPage,
+      totalPages: params.totalPages,
+      items: params.items.map((item) => ({
+        title: `№${item.id} • ${item.status}`,
+        payload: {
+          broadcastAction: 'detail',
+          campaignId: item.id,
+          page: params.currentPage,
         },
-      ]),
-      [
-        {
-          title: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToMenu),
-          payload: { broadcastAction: 'menuPanel' },
-        },
+      })),
+      getPagePayload: (page) => ({ broadcastAction: 'menuList', page }),
+      additionalButtons: [
+        [
+          Keyboard.callbackButton({
+            label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToMenu),
+            payload: { broadcastAction: 'menuPanel' },
+            color: Keyboard.SECONDARY_COLOR,
+          }),
+        ],
       ],
-    ]);
+      pagerMode: 'compact-pages',
+    });
   }
 
   public getBroadcastCampaignDetails(
     ctx: IContext,
-    params: { campaignId: number; active: boolean; paused: boolean },
+    params: {
+      campaignId: number;
+      page: number;
+      active: boolean;
+      paused: boolean;
+    },
   ) {
     return Keyboard.keyboard([
       ...(params.active
@@ -890,7 +908,7 @@ export class VKKeyboardFactory {
       [
         Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Broadcast_BackToList),
-          payload: { broadcastAction: 'menuList' },
+          payload: { broadcastAction: 'menuList', page: params.page },
           color: Keyboard.SECONDARY_COLOR,
         }),
       ],

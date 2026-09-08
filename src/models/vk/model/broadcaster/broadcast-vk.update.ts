@@ -59,15 +59,17 @@ export class BroadcastVkUpdate {
 
   @Hears('/broadcast_list')
   async onBroadcastList(@Ctx() ctx: IMessageContext) {
-    const items = await this.broadcastService.getRecentCampaigns(
-      SocialType.Vkontakte,
-      5,
-    );
+    const campaigns = await this.broadcastService.getCampaignsPage({
+      social: SocialType.Vkontakte,
+      limit: 4,
+    });
     await ctx.send(
-      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, { items }),
+      ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, {
+        items: campaigns.items,
+      }),
       {
         keyboard: this.keyboardFactory
-          .getBroadcastCampaignsList(ctx, items)
+          .getBroadcastCampaignsList(ctx, campaigns)
           .inline(),
       },
     );
@@ -187,7 +189,7 @@ export class BroadcastVkUpdate {
         type: 'show_snackbar',
         text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_List),
       });
-      await this.editCampaignsList(ctx);
+      await this.editCampaignsList(ctx, Number(ctx.eventPayload.page) || 1);
       return;
     }
 
@@ -196,7 +198,11 @@ export class BroadcastVkUpdate {
         type: 'show_snackbar',
         text: ctx.i18n.t(LocalePhrase.Broadcast_Notification_Campaign),
       });
-      await this.editCampaignDetails(ctx, Number(ctx.eventPayload.campaignId));
+      await this.editCampaignDetails(
+        ctx,
+        Number(ctx.eventPayload.campaignId),
+        Number(ctx.eventPayload.page) || 1,
+      );
       return;
     }
 
@@ -347,19 +353,20 @@ export class BroadcastVkUpdate {
     });
   }
 
-  private async editCampaignsList(ctx: IMessageEventContext) {
-    const items = await this.broadcastService.getRecentCampaigns(
-      SocialType.Vkontakte,
-      5,
-    );
+  private async editCampaignsList(ctx: IMessageEventContext, page = 1) {
+    const campaigns = await this.broadcastService.getCampaignsPage({
+      social: SocialType.Vkontakte,
+      page,
+      limit: 4,
+    });
     await ctx.api.messages.edit({
       peer_id: ctx.peerId,
       cmid: ctx.conversationMessageId,
       message: ctx.i18n.t(LocalePhrase.Page_Broadcast_CampaignsList, {
-        items,
+        items: campaigns.items,
       }),
       keyboard: this.keyboardFactory
-        .getBroadcastCampaignsList(ctx, items)
+        .getBroadcastCampaignsList(ctx, campaigns)
         .inline(),
     });
   }
@@ -367,6 +374,7 @@ export class BroadcastVkUpdate {
   private async editCampaignDetails(
     ctx: IMessageEventContext,
     campaignId: number,
+    page = 1,
   ) {
     const [campaign, status] = await Promise.all([
       this.broadcastService.getCampaignForSocial(
@@ -404,6 +412,7 @@ export class BroadcastVkUpdate {
       keyboard: this.keyboardFactory
         .getBroadcastCampaignDetails(ctx, {
           campaignId: campaign.id,
+          page,
           active,
           paused: status.paused,
         })

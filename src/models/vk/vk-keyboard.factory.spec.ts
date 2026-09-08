@@ -264,17 +264,30 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('keeps the broadcast campaigns list within the VK inline keyboard row limit', () => {
-    const keyboard = new VKKeyboardFactory().getBroadcastCampaignsList(
-      ctx,
-      Array.from({ length: 5 }, (_, index) => ({
+    const keyboard = new VKKeyboardFactory().getBroadcastCampaignsList(ctx, {
+      items: Array.from({ length: 4 }, (_, index) => ({
         id: index + 1,
         status: 'completed',
       })),
-    );
+      currentPage: 2,
+      totalPages: 3,
+    });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
     expect(renderedKeyboard.buttons).toHaveLength(6);
-    expect(renderedKeyboard.buttons.flat()).toHaveLength(6);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(8);
+    expect(
+      JSON.parse(renderedKeyboard.buttons[0][0].action.payload),
+    ).toMatchObject({
+      broadcastAction: 'detail',
+      campaignId: 1,
+      page: 2,
+    });
+    expect(
+      JSON.parse(renderedKeyboard.buttons[5][0].action.payload),
+    ).toMatchObject({
+      broadcastAction: 'menuPanel',
+    });
   });
 
   it('renders recipient actions, a URL link and feedback within VK inline keyboard limits', () => {

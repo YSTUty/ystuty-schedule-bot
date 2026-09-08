@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -17,6 +17,8 @@ import { type ScheduleNotifRecipient } from './transport/schedule-notif.transpor
 
 @Injectable()
 export class ScheduleNotifDeliveryService {
+  private readonly logger = new Logger(ScheduleNotifDeliveryService.name);
+
   constructor(
     @InjectRepository(ScheduleNotif)
     private readonly notifRepository: Repository<ScheduleNotif>,
@@ -32,95 +34,116 @@ export class ScheduleNotifDeliveryService {
     delivery: ScheduleNotifDelivery,
     now = new Date(),
   ) {
-    try {
-      const recipient: ScheduleNotifRecipient | undefined = notif.userSocial
-        ? { type: 'user', userSocial: notif.userSocial }
-        : notif.conversation
-          ? {
-              type: 'conversation',
-              conversationId: Number(notif.conversation.conversationId),
-            }
-          : undefined;
-      if (
-        !notif.isEnabled ||
-        !recipient ||
-        notif.conversation?.isLeaved ||
-        (recipient.type === 'user' &&
-          (!recipient.userSocial.hasDM ||
-            recipient.userSocial.isBlockedBot ||
-            recipient.userSocial.broadcastDisabledAt))
-      ) {
-        return await this.markSkipped(
-          notif,
-          delivery,
-          'Notification recipient is unavailable',
-        );
-      }
-      const target = this.getTarget(notif);
-      if (!target) {
-        return await this.markSkipped(
-          notif,
-          delivery,
-          `${
-            notif.targetType === ScheduleNotifTargetType.Group
-              ? 'Group'
-              : 'Teacher'
-          } is absent from Schedule API`,
-          now,
-          true,
-        );
-      }
-
-      const [, schedule] = await this.scheduleService.findNext({
-        ...target.scheduleTarget,
-        ...(notif.period === ScheduleNotifPeriod.Week
-          ? { isWeek: true }
-          : {
-              // Старые записи без period остаются дневными до применения миграции.
-              skipDays:
-                notif.targetDayOffset ?? ScheduleNotifTargetDayOffset.Today,
-            }),
-      });
-      const text = `${
-        schedule || 'На этот день нету расписания'
-      }\n[${target.name}]`;
-      const transport = this.transportRegistry.get(notif.transport);
-      const result = await transport.sendScheduleNotif({
-        recipient,
-        text,
-      });
-
-      Object.assign(delivery, {
-        status: ScheduleNotifDeliveryStatus.Sent,
-        sentMessageId: result.messageId || null,
-        error: null,
-      });
-      await this.deliveryRepository.save(delivery);
-      await this.notifRepository.save(
-        Object.assign(notif, {
-          lastDeliveredAt: new Date(),
-          lastError: null,
-        }),
+    const recipient: ScheduleNotifRecipient | undefined = notif.userSocial
+      ? { type: 'user', userSocial: notif.userSocial }
+      : notif.conversation
+        ? {
+            type: 'conversation',
+            conversationId: Number(notif.conversation.conversationId),
+          }
+        : undefined;
+    if (
+      !notif.isEnabled ||
+      !recipient ||
+      notif.conversation?.isLeaved ||
+      (recipient.type === 'user' &&
+        (!recipient.userSocial.hasDM ||
+          recipient.userSocial.isBlockedBot ||
+          recipient.userSocial.broadcastDisabledAt))
+    ) {
+      return await this.markSkipped(
+        notif,
+        delivery,
+        'Notification recipient is unavailable',
       );
-      return delivery;
-    } catch (error) {
-      const errorText = error instanceof Error ? error.message : String(error);
-      Object.assign(delivery, {
-        status: ScheduleNotifDeliveryStatus.Failed,
-        error: errorText,
-      });
-      await this.deliveryRepository.save(delivery);
-      await this.notifRepository.save(
-        Object.assign(notif, {
-          lastFailedAt: new Date(),
-          lastError: errorText,
-        }),
-      );
-      return delivery;
     }
+    const target = this.getTarget(notif);
+    if (!target) {
+      return await this.markSkipped(
+        notif,
+        delivery,
+        `${
+          notif.targetType === ScheduleNotifTargetType.Group
+            ? 'Group'
+            : 'Teacher'
+        } is absent from Schedule API`,
+        now,
+        true,
+      );
+    }
+
+    const [, schedule] = await this.scheduleService.findNext({
+      ...target.scheduleTarget,
+      ...(notif.period === ScheduleNotifPeriod.Week
+        ? { isWeek: true }
+        : {
+            // Старые записи без period остаются дневными до применения миграции.
+            skipDays:
+              notif.targetDayOffset ?? ScheduleNotifTargetDayOffset.Today,
+          }),
+    });
+    const text = `${schedule || 'На этот день нету расписания'}\n[${target.name}]`;
+    const transport = this.transportRegistry.get(notif.transport);
+    const result = await transport.sendScheduleNotif({
+      recipient,
+      text,
+    });
+
+    Object.assign(delivery, {
+      status: ScheduleNotifDeliveryStatus.Sent,
+      sentMessageId: result.messageId || null,
+      error: null,
+    });
+    await this.deliveryRepository.save(delivery);
+    await this.notifRepository.save(
+      Object.assign(notif, {
+        lastDeliveredAt: new Date(),
+        lastError: null,
+      }),
+    );
+    return delivery;
   }
 
-  private async markSkipped(
+  /** Загружает актуальные relation перед выполнением job: настройки могли измениться после cron. */
+  public async getPendingDeliveryForProcessing(deliveryId: number) {
+    const delivery = await this.deliveryRepository.findOne({
+      where: { id: deliveryId, status: ScheduleNotifDeliveryStatus.Pending },
+      relations: ['notif', 'notif.userSocial', 'notif.conversation'],
+    });
+    if (!delivery?.notif) return null;
+    return { notif: delivery.notif, delivery };
+  }
+
+  /** Сохраняет последнюю временную ошибку, не превращая доставку в final failure. */
+  public async markRetry(delivery: ScheduleNotifDelivery, error: string) {
+    Object.assign(delivery, {
+      status: ScheduleNotifDeliveryStatus.Pending,
+      error,
+    });
+    await this.deliveryRepository.save(delivery);
+  }
+
+  public async markFailed(
+    notif: ScheduleNotif,
+    delivery: ScheduleNotifDelivery,
+    error: string,
+    now = new Date(),
+  ) {
+    Object.assign(delivery, {
+      status: ScheduleNotifDeliveryStatus.Failed,
+      error,
+    });
+    await this.deliveryRepository.save(delivery);
+    await this.notifRepository.save(
+      Object.assign(notif, {
+        lastFailedAt: now,
+        lastError: error,
+      }),
+    );
+    return delivery;
+  }
+
+  public async markSkipped(
     notif: ScheduleNotif,
     delivery: ScheduleNotifDelivery,
     error: string,
@@ -156,10 +179,18 @@ export class ScheduleNotifDeliveryService {
           : undefined;
       if (recipient) {
         const transport = this.transportRegistry.get(notif.transport);
-        await transport.sendScheduleNotif({
-          recipient,
-          text: `Рассылка расписания автоматически отключена: ${error}. Выберите актуальную группу или преподавателя в настройках.`,
-        });
+        try {
+          await transport.sendScheduleNotif({
+            recipient,
+            text: `Рассылка расписания автоматически отключена: ${error}. Выберите актуальную группу или преподавателя в настройках.`,
+          });
+        } catch (sendError) {
+          this.logger.warn(
+            `Could not notify about auto-disabled schedule notif #${notif.id}: ${
+              sendError instanceof Error ? sendError.message : String(sendError)
+            }`,
+          );
+        }
       }
     }
     return delivery;

@@ -85,6 +85,33 @@ describe('VkService', () => {
     );
   });
 
+  it('preserves VK API errors for a background delivery retry policy', async () => {
+    const error = new APIError({
+      error_code: APIErrorCode.RATE_LIMIT,
+      error_msg: 'Too many requests per second',
+      request_params: [],
+    });
+    const bot = {
+      api: {
+        messages: {
+          send: jest.fn().mockRejectedValue(error),
+        },
+      },
+    };
+    const service = new VkService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+
+    await expect(service.sendMessageOrThrow(123, 'Расписание')).rejects.toBe(
+      error,
+    );
+  });
+
   it('reads the bot role in a VK conversation without using cache', async () => {
     const bot = {
       api: {

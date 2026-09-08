@@ -117,6 +117,18 @@ describe('ScheduleNotifDeliveryService', () => {
     expect(delivery.sentMessageId).toBe('42');
   });
 
+  it('does not turn a transient transport failure into a final delivery result', async () => {
+    const { service, scheduleService, transport, deliveryRepository } =
+      createService();
+    scheduleService.getGroupByName.mockReturnValue('ЦИС-11');
+    scheduleService.findNext.mockResolvedValue([1, '<b>Schedule</b>']);
+    transport.sendScheduleNotif.mockRejectedValue(new Error('ETIMEDOUT'));
+
+    await expect(service.deliver(notif, delivery)).rejects.toThrow('ETIMEDOUT');
+
+    expect(deliveryRepository.save).not.toHaveBeenCalled();
+  });
+
   it('sends the current schedule week without a day offset', async () => {
     const { service, scheduleService, transport } = createService();
     Object.assign(notif, {
@@ -194,6 +206,26 @@ describe('ScheduleNotifDeliveryService', () => {
       }),
     );
     expect(notifRepository.save).toHaveBeenCalledWith(notif);
+  });
+
+  it('keeps the skipped delivery when the auto-disable notice cannot be sent', async () => {
+    const { service, scheduleService, transport, deliveryRepository } =
+      createService();
+    notif.missingTargetAttempts = 6;
+    scheduleService.getGroupByName.mockReturnValue(undefined);
+    transport.sendScheduleNotif.mockRejectedValue(new Error('ETIMEDOUT'));
+
+    await expect(
+      service.deliver(notif, delivery, new Date('2026-09-01')),
+    ).resolves.toMatchObject({
+      status: ScheduleNotifDeliveryStatus.Skipped,
+    });
+
+    expect(deliveryRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: ScheduleNotifDeliveryStatus.Skipped,
+      }),
+    );
   });
 
   it('does not increase missing target attempts during summer', async () => {

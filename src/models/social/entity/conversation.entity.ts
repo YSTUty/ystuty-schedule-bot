@@ -34,7 +34,8 @@ export class Conversation {
     transformer: [
       {
         to: (entityValue: bigint) => entityValue,
-        from: (databaseValue: string): bigint => BigInt(databaseValue),
+        from: (databaseValue: string | null): bigint | null =>
+          databaseValue === null ? null : BigInt(databaseValue),
       },
     ],
   })

@@ -31,7 +31,13 @@ export class VkScheduleNotifTransport
         ? params.recipient.userSocial.socialId
         : // only for vk conversation
           params.recipient.conversationId + 2e9;
-    const messageId = await this.vkService.sendMessage(peerId, params.text);
+    const messageId = await this.vkService.sendMessageOrThrow(
+      peerId,
+      params.text,
+    );
+    if (typeof messageId === 'number') {
+      return { messageId: String(messageId) };
+    }
     if (!messageId || !Array.isArray(messageId)) {
       throw new Error('VK did not accept the schedule notif');
     }
@@ -42,10 +48,13 @@ export class VkScheduleNotifTransport
   public async sendMessage(
     params: Parameters<ScheduleNotifTransport['sendMessage']>[0],
   ) {
-    const messageId = await this.vkService.sendMessage(
+    const messageId = await this.vkService.sendMessageOrThrow(
       params.recipient.socialId,
       params.text,
     );
+    if (typeof messageId === 'number') {
+      return { messageId: String(messageId) };
+    }
     if (!messageId || !Array.isArray(messageId)) {
       throw new Error('VK did not accept the schedule notif');
     }

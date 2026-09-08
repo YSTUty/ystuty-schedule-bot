@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
-import { ScheduleNotifDeliveryService } from './schedule-notif-delivery.service';
+import { ScheduleNotifQueueService } from './schedule-notif-queue.service';
+import { SCHEDULE_NOTIF_MAX_DELIVERY_DELAY_MS } from './schedule-notif.constants';
 import { ScheduleNotifService } from './schedule-notif.service';
 
 const ISO_WEEKDAY_BY_NAME: Record<string, number> = {
@@ -20,7 +21,7 @@ export class ScheduleNotifScheduler {
 
   constructor(
     private readonly notifService: ScheduleNotifService,
-    private readonly deliveryService: ScheduleNotifDeliveryService,
+    private readonly queueService: ScheduleNotifQueueService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -37,19 +38,45 @@ export class ScheduleNotifScheduler {
     const scheduledFor = new Date(now);
     scheduledFor.setUTCSeconds(0, 0);
 
+    await this.notifService.expirePendingDeliveries(
+      new Date(scheduledFor.getTime() - SCHEDULE_NOTIF_MAX_DELIVERY_DELAY_MS),
+    );
+    const pendingDeliveries = await this.notifService.findPendingDeliveries({
+      from: new Date(
+        scheduledFor.getTime() - SCHEDULE_NOTIF_MAX_DELIVERY_DELAY_MS,
+      ),
+      before: new Date(scheduledFor.getTime() - 1),
+    });
+
     const notifs = await this.notifService.findDue({
       deliveryHour,
       deliveryMinute,
       isoWeekday,
     });
+    const reservedDeliveries: {
+      notif: (typeof notifs)[number];
+      delivery: NonNullable<
+        Awaited<ReturnType<ScheduleNotifService['reserveDelivery']>>
+      >;
+    }[] = [];
     for (const notif of notifs) {
       const delivery = await this.notifService.reserveDelivery(
         notif.id,
         scheduledFor,
       );
       if (delivery) {
-        await this.deliveryService.deliver(notif, delivery);
+        reservedDeliveries.push({ notif, delivery });
       }
+    }
+    const queueEntries = [
+      ...pendingDeliveries.map((delivery) => ({
+        notif: delivery.notif,
+        delivery,
+      })),
+      ...reservedDeliveries,
+    ];
+    if (queueEntries.length) {
+      await this.queueService.enqueueMany(queueEntries);
     }
   }
 

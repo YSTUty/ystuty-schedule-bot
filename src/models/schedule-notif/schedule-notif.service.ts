@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, IsNull, Not, Repository } from 'typeorm';
+import {
+  Between,
+  FindOneOptions,
+  IsNull,
+  LessThan,
+  Not,
+  Repository,
+} from 'typeorm';
 
 import { MetricsService } from '../metrics/metrics.service';
 import { ScheduleService } from '../schedule/schedule.service';
@@ -405,6 +412,37 @@ export class ScheduleNotifService {
       }
       throw error;
     }
+  }
+
+  /** Возвращает недавние pending-доставки для повторной постановки после сбоя Redis/Bull. */
+  public async findPendingDeliveries(params: {
+    from: Date;
+    before: Date;
+    limit?: number;
+  }) {
+    return await this.deliveryRepository.find({
+      where: {
+        status: ScheduleNotifDeliveryStatus.Pending,
+        scheduledFor: Between(params.from, params.before),
+      },
+      relations: ['notif'],
+      order: { scheduledFor: 'ASC' },
+      take: params.limit || 500,
+    });
+  }
+
+  /** Не отправляет устаревшее расписание, если очередь была недоступна слишком долго. */
+  public async expirePendingDeliveries(before: Date) {
+    await this.deliveryRepository.update(
+      {
+        status: ScheduleNotifDeliveryStatus.Pending,
+        scheduledFor: LessThan(before),
+      },
+      {
+        status: ScheduleNotifDeliveryStatus.Skipped,
+        error: 'Notification delivery expired before it was sent',
+      },
+    );
   }
 
   private assertEligibleUserSocial(userSocial: UserSocial) {

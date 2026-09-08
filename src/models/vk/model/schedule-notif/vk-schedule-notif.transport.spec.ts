@@ -6,7 +6,7 @@ describe('VkScheduleNotifTransport', () => {
   const createTransport = () => {
     const vkService = {
       isActive: true,
-      sendMessage: jest.fn().mockResolvedValue([
+      sendMessageOrThrow: jest.fn().mockResolvedValue([
         {
           conversation_message_id: 42,
         },
@@ -33,7 +33,7 @@ describe('VkScheduleNotifTransport', () => {
       text: 'Расписание',
     });
 
-    expect(vkService.sendMessage).toHaveBeenCalledWith(
+    expect(vkService.sendMessageOrThrow).toHaveBeenCalledWith(
       2000000001,
       'Расписание',
     );
@@ -53,6 +53,21 @@ describe('VkScheduleNotifTransport', () => {
       text: 'Расписание',
     });
 
-    expect(vkService.sendMessage).toHaveBeenCalledWith(123, 'Расписание');
+    expect(vkService.sendMessageOrThrow).toHaveBeenCalledWith(
+      123,
+      'Расписание',
+    );
+  });
+
+  it('accepts a numeric VK message id for a single recipient', async () => {
+    const { transport, vkService } = createTransport();
+    vkService.sendMessageOrThrow.mockResolvedValue(42);
+
+    await expect(
+      transport.sendScheduleNotif({
+        recipient: { type: 'conversation', conversationId: 1 },
+        text: 'Расписание',
+      }),
+    ).resolves.toEqual({ messageId: '42' });
   });
 });

@@ -80,6 +80,28 @@ export class VkService implements OnModuleInit {
     }
   }
 
+  /** Отправляет фоновое сообщение, сохраняя исходную VK API-ошибку для retry policy. */
+  public async sendMessageOrThrow(
+    peer_id: number,
+    message: string,
+    extra: MessagesSendParams = {},
+  ) {
+    if (!this.isActive) {
+      throw new Error('VK bot is inactive');
+    }
+    try {
+      return await this.bot.api.messages.send({
+        random_id: getRandomId(),
+        peer_id,
+        message,
+        ...extra,
+      });
+    } catch (error) {
+      await this.handleSendError(peer_id, error);
+      throw error;
+    }
+  }
+
   public async tryEditOrSendMessage(
     peer_id: number,
     msgId: { conversation_message_id: number } | { message_id: number },

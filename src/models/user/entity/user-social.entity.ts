@@ -35,7 +35,8 @@ export class UserSocial {
       {
         to: (entityValue: bigint) => entityValue,
         // TODO!: fix(db): replace BigInt transformers with numeric casting
-        from: (databaseValue: string): bigint => BigInt(databaseValue),
+        from: (databaseValue: string | null): bigint | null =>
+          databaseValue === null ? null : BigInt(databaseValue),
         // from: (databaseValue: string) => Number(databaseValue),
       },
     ],

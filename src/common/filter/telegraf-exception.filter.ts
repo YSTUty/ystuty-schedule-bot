@@ -32,6 +32,13 @@ export const isTelegramConversationUnavailableError = (
 export const isTelegramRateLimitError = (exception: TelegramError) =>
   exception.code === 429 || exception.description.includes('Too Many Requests');
 
+/** Ошибки API, которые штатно обрабатываются filter-ом без error-лога. */
+export const isExpectedTelegramTransportError = (exception: Error) =>
+  exception instanceof TelegramError &&
+  (isTelegramUserUnavailableError(exception) ||
+    isTelegramConversationUnavailableError(exception) ||
+    isTelegramRateLimitError(exception));
+
 @Catch()
 export class TelegrafExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(TelegrafExceptionFilter.name);
@@ -54,7 +61,11 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    if (exception.message !== LocalePhrase.Common_NoAccess && !isCCE) {
+    if (
+      exception.message !== LocalePhrase.Common_NoAccess &&
+      !isCCE &&
+      !isExpectedTelegramTransportError(exception)
+    ) {
       this.logger.error(
         `OnUpdateType(${ctx?.updateType}): ${exception?.message || exception}`,
         exception.stack,

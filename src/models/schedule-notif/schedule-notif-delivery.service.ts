@@ -42,20 +42,17 @@ export class ScheduleNotifDeliveryService {
             conversationId: Number(notif.conversation.conversationId),
           }
         : undefined;
-    if (
-      !notif.isEnabled ||
-      !recipient ||
-      notif.conversation?.isLeaved ||
-      (recipient.type === 'user' &&
-        (!recipient.userSocial.hasDM ||
-          recipient.userSocial.isBlockedBot ||
-          recipient.userSocial.broadcastDisabledAt))
-    ) {
-      return await this.markSkipped(
-        notif,
-        delivery,
-        'Notification recipient is unavailable',
-      );
+    const unavailableReason = this.getUnavailableRecipientReason(
+      notif,
+      recipient,
+    );
+    if (unavailableReason) {
+      return await this.markSkipped(notif, delivery, unavailableReason);
+    }
+    // getUnavailableRecipientReason() возвращает причину для отсутствующего
+    // recipient, но явная проверка сохраняет narrowing для TypeScript.
+    if (!recipient) {
+      throw new Error('Schedule notification recipient is unavailable');
     }
     const target = this.getTarget(notif);
     if (!target) {
@@ -106,10 +103,18 @@ export class ScheduleNotifDeliveryService {
 
   /** Загружает актуальные relation перед выполнением job: настройки могли измениться после cron. */
   public async getPendingDeliveryForProcessing(deliveryId: number) {
-    const delivery = await this.deliveryRepository.findOne({
-      where: { id: deliveryId, status: ScheduleNotifDeliveryStatus.Pending },
-      relations: ['notif', 'notif.userSocial', 'notif.conversation'],
-    });
+    // Явные join-ы не дают TypeORM оставить recipient relation незагруженной
+    // после повторного чтения delivery из Bull job.
+    const delivery = await this.deliveryRepository
+      .createQueryBuilder('delivery')
+      .leftJoinAndSelect('delivery.notif', 'notif')
+      .leftJoinAndSelect('notif.userSocial', 'userSocial')
+      .leftJoinAndSelect('notif.conversation', 'conversation')
+      .where('delivery.id = :deliveryId', { deliveryId })
+      .andWhere('delivery.status = :status', {
+        status: ScheduleNotifDeliveryStatus.Pending,
+      })
+      .getOne();
     if (!delivery?.notif) return null;
     return { notif: delivery.notif, delivery };
   }
@@ -168,6 +173,9 @@ export class ScheduleNotifDeliveryService {
         lastError: error,
       }),
     );
+    this.logger.warn(
+      `Schedule notif delivery #${delivery.id} skipped: ${error}`,
+    );
     if (isDeactivated) {
       const recipient: ScheduleNotifRecipient | undefined = notif.userSocial
         ? { type: 'user', userSocial: notif.userSocial }
@@ -194,6 +202,33 @@ export class ScheduleNotifDeliveryService {
       }
     }
     return delivery;
+  }
+
+  /** Возвращает понятную причину, по которой получателю нельзя отправить уведомление. */
+  private getUnavailableRecipientReason(
+    notif: ScheduleNotif,
+    recipient: ScheduleNotifRecipient | undefined,
+  ) {
+    if (!notif.isEnabled) return 'Notification is disabled';
+    if (!recipient) {
+      return notif.conversationId
+        ? 'Conversation recipient relation is unavailable'
+        : notif.userSocialId
+          ? 'User recipient relation is unavailable'
+          : 'Notification recipient is not configured';
+    }
+    if (notif.conversation?.isLeaved) {
+      return 'Bot is no longer a member of the conversation';
+    }
+    if (recipient.type !== 'user') return null;
+    if (!recipient.userSocial.hasDM) {
+      return 'User has not allowed personal messages from the bot';
+    }
+    if (recipient.userSocial.isBlockedBot) return 'User blocked the bot';
+    if (recipient.userSocial.broadcastDisabledAt) {
+      return 'User disabled personal broadcasts';
+    }
+    return null;
   }
 
   /** Находит и нормализует цель рассылки для единого вызова Schedule API. */

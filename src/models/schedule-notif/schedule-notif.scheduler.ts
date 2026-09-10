@@ -38,9 +38,14 @@ export class ScheduleNotifScheduler {
     const scheduledFor = new Date(now);
     scheduledFor.setUTCSeconds(0, 0);
 
-    await this.notifService.expirePendingDeliveries(
+    const expiredDeliveries = await this.notifService.expirePendingDeliveries(
       new Date(scheduledFor.getTime() - SCHEDULE_NOTIF_MAX_DELIVERY_DELAY_MS),
     );
+    if (expiredDeliveries.affected) {
+      this.logger.warn(
+        `Expired ${expiredDeliveries.affected} schedule notif deliveries before queue processing`,
+      );
+    }
     const pendingDeliveries = await this.notifService.findPendingDeliveries({
       from: new Date(
         scheduledFor.getTime() - SCHEDULE_NOTIF_MAX_DELIVERY_DELAY_MS,

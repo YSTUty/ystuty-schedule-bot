@@ -19,6 +19,8 @@ import { RedisService } from '../redis/redis.service';
 import { ScheduleService } from '../schedule/schedule.service';
 
 const CHAT_ADMINS_CACHE_TTL_SECONDS = 120;
+const SEND_MESSAGE_TIMEOUT_MS = 20e3;
+
 type CachedChatAdmin = {
   user: { id: ChatMember['user']['id'] };
   status: ChatMember['status'];
@@ -119,10 +121,16 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   ) {
     if (!this.isActive) return false;
     try {
-      return await this.bot.telegram.sendMessage(chatId, text, {
-        parse_mode: 'HTML',
-        ...extra,
-      });
+      return await this.bot.telegram.callApi(
+        'sendMessage',
+        {
+          chat_id: chatId,
+          text,
+          parse_mode: 'HTML',
+          ...extra,
+        },
+        { signal: AbortSignal.timeout(SEND_MESSAGE_TIMEOUT_MS) },
+      );
     } catch (err) {
       this.logger.error(err);
       return false;

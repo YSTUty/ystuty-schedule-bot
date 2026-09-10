@@ -38,7 +38,21 @@ describe('ScheduleNotifDeliveryService', () => {
 
   const createService = () => {
     const notifRepository = { save: jest.fn(async (value) => value) };
-    const deliveryRepository = { save: jest.fn(async (value) => value) };
+    const deliveryQueryBuilder = {
+      leftJoinAndSelect: jest.fn(),
+      where: jest.fn(),
+      andWhere: jest.fn(),
+      getOne: jest.fn(),
+    };
+    Object.values(deliveryQueryBuilder)
+      .filter((value) => typeof value === 'function')
+      .forEach((method) => {
+        (method as jest.Mock).mockReturnValue(deliveryQueryBuilder);
+      });
+    const deliveryRepository = {
+      save: jest.fn(async (value) => value),
+      createQueryBuilder: jest.fn(() => deliveryQueryBuilder),
+    };
     const scheduleService = {
       getGroupByName: jest.fn(),
       getTeacher: jest.fn(),
@@ -53,6 +67,7 @@ describe('ScheduleNotifDeliveryService', () => {
     return {
       notifRepository,
       deliveryRepository,
+      deliveryQueryBuilder,
       scheduleService,
       transport,
       service: new ScheduleNotifDeliveryService(
@@ -166,6 +181,60 @@ describe('ScheduleNotifDeliveryService', () => {
     );
   });
 
+  it('loads both possible recipients explicitly before processing a queued delivery', async () => {
+    const { service, deliveryRepository, deliveryQueryBuilder } =
+      createService();
+    deliveryQueryBuilder.getOne.mockResolvedValue({ ...delivery, notif });
+
+    await expect(service.getPendingDeliveryForProcessing(42)).resolves.toEqual({
+      delivery: expect.objectContaining({ id: delivery.id }),
+      notif,
+    });
+
+    expect(deliveryRepository.createQueryBuilder).toHaveBeenCalledWith(
+      'delivery',
+    );
+    expect(deliveryQueryBuilder.leftJoinAndSelect).toHaveBeenNthCalledWith(
+      1,
+      'delivery.notif',
+      'notif',
+    );
+    expect(deliveryQueryBuilder.leftJoinAndSelect).toHaveBeenNthCalledWith(
+      2,
+      'notif.userSocial',
+      'userSocial',
+    );
+    expect(deliveryQueryBuilder.leftJoinAndSelect).toHaveBeenNthCalledWith(
+      3,
+      'notif.conversation',
+      'conversation',
+    );
+    expect(deliveryQueryBuilder.andWhere).toHaveBeenCalledWith(
+      'delivery.status = :status',
+      { status: ScheduleNotifDeliveryStatus.Pending },
+    );
+  });
+
+  it('records a missing loaded conversation relation explicitly', async () => {
+    const { service, deliveryRepository, transport } = createService();
+    Object.assign(notif, {
+      userSocial: null,
+      userSocialId: null,
+      conversation: null,
+      conversationId: 7,
+    });
+
+    await service.deliver(notif, delivery);
+
+    expect(transport.sendScheduleNotif).not.toHaveBeenCalled();
+    expect(deliveryRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: ScheduleNotifDeliveryStatus.Skipped,
+        error: 'Conversation recipient relation is unavailable',
+      }),
+    );
+  });
+
   it('skips a notification for a conversation that the bot has left', async () => {
     const { service, scheduleService, transport, deliveryRepository } =
       createService();
@@ -181,7 +250,7 @@ describe('ScheduleNotifDeliveryService', () => {
     expect(deliveryRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         status: ScheduleNotifDeliveryStatus.Skipped,
-        error: 'Notification recipient is unavailable',
+        error: 'Bot is no longer a member of the conversation',
       }),
     );
   });

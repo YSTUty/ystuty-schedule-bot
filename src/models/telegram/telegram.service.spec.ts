@@ -1,6 +1,27 @@
 import { TelegramService } from './telegram.service';
 
 describe('TelegramService', () => {
+  it('aborts a stalled outgoing message instead of blocking a notification worker indefinitely', async () => {
+    const callApi = jest.fn().mockResolvedValue({ message_id: 42 });
+    const bot = { telegram: { callApi } };
+    const service = new TelegramService(
+      bot as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(service.sendMessage(123, 'Hello')).resolves.toEqual({
+      message_id: 42,
+    });
+
+    expect(callApi).toHaveBeenCalledWith(
+      'sendMessage',
+      { chat_id: 123, text: 'Hello', parse_mode: 'HTML' },
+      { signal: expect.any(AbortSignal) },
+    );
+  });
+
   it('enables polling conflict retry on launch', async () => {
     const bot = {
       catch: jest.fn(),

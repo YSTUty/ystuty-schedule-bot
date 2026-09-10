@@ -10,7 +10,7 @@ describe('ScheduleNotifScheduler', () => {
     const notifService = {
       findDue: jest.fn().mockResolvedValue([dueNotif]),
       reserveDelivery: jest.fn().mockResolvedValue(delivery),
-      expirePendingDeliveries: jest.fn(),
+      expirePendingDeliveries: jest.fn().mockResolvedValue({ affected: 0 }),
       findPendingDeliveries: jest.fn().mockResolvedValue([]),
     };
     const queueService = { enqueueMany: jest.fn() };
@@ -47,7 +47,7 @@ describe('ScheduleNotifScheduler', () => {
     const notifService = {
       findDue: jest.fn().mockResolvedValue([{ id: 1 }]),
       reserveDelivery: jest.fn().mockResolvedValue(null),
-      expirePendingDeliveries: jest.fn(),
+      expirePendingDeliveries: jest.fn().mockResolvedValue({ affected: 0 }),
       findPendingDeliveries: jest.fn().mockResolvedValue([]),
     };
     const queueService = { enqueueMany: jest.fn() };
@@ -66,7 +66,7 @@ describe('ScheduleNotifScheduler', () => {
     const notifService = {
       findDue: jest.fn().mockResolvedValue([]),
       reserveDelivery: jest.fn(),
-      expirePendingDeliveries: jest.fn(),
+      expirePendingDeliveries: jest.fn().mockResolvedValue({ affected: 0 }),
       findPendingDeliveries: jest.fn().mockResolvedValue([pendingDelivery]),
     };
     const queueService = { enqueueMany: jest.fn() };

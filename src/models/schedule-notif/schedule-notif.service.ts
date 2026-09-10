@@ -433,7 +433,7 @@ export class ScheduleNotifService {
 
   /** Не отправляет устаревшее расписание, если очередь была недоступна слишком долго. */
   public async expirePendingDeliveries(before: Date) {
-    await this.deliveryRepository.update(
+    return await this.deliveryRepository.update(
       {
         status: ScheduleNotifDeliveryStatus.Pending,
         scheduledFor: LessThan(before),

@@ -18,6 +18,8 @@ import {
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
+import { getTransportErrorHandlerLabel } from './transport-exception-context.util';
+
 export const isTelegramUserUnavailableError = (exception: TelegramError) =>
   exception.description.includes('bot was blocked by the user') ||
   exception.description.includes('user is deactivated') ||
@@ -66,8 +68,11 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
       !isCCE &&
       !isExpectedTelegramTransportError(exception)
     ) {
+      const handler = getTransportErrorHandlerLabel(host);
+      const messageId =
+        ctx?.callbackQuery?.message?.message_id ?? ctx?.message?.message_id;
       this.logger.error(
-        `OnUpdateType(${ctx?.updateType}): ${exception?.message || exception}`,
+        `OnUpdateType(${ctx?.updateType}) [handler=${handler}] [chat=${ctx?.chat?.id ?? 'unknown'} user=${ctx?.from?.id ?? 'unknown'} message=${messageId ?? 'unknown'}]: ${exception?.message || exception}`,
         exception.stack,
       );
     }

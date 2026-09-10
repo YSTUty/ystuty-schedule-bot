@@ -18,6 +18,8 @@ import {
 import { LocalePhrase } from '@my-interfaces';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
+import { getTransportErrorHandlerLabel } from './transport-exception-context.util';
+
 export const isVkUserUnavailableError = (error: APIError) =>
   // error.code === APIErrorCode.PERMISSION ||
   // TODO: need valid this codes
@@ -86,8 +88,9 @@ export class VkExceptionFilter implements ExceptionFilter {
         exception instanceof APIError
           ? getVkApiErrorMethod(exception)
           : undefined;
+      const handler = getTransportErrorHandlerLabel(host);
       this.logger.error(
-        `OnUpdateType(${ctx?.type})${apiMethod ? ` [VK API: ${apiMethod}]` : ''}: ${exception?.message || exception}`,
+        `OnUpdateType(${ctx?.type}) [handler=${handler}] [peer=${ctx?.peerId ?? 'unknown'} sender=${ctx?.senderId ?? 'unknown'} cmid=${ctx?.conversationMessageId ?? 'unknown'}]${apiMethod ? ` [VK API: ${apiMethod}]` : ''}: ${exception?.message || exception}`,
         exception.stack,
       );
     }

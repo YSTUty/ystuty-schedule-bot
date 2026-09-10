@@ -438,6 +438,7 @@ export class TelegramKeyboardFactory {
       period: 'day' | 'week';
       targetDayOffset: number | null;
       weekdays: number[];
+      isEnabled: boolean;
     },
   ) {
     const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -473,6 +474,15 @@ export class TelegramKeyboardFactory {
           ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeTarget),
           `scheduleNotif:changeTarget:${notif.id}`,
           { style: 'primary' },
+        ),
+        TelegramButtons.callback(
+          ctx.i18n.t(
+            notif.isEnabled
+              ? LocalePhrase.Button_ScheduleNotif_Disable
+              : LocalePhrase.Button_ScheduleNotif_Enable,
+          ),
+          `scheduleNotif:enabled:${notif.id}:${notif.isEnabled ? '0' : '1'}`,
+          { style: notif.isEnabled ? 'danger' : 'success' },
         ),
       ],
       [

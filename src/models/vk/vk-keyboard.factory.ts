@@ -550,6 +550,7 @@ export class VKKeyboardFactory {
       period: ScheduleNotifPeriod;
       targetDayOffset: number | null;
       weekdays: number[];
+      isEnabled: boolean;
     },
   ) {
     return Keyboard.keyboard([
@@ -599,6 +600,23 @@ export class VKKeyboardFactory {
             notifId: notif.id,
           },
           color: Keyboard.SECONDARY_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            ctx.i18n.t(
+              notif.isEnabled
+                ? LocalePhrase.Button_ScheduleNotif_Disable
+                : LocalePhrase.Button_ScheduleNotif_Enable,
+            ),
+          ),
+          payload: {
+            scheduleNotifAction: 'enabled',
+            notifId: notif.id,
+            isEnabled: !notif.isEnabled,
+          },
+          color: notif.isEnabled
+            ? Keyboard.NEGATIVE_COLOR
+            : Keyboard.POSITIVE_COLOR,
         }),
         Keyboard.callbackButton({
           label: getVKButtonLabel(

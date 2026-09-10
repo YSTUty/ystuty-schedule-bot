@@ -129,6 +129,7 @@ describe('VKKeyboardFactory', () => {
       period: ScheduleNotifPeriod.Day,
       targetDayOffset: 0,
       weekdays: [1, 2, 3, 4, 5, 6, 7],
+      isEnabled: true,
     });
 
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
@@ -136,6 +137,20 @@ describe('VKKeyboardFactory', () => {
 
     expect(renderedKeyboard.buttons).toHaveLength(4);
     expect(buttonsCount).toBeLessThanOrEqual(10);
+    expect(renderedKeyboard.buttons[3]).toHaveLength(3);
+    expect(
+      renderedKeyboard.buttons
+        .flat()
+        .map((button: any) => JSON.parse(button.action.payload)),
+    ).toEqual(
+      expect.arrayContaining([
+        {
+          scheduleNotifAction: 'enabled',
+          notifId: 1,
+          isEnabled: false,
+        },
+      ]),
+    );
   });
 
   it('creates the editor weekday page within VK inline keyboard limits', () => {
@@ -159,6 +174,7 @@ describe('VKKeyboardFactory', () => {
       period: ScheduleNotifPeriod.Day,
       targetDayOffset: 0,
       weekdays: [1],
+      isEnabled: true,
     });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 

@@ -218,11 +218,20 @@ describe('TelegramKeyboardFactory', () => {
       period: 'day',
       targetDayOffset: 0,
       weekdays: [1],
+      isEnabled: true,
     });
 
     expect(keyboard.reply_markup.inline_keyboard[0][0]).toMatchObject({
       callback_data: 'scheduleNotif:editTime:7',
     });
+    expect(keyboard.reply_markup.inline_keyboard.flat()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          callback_data: 'scheduleNotif:enabled:7:0',
+          style: 'danger',
+        }),
+      ]),
+    );
   });
 
   it('offers the current week as a schedule-notification target', () => {

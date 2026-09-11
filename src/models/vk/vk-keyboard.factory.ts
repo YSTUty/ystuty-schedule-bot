@@ -593,7 +593,7 @@ export class VKKeyboardFactory {
       [
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeTarget),
+            `✏️ ${ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeTarget)}`,
           ),
           payload: {
             scheduleNotifAction: 'changeTarget',
@@ -603,11 +603,11 @@ export class VKKeyboardFactory {
         }),
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            ctx.i18n.t(
+            `${notif.isEnabled ? '⏸️' : '▶️'} ${ctx.i18n.t(
               notif.isEnabled
                 ? LocalePhrase.Button_ScheduleNotif_Disable
                 : LocalePhrase.Button_ScheduleNotif_Enable,
-            ),
+            )}`,
           ),
           payload: {
             scheduleNotifAction: 'enabled',
@@ -618,9 +618,21 @@ export class VKKeyboardFactory {
             ? Keyboard.NEGATIVE_COLOR
             : Keyboard.POSITIVE_COLOR,
         }),
+      ],
+      [
         Keyboard.callbackButton({
           label: getVKButtonLabel(
-            ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
+            `🗑️ ${ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete)}`,
+          ),
+          payload: {
+            scheduleNotifAction: 'deleteConfirm',
+            notifId: notif.id,
+          },
+          color: Keyboard.NEGATIVE_COLOR,
+        }),
+        Keyboard.callbackButton({
+          label: getVKButtonLabel(
+            `✅ ${ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done)}`,
           ),
           payload: { scheduleNotifAction: 'editSave' },
           color: Keyboard.POSITIVE_COLOR,

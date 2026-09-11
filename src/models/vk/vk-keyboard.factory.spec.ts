@@ -135,9 +135,10 @@ describe('VKKeyboardFactory', () => {
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const buttonsCount = renderedKeyboard.buttons.flat().length;
 
-    expect(renderedKeyboard.buttons).toHaveLength(4);
+    expect(renderedKeyboard.buttons).toHaveLength(5);
     expect(buttonsCount).toBeLessThanOrEqual(10);
-    expect(renderedKeyboard.buttons[3]).toHaveLength(3);
+    expect(renderedKeyboard.buttons[3]).toHaveLength(2);
+    expect(renderedKeyboard.buttons[4]).toHaveLength(2);
     expect(
       renderedKeyboard.buttons
         .flat()
@@ -149,6 +150,41 @@ describe('VKKeyboardFactory', () => {
           notifId: 1,
           isEnabled: false,
         },
+        {
+          scheduleNotifAction: 'deleteConfirm',
+          notifId: 1,
+        },
+      ]),
+    );
+    expect(renderedKeyboard.buttons[4]).toEqual([
+      expect.objectContaining({
+        action: expect.objectContaining({
+          label: `🗑️ ${LocalePhrase.Button_ScheduleNotif_Delete}`,
+          payload: JSON.stringify({
+            scheduleNotifAction: 'deleteConfirm',
+            notifId: 1,
+          }),
+        }),
+      }),
+      expect.objectContaining({
+        action: expect.objectContaining({
+          label: `✅ ${LocalePhrase.Button_ScheduleNotif_Done}`,
+          payload: JSON.stringify({ scheduleNotifAction: 'editSave' }),
+        }),
+      }),
+    ]);
+    expect(renderedKeyboard.buttons[3]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: expect.stringMatching(/^✏️/),
+          }),
+        }),
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: `⏸️ ${LocalePhrase.Button_ScheduleNotif_Disable}`,
+          }),
+        }),
       ]),
     );
   });

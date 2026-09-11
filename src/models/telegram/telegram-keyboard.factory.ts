@@ -471,23 +471,28 @@ export class TelegramKeyboardFactory {
       ),
       [
         TelegramButtons.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeTarget),
+          `✏️ ${ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_ChangeTarget)}`,
           `scheduleNotif:changeTarget:${notif.id}`,
           { style: 'primary' },
         ),
         TelegramButtons.callback(
-          ctx.i18n.t(
+          `${notif.isEnabled ? '⏸️' : '▶️'} ${ctx.i18n.t(
             notif.isEnabled
               ? LocalePhrase.Button_ScheduleNotif_Disable
               : LocalePhrase.Button_ScheduleNotif_Enable,
-          ),
+          )}`,
           `scheduleNotif:enabled:${notif.id}:${notif.isEnabled ? '0' : '1'}`,
           { style: notif.isEnabled ? 'danger' : 'success' },
         ),
       ],
       [
         TelegramButtons.callback(
-          ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done),
+          `🗑️ ${ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Delete)}`,
+          `scheduleNotif:deleteConfirm:${notif.id}`,
+          { style: 'danger' },
+        ),
+        TelegramButtons.callback(
+          `✅ ${ctx.i18n.t(LocalePhrase.Button_ScheduleNotif_Done)}`,
           'scheduleNotif:editSave',
           { style: 'success' },
         ),

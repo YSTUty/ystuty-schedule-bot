@@ -228,10 +228,29 @@ describe('TelegramKeyboardFactory', () => {
       expect.arrayContaining([
         expect.objectContaining({
           callback_data: 'scheduleNotif:enabled:7:0',
+          text: `⏸️ ${LocalePhrase.Button_ScheduleNotif_Disable}`,
+          style: 'danger',
+        }),
+        expect.objectContaining({
+          callback_data: 'scheduleNotif:changeTarget:7',
+          text: `✏️ ${LocalePhrase.Button_ScheduleNotif_ChangeTarget}`,
+        }),
+        expect.objectContaining({
+          callback_data: 'scheduleNotif:deleteConfirm:7',
+          text: `🗑️ ${LocalePhrase.Button_ScheduleNotif_Delete}`,
           style: 'danger',
         }),
       ]),
     );
+    expect(keyboard.reply_markup.inline_keyboard.at(-1)).toEqual([
+      expect.objectContaining({
+        callback_data: 'scheduleNotif:deleteConfirm:7',
+      }),
+      expect.objectContaining({
+        callback_data: 'scheduleNotif:editSave',
+        text: `✅ ${LocalePhrase.Button_ScheduleNotif_Done}`,
+      }),
+    ]);
   });
 
   it('offers the current week as a schedule-notification target', () => {

@@ -10,6 +10,7 @@ describe('TelegramService', () => {
       {} as any,
       {} as any,
     );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
 
     await expect(service.sendMessage(123, 'Hello')).resolves.toEqual({
       message_id: 42,
@@ -20,6 +21,20 @@ describe('TelegramService', () => {
       { chat_id: 123, text: 'Hello', parse_mode: 'HTML' },
       { signal: expect.any(AbortSignal) },
     );
+  });
+
+  it('does not send an outgoing message when Telegram is inactive', async () => {
+    const callApi = jest.fn();
+    const service = new TelegramService(
+      { telegram: { callApi } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(false);
+
+    await expect(service.sendMessage(123, 'Hello')).resolves.toBe(false);
+    expect(callApi).not.toHaveBeenCalled();
   });
 
   it('enables polling conflict retry on launch', async () => {

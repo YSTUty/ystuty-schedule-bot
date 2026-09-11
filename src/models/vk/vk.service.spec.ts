@@ -5,6 +5,38 @@ import { SocialType } from '@my-common/constants';
 import { VkService } from './vk.service';
 
 describe('VkService', () => {
+  it('sends an outgoing message when VK is active', async () => {
+    const send = jest.fn().mockResolvedValue(42);
+    const service = new VkService(
+      { api: { messages: { send } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+
+    await expect(service.sendMessage(123, 'Hello')).resolves.toBe(42);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ peer_id: 123, message: 'Hello' }),
+    );
+  });
+
+  it('does not send an outgoing message when VK is inactive', async () => {
+    const send = jest.fn();
+    const service = new VkService(
+      { api: { messages: { send } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(false);
+
+    await expect(service.sendMessage(123, 'Hello')).resolves.toBe(false);
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('caches conversation members for two minutes', async () => {
     const items = [{ member_id: 1, is_admin: true }];
     const bot = {

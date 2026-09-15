@@ -6,6 +6,7 @@ import { APIError } from 'vk-io';
 
 import {
   delay,
+  isTelegramChatNotFoundError,
   isTelegramConversationUnavailableError,
   isTelegramRateLimitError,
   isVkConversationUnavailableError,
@@ -118,7 +119,14 @@ export class ConversationMembershipScheduler {
         }
 
         if (this.isConversationUnavailableError(conversation.social, error)) {
-          return { isLeaved: true, chatStatus: 'kicked' };
+          return {
+            isLeaved: true,
+            chatStatus:
+              error instanceof TelegramError &&
+              isTelegramChatNotFoundError(error)
+                ? 'not_found'
+                : 'kicked',
+          };
         }
 
         this.logger.error(

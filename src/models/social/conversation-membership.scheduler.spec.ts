@@ -125,6 +125,35 @@ describe('ConversationMembershipScheduler', () => {
     );
   });
 
+  it.each([
+    [403, 'Forbidden: bot was kicked from the supergroup chat', 'kicked'],
+    [400, 'Bad Request: chat not found', 'not_found'],
+  ])(
+    'marks Telegram conversation %i (%s) as %s without an error log',
+    async (code, description, chatStatus) => {
+      const { scheduler, socialService, telegramService } = createScheduler();
+      const conversation = {
+        id: 1,
+        social: SocialType.Telegram,
+        conversationId: -1001,
+        isLeaved: false,
+        chatStatus: 'member',
+      };
+      socialService.findActiveConversations.mockResolvedValue([conversation]);
+      telegramService.getBotChatMembership.mockRejectedValue(
+        new TelegramError({ error_code: code, description }),
+      );
+
+      await scheduler.run();
+
+      expect(socialService.syncConversationMembership).toHaveBeenCalledWith(
+        conversation,
+        { isLeaved: true, chatStatus },
+      );
+      expect((scheduler as any).logger.error).not.toHaveBeenCalled();
+    },
+  );
+
   it('waits one second for a VK rate limit before retrying', async () => {
     const { scheduler, socialService, vkService } = createScheduler();
     const conversation = {

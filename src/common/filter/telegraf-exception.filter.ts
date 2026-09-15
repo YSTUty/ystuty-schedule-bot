@@ -22,14 +22,21 @@ import { getTransportErrorHandlerLabel } from './transport-exception-context.uti
 
 export const isTelegramUserUnavailableError = (exception: TelegramError) =>
   exception.description.includes('bot was blocked by the user') ||
-  exception.description.includes('user is deactivated') ||
+  exception.description.includes('user is deactivated');
+
+/** Telegram не уточняет тип чата в этой ошибке, его определяет вызывающий контекст. */
+export const isTelegramChatNotFoundError = (exception: TelegramError) =>
   exception.description.includes('chat not found');
 
 export const isTelegramConversationUnavailableError = (
   exception: TelegramError,
 ) =>
   exception.description.includes('bot was kicked from the group chat') ||
-  exception.description.includes('bot is not a member of the supergroup chat');
+  exception.description.includes('bot was kicked from the supergroup chat') ||
+  exception.description.includes(
+    'bot is not a member of the supergroup chat',
+  ) ||
+  isTelegramChatNotFoundError(exception);
 
 export const isTelegramRateLimitError = (exception: TelegramError) =>
   exception.code === 429 || exception.description.includes('Too Many Requests');
@@ -124,7 +131,14 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof TelegramError) {
-      if (isTelegramUserUnavailableError(exception)) {
+      const isPrivateChat = ctx.chat?.type === 'private';
+      const isUserUnavailable =
+        isTelegramUserUnavailableError(exception) ||
+        (isPrivateChat && isTelegramChatNotFoundError(exception));
+      const isConversationUnavailable =
+        !isPrivateChat && isTelegramConversationUnavailableError(exception);
+
+      if (isUserUnavailable) {
         try {
           ctx.userSocial.isBlockedBot = true;
           // ctx.session.isBlockedBot = true;
@@ -143,7 +157,7 @@ export class TelegrafExceptionFilter implements ExceptionFilter {
         return;
       }
 
-      if (isTelegramConversationUnavailableError(exception)) {
+      if (isConversationUnavailable) {
         try {
           if (ctx.conversation) {
             ctx.conversation.isLeaved = true;

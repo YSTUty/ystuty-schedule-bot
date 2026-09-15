@@ -116,6 +116,7 @@ export class TelegramKeyboardFactory {
       ...(isPrivate && isAdmin
         ? [[ctx.i18n.t(LocalePhrase.Button_Broadcast)]]
         : []),
+      ...(isPrivate ? this.getWebAppRows() : []),
     ]).resize();
   }
 
@@ -217,7 +218,7 @@ export class TelegramKeyboardFactory {
           LocalePhrase.Button_ScheduleNotif,
         ),
       ],
-[
+      [
         TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Welcome_Guide),
           'help:open',
@@ -230,7 +231,37 @@ export class TelegramKeyboardFactory {
           `https://t.me/${xEnv.SOCIAL_TELEGRAM_BOT_NAME}?startgroup=invite`,
         ),
       ],
+      ...this.getWebAppRows(),
     ]);
+  }
+
+  /** Собирает до двух опциональных кнопок Mini App из конфигурации окружения. */
+  private getWebAppRows() {
+    const options: {
+      name: string;
+      url: string;
+      style: TelegramButtonOptions['style'];
+    }[] = [
+      {
+        name: xEnv.SOCIAL_TELEGRAM_BOT_WEBAPP_NAME,
+        url: xEnv.SOCIAL_TELEGRAM_WEBAPP_URL,
+        style: 'primary',
+      },
+      {
+        name: xEnv.SOCIAL_TELEGRAM_BOT_WEBAPP_NAME_2,
+        url: xEnv.SOCIAL_TELEGRAM_WEBAPP_URL_2,
+        style: 'success',
+      },
+    ];
+    const buttons = options.flatMap(({ name, url, style }) => {
+      const text = name.trim();
+      const webAppUrl = url.trim();
+      return text && webAppUrl
+        ? [TelegramButtons.webApp(text, webAppUrl, { style })]
+        : [];
+    });
+
+    return buttons.length ? [buttons] : [];
   }
 
   public getBroadcastQueueControls(ctx: IContext, paused = true) {

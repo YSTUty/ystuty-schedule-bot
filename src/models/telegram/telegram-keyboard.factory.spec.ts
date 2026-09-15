@@ -1,3 +1,5 @@
+import * as xEnv from '@my-environment';
+
 import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 
@@ -7,6 +9,10 @@ describe('TelegramKeyboardFactory', () => {
   const ctx = {
     i18n: { t: jest.fn((phrase: string) => phrase) },
   } as any;
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('shows all notif hours when creating a notif', () => {
     const keyboard = new TelegramKeyboardFactory().getScheduleNotifHours(
@@ -64,6 +70,65 @@ describe('TelegramKeyboardFactory', () => {
         [LocalePhrase.Button_ScheduleNotif],
       ]),
     );
+  });
+
+  it('shows configured Mini Apps only in private-chat keyboards', () => {
+    jest.replaceProperty(
+      xEnv,
+      'SOCIAL_TELEGRAM_WEBAPP_URL',
+      'https://mini-app.example/one',
+    );
+    jest.replaceProperty(
+      xEnv,
+      'SOCIAL_TELEGRAM_BOT_WEBAPP_NAME',
+      'Основное приложение',
+    );
+    jest.replaceProperty(
+      xEnv,
+      'SOCIAL_TELEGRAM_WEBAPP_URL_2',
+      'https://mini-app.example/two',
+    );
+    jest.replaceProperty(
+      xEnv,
+      'SOCIAL_TELEGRAM_BOT_WEBAPP_NAME_2',
+      'Второе приложение',
+    );
+
+    const factory = new TelegramKeyboardFactory();
+    const privateKeyboard = factory.getStart({
+      chat: { type: 'private' },
+      from: { id: 42 },
+      session: {},
+      i18n: { t: (phrase: string) => phrase },
+    } as any);
+    const welcomeKeyboard = factory.getWelcomeFeatures(ctx);
+    const groupKeyboard = factory.getStart({
+      chat: { type: 'group' },
+      from: { id: 42 },
+      session: {},
+      i18n: { t: (phrase: string) => phrase },
+    } as any);
+
+    const privateButtons = privateKeyboard.reply_markup.keyboard.flat();
+    const welcomeButtons = welcomeKeyboard.reply_markup.inline_keyboard.flat();
+    const groupButtons = groupKeyboard.reply_markup.keyboard.flat();
+
+    const appButtons = [
+      expect.objectContaining({
+        text: 'Основное приложение',
+        style: 'primary',
+        web_app: { url: 'https://mini-app.example/one' },
+      }),
+      expect.objectContaining({
+        text: 'Второе приложение',
+        style: 'success',
+        web_app: { url: 'https://mini-app.example/two' },
+      }),
+    ];
+
+    expect(privateButtons).toEqual(expect.arrayContaining(appButtons));
+    expect(welcomeButtons).toEqual(expect.arrayContaining(appButtons));
+    expect(groupButtons).not.toEqual(expect.arrayContaining(appButtons));
   });
 
   it('builds the fallback help button as an inline callback', () => {

@@ -92,6 +92,14 @@ export const SOCIAL_TELEGRAM_BOT_NAME =
   process.env.SOCIAL_TELEGRAM_BOT_NAME || '';
 export const SOCIAL_TELEGRAM_BOT_TOKEN =
   process.env.SOCIAL_TELEGRAM_BOT_TOKEN || '';
+export const SOCIAL_TELEGRAM_WEBAPP_URL =
+  process.env.SOCIAL_TELEGRAM_WEBAPP_URL || '';
+export const SOCIAL_TELEGRAM_BOT_WEBAPP_NAME =
+  process.env.SOCIAL_TELEGRAM_BOT_WEBAPP_NAME || '';
+export const SOCIAL_TELEGRAM_WEBAPP_URL_2 =
+  process.env.SOCIAL_TELEGRAM_WEBAPP_URL_2 || '';
+export const SOCIAL_TELEGRAM_BOT_WEBAPP_NAME_2 =
+  process.env.SOCIAL_TELEGRAM_BOT_WEBAPP_NAME_2 || '';
 export const SOCIAL_TELEGRAM_ADMIN_IDS: number[] =
   (process.env.SOCIAL_TELEGRAM_ADMIN_IDS &&
     JSON.parse(process.env.SOCIAL_TELEGRAM_ADMIN_IDS)) ||

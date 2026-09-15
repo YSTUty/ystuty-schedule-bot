@@ -1,8 +1,19 @@
 import { APIError, APIErrorCode } from 'vk-io';
 
+import * as xEnv from '@my-environment';
+
 import { VkUnreadDialogRecoveryService } from './vk-unread-dialog-recovery.service';
 
 describe('VkUnreadDialogRecoveryService', () => {
+  beforeEach(() => {
+    // В CI нет локального .env, но recovery требует ID сообщества до вызова VK API.
+    jest.replaceProperty(xEnv, 'SOCIAL_VK_GROUP_ID', 42);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   const createService = () => {
     const getConversations = jest.fn();
     const send = jest.fn().mockResolvedValue(1);

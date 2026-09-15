@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.4.3](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.4.2...v0.4.3) (2026-09-15)
+
+### 🚀 Features
+
+* **help:** add welcome guide actions ([2e8cc34](https://github.com/YSTUty/ystuty-schedule-bot/commit/2e8cc3450516404406d97eeffb3e217157aef671))
+* **telegram:** add configurable webapp buttons ([1233b81](https://github.com/YSTUty/ystuty-schedule-bot/commit/1233b8156706b395fa24534bd47ecb055b7bce45))
+* **vk:** recover unread direct messages after startup ([263e178](https://github.com/YSTUty/ystuty-schedule-bot/commit/263e178330d37605fe22fad1db5641e43e3e1da3))
+
+### 🐛 Bug Fixes
+
+* **conversations:** classify unavailable telegram chats ([4d45373](https://github.com/YSTUty/ystuty-schedule-bot/commit/4d45373b42166280b45a4972e8faf3de250c0d37))
+* **logging:** trace transport error handlers ([7c4744f](https://github.com/YSTUty/ystuty-schedule-bot/commit/7c4744ff38abc0772a16e5ee48bda3f690c75f39))
+* **schedule-notif:** load queue recipients reliably ([7028ee3](https://github.com/YSTUty/ystuty-schedule-bot/commit/7028ee3a65c01855cb5fe0f09c8897a5da5eaa3c))
+* **schedule-notif:** restore delete editor action ([701e6cf](https://github.com/YSTUty/ystuty-schedule-bot/commit/701e6cf602caca63571137f7afba11fec77524e6))
+* **schedule-notif:** restore notification toggle controls ([f0538c5](https://github.com/YSTUty/ystuty-schedule-bot/commit/f0538c547f80901d3b2c728b6f7b413b1a533a35))
+* **social-connect:** suppress repeated check failures ([87eb73f](https://github.com/YSTUty/ystuty-schedule-bot/commit/87eb73f12745f0680893b81ed3ec67b54eff15bc))
+* **telegram:** silence expected transport errors ([195ed0b](https://github.com/YSTUty/ystuty-schedule-bot/commit/195ed0b663a9ee65cce07bbbdfce7a5d285fb7d7))
+* **vk:** avoid false conversation kicks ([20fd1ac](https://github.com/YSTUty/ystuty-schedule-bot/commit/20fd1ac4a82ba05658bf812c74792af1b77b05bd))
+
+### 🐱‍💻 Tests
+
+* **transports:** isolate service activity checks ([39cfab1](https://github.com/YSTUty/ystuty-schedule-bot/commit/39cfab197adcd6cfe7679de88ff9187d767f9c52))
+
 ## [0.4.2](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.4.1...v0.4.2) (2026-09-08)
 
 ### 🚀 Features

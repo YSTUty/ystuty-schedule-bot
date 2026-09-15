@@ -14,9 +14,15 @@ import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
 import { VkFeedbackDeliveryService } from './vk-feedback-delivery.service';
 import { VKKeyboardFactory } from './vk-keyboard.factory';
+import { VkUnreadDialogRecoveryService } from './vk-unread-dialog-recovery.service';
 import { VkService } from './vk.service';
 
-const baseProviders = [VkService, VKKeyboardFactory, VkFeedbackDeliveryService];
+const baseProviders = [
+  VkService,
+  VKKeyboardFactory,
+  VkFeedbackDeliveryService,
+  VkUnreadDialogRecoveryService,
+];
 const middlewares = [MainMiddleware];
 const providers = [
   ...middlewares,

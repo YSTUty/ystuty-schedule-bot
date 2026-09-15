@@ -145,6 +145,7 @@ export enum LocalePhrase {
   // Pages
   Page_Start = 'page.start',
   Page_InitBot = 'page.init_bot',
+  Page_Vk_UnreadRecovery = 'page.vk.unread_recovery',
   Page_WelcomeFeatures = 'page.welcome_features',
   Page_Help = 'page.help',
   Page_UnknownMessage = 'page.unknown_message',

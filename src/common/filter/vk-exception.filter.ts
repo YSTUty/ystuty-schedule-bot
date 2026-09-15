@@ -177,6 +177,7 @@ export class VkExceptionFilter implements ExceptionFilter {
       if (ctx.isDM && isVkUserUnavailableError(exception)) {
         try {
           ctx.state.userSocial.isBlockedBot = true;
+          ctx.state.userSocial.hasDM = false;
           // ctx.session.isBlockedBot = true;
         } catch (err) {
           if (err instanceof Error) {

@@ -16,6 +16,8 @@ import { RedisService } from '../redis/redis.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { SocialService } from '../social/social.service';
 
+import { VkUnreadDialogRecoveryService } from './vk-unread-dialog-recovery.service';
+
 const CONVERSATION_MEMBERS_CACHE_TTL_SECONDS = 120;
 
 type CachedConversationMember = Pick<
@@ -43,6 +45,7 @@ export class VkService implements OnModuleInit {
     private readonly redisService: RedisService,
     public readonly scheduleService: ScheduleService,
     private readonly socialService: SocialService,
+    private readonly unreadDialogRecoveryService: VkUnreadDialogRecoveryService,
   ) {}
 
   public get isActive(): boolean {
@@ -56,8 +59,11 @@ export class VkService implements OnModuleInit {
 
   public async launch() {
     try {
-      this.bot.updates.start().catch((err) => this.logger.error(err));
+      await this.bot.updates.start();
       this.logger.log('[Bot] Started');
+      void this.unreadDialogRecoveryService
+        .recoverUnreadDirectMessages()
+        .catch((error) => this.logger.error('[Unread recovery] Failed', error));
       // await this.notifyAdmin('🚀 BotServer is running');
     } catch (err) {
       this.logger.error(err);

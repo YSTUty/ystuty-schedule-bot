@@ -13,6 +13,7 @@ describe('VkService', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
     jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
 
@@ -26,6 +27,7 @@ describe('VkService', () => {
     const send = jest.fn();
     const service = new VkService(
       { api: { messages: { send } } } as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -59,6 +61,7 @@ describe('VkService', () => {
       bot as any,
       {} as any,
       redisService as any,
+      {} as any,
       {} as any,
       {} as any,
     );
@@ -102,6 +105,7 @@ describe('VkService', () => {
       {} as any,
       {} as any,
       socialService as any,
+      {} as any,
     );
     jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
     jest.spyOn((service as any).logger, 'warn').mockImplementation();
@@ -136,6 +140,7 @@ describe('VkService', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
     jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
 
@@ -160,6 +165,7 @@ describe('VkService', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
 
     await expect(
@@ -171,5 +177,42 @@ describe('VkService', () => {
       group_id: expect.any(Number),
       count: 1_000,
     });
+  });
+
+  it('starts unread direct-message recovery after polling starts', async () => {
+    const start = jest.fn().mockResolvedValue(undefined);
+    const recoverUnreadDirectMessages = jest.fn().mockResolvedValue(undefined);
+    const service = new VkService(
+      { updates: { start } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { recoverUnreadDirectMessages } as any,
+    );
+    jest.spyOn((service as any).logger, 'log').mockImplementation();
+
+    await service.launch();
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(recoverUnreadDirectMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start unread direct-message recovery when polling fails', async () => {
+    const start = jest.fn().mockRejectedValue(new Error('VK unavailable'));
+    const recoverUnreadDirectMessages = jest.fn();
+    const service = new VkService(
+      { updates: { start } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { recoverUnreadDirectMessages } as any,
+    );
+    jest.spyOn((service as any).logger, 'error').mockImplementation();
+
+    await service.launch();
+
+    expect(recoverUnreadDirectMessages).not.toHaveBeenCalled();
   });
 });

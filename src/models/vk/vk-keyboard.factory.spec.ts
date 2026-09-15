@@ -22,7 +22,7 @@ describe('VKKeyboardFactory', () => {
     expect(renderedKeyboard.buttons[0][0].action.label).toHaveLength(40);
   });
 
-  it('builds welcome quick actions for selecting a group, notifications and chat invite', () => {
+  it('builds welcome quick actions for selecting a group, notifications, guide and chat invite', () => {
     const keyboard = new VKKeyboardFactory().getWelcomeFeatures({
       ...ctx,
       $groupId: 42,
@@ -42,6 +42,13 @@ describe('VKKeyboardFactory', () => {
               phrase: 'button.schedule_notification.title',
             }),
           }),
+        }),
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: LocalePhrase.Button_Welcome_Guide,
+            payload: JSON.stringify({ mainAction: 'help' }),
+          }),
+          color: 'primary',
         }),
         expect.objectContaining({
           action: expect.objectContaining({

@@ -217,6 +217,13 @@ export class TelegramKeyboardFactory {
           LocalePhrase.Button_ScheduleNotif,
         ),
       ],
+[
+        TelegramButtons.callback(
+          ctx.i18n.t(LocalePhrase.Button_Welcome_Guide),
+          'help:open',
+          { style: 'primary' },
+        ),
+      ],
       [
         Markup.button.url(
           ctx.i18n.t(LocalePhrase.Button_Welcome_InviteToChat),

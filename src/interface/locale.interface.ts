@@ -21,6 +21,7 @@ export enum LocalePhrase {
   Button_SelectGroup_X = 'button.select_group_x',
   Button_Welcome_SelectGroup = 'button.welcome.select_group',
   Button_Welcome_ScheduleNotif = 'button.welcome.schedule_notification',
+  Button_Welcome_Guide = 'button.welcome.guide',
   Button_Welcome_InviteToChat = 'button.welcome.invite_to_chat',
   Button_Broadcast = 'button.broadcast.title',
   Button_Broadcast_Create = 'button.broadcast.create',

@@ -287,6 +287,13 @@ export class VKKeyboardFactory {
         }),
       ],
       [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Welcome_Guide),
+          payload: { mainAction: 'help' },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+      ],
+      [
         Keyboard.applicationButton({
           label: ctx.i18n.t(LocalePhrase.Button_InviteToChat),
           appId: 6441755,

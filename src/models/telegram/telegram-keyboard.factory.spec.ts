@@ -23,7 +23,7 @@ describe('TelegramKeyboardFactory', () => {
     });
   });
 
-  it('builds welcome quick actions for selecting a group, notifications and chat invite', () => {
+  it('builds welcome quick actions for selecting a group, notifications, guide and chat invite', () => {
     const keyboard = new TelegramKeyboardFactory().getWelcomeFeatures(ctx);
     const buttons = keyboard.reply_markup.inline_keyboard.flat();
 
@@ -34,6 +34,11 @@ describe('TelegramKeyboardFactory', () => {
         }),
         expect.objectContaining({
           callback_data: 'button.schedule_notification.title',
+        }),
+        expect.objectContaining({
+          callback_data: 'help:open',
+          text: LocalePhrase.Button_Welcome_Guide,
+          style: 'primary',
         }),
         expect.objectContaining({
           url: expect.stringContaining('?startgroup=invite'),

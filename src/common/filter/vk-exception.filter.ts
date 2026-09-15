@@ -41,9 +41,15 @@ export const isVkConversationUnavailableError = (error: APIError) =>
   error.code === APIErrorCode.MESSAGES_CHAT_DISABLED ||
   error.code === APIErrorCode.MESSAGES_CHAT_NOT_EXIST ||
   error.code === APIErrorCode.MESSAGES_CHAT_USER_LEFT ||
-  error.code === APIErrorCode.MESSAGES_CHAT_USER_NO_ACCESS ||
+  // `917` не означает исключение сообщества: VK может запретить читать состав
+  // участников активной беседы, если у бота недостаточно прав.
+  // error.code === APIErrorCode.MESSAGES_CHAT_USER_NO_ACCESS ||
   // Permission to perform this action is denied: the user was kicked out of the conversation
   /kicked out of the conversation/i.test(error.message);
+
+/** Нет доступа к списку участников, но это не подтверждает исключение бота из беседы. */
+export const isVkConversationMembersAccessDeniedError = (error: APIError) =>
+  error.code === APIErrorCode.MESSAGES_CHAT_USER_NO_ACCESS;
 
 export const isVkRateLimitError = (error: APIError) =>
   error.code === APIErrorCode.RATE_LIMIT ||

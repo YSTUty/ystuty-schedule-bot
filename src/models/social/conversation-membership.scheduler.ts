@@ -9,6 +9,7 @@ import {
   isTelegramChatNotFoundError,
   isTelegramConversationUnavailableError,
   isTelegramRateLimitError,
+  isVkConversationMembersAccessDeniedError,
   isVkConversationUnavailableError,
   isVkRateLimitError,
   SocialType,
@@ -127,6 +128,17 @@ export class ConversationMembershipScheduler {
                 ? 'not_found'
                 : 'kicked',
           };
+        }
+
+        if (
+          conversation.social === SocialType.Vkontakte &&
+          error instanceof APIError &&
+          isVkConversationMembersAccessDeniedError(error)
+        ) {
+          this.logger.warn(
+            `[vkontakte][conversation] cannot verify membership id=${String(conversation.conversationId)}: VK denied access to conversation data; preserving current state`,
+          );
+          return null;
         }
 
         this.logger.error(

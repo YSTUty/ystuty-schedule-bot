@@ -52,6 +52,52 @@ export class MainUpdate {
     await ctx.send('YOUARE ADMIN');
   }
 
+  @Hears(/^\/debug_members(?:\s+(?<conversationId>\d+))?$/i)
+  @UseGuards(VkAdminGuard(true))
+  async onDebugConversationMembers(@Ctx() ctx: IMessageContext) {
+    if (!ctx.isDM) {
+      await ctx.send('Используй команду в личных сообщениях с ботом.');
+      return;
+    }
+
+    const conversationId = Number(ctx.$match?.groups?.conversationId);
+    if (!Number.isSafeInteger(conversationId) || conversationId < 1) {
+      await ctx.send('Укажи номер беседы: /debug_members 1');
+      return;
+    }
+
+    const groupId = ctx.$groupId;
+    if (!groupId) {
+      await ctx.send('Не удалось определить ID сообщества VK.');
+      return;
+    }
+
+    const peerId = 2e9 + conversationId;
+    let membersResult = 'не проверено';
+    try {
+      const { count, items } = await this.vkService.getConversationMembers(
+        peerId,
+        groupId,
+      );
+      const botMember = items.find((member) => member.member_id === -groupId);
+      membersResult = botMember
+        ? `успешно; участников: ${count}; member_id=${botMember.member_id}; is_admin=${Boolean(botMember.is_admin)}; is_owner=${Boolean(botMember.is_owner)}`
+        : `успешно; участников: ${count}; бот не найден в ответе API`;
+    } catch (error) {
+      membersResult =
+        error instanceof APIError
+          ? `VK API Code №${error.code}: ${error.message}`
+          : `ошибка: ${error instanceof Error ? error.message : String(error)}`;
+    }
+
+    this.logger.log(
+      `[VK][debug][conversation-members] conversation=${conversationId} peer=${peerId} members=${membersResult}`,
+    );
+    await ctx.send(
+      `🧪 Проверка VK members API\nconversation_id: ${conversationId}\npeer_id: ${peerId}\nСписок участников: ${membersResult}`,
+    );
+  }
+
   @Hears('/broke')
   onBroke() {
     throw new Error('Whoops');

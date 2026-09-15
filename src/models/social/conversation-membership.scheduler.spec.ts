@@ -180,6 +180,33 @@ describe('ConversationMembershipScheduler', () => {
     expect(vkService.getBotConversationMembership).toHaveBeenCalledTimes(2);
   });
 
+  it('preserves VK conversation state when the members API denies access', async () => {
+    const { scheduler, socialService, vkService } = createScheduler();
+    const conversation = {
+      id: 1,
+      social: SocialType.Vkontakte,
+      conversationId: 123,
+      isLeaved: false,
+      chatStatus: 'member',
+    };
+    socialService.findActiveConversations.mockResolvedValue([conversation]);
+    vkService.getBotConversationMembership.mockRejectedValue(
+      new APIError({
+        error_code: APIErrorCode.MESSAGES_CHAT_USER_NO_ACCESS,
+        error_msg: "You don't have access to this chat",
+        request_params: [],
+      }),
+    );
+
+    await scheduler.run();
+
+    expect(socialService.syncConversationMembership).not.toHaveBeenCalled();
+    expect((scheduler as any).logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('preserving current state'),
+    );
+    expect((scheduler as any).logger.error).not.toHaveBeenCalled();
+  });
+
   it('checks only recently left conversations for bot re-invites', async () => {
     const { scheduler, socialService, telegramService } = createScheduler();
     const conversation = {

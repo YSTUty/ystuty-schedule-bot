@@ -28,6 +28,11 @@ export type BotConversationMembership = {
   chatStatus: 'member' | 'administrator' | 'owner' | 'kicked';
 };
 
+export type VkConversationMembers = {
+  count: number;
+  items: CachedConversationMember[];
+};
+
 @Injectable()
 export class VkService implements OnModuleInit {
   private readonly logger = new Logger(VkService.name);
@@ -215,7 +220,37 @@ export class VkService implements OnModuleInit {
     return cachedValue;
   }
 
-  /** Запрашивает актуальное присутствие и роль сообщества в VK-беседе без Redis cache. */
+  /** Запрашивает состав беседы у VK API без Redis cache для диагностики и проверки роли бота. */
+  public async getConversationMembers(
+    peerId: number,
+    groupId = xEnv.SOCIAL_VK_GROUP_ID,
+  ): Promise<VkConversationMembers> {
+    if (!groupId) {
+      throw new Error('VK group ID is not configured');
+    }
+
+    const { count, items } = await this.bot.api.messages.getConversationMembers(
+      {
+        peer_id: peerId,
+        group_id: groupId,
+        count: 1_000,
+      },
+    );
+    return {
+      count,
+      items: items.map((item) => ({
+        member_id: item.member_id,
+        is_admin: item.is_admin,
+        is_owner: item.is_owner,
+      })),
+    };
+  }
+
+  /**
+   * Запрашивает присутствие и роль сообщества в VK-беседе без Redis cache.
+   * Error 917 не интерпретируется здесь как исключение бота: вызывающий код
+   * должен сохранить прежнее состояние, поскольку роль и membership неизвестны.
+   */
   public async getBotConversationMembership(
     conversationId: number,
     groupId = xEnv.SOCIAL_VK_GROUP_ID,
@@ -224,11 +259,10 @@ export class VkService implements OnModuleInit {
       throw new Error('VK group ID is not configured');
     }
 
-    const { items } = await this.bot.api.messages.getConversationMembers({
-      peer_id: 2e9 + conversationId,
-      group_id: groupId,
-      count: 1_000,
-    });
+    const { items } = await this.getConversationMembers(
+      2e9 + conversationId,
+      groupId,
+    );
     const botMember = items.find((member) => member.member_id === -groupId);
     if (!botMember) {
       return { isLeaved: true, chatStatus: 'kicked' };

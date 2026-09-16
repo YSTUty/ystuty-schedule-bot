@@ -22,8 +22,6 @@ export const checkLocaleCondition =
   (value: string | undefined = undefined, ctx: IMessageContext) => {
     if (!value || !ctx.i18n) return false;
 
-    // let pass: RegExpExecArray = null;
-
     const wrapPhrase = (phrase: LocalePhrase) => {
       try {
         return ctx.i18n.t(phrase, templateData);
@@ -34,36 +32,48 @@ export const checkLocaleCondition =
       }
     };
 
-    const passed = phrases
-      .map((e) => [e, wrapPhrase(e)] as const)
-      .some(([key, phrase]) => {
-        if (phrase === null) {
-          return false;
-        }
+    const localizedPhrases = phrases.map(
+      (phrase) => [phrase, wrapPhrase(phrase)] as const,
+    );
+    const literalButton = localizedPhrases.find(
+      ([key, phrase]) =>
+        phrase !== null &&
+        (ctx.messagePayload?.phrase === key ||
+          (key.split('.')[0] !== 'regexp' && value === phrase)),
+    );
 
-        // By keyboard button (значение `phrase` устанавливается в `payload` кнопки)
-        if (ctx.messagePayload?.phrase === key) {
-          ctx.$match = /* pass = */ value.match(phrase) as RegExpExecArray;
+    // Текст static keyboard и payload-кнопок должен выигрывать у широкой
+    // regexp-команды, которая способна принять подпись за имя группы.
+    if (literalButton) {
+      if (!ctx.messagePayload?.phrase) {
+        ctx.state.isLocalePhrase = true;
+      }
+      ctx.$match = /[\s\S]+/.exec(value)!;
+      return true;
+    }
+
+    const passed = localizedPhrases.some(([key, phrase]) => {
+      if (phrase === null) {
+        return false;
+      }
+
+      if (key.split('.')[0] === 'regexp' && regExpByRegExp.test(phrase)) {
+        const { regex_body, regex_flags } =
+          phrase.match(regExpByRegExp)!.groups!;
+        const regExp = new RegExp(regex_body, regex_flags);
+
+        if (regExp.test(value)) {
+          ctx.$match = /* pass = */ value.match(regExp)!;
           return true;
         }
+      }
 
-        if (key.split('.')[0] === 'regexp' && regExpByRegExp.test(phrase)) {
-          const { regex_body, regex_flags } =
-            phrase.match(regExpByRegExp)!.groups!;
-          const regExp = new RegExp(regex_body, regex_flags);
-
-          if (regExp.test(value)) {
-            ctx.$match = /* pass = */ value.match(regExp)!;
-            return true;
-          }
-        }
-
-        const result = phrase === value;
-        if (result) {
-          ctx.state.isLocalePhrase = true;
-        }
-        return result;
-      });
+      const result = phrase === value;
+      if (result) {
+        ctx.state.isLocalePhrase = true;
+      }
+      return result;
+    });
 
     return passed;
   };

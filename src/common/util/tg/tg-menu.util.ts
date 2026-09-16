@@ -38,39 +38,41 @@ export const checkLocaleCondition =
       }
     };
 
-    phrases
-      .map((e) => [e, wrapPhrase(e)] as const)
-      .some(([key, phrase]) => {
-        if (phrase === null) {
-          return false;
-        }
+    const localizedPhrases = phrases.map(
+      (phrase) => [phrase, wrapPhrase(phrase)] as const,
+    );
+    const literalButton = localizedPhrases.find(
+      ([key, phrase]) => key.split('.')[0] !== 'regexp' && value === phrase,
+    );
 
-        // By keyboard button
-        if (value === phrase) {
-          // В тексте кнопки могут быть символы RegExp, например `[A]` у
-          // админской кнопки рассылок. Значение уже сравнили буквально,
-          // поэтому нельзя передавать строку в String.match().
-          pass = /[\s\S]+/.exec(value)!;
+    // Сначала проверяем точные подписи кнопок: широкая regexp-команда может
+    // иначе принять «Расписание группы» за запрос группы «группы».
+    if (literalButton) {
+      return /[\s\S]+/.exec(value);
+    }
+
+    localizedPhrases.some(([key, phrase]) => {
+      if (phrase === null) {
+        return false;
+      }
+
+      if (key.split('.')[0] === 'regexp' && regExpByRegExp.test(phrase)) {
+        const { regex_body, regex_flags } =
+          phrase.match(regExpByRegExp)!.groups!;
+        const regExp = new RegExp(regex_body, regex_flags);
+
+        if (regExp.test(value)) {
+          pass = regExp.exec(value);
           return true;
         }
+      }
 
-        if (key.split('.')[0] === 'regexp' && regExpByRegExp.test(phrase)) {
-          const { regex_body, regex_flags } =
-            phrase.match(regExpByRegExp)!.groups!;
-          const regExp = new RegExp(regex_body, regex_flags);
-
-          if (regExp.test(value)) {
-            pass = regExp.exec(value);
-            return true;
-          }
-        }
-
-        const result = phrase === value;
-        if (result) {
-          ctx.state.isLocalePhrase = true;
-        }
-        return result;
-      });
+      const result = phrase === value;
+      if (result) {
+        ctx.state.isLocalePhrase = true;
+      }
+      return result;
+    });
 
     return pass;
   };

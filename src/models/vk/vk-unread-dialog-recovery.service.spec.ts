@@ -2,6 +2,8 @@ import { APIError, APIErrorCode } from 'vk-io';
 
 import * as xEnv from '@my-environment';
 
+import { SocialType } from '@my-common/constants';
+
 import { VkUnreadDialogRecoveryService } from './vk-unread-dialog-recovery.service';
 
 describe('VkUnreadDialogRecoveryService', () => {
@@ -22,12 +24,16 @@ describe('VkUnreadDialogRecoveryService', () => {
       del: jest.fn().mockResolvedValue(1),
       set: jest.fn().mockResolvedValue('OK'),
     };
+    const userService = {
+      findBySocialId: jest.fn().mockResolvedValue({ id: 1 }),
+    };
     const service = new VkUnreadDialogRecoveryService(
       {
         api: { messages: { getConversations, send } },
         updates: { handleWebhookUpdate },
       } as any,
       { redis } as any,
+      userService as any,
     );
     const log = jest.spyOn((service as any).logger, 'log').mockImplementation();
     jest.spyOn((service as any).logger, 'warn').mockImplementation();
@@ -41,6 +47,7 @@ describe('VkUnreadDialogRecoveryService', () => {
       redis,
       send,
       service,
+      userService,
       wait,
     };
   };
@@ -162,6 +169,50 @@ describe('VkUnreadDialogRecoveryService', () => {
       expect.objectContaining({
         object: expect.objectContaining({
           message: expect.objectContaining({ id: 987, peer_id: 789 }),
+        }),
+      }),
+    );
+  });
+
+  it('replays start instead of an arbitrary message for a new social profile', async () => {
+    const {
+      getConversations,
+      handleWebhookUpdate,
+      send,
+      service,
+      userService,
+    } = createService();
+    userService.findBySocialId.mockResolvedValue(null);
+    getConversations.mockResolvedValue({
+      count: 1,
+      items: [
+        {
+          conversation: { peer: { id: 123 } },
+          last_message: {
+            date: 1_789_473_000,
+            from_id: 123,
+            id: 456,
+            out: 0,
+            peer_id: 123,
+            text: 'Произвольное сообщение',
+          },
+        },
+      ],
+    });
+
+    await service.recoverUnreadDirectMessages(
+      new Date('2026-09-15T12:00:00.000Z'),
+    );
+
+    expect(userService.findBySocialId).toHaveBeenCalledWith(
+      SocialType.Vkontakte,
+      123,
+    );
+    expect(send).not.toHaveBeenCalled();
+    expect(handleWebhookUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        object: expect.objectContaining({
+          message: expect.objectContaining({ id: 456, text: '/start' }),
         }),
       }),
     );

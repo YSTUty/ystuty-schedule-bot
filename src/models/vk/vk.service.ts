@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectVkApi } from 'nestjs-vk';
 
 import { APIError, getRandomId, VK } from 'vk-io';
@@ -45,6 +51,7 @@ export class VkService implements OnModuleInit {
     private readonly redisService: RedisService,
     public readonly scheduleService: ScheduleService,
     private readonly socialService: SocialService,
+    @Inject(forwardRef(() => VkUnreadDialogRecoveryService))
     private readonly unreadDialogRecoveryService: VkUnreadDialogRecoveryService,
   ) {}
 

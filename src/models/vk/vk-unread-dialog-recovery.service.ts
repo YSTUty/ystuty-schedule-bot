@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectVkApi } from 'nestjs-vk';
 
 import { APIError, getRandomId, VK } from 'vk-io';
@@ -10,10 +10,12 @@ import {
   isVkRateLimitError,
   isVkUserUnavailableError,
 } from '@my-common';
+import { SocialType } from '@my-common/constants';
 import { i18n } from '@my-common/util/vk';
 import { LocalePhrase } from '@my-interfaces';
 
 import { RedisService } from '../redis/redis.service';
+import { UserService } from '../user/user.service';
 
 const RECOVERY_DIALOGS_PAGE_SIZE = 200;
 const RECOVERY_MESSAGE_MAX_AGE_MS = 4 * 24 * 60 * 60 * 1e3;
@@ -75,6 +77,7 @@ type RecoveryStats = {
   eligible: number;
   claimed: number;
   processed: number;
+  started: number;
   unavailable: number;
   failed: number;
   skipped: Record<RecoveryCandidateSkipReason, number>;
@@ -89,6 +92,8 @@ export class VkUnreadDialogRecoveryService {
   constructor(
     @InjectVkApi() private readonly bot: VK,
     private readonly redisService: RedisService,
+    @Inject(forwardRef(() => UserService))
+    private readonly userService: UserService,
   ) {}
 
   /** Однократно после старта пытается ответить на свежие непрочитанные и неотвеченные ЛС. */
@@ -104,6 +109,7 @@ export class VkUnreadDialogRecoveryService {
       filters,
       processed: 0,
       skipped: this.createSkipStats(),
+      started: 0,
       unavailable: 0,
       unique: 0,
     };
@@ -144,9 +150,21 @@ export class VkUnreadDialogRecoveryService {
       stats.claimed += 1;
 
       try {
-        await this.notifyAboutRecovery(candidate.peerId);
-        await this.replayMessage(groupId, candidate);
-        stats.processed += 1;
+        const isNewSocialUser = !(await this.userService.findBySocialId(
+          SocialType.Vkontakte,
+          candidate.peerId,
+        ));
+        if (isNewSocialUser) {
+          // Последнее сообщение могло быть произвольным, а не командой запуска.
+          // Для нового профиля сначала эмулируем /start, чтобы отправить обычный
+          // стартовый экран и дать понятную точку входа.
+          await this.replayStartMessage(groupId, candidate);
+          stats.started += 1;
+        } else {
+          await this.notifyAboutRecovery(candidate.peerId);
+          await this.replayMessage(groupId, candidate);
+          stats.processed += 1;
+        }
       } catch (error) {
         if (error instanceof APIError && isVkUserUnavailableError(error)) {
           // Сообщение уже подтверждает факт ЛС. Пропускаем его через обычный
@@ -301,10 +319,11 @@ export class VkUnreadDialogRecoveryService {
   private async replayMessage(
     groupId: number,
     candidate: RecoveryMessageCandidate,
+    text = candidate.message.text,
   ) {
     // `messages.getConversations` usually returns peer_id, but the
     // middleware chain needs it unconditionally for an emulated update.
-    const message = { ...candidate.message, peer_id: candidate.peerId };
+    const message = { ...candidate.message, peer_id: candidate.peerId, text };
     await this.bot.updates.handleWebhookUpdate({
       type: 'message_new',
       group_id: groupId,
@@ -313,6 +332,13 @@ export class VkUnreadDialogRecoveryService {
         message,
       },
     });
+  }
+
+  private async replayStartMessage(
+    groupId: number,
+    candidate: RecoveryMessageCandidate,
+  ) {
+    await this.replayMessage(groupId, candidate, '/start');
   }
 
   private async replayUnavailableUserMessage(
@@ -381,7 +407,7 @@ export class VkUnreadDialogRecoveryService {
       .join(',');
 
     this.logger.log(
-      `[VK][unread-recovery] completed filters=${filters} unique=${stats.unique} eligible=${stats.eligible} claimed=${stats.claimed} processed=${stats.processed} unavailable=${stats.unavailable} failed=${stats.failed} skipped=${skipped || 'none'}`,
+      `[VK][unread-recovery] completed filters=${filters} unique=${stats.unique} eligible=${stats.eligible} claimed=${stats.claimed} started=${stats.started} processed=${stats.processed} unavailable=${stats.unavailable} failed=${stats.failed} skipped=${skipped || 'none'}`,
     );
   }
 }

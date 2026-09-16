@@ -25,10 +25,17 @@ describe('MetricsService', () => {
     const conversationStatusCounter = createGauge();
     const scheduleReferenceCounter = createGauge();
     const scheduleRequestCounter = { inc: jest.fn() };
+    const scheduleCacheCounter = { inc: jest.fn() };
+    const scheduleApiRequestCounter = { inc: jest.fn() };
+    const scheduleRefreshCounter = { inc: jest.fn() };
     const scheduleNotifCreatedCounter = { inc: jest.fn() };
     const telegramRequestCounter = { inc: jest.fn() };
     const vkRequestCounter = { inc: jest.fn() };
-    const histogram = { startTimer: jest.fn() };
+    const scheduleApiStopTimer = jest.fn();
+    const scheduleApiHistogram = {
+      startTimer: jest.fn(() => scheduleApiStopTimer),
+    };
+    const transportHistogram = { startTimer: jest.fn() };
     const getGauge = jest
       .fn()
       .mockReturnValueOnce(userCounter)
@@ -43,6 +50,9 @@ describe('MetricsService', () => {
     const getCounter = jest
       .fn()
       .mockReturnValueOnce(scheduleRequestCounter)
+      .mockReturnValueOnce(scheduleCacheCounter)
+      .mockReturnValueOnce(scheduleApiRequestCounter)
+      .mockReturnValueOnce(scheduleRefreshCounter)
       .mockReturnValueOnce(scheduleNotifCreatedCounter)
       .mockReturnValueOnce(telegramRequestCounter)
       .mockReturnValueOnce(vkRequestCounter);
@@ -135,13 +145,19 @@ describe('MetricsService', () => {
       {
         getCounter,
         getGauge,
-        getHistogram: jest.fn().mockReturnValue(histogram),
+        getHistogram: jest
+          .fn()
+          .mockReturnValueOnce(scheduleApiHistogram)
+          .mockReturnValue(transportHistogram),
       } as never,
       dataSource as never,
     );
 
     await metricsService.refreshDomainGauges();
     metricsService.incrementScheduleRequest('group', 'ЦИС-17');
+    metricsService.incrementScheduleCacheResult('group', 'fresh');
+    metricsService.startScheduleApiRequestTimer('group')('success');
+    metricsService.incrementScheduleRefreshResult('group', 'lock_busy');
     metricsService.incrementScheduleNotifCreated({
       social: SocialType.Telegram,
       scope: 'personal',
@@ -152,6 +168,22 @@ describe('MetricsService', () => {
     expect(userCounter.set).toHaveBeenCalledWith(1);
     expect(scheduleRequestCounter.inc).toHaveBeenCalledWith({
       target_type: 'group',
+    });
+    expect(scheduleCacheCounter.inc).toHaveBeenCalledWith({
+      target_type: 'group',
+      result: 'fresh',
+    });
+    expect(scheduleApiRequestCounter.inc).toHaveBeenCalledWith({
+      target_type: 'group',
+      status: 'success',
+    });
+    expect(scheduleApiHistogram.startTimer).toHaveBeenCalledWith({
+      target_type: 'group',
+    });
+    expect(scheduleApiStopTimer).toHaveBeenCalledWith({ status: 'success' });
+    expect(scheduleRefreshCounter.inc).toHaveBeenCalledWith({
+      target_type: 'group',
+      result: 'lock_busy',
     });
     expect(metricsService.scheduleTargetRequestCounter).toBeNull();
     expect(metricsService.scheduleNotifTargetCreatedCounter).toBeNull();

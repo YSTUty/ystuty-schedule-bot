@@ -645,20 +645,31 @@ export class ScheduleService implements OnModuleInit {
       if (cacheAgeMs <= SCHEDULE_CACHE_FRESH_MS) {
         if (cacheAgeMs > SCHEDULE_CACHE_SOFT_REFRESH_MS) {
           this.refreshScheduleInBackground({ cacheKey, targetId, targetType });
+          this.metricsService.incrementScheduleCacheResult(
+            targetType,
+            'soft_stale',
+          );
           return this.createCachedScheduleResult(cached, 'soft_stale');
         }
+        this.metricsService.incrementScheduleCacheResult(targetType, 'fresh');
         return this.createCachedScheduleResult(cached, 'fresh');
       }
 
-      return await this.refreshScheduleWithLock({
+      const response = await this.refreshScheduleWithLock({
         cacheKey,
         cached,
         targetId,
         targetType,
         options,
       });
+      this.metricsService.incrementScheduleCacheResult(
+        targetType,
+        response?.cacheState === 'stale' ? 'stale_fallback' : 'stale_refresh',
+      );
+      return response;
     }
 
+    this.metricsService.incrementScheduleCacheResult(targetType, 'miss');
     return await this.refreshScheduleWithLock({
       cacheKey,
       targetId,
@@ -679,10 +690,12 @@ export class ScheduleService implements OnModuleInit {
     targetType: 'group' | 'teacher';
     options?: { requestTimeoutMs?: number };
   }): Promise<ScheduleLoadResult | null> {
+    const stopApiTimer =
+      this.metricsService.startScheduleApiRequestTimer(targetType);
+
+    let response: { data: { isCache: boolean; items: OneWeek[] } };
     try {
-      const {
-        data: { items, isCache },
-      } = await firstValueFrom(
+      response = await firstValueFrom(
         this.httpService.get<{
           isCache: boolean;
           items: OneWeek[];
@@ -690,43 +703,9 @@ export class ScheduleService implements OnModuleInit {
           timeout: options?.requestTimeoutMs ?? SCHEDULE_API_REQUEST_TIMEOUT_MS,
         }),
       );
-
-      if (items.length === 0) {
-        return null;
-      }
-
-      this.removePastScheduleDays(items);
-      const fetchedAt = new Date();
-      if (this.allowCaching) {
-        try {
-          await this.redisService.redis.set(
-            cacheKey,
-            JSON.stringify({
-              fetchedAt: fetchedAt.toISOString(),
-              items,
-            } satisfies ScheduleCacheEntry),
-            'EX',
-            SCHEDULE_CACHE_RETENTION_SECONDS,
-          );
-          await this.redisService.redis.del(
-            this.getRefreshFailureKey(cacheKey),
-          );
-        } catch (error) {
-          // Успешный ответ Schedule API остаётся полезным, даже если Redis
-          // временно недоступен и новый снимок нельзя сохранить.
-          this.logger.warn(
-            `Failed to persist schedule cache: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
-      }
-
-      return {
-        cacheState: 'upstream',
-        fetchedAt,
-        isCache,
-        items,
-      };
+      stopApiTimer('success');
     } catch (error) {
+      stopApiTimer('error');
       if (this.allowCaching) {
         try {
           await this.redisService.redis.set(
@@ -739,6 +718,44 @@ export class ScheduleService implements OnModuleInit {
       }
       throw error;
     }
+
+    const {
+      data: { items, isCache },
+    } = response;
+
+    if (items.length === 0) {
+      return null;
+    }
+
+    this.removePastScheduleDays(items);
+    const fetchedAt = new Date();
+    if (this.allowCaching) {
+      try {
+        await this.redisService.redis.set(
+          cacheKey,
+          JSON.stringify({
+            fetchedAt: fetchedAt.toISOString(),
+            items,
+          } satisfies ScheduleCacheEntry),
+          'EX',
+          SCHEDULE_CACHE_RETENTION_SECONDS,
+        );
+        await this.redisService.redis.del(this.getRefreshFailureKey(cacheKey));
+      } catch (error) {
+        // Успешный ответ Schedule API остаётся полезным, даже если Redis
+        // временно недоступен и новый снимок нельзя сохранить.
+        this.logger.warn(
+          `Failed to persist schedule cache: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    return {
+      cacheState: 'upstream',
+      fetchedAt,
+      isCache,
+      items,
+    };
   }
 
   /** Убирает прошедшие дни, которые Schedule API всё ещё возвращает в ответе. */
@@ -834,6 +851,10 @@ export class ScheduleService implements OnModuleInit {
   }): Promise<ScheduleLoadResult | null> {
     const activeRefresh = this.inFlightScheduleRefreshes.get(cacheKey);
     if (activeRefresh) {
+      this.metricsService.incrementScheduleRefreshResult(
+        rest.targetType,
+        'joined_local',
+      );
       // Пользовательский запрос со старым снимком не должен ждать медленный
       // upstream refresh, который уже выполняется в этом же процессе.
       if (rest.cached) {
@@ -885,6 +906,10 @@ export class ScheduleService implements OnModuleInit {
           }
 
           if (currentCached && (await this.isRefreshInCooldown(cacheKey))) {
+            this.metricsService.incrementScheduleRefreshResult(
+              targetType,
+              'cooldown',
+            );
             return this.createCachedScheduleResult(currentCached, 'stale');
           }
 
@@ -910,6 +935,11 @@ export class ScheduleService implements OnModuleInit {
       );
     } catch (error) {
       if (!isConcurrencyControlError(error)) throw error;
+
+      this.metricsService.incrementScheduleRefreshResult(
+        targetType,
+        'lock_busy',
+      );
 
       // Первый worker уже обновляет ключ. Не заставляем пользователя ждать:
       // возвращаем его последний снимок, если он существует.

@@ -37,12 +37,25 @@ const KNOWN_CHAT_STATUSES = new Set([
   'owner',
   'restricted',
 ]);
+const SCHEDULE_API_REQUEST_DURATION_BUCKETS = [
+  0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 15,
+];
 
 export type ScheduleGroupLessonMetric = {
   groupName: string;
   instituteName: string;
   lessonsCount: number;
 };
+
+type ScheduleTargetType = 'group' | 'teacher';
+type ScheduleCacheMetricResult =
+  | 'fresh'
+  | 'soft_stale'
+  | 'stale_refresh'
+  | 'stale_fallback'
+  | 'miss';
+type ScheduleRefreshMetricResult = 'cooldown' | 'lock_busy' | 'joined_local';
+type ScheduleApiRequestMetricStatus = 'success' | 'error';
 
 @Injectable()
 export class MetricsService implements OnApplicationBootstrap {
@@ -65,6 +78,10 @@ export class MetricsService implements OnApplicationBootstrap {
   public readonly scheduleGroupLessonScanTimestamp: Gauge | null;
   public readonly scheduleRequestCounter: CounterMetric;
   public readonly scheduleTargetRequestCounter: CounterMetric | null;
+  public readonly scheduleCacheCounter: CounterMetric;
+  public readonly scheduleApiRequestCounter: CounterMetric;
+  public readonly scheduleApiRequestDurationHistogram: HistogramMetric;
+  public readonly scheduleRefreshCounter: CounterMetric;
   public readonly scheduleNotifCreatedCounter: CounterMetric;
   public readonly scheduleNotifTargetCreatedCounter: CounterMetric | null;
 
@@ -157,6 +174,27 @@ export class MetricsService implements OnApplicationBootstrap {
             labelNames: ['target_type', 'target'],
           })
         : null;
+    this.scheduleCacheCounter = this.promService.getCounter({
+      name: `${this.prefix}schedule_cache_total`,
+      help: 'Schedule cache outcome by target type',
+      labelNames: ['target_type', 'result'],
+    });
+    this.scheduleApiRequestCounter = this.promService.getCounter({
+      name: `${this.prefix}schedule_api_request_total`,
+      help: 'Actual upstream Schedule API requests by target type and status',
+      labelNames: ['target_type', 'status'],
+    });
+    this.scheduleApiRequestDurationHistogram = this.promService.getHistogram({
+      name: `${this.prefix}schedule_api_request_duration_seconds`,
+      help: 'Actual upstream Schedule API request duration in seconds',
+      labelNames: ['target_type', 'status'],
+      buckets: SCHEDULE_API_REQUEST_DURATION_BUCKETS,
+    });
+    this.scheduleRefreshCounter = this.promService.getCounter({
+      name: `${this.prefix}schedule_refresh_total`,
+      help: 'Schedule cache refresh coordination outcomes by target type',
+      labelNames: ['target_type', 'result'],
+    });
     this.scheduleNotifCreatedCounter = this.promService.getCounter({
       name: `${this.prefix}schedule_notif_created_total`,
       help: 'Created schedule notifications by transport, scope, and target type',
@@ -428,7 +466,7 @@ export class MetricsService implements OnApplicationBootstrap {
 
   /** Учитывает общий запрос и, при явном включении, его конкретную цель. */
   public incrementScheduleRequest(
-    targetType: 'group' | 'teacher',
+    targetType: ScheduleTargetType,
     target: string | number,
   ) {
     this.scheduleRequestCounter.inc({ target_type: targetType });
@@ -436,6 +474,34 @@ export class MetricsService implements OnApplicationBootstrap {
       target_type: targetType,
       target: String(target),
     });
+  }
+
+  /** Учитывает итог cache-aside пути одного логического запроса расписания. */
+  public incrementScheduleCacheResult(
+    targetType: ScheduleTargetType,
+    result: ScheduleCacheMetricResult,
+  ) {
+    this.scheduleCacheCounter.inc({ target_type: targetType, result });
+  }
+
+  /** Запускает измерение только фактического HTTP-вызова Schedule API. */
+  public startScheduleApiRequestTimer(targetType: ScheduleTargetType) {
+    const stopTimer = this.scheduleApiRequestDurationHistogram.startTimer({
+      target_type: targetType,
+    });
+
+    return (status: ScheduleApiRequestMetricStatus) => {
+      this.scheduleApiRequestCounter.inc({ target_type: targetType, status });
+      stopTimer({ status });
+    };
+  }
+
+  /** Учитывает только причины, по которым refresh не начал новый HTTP-вызов. */
+  public incrementScheduleRefreshResult(
+    targetType: ScheduleTargetType,
+    result: ScheduleRefreshMetricResult,
+  ) {
+    this.scheduleRefreshCounter.inc({ target_type: targetType, result });
   }
 
   /** Учитывает только новое сохранённое уведомление, а не его редактирование. */

@@ -31,6 +31,20 @@ describe('ScheduleService', () => {
     ),
   });
 
+  const createMetricsService = () => {
+    const stopScheduleApiTimer = jest.fn();
+
+    return {
+      incrementScheduleCacheResult: jest.fn(),
+      incrementScheduleRefreshResult: jest.fn(),
+      incrementScheduleRequest: jest.fn(),
+      setScheduleGroupLessonCounts: jest.fn(),
+      setScheduleReferenceCounts: jest.fn(),
+      startScheduleApiRequestTimer: jest.fn(() => stopScheduleApiTimer),
+      stopScheduleApiTimer,
+    };
+  };
+
   beforeEach(() => {
     service = new ScheduleService({} as any, {} as any, {} as any, {} as any);
     (service as any).allTeachersList = [
@@ -59,7 +73,7 @@ describe('ScheduleService', () => {
 
   describe('reference data loading logs', () => {
     it('logs groups only after the first load and when their content changes', async () => {
-      const metricsService = { setScheduleReferenceCounts: jest.fn() };
+      const metricsService = createMetricsService();
       const httpService = {
         get: jest
           .fn()
@@ -148,9 +162,7 @@ describe('ScheduleService', () => {
 
   describe('schedule availability metrics', () => {
     it('counts all raw lesson records for every group', async () => {
-      const metricsService = {
-        setScheduleGroupLessonCounts: jest.fn(),
-      };
+      const metricsService = createMetricsService();
       const httpService = {
         get: jest.fn((url: string) => {
           if (url.includes(encodeURIComponent('ЦИС-17'))) {
@@ -210,9 +222,7 @@ describe('ScheduleService', () => {
     });
 
     it('keeps the previous snapshot when at least one group request fails', async () => {
-      const metricsService = {
-        setScheduleGroupLessonCounts: jest.fn(),
-      };
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         {
           get: jest.fn(() => throwError(() => new Error('Schedule API down'))),
@@ -251,11 +261,12 @@ describe('ScheduleService', () => {
         }),
       });
       const httpService = { get: jest.fn() };
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         httpService as any,
         createConcurrency() as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
 
       await expect(
@@ -266,6 +277,10 @@ describe('ScheduleService', () => {
         items: scheduleItems(),
       });
       expect(httpService.get).not.toHaveBeenCalled();
+      expect(metricsService.incrementScheduleCacheResult).toHaveBeenCalledWith(
+        'group',
+        'fresh',
+      );
     });
 
     it('keeps compatibility with the legacy array-only cache payload', async () => {
@@ -273,11 +288,12 @@ describe('ScheduleService', () => {
         [cacheKey]: JSON.stringify(scheduleItems()),
       });
       const httpService = { get: jest.fn() };
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         httpService as any,
         createConcurrency() as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
 
       await expect(
@@ -287,6 +303,10 @@ describe('ScheduleService', () => {
         isCache: true,
       });
       expect(httpService.get).not.toHaveBeenCalled();
+      expect(metricsService.incrementScheduleCacheResult).toHaveBeenCalledWith(
+        'group',
+        'fresh',
+      );
     });
 
     it('starts a background refresh for a five-to-fifteen-minute-old snapshot', async () => {
@@ -297,11 +317,12 @@ describe('ScheduleService', () => {
           items: scheduleItems(),
         }),
       });
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         { get: jest.fn() } as any,
         createConcurrency() as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
       const refresh = jest
         .spyOn(service as any, 'refreshScheduleInBackground')
@@ -318,6 +339,10 @@ describe('ScheduleService', () => {
         targetId: 'ЦИС-46',
         targetType: 'group',
       });
+      expect(metricsService.incrementScheduleCacheResult).toHaveBeenCalledWith(
+        'group',
+        'soft_stale',
+      );
     });
 
     it('serves stale data and records a short cooldown when Schedule API is unavailable', async () => {
@@ -331,11 +356,12 @@ describe('ScheduleService', () => {
       const httpService = {
         get: jest.fn(() => throwError(() => new Error('Schedule API down'))),
       };
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         httpService as any,
         createConcurrency() as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
 
       await expect(
@@ -350,6 +376,14 @@ describe('ScheduleService', () => {
         'EX',
         60,
       );
+      expect(metricsService.incrementScheduleCacheResult).toHaveBeenCalledWith(
+        'group',
+        'stale_fallback',
+      );
+      expect(metricsService.startScheduleApiRequestTimer).toHaveBeenCalledWith(
+        'group',
+      );
+      expect(metricsService.stopScheduleApiTimer).toHaveBeenCalledWith('error');
     });
 
     it('does not retry Schedule API while the failed-refresh cooldown exists', async () => {
@@ -362,11 +396,12 @@ describe('ScheduleService', () => {
         [`${cacheKey}:refresh-failed`]: '1',
       });
       const httpService = { get: jest.fn() };
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         httpService as any,
         createConcurrency() as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
 
       await expect(
@@ -376,6 +411,13 @@ describe('ScheduleService', () => {
         isCache: true,
       });
       expect(httpService.get).not.toHaveBeenCalled();
+      expect(metricsService.incrementScheduleCacheResult).toHaveBeenCalledWith(
+        'group',
+        'stale_fallback',
+      );
+      expect(
+        metricsService.incrementScheduleRefreshResult,
+      ).toHaveBeenCalledWith('group', 'cooldown');
     });
 
     it('stores an upstream response with a long fallback retention', async () => {
@@ -385,11 +427,12 @@ describe('ScheduleService', () => {
           of({ data: { isCache: false, items: scheduleItems() } }),
         ),
       };
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         httpService as any,
         createConcurrency() as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
 
       await expect(
@@ -403,6 +446,13 @@ describe('ScheduleService', () => {
         expect.stringContaining('"fetchedAt"'),
         'EX',
         14 * 24 * 60 * 60,
+      );
+      expect(metricsService.incrementScheduleCacheResult).toHaveBeenCalledWith(
+        'group',
+        'miss',
+      );
+      expect(metricsService.stopScheduleApiTimer).toHaveBeenCalledWith(
+        'success',
       );
     });
 
@@ -418,11 +468,12 @@ describe('ScheduleService', () => {
       concurrency.exclusiveDistributed.mockRejectedValue(
         new LockBusyError('Refresh is busy'),
       );
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         { get: jest.fn() } as any,
         concurrency as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
 
       await expect(
@@ -431,6 +482,9 @@ describe('ScheduleService', () => {
         cacheState: 'stale',
         isCache: true,
       });
+      expect(
+        metricsService.incrementScheduleRefreshResult,
+      ).toHaveBeenCalledWith('group', 'lock_busy');
     });
 
     it('does not wait for an already running local refresh when stale data exists', async () => {
@@ -441,11 +495,12 @@ describe('ScheduleService', () => {
           items: scheduleItems(),
         }),
       });
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         { get: jest.fn() } as any,
         createConcurrency() as any,
         { redis } as any,
-        {} as any,
+        metricsService as any,
       );
       (service as any).inFlightScheduleRefreshes.set(
         cacheKey,
@@ -458,6 +513,9 @@ describe('ScheduleService', () => {
         cacheState: 'stale',
         isCache: true,
       });
+      expect(
+        metricsService.incrementScheduleRefreshResult,
+      ).toHaveBeenCalledWith('group', 'joined_local');
     });
 
     it('adds a calm cache marker only for a stale fallback response', () => {
@@ -485,7 +543,7 @@ describe('ScheduleService', () => {
 
   describe('weekly navigation', () => {
     it('returns only adjacent weeks that have calendar dates in the schedule', async () => {
-      const metricsService = { incrementScheduleRequest: jest.fn() };
+      const metricsService = createMetricsService();
       service = new ScheduleService(
         {} as any,
         {} as any,

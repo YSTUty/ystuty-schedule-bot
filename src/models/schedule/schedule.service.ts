@@ -29,6 +29,14 @@ type Teacher = {
 
 const SCHEDULE_AVAILABILITY_CONCURRENCY = 4;
 const SCHEDULE_AVAILABILITY_REQUEST_TIMEOUT_MS = 15e3;
+const SCHEDULE_API_REQUEST_TIMEOUT_MS = 10e3;
+const SCHEDULE_CACHE_SOFT_REFRESH_MS = 5 * 60 * 1e3;
+const SCHEDULE_CACHE_FRESH_MS = 15 * 60 * 1e3;
+const SCHEDULE_CACHE_TIMESTAMP_NOTICE_MS = 60 * 60 * 1e3;
+const SCHEDULE_CACHE_OLD_NOTICE_MS = 3 * 24 * 60 * 60 * 1e3;
+const SCHEDULE_CACHE_RETENTION_SECONDS = 14 * 24 * 60 * 60;
+const SCHEDULE_REFRESH_FAILURE_COOLDOWN_SECONDS = 60;
+const SCHEDULE_REFRESH_LOCK_TTL_MS = SCHEDULE_API_REQUEST_TIMEOUT_MS + 5e3;
 
 export type GroupInstitute = {
   name: string;
@@ -43,6 +51,20 @@ export type ScheduleWeekView = {
   message: string;
   previousWeekNumber?: number;
   nextWeekNumber?: number;
+};
+
+type ScheduleCacheEntry = {
+  fetchedAt: string;
+  items: OneWeek[];
+};
+
+type ScheduleCacheState = 'upstream' | 'fresh' | 'soft_stale' | 'stale';
+
+type ScheduleLoadResult = {
+  isCache: boolean;
+  items: OneWeek[];
+  cacheState: ScheduleCacheState;
+  fetchedAt: Date;
 };
 
 @Injectable()
@@ -62,6 +84,11 @@ export class ScheduleService implements OnModuleInit {
   private groupsChecksum?: string;
   private teachersChecksum?: string;
   private isScheduleAvailabilityRefreshInProgress = false;
+  /** Объединяет одинаковые refresh в пределах одного процесса. */
+  private readonly inFlightScheduleRefreshes = new Map<
+    string,
+    Promise<ScheduleLoadResult | null>
+  >();
 
   async onModuleInit() {
     this.logger.debug('Start load all groups & teachers');
@@ -489,7 +516,7 @@ export class ScheduleService implements OnModuleInit {
         return null;
       }
 
-      return formatScheduleWeekDays({
+      const message = formatScheduleWeekDays({
         week,
         dayNumber,
         addHashTag,
@@ -497,22 +524,13 @@ export class ScheduleService implements OnModuleInit {
         targetType,
         presentation,
       });
+      if (!message) return message;
+      return this.appendScheduleCacheNotice(message, response);
     };
 
     try {
-      return await this.concurrencyService.exclusiveDistributed(
-        this.concurrencyService.buildKey(
-          'ystuty:schedule',
-          targetType,
-          String(targetId).toLowerCase(),
-        ),
-        loadSchedule,
-        { ttlMs: 5e3 },
-      );
+      return await loadSchedule();
     } catch (error) {
-      if (isConcurrencyControlError(error)) {
-        throw error;
-      }
       this.logger.error(
         'Failed to load formatted schedule',
         error instanceof Error ? error.stack : String(error),
@@ -593,7 +611,7 @@ export class ScheduleService implements OnModuleInit {
         dateRange: scheduleUtil.getScheduleWeekDateRangeForDate(
           selected.weekStartDate,
         ),
-        message,
+        message: this.appendScheduleCacheNotice(message, response),
         previousWeekNumber: weeks[selectedIndex - 1]?.week.number,
         nextWeekNumber: weeks[selectedIndex + 1]?.week.number,
       };
@@ -610,37 +628,121 @@ export class ScheduleService implements OnModuleInit {
     targetId: string | number,
     targetType: 'group' | 'teacher',
     options?: { requestTimeoutMs?: number },
-  ) {
+  ): Promise<ScheduleLoadResult | null> {
     const cacheKey = `schedule:${targetType}:${String(targetId).toLowerCase()}`;
-    if (this.allowCaching) {
-      try {
-        const cachedData = await this.redisService.redis.get(cacheKey);
-        if (cachedData) {
-          const items = JSON.parse(cachedData) as OneWeek[];
-          return { isCache: true, items };
+    if (!this.allowCaching) {
+      return await this.loadScheduleFromApi({
+        cacheKey,
+        targetId,
+        targetType,
+        options,
+      });
+    }
+
+    const cached = await this.readCachedSchedule(cacheKey);
+    if (cached) {
+      const cacheAgeMs = this.getCacheAgeMs(cached.fetchedAt);
+      if (cacheAgeMs <= SCHEDULE_CACHE_FRESH_MS) {
+        if (cacheAgeMs > SCHEDULE_CACHE_SOFT_REFRESH_MS) {
+          this.refreshScheduleInBackground({ cacheKey, targetId, targetType });
+          return this.createCachedScheduleResult(cached, 'soft_stale');
         }
-      } catch (err) {
-        this.logger.error(err);
+        return this.createCachedScheduleResult(cached, 'fresh');
       }
+
+      return await this.refreshScheduleWithLock({
+        cacheKey,
+        cached,
+        targetId,
+        targetType,
+        options,
+      });
     }
 
-    const {
-      data: { items, isCache },
-    } = await firstValueFrom(
-      this.httpService.get<{
-        isCache: boolean;
-        items: OneWeek[];
-      }>(`/v1/schedule/${targetType}/${encodeURIComponent(targetId)}`, {
-        ...(options?.requestTimeoutMs && {
-          timeout: options.requestTimeoutMs,
+    return await this.refreshScheduleWithLock({
+      cacheKey,
+      targetId,
+      targetType,
+      options,
+    });
+  }
+
+  /** Возвращает актуальный снимок Schedule API и сохраняет его с метаданными. */
+  private async loadScheduleFromApi({
+    cacheKey,
+    targetId,
+    targetType,
+    options,
+  }: {
+    cacheKey: string;
+    targetId: string | number;
+    targetType: 'group' | 'teacher';
+    options?: { requestTimeoutMs?: number };
+  }): Promise<ScheduleLoadResult | null> {
+    try {
+      const {
+        data: { items, isCache },
+      } = await firstValueFrom(
+        this.httpService.get<{
+          isCache: boolean;
+          items: OneWeek[];
+        }>(`/v1/schedule/${targetType}/${encodeURIComponent(targetId)}`, {
+          timeout: options?.requestTimeoutMs ?? SCHEDULE_API_REQUEST_TIMEOUT_MS,
         }),
-      }),
-    );
+      );
 
-    if (items.length === 0) {
-      return null;
+      if (items.length === 0) {
+        return null;
+      }
+
+      this.removePastScheduleDays(items);
+      const fetchedAt = new Date();
+      if (this.allowCaching) {
+        try {
+          await this.redisService.redis.set(
+            cacheKey,
+            JSON.stringify({
+              fetchedAt: fetchedAt.toISOString(),
+              items,
+            } satisfies ScheduleCacheEntry),
+            'EX',
+            SCHEDULE_CACHE_RETENTION_SECONDS,
+          );
+          await this.redisService.redis.del(
+            this.getRefreshFailureKey(cacheKey),
+          );
+        } catch (error) {
+          // Успешный ответ Schedule API остаётся полезным, даже если Redis
+          // временно недоступен и новый снимок нельзя сохранить.
+          this.logger.warn(
+            `Failed to persist schedule cache: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+
+      return {
+        cacheState: 'upstream',
+        fetchedAt,
+        isCache,
+        items,
+      };
+    } catch (error) {
+      if (this.allowCaching) {
+        try {
+          await this.redisService.redis.set(
+            this.getRefreshFailureKey(cacheKey),
+            '1',
+            'EX',
+            SCHEDULE_REFRESH_FAILURE_COOLDOWN_SECONDS,
+          );
+        } catch {}
+      }
+      throw error;
     }
+  }
 
+  /** Убирает прошедшие дни, которые Schedule API всё ещё возвращает в ответе. */
+  private removePastScheduleDays(items: OneWeek[]) {
     const firstAugustDate = new Date(new Date().getFullYear(), 7, 1);
     if (new Date() > firstAugustDate) {
       for (const item of items) {
@@ -658,17 +760,221 @@ export class ScheduleService implements OnModuleInit {
         );
       }
     }
+  }
 
-    if (this.allowCaching) {
-      await this.redisService.redis.set(
-        cacheKey,
-        JSON.stringify(items),
-        'EX',
-        60 * 5,
+  private async readCachedSchedule(cacheKey: string) {
+    try {
+      const cachedData = await this.redisService.redis.get(cacheKey);
+      if (!cachedData) return null;
+
+      const parsed = JSON.parse(cachedData) as ScheduleCacheEntry | OneWeek[];
+      if (Array.isArray(parsed)) {
+        // До этой доработки Redis хранил только массив. Его старый TTL был
+        // пять минут, поэтому временно считаем такой снимок свежим.
+        return { fetchedAt: new Date().toISOString(), items: parsed };
+      }
+      if (!Array.isArray(parsed.items)) return null;
+
+      const fetchedAt = new Date(parsed.fetchedAt);
+      if (Number.isNaN(fetchedAt.getTime())) return null;
+      return { fetchedAt: fetchedAt.toISOString(), items: parsed.items };
+    } catch (error) {
+      this.logger.warn(
+        `Failed to read schedule cache: ${error instanceof Error ? error.message : String(error)}`,
       );
+      return null;
+    }
+  }
+
+  private createCachedScheduleResult(
+    cached: ScheduleCacheEntry,
+    cacheState: Extract<ScheduleCacheState, 'fresh' | 'soft_stale' | 'stale'>,
+  ): ScheduleLoadResult {
+    return {
+      cacheState,
+      fetchedAt: new Date(cached.fetchedAt),
+      isCache: true,
+      items: cached.items,
+    };
+  }
+
+  private refreshScheduleInBackground({
+    cacheKey,
+    targetId,
+    targetType,
+  }: {
+    cacheKey: string;
+    targetId: string | number;
+    targetType: 'group' | 'teacher';
+  }) {
+    void this.refreshScheduleWithLock({ cacheKey, targetId, targetType }).catch(
+      (error) => {
+        if (!isConcurrencyControlError(error)) {
+          this.logger.debug(
+            `Background schedule refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      },
+    );
+  }
+
+  /**
+   * Не даёт нескольким worker-ам одновременно обновлять один снимок.
+   * При занятом lock уже имеющийся кэш остаётся доступным, даже если он старый.
+   */
+  private async refreshScheduleWithLock({
+    cacheKey,
+    ...rest
+  }: {
+    cacheKey: string;
+    cached?: ScheduleCacheEntry | null;
+    targetId: string | number;
+    targetType: 'group' | 'teacher';
+    options?: { requestTimeoutMs?: number };
+  }): Promise<ScheduleLoadResult | null> {
+    const activeRefresh = this.inFlightScheduleRefreshes.get(cacheKey);
+    if (activeRefresh) {
+      // Пользовательский запрос со старым снимком не должен ждать медленный
+      // upstream refresh, который уже выполняется в этом же процессе.
+      if (rest.cached) {
+        return this.createCachedScheduleResult(rest.cached, 'stale');
+      }
+      return await activeRefresh;
     }
 
-    return { isCache, items };
+    const refresh = this.refreshScheduleWithDistributedLock({
+      cacheKey,
+      ...rest,
+    });
+    this.inFlightScheduleRefreshes.set(cacheKey, refresh);
+
+    try {
+      return await refresh;
+    } finally {
+      if (this.inFlightScheduleRefreshes.get(cacheKey) === refresh) {
+        this.inFlightScheduleRefreshes.delete(cacheKey);
+      }
+    }
+  }
+
+  /** Координирует refresh между несколькими экземплярами бота через Redis. */
+  private async refreshScheduleWithDistributedLock({
+    cacheKey,
+    cached,
+    targetId,
+    targetType,
+    options,
+  }: {
+    cacheKey: string;
+    cached?: ScheduleCacheEntry | null;
+    targetId: string | number;
+    targetType: 'group' | 'teacher';
+    options?: { requestTimeoutMs?: number };
+  }): Promise<ScheduleLoadResult | null> {
+    try {
+      return await this.concurrencyService.exclusiveDistributed(
+        this.getRefreshLockKey(targetId, targetType),
+        async () => {
+          const currentCached = await this.readCachedSchedule(cacheKey);
+          if (
+            currentCached &&
+            this.getCacheAgeMs(currentCached.fetchedAt) <=
+              SCHEDULE_CACHE_SOFT_REFRESH_MS
+          ) {
+            return this.createCachedScheduleResult(currentCached, 'fresh');
+          }
+
+          if (currentCached && (await this.isRefreshInCooldown(cacheKey))) {
+            return this.createCachedScheduleResult(currentCached, 'stale');
+          }
+
+          try {
+            return await this.loadScheduleFromApi({
+              cacheKey,
+              targetId,
+              targetType,
+              options,
+            });
+          } catch (error) {
+            if (currentCached) {
+              return this.createCachedScheduleResult(currentCached, 'stale');
+            }
+            throw error;
+          }
+        },
+        {
+          retryAttempts: cached ? 0 : 2,
+          retryDelayMs: 200,
+          ttlMs: SCHEDULE_REFRESH_LOCK_TTL_MS,
+        },
+      );
+    } catch (error) {
+      if (!isConcurrencyControlError(error)) throw error;
+
+      // Первый worker уже обновляет ключ. Не заставляем пользователя ждать:
+      // возвращаем его последний снимок, если он существует.
+      const fallbackCached =
+        cached || (await this.readCachedSchedule(cacheKey));
+      if (fallbackCached) {
+        return this.createCachedScheduleResult(fallbackCached, 'stale');
+      }
+      throw error;
+    }
+  }
+
+  private getRefreshLockKey(
+    targetId: string | number,
+    targetType: 'group' | 'teacher',
+  ) {
+    return this.concurrencyService.buildKey(
+      'ystuty:schedule:refresh',
+      targetType,
+      String(targetId).toLowerCase(),
+    );
+  }
+
+  private async isRefreshInCooldown(cacheKey: string) {
+    try {
+      return !!(await this.redisService.redis.get(
+        this.getRefreshFailureKey(cacheKey),
+      ));
+    } catch {
+      return false;
+    }
+  }
+
+  private getRefreshFailureKey(cacheKey: string) {
+    return `${cacheKey}:refresh-failed`;
+  }
+
+  private getCacheAgeMs(fetchedAt: string) {
+    return Math.max(0, Date.now() - new Date(fetchedAt).getTime());
+  }
+
+  /** Показывает, что ответ получен из устаревшего fallback, без тревожного текста. */
+  private appendScheduleCacheNotice(
+    message: string,
+    response: ScheduleLoadResult,
+  ) {
+    if (response.cacheState !== 'stale') return message;
+
+    const cacheAgeMs = this.getCacheAgeMs(response.fetchedAt.toISOString());
+    if (cacheAgeMs < SCHEDULE_CACHE_TIMESTAMP_NOTICE_MS) {
+      return `${message}\n\n♻️`;
+    }
+
+    const formattedDate = new Intl.DateTimeFormat('ru-RU', {
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      month: 'long',
+      timeZone: 'Europe/Moscow',
+    }).format(response.fetchedAt);
+    const label =
+      cacheAgeMs >= SCHEDULE_CACHE_OLD_NOTICE_MS
+        ? 'Последнее обновление'
+        : 'Обновлено';
+    return `${message}\n\n♻️ ${label}: ${formattedDate}`;
   }
 
   /**

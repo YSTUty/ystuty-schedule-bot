@@ -20,9 +20,26 @@ describe('VkUnreadDialogRecoveryService', () => {
     const getConversations = jest.fn();
     const send = jest.fn().mockResolvedValue(1);
     const handleWebhookUpdate = jest.fn().mockResolvedValue(undefined);
+    const redisStorage = new Map<string, string>();
     const redis = {
-      del: jest.fn().mockResolvedValue(1),
-      set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn(async (key: string) => {
+        redisStorage.delete(key);
+        return 1;
+      }),
+      get: jest.fn(async (key: string) => redisStorage.get(key) ?? null),
+      set: jest.fn(
+        async (
+          key: string,
+          value: string,
+          _ttlMode: string,
+          _ttl: number,
+          mode?: string,
+        ) => {
+          if (mode === 'NX' && redisStorage.has(key)) return null;
+          redisStorage.set(key, value);
+          return 'OK';
+        },
+      ),
     };
     const userService = {
       findBySocialId: jest.fn().mockResolvedValue({ id: 1 }),
@@ -45,6 +62,7 @@ describe('VkUnreadDialogRecoveryService', () => {
       handleWebhookUpdate,
       log,
       redis,
+      redisStorage,
       send,
       service,
       userService,
@@ -96,11 +114,17 @@ describe('VkUnreadDialogRecoveryService', () => {
       offset: 0,
     });
     expect(redis.set).toHaveBeenCalledWith(
+      'vk:unread-recovery:123:456:processing',
+      '1',
+      'EX',
+      900,
+      'NX',
+    );
+    expect(redis.set).toHaveBeenCalledWith(
       'vk:unread-recovery:123:456',
       '1',
       'EX',
       432_000,
-      'NX',
     );
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ peer_id: 123 }),
@@ -166,6 +190,52 @@ describe('VkUnreadDialogRecoveryService', () => {
     expect(handleWebhookUpdate).toHaveBeenCalledTimes(2);
     expect(handleWebhookUpdate).toHaveBeenNthCalledWith(
       2,
+      expect.objectContaining({
+        object: expect.objectContaining({
+          message: expect.objectContaining({ id: 987, peer_id: 789 }),
+        }),
+      }),
+    );
+  });
+
+  it('uses a second snapshot to recover a message that arrived during recovery', async () => {
+    const { getConversations, handleWebhookUpdate, send, service } =
+      createService();
+    let unreadRequestCount = 0;
+    getConversations.mockImplementation(({ filter }) => {
+      if (filter === 'unanswered') {
+        return Promise.resolve({ count: 0, items: [] });
+      }
+
+      unreadRequestCount += 1;
+      const peerId = unreadRequestCount === 1 ? 123 : 789;
+      const messageId = unreadRequestCount === 1 ? 456 : 987;
+      return Promise.resolve({
+        count: 1,
+        items: [
+          {
+            conversation: { peer: { id: peerId } },
+            last_message: {
+              date: 1_789_473_000,
+              from_id: peerId,
+              id: messageId,
+              out: 0,
+              peer_id: peerId,
+              text: 'Расписание',
+            },
+          },
+        ],
+      });
+    });
+
+    await service.recoverUnreadDirectMessages(
+      new Date('2026-09-15T12:00:00.000Z'),
+    );
+
+    expect(getConversations).toHaveBeenCalledTimes(4);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(handleWebhookUpdate).toHaveBeenCalledTimes(2);
+    expect(handleWebhookUpdate).toHaveBeenLastCalledWith(
       expect.objectContaining({
         object: expect.objectContaining({
           message: expect.objectContaining({ id: 987, peer_id: 789 }),
@@ -282,7 +352,7 @@ describe('VkUnreadDialogRecoveryService', () => {
       new Date('2026-09-15T12:00:00.000Z'),
     );
 
-    expect(getConversations).toHaveBeenCalledTimes(3);
+    expect(getConversations).toHaveBeenCalledTimes(6);
     expect(getConversations).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ filter: 'unread', offset: 1 }),
@@ -376,7 +446,7 @@ describe('VkUnreadDialogRecoveryService', () => {
 
     expect(log).toHaveBeenCalledWith(
       expect.stringContaining(
-        'filters=unread(pages=1,count=1,items=1) unanswered(pages=1,count=1,items=1)',
+        'passes=1 filters=pass=1:unread(pages=1,count=1,items=1) pass=1:unanswered(pages=1,count=1,items=1)',
       ),
     );
     expect(log).toHaveBeenCalledWith(
@@ -387,10 +457,12 @@ describe('VkUnreadDialogRecoveryService', () => {
     );
   });
 
-  it('does not replay a message already claimed by a previous startup', async () => {
+  it('does not replay a message completed by a previous startup', async () => {
     const { getConversations, handleWebhookUpdate, redis, send, service } =
       createService();
-    redis.set.mockResolvedValue(null);
+    redis.get.mockImplementation(async (key: string) =>
+      key === 'vk:unread-recovery:123:456' ? '1' : null,
+    );
     getConversations.mockResolvedValue({
       count: 1,
       items: [
@@ -414,6 +486,83 @@ describe('VkUnreadDialogRecoveryService', () => {
 
     expect(send).not.toHaveBeenCalled();
     expect(handleWebhookUpdate).not.toHaveBeenCalled();
+    expect(redis.set).not.toHaveBeenCalled();
+  });
+
+  it('keeps a concurrently processing message separate from a completed marker', async () => {
+    const {
+      getConversations,
+      handleWebhookUpdate,
+      redisStorage,
+      send,
+      service,
+    } = createService();
+    redisStorage.set('vk:unread-recovery:123:456:processing', '1');
+    getConversations.mockResolvedValue({
+      count: 1,
+      items: [
+        {
+          conversation: { peer: { id: 123 } },
+          last_message: {
+            date: 1_789_473_000,
+            from_id: 123,
+            id: 456,
+            out: 0,
+            peer_id: 123,
+            text: 'Расписание',
+          },
+        },
+      ],
+    });
+
+    await service.recoverUnreadDirectMessages(
+      new Date('2026-09-15T12:00:00.000Z'),
+    );
+
+    expect(send).not.toHaveBeenCalled();
+    expect(handleWebhookUpdate).not.toHaveBeenCalled();
+  });
+
+  it('retries a message once its processing lease has expired', async () => {
+    jest.useFakeTimers();
+    try {
+      const {
+        getConversations,
+        handleWebhookUpdate,
+        redisStorage,
+        send,
+        service,
+      } = createService();
+      redisStorage.set('vk:unread-recovery:123:456:processing', '1');
+      getConversations.mockResolvedValue({
+        count: 1,
+        items: [
+          {
+            conversation: { peer: { id: 123 } },
+            last_message: {
+              date: 1_789_473_000,
+              from_id: 123,
+              id: 456,
+              out: 0,
+              peer_id: 123,
+              text: 'Расписание',
+            },
+          },
+        ],
+      });
+
+      await service.recoverUnreadDirectMessages(
+        new Date('2026-09-15T12:00:00.000Z'),
+      );
+      redisStorage.delete('vk:unread-recovery:123:456:processing');
+
+      await jest.advanceTimersByTimeAsync(15 * 60 * 1e3);
+
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(handleWebhookUpdate).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('waits and retries VK rate limits while reading recovery dialogs', async () => {
@@ -477,7 +626,7 @@ describe('VkUnreadDialogRecoveryService', () => {
     expect(wait).toHaveBeenNthCalledWith(2, 1_000);
   });
 
-  it('releases the recovery claim after a transient notification error', async () => {
+  it('retries a transient notification error during the second snapshot', async () => {
     const { getConversations, handleWebhookUpdate, redis, send, service } =
       createService();
     getConversations.mockResolvedValue({
@@ -502,8 +651,11 @@ describe('VkUnreadDialogRecoveryService', () => {
       new Date('2026-09-15T12:00:00.000Z'),
     );
 
-    expect(redis.del).toHaveBeenCalledWith('vk:unread-recovery:123:456');
-    expect(handleWebhookUpdate).not.toHaveBeenCalled();
+    expect(redis.del).toHaveBeenCalledWith(
+      'vk:unread-recovery:123:456:processing',
+    );
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(handleWebhookUpdate).toHaveBeenCalledTimes(1);
   });
 
   it('replays an unavailable user message so middleware can persist the profile state', async () => {
@@ -538,6 +690,8 @@ describe('VkUnreadDialogRecoveryService', () => {
     );
 
     expect(handleWebhookUpdate).toHaveBeenCalledTimes(1);
-    expect(redis.del).not.toHaveBeenCalled();
+    expect(redis.del).toHaveBeenCalledWith(
+      'vk:unread-recovery:123:456:processing',
+    );
   });
 });

@@ -40,6 +40,13 @@ const patternGroupNameTemplate =
 export const patternGroupName = `(${patternGroupNameTemplate})`;
 export const patternGroupName0 = `(${patternGroupNameTemplate}|0)`;
 
+/**
+ * Название цели в команде расписания. В отличие от типового кода группы,
+ * точное совпадение дополнительно валидируется по справочнику Schedule API.
+ * «подробно» остаётся служебным суффиксом команды, а не названием группы.
+ */
+export const patternScheduleGroupTarget = '(?<groupTarget>(?!подробно$).+?)';
+
 export const matchGroupName = (str: string, flags = 'i') =>
   str.match(new RegExp(patternGroupName, flags)) as
     | null

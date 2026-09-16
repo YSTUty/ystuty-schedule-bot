@@ -3,6 +3,7 @@ import { Context } from 'telegraf-hardened';
 import {
   patternGroupName,
   patternGroupName0,
+  patternScheduleGroupTarget,
   patternTeacherId,
 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
@@ -11,7 +12,12 @@ import { IContext } from '@my-interfaces/telegram';
 const regExpByRegExp = /^\/(?<regex_body>.*?)\/(?<regex_flags>[gmiyusd]+)?$/;
 
 // Custom template data
-const templateData = { patternGroupName, patternGroupName0, patternTeacherId };
+const templateData = {
+  patternGroupName,
+  patternGroupName0,
+  patternScheduleGroupTarget,
+  patternTeacherId,
+};
 
 export const checkLocaleCondition =
   (

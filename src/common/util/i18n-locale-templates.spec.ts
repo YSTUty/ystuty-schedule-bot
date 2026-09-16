@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { load } from 'js-yaml';
 import { resolve } from 'path';
 
-import { patternGroupName } from './schedule.util';
+import { patternGroupName, patternScheduleGroupTarget } from './schedule.util';
 import { i18n as telegramI18n } from './tg/i18n.util';
 import { i18n as vkI18n } from './vk/i18n.util';
 
@@ -93,6 +93,7 @@ const localeTemplateData = {
   onlyAuthorized: true,
   patternGroupName: '(?<groupName>ЦИС-46)',
   patternGroupName0: '(?<groupName>ЦИС-46)',
+  patternScheduleGroupTarget: '(?<groupTarget>ЦИС-46)',
   query: 'Иванов',
   randomGroupName: 'ЦИС-46',
   randomGroupName2: 'ЦИС-47',
@@ -175,7 +176,9 @@ const getScheduleRegExp = (
   const [, pattern, flags] = source.match(/^\/(.*)\/([a-z]*)$/i) || [];
 
   return new RegExp(
-    pattern.replace('${patternGroupName}', patternGroupName),
+    pattern
+      .replace('${patternGroupName}', patternGroupName)
+      .replace('${patternScheduleGroupTarget}', patternScheduleGroupTarget),
     flags,
   );
 };
@@ -239,12 +242,28 @@ describe.each(['telegram', 'vk'] as const)(
         getScheduleRegExp(transport, 'for_one_day').exec(
           'расписание ЦИС-46 подробно',
         )?.groups,
-      ).toMatchObject({ detailed: ' подробно', groupName: 'ЦИС-46' });
+      ).toMatchObject({ detailed: ' подробно', groupTarget: 'ЦИС-46' });
+      expect(
+        getScheduleRegExp(transport, 'for_one_day').exec(
+          'Расписание Научно-исслед сем подробно',
+        )?.groups,
+      ).toMatchObject({
+        detailed: ' подробно',
+        groupTarget: 'Научно-исслед сем',
+      });
       expect(
         getScheduleRegExp(transport, 'for_week').exec(
           'расписание на неделю подробно',
         )?.groups?.detailed,
       ).toBe(' подробно');
+      expect(
+        getScheduleRegExp(transport, 'for_week').exec(
+          'Расписание на неделю Научно-исслед сем подробно',
+        )?.groups,
+      ).toMatchObject({
+        detailed: ' подробно',
+        groupTarget: 'Научно-исслед сем',
+      });
     });
   },
 );

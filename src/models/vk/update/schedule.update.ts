@@ -264,7 +264,8 @@ export class ScheduleUpdate {
     const selectedGroupName = !ctx.isChat
       ? ctx.state.userSocial.groupName
       : ctx.state.conversation?.groupName;
-    const groupNameFromMatch = ctx.$match?.groups?.groupName;
+    const groupNameFromMatch =
+      ctx.$match?.groups?.groupTarget || ctx.$match?.groups?.groupName;
     const groupNameFromPayload =
       typeof payload?.groupName === 'string' ? payload.groupName : undefined;
     const groupNameQuery =

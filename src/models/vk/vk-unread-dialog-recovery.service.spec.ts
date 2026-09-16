@@ -29,7 +29,7 @@ describe('VkUnreadDialogRecoveryService', () => {
       } as any,
       { redis } as any,
     );
-    jest.spyOn((service as any).logger, 'log').mockImplementation();
+    const log = jest.spyOn((service as any).logger, 'log').mockImplementation();
     jest.spyOn((service as any).logger, 'warn').mockImplementation();
     const wait = jest.fn().mockResolvedValue(undefined);
     (service as any).wait = wait;
@@ -37,6 +37,7 @@ describe('VkUnreadDialogRecoveryService', () => {
     return {
       getConversations,
       handleWebhookUpdate,
+      log,
       redis,
       send,
       service,
@@ -44,7 +45,7 @@ describe('VkUnreadDialogRecoveryService', () => {
     };
   };
 
-  it('notifies and replays a fresh unread direct message once after startup', async () => {
+  it('notifies and replays a fresh direct message once after startup', async () => {
     const {
       getConversations,
       handleWebhookUpdate,
@@ -75,9 +76,15 @@ describe('VkUnreadDialogRecoveryService', () => {
       new Date('2026-09-15T12:00:00.000Z'),
     );
 
-    expect(getConversations).toHaveBeenCalledWith({
+    expect(getConversations).toHaveBeenNthCalledWith(1, {
       count: 200,
       filter: 'unread',
+      group_id: expect.any(Number),
+      offset: 0,
+    });
+    expect(getConversations).toHaveBeenNthCalledWith(2, {
+      count: 200,
+      filter: 'unanswered',
       group_id: expect.any(Number),
       offset: 0,
     });
@@ -101,6 +108,136 @@ describe('VkUnreadDialogRecoveryService', () => {
       }),
     );
     expect(wait).toHaveBeenCalledWith(1_000);
+  });
+
+  it('recovers distinct messages from unread and unanswered dialogs', async () => {
+    const { getConversations, handleWebhookUpdate, send, service } =
+      createService();
+    getConversations.mockImplementation(({ filter }) => {
+      if (filter === 'unread') {
+        return Promise.resolve({
+          count: 1,
+          items: [
+            {
+              conversation: { peer: { id: 123 } },
+              last_message: {
+                date: 1_789_473_000,
+                from_id: 123,
+                id: 456,
+                out: 0,
+                peer_id: 123,
+                text: 'Расписание на сегодня',
+              },
+            },
+          ],
+        });
+      }
+
+      return Promise.resolve({
+        count: 1,
+        items: [
+          {
+            conversation: { peer: { id: 789 } },
+            last_message: {
+              date: 1_789_473_000,
+              from_id: 789,
+              id: 987,
+              out: 0,
+              peer_id: 789,
+              text: 'Расписание на завтра',
+            },
+          },
+        ],
+      });
+    });
+
+    await service.recoverUnreadDirectMessages(
+      new Date('2026-09-15T12:00:00.000Z'),
+    );
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(handleWebhookUpdate).toHaveBeenCalledTimes(2);
+    expect(handleWebhookUpdate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        object: expect.objectContaining({
+          message: expect.objectContaining({ id: 987, peer_id: 789 }),
+        }),
+      }),
+    );
+  });
+
+  it('reads each recovery filter page by page and deduplicates an overlap', async () => {
+    const { getConversations, handleWebhookUpdate, send, service } =
+      createService();
+    getConversations.mockImplementation(({ filter, offset }) => {
+      if (filter === 'unread' && offset === 0) {
+        return Promise.resolve({
+          count: 2,
+          items: [
+            {
+              conversation: { peer: { id: 123 } },
+              last_message: {
+                date: 1_789_473_000,
+                from_id: 123,
+                id: 456,
+                out: 0,
+                peer_id: 123,
+                text: 'Расписание',
+              },
+            },
+          ],
+        });
+      }
+
+      if (filter === 'unread' && offset === 1) {
+        return Promise.resolve({
+          count: 2,
+          items: [
+            {
+              conversation: { peer: { id: 789 } },
+              last_message: {
+                date: 1_789_473_000,
+                from_id: 789,
+                id: 987,
+                out: 0,
+                peer_id: 789,
+                text: 'На завтра',
+              },
+            },
+          ],
+        });
+      }
+
+      return Promise.resolve({
+        count: 1,
+        items: [
+          {
+            conversation: { peer: { id: 123 } },
+            last_message: {
+              date: 1_789_473_000,
+              from_id: 123,
+              id: 456,
+              out: 0,
+              peer_id: 123,
+              text: 'Расписание',
+            },
+          },
+        ],
+      });
+    });
+
+    await service.recoverUnreadDirectMessages(
+      new Date('2026-09-15T12:00:00.000Z'),
+    );
+
+    expect(getConversations).toHaveBeenCalledTimes(3);
+    expect(getConversations).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ filter: 'unread', offset: 1 }),
+    );
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(handleWebhookUpdate).toHaveBeenCalledTimes(2);
   });
 
   it('skips stale, outbound and payload messages', async () => {
@@ -154,6 +291,42 @@ describe('VkUnreadDialogRecoveryService', () => {
     expect(handleWebhookUpdate).not.toHaveBeenCalled();
   });
 
+  it('logs a safe recovery summary with filters and skip reasons', async () => {
+    const { getConversations, log, service } = createService();
+    getConversations.mockResolvedValue({
+      count: 1,
+      items: [
+        {
+          conversation: { peer: { id: 123 } },
+          last_message: {
+            date: 1_789_041_000,
+            from_id: 123,
+            id: 456,
+            out: 0,
+            peer_id: 123,
+            text: 'Текст нельзя выводить в диагностике',
+          },
+        },
+      ],
+    });
+
+    await service.recoverUnreadDirectMessages(
+      new Date('2026-09-15T12:00:00.000Z'),
+    );
+
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'filters=unread(pages=1,count=1,items=1) unanswered(pages=1,count=1,items=1)',
+      ),
+    );
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining('skipped=stale=2'),
+    );
+    expect(log).not.toHaveBeenCalledWith(
+      expect.stringContaining('Текст нельзя выводить в диагностике'),
+    );
+  });
+
   it('does not replay a message already claimed by a previous startup', async () => {
     const { getConversations, handleWebhookUpdate, redis, send, service } =
       createService();
@@ -183,7 +356,7 @@ describe('VkUnreadDialogRecoveryService', () => {
     expect(handleWebhookUpdate).not.toHaveBeenCalled();
   });
 
-  it('waits and retries VK rate limits while reading unread dialogs', async () => {
+  it('waits and retries VK rate limits while reading recovery dialogs', async () => {
     const { getConversations, service, wait } = createService();
     getConversations
       .mockRejectedValueOnce(
@@ -193,13 +366,14 @@ describe('VkUnreadDialogRecoveryService', () => {
           request_params: [],
         }),
       )
+      .mockResolvedValueOnce({ count: 0, items: [] })
       .mockResolvedValueOnce({ count: 0, items: [] });
 
     await service.recoverUnreadDirectMessages(
       new Date('2026-09-15T12:00:00.000Z'),
     );
 
-    expect(getConversations).toHaveBeenCalledTimes(2);
+    expect(getConversations).toHaveBeenCalledTimes(3);
     expect(wait).toHaveBeenCalledWith(1_000);
   });
 

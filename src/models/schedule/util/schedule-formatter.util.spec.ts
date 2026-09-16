@@ -168,6 +168,43 @@ describe('formatScheduleWeekDays', () => {
     expect(result?.match(/↑\.\.\./g)).toHaveLength(1);
   });
 
+  it('collapses a large list of otherwise identical subgroup lessons in compact view', () => {
+    const result = format(
+      ['Иванов И. И.', 'Петров П. П.', 'Сидоров С. С.', 'Кузнецов К. К.'].map(
+        (teacherName) =>
+          lesson({
+            number: 5,
+            timeRange: '15:40-17:10',
+            auditoryName: 'Точка кипения',
+            lessonName: 'Научно-исследовательский семинар',
+            teacherName,
+            isDivision: teacherName !== 'Иванов И. И.',
+          }),
+      ),
+    );
+
+    expect(result).toContain('5⃣ 15:40-17:10. {Точка кипения}');
+    expect(result).toContain('Научно-исследовательский семинар [ПР] П/Г');
+    expect(result).toContain('👨‍🏫 Преподаватели:');
+    expect(result).toContain('• Иванов И. И.');
+    expect(result).toContain('• Кузнецов К. К.');
+    expect(result).not.toContain('Другая П/Г:');
+    expect(result?.match(/Научно-исследовательский семинар/g)).toHaveLength(1);
+  });
+
+  it('keeps different same-time lessons separate instead of treating them as subgroups', () => {
+    const result = format([
+      lesson({ number: 5, lessonName: 'Первый семинар' }),
+      lesson({ number: 5, lessonName: 'Второй семинар' }),
+      lesson({ number: 5, lessonName: 'Третий семинар' }),
+      lesson({ number: 5, lessonName: 'Четвёртый семинар' }),
+    ]);
+
+    expect(result).toContain('Первый семинар');
+    expect(result).toContain('Четвёртый семинар');
+    expect(result).not.toContain('👨‍🏫');
+  });
+
   it('renders no-lesson days and week hashtags', () => {
     const result = formatScheduleWeekDays({
       week: week(),

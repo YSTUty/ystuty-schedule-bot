@@ -6,6 +6,8 @@ import * as scheduleUtil from './schedule.util';
 /** Вариант представления расписания в сообщении. */
 export type SchedulePresentation = 'compact' | 'detailed';
 
+const COMPACT_SUBGROUP_COLLAPSE_THRESHOLD = 4;
+
 /** Отделяет название группы или преподавателя от последнего дня расписания. */
 export const appendScheduleTargetFooter = (
   message: string,
@@ -72,12 +74,18 @@ const formatCompactLesson = ({
   isDone,
   targetType,
   withTags,
+  includeTargets = true,
+  forceDivision = false,
 }: {
   lesson: Lesson;
   isAnotherSubgroup: boolean;
   isDone: boolean;
   targetType: 'group' | 'teacher';
   withTags: boolean;
+  /** Убирает повторяющихся преподавателей при свёртке большого списка П/Г. */
+  includeTargets?: boolean;
+  /** Помечает общую строку как П/Г, даже если первый API-элемент без флага. */
+  forceDivision?: boolean;
 }) => {
   const auditoryName = getAuditories(lesson);
   const lessonTypes = getLessonTypes(lesson);
@@ -98,11 +106,12 @@ const formatCompactLesson = ({
       ? ' <b>(онлайн)</b>'
       : ' (онлайн)'
     : '';
-  const target = targets
-    ? withTags
-      ? ` (<i>${targets}</i>)`
-      : ` (${targets})`
-    : '';
+  const target =
+    includeTargets && targets
+      ? withTags
+        ? ` (<i>${targets}</i>)`
+        : ` (${targets})`
+      : '';
 
   const prefix = isAnotherSubgroup
     ? 'Другая П/Г:'
@@ -111,9 +120,76 @@ const formatCompactLesson = ({
         isDone,
         withTags,
       )}.`;
-  const division = lesson.isDivision ? ' П/Г' : '';
+  const division = lesson.isDivision || forceDivision ? ' П/Г' : '';
 
   return `${prefix}${auditory}${distant} ${lessonName}${type}${target}${division}${isDone ? ' ✅' : ''}`;
+};
+
+/**
+ * Определяет одинаковую пару без преподавателя или списка групп.
+ * Такие соседние записи Schedule API описывают варианты одной пары по П/Г.
+ */
+const getCompactSubgroupSignature = (lesson: Lesson) =>
+  JSON.stringify({
+    number: lesson.number,
+    time: getLessonTime(lesson),
+    auditory: getAuditories(lesson),
+    types: getLessonTypes(lesson),
+    lessonName: lesson.lessonName?.trim() || '—',
+    isDistant: !!lesson.isDistant,
+  });
+
+const getConsecutiveSameSubgroupLessons = (
+  lessons: Lesson[],
+  startIndex: number,
+) => {
+  const signature = getCompactSubgroupSignature(lessons[startIndex]);
+  let endIndex = startIndex + 1;
+
+  while (
+    endIndex < lessons.length &&
+    getCompactSubgroupSignature(lessons[endIndex]) === signature
+  ) {
+    endIndex += 1;
+  }
+
+  return lessons.slice(startIndex, endIndex);
+};
+
+/** Сворачивает длинный список одинаковых пар до одной строки и вариантов П/Г. */
+const formatCompactSubgroupLessons = ({
+  lessons,
+  isDone,
+  targetType,
+  withTags,
+}: {
+  lessons: Lesson[];
+  isDone: boolean;
+  targetType: 'group' | 'teacher';
+  withTags: boolean;
+}) => {
+  const [firstLesson] = lessons;
+  const targetIcon = targetType === 'group' ? '👨‍🏫' : '👥';
+  const targetLabel = targetType === 'group' ? 'Преподаватели' : 'Группы';
+  const targets = lessons
+    .map((lesson) => getTargets(lesson, targetType) || '—')
+    .filter((target, index, values) => values.indexOf(target) === index);
+  const targetList = targets
+    .map((target) => `• ${withTags ? `<i>${target}</i>` : target}`)
+    .join('\n   ');
+
+  return [
+    formatCompactLesson({
+      lesson: firstLesson,
+      isAnotherSubgroup: false,
+      isDone,
+      targetType,
+      withTags,
+      includeTargets: false,
+      forceDivision: true,
+    }),
+    `   ${targetIcon} ${targetLabel}:\n   ${targetList}`,
+  ].join('\n');
 };
 
 const formatDetailedLesson = ({
@@ -206,8 +282,13 @@ export function formatScheduleWeekDays({
         : `${scheduleUtil.short2Long2(dayType)} ${withTags ? '<b>Расписание на <code>' : 'Расписание на '}${dayName}${withTags ? '</code></b>' : ''}${weekNumber ? ` [${weekNumber}]` : ''}${dayDate ? (withTags ? ` <b>(${isDoneDay ? `<s>${formatScheduleDate(dayDate)}</s>` : formatScheduleDate(dayDate)})</b>` : ` (${formatScheduleDate(dayDate)})`) : ''}${isDoneDay ? ' ✅' : ''} ${compactParity}\n`;
 
     let lastLesson: Lesson | null = null;
-    for (const [index, lesson] of lessons.entries()) {
-      const nextLesson = lessons[index + 1];
+    for (let index = 0; index < lessons.length; ) {
+      const lesson = lessons[index];
+      const sameSubgroupLessons = getConsecutiveSameSubgroupLessons(
+        lessons,
+        index,
+      );
+      const nextLesson = lessons[index + sameSubgroupLessons.length];
       const isDone =
         !!lesson.endAt && now.getTime() > new Date(lesson.endAt).getTime();
       const isAnotherSubgroup =
@@ -224,16 +305,28 @@ export function formatScheduleWeekDays({
         message += `✌ ${scheduleUtil.getTimez('11:40', 40)}. Окно\n`;
       }
 
-      message +=
-        presentation === 'detailed'
-          ? `${formatDetailedLesson({ lesson, isDone, targetType, withTags })}\n`
-          : `${formatCompactLesson({
-              lesson,
-              isAnotherSubgroup,
-              isDone,
-              targetType,
-              withTags,
-            })}\n`;
+      if (
+        presentation === 'compact' &&
+        sameSubgroupLessons.length >= COMPACT_SUBGROUP_COLLAPSE_THRESHOLD
+      ) {
+        message += `${formatCompactSubgroupLessons({
+          lessons: sameSubgroupLessons,
+          isDone,
+          targetType,
+          withTags,
+        })}\n`;
+      } else {
+        message +=
+          presentation === 'detailed'
+            ? `${formatDetailedLesson({ lesson, isDone, targetType, withTags })}\n`
+            : `${formatCompactLesson({
+                lesson,
+                isAnotherSubgroup,
+                isDone,
+                targetType,
+                withTags,
+              })}\n`;
+      }
 
       // Длительную пару показываем один раз после всех её подгрупп.
       const sameNumberLessons = lessons.filter(
@@ -256,7 +349,12 @@ export function formatScheduleWeekDays({
               : `${continuation.replace(/\ Продолжение \d+ пары/, '')} ↑...\n`;
         }
       }
-      lastLesson = lesson;
+      lastLesson = sameSubgroupLessons.at(-1) || lesson;
+      index +=
+        presentation === 'compact' &&
+        sameSubgroupLessons.length >= COMPACT_SUBGROUP_COLLAPSE_THRESHOLD
+          ? sameSubgroupLessons.length
+          : 1;
     }
 
     if (!lessons.length) {

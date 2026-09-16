@@ -58,7 +58,6 @@ type RecoveryCandidateSkipReason =
   | 'invalid_id'
   | 'non_dm'
   | 'outbound'
-  | 'payload'
   | 'empty'
   | 'stale'
   | 'duplicate'
@@ -266,10 +265,6 @@ export class VkUnreadDialogRecoveryService {
       return { candidate: null, reason: 'outbound' };
     }
 
-    if (Boolean(message.payload)) {
-      return { candidate: null, reason: 'payload' };
-    }
-
     if (!message.text?.trim()) {
       return { candidate: null, reason: 'empty' };
     }
@@ -388,7 +383,6 @@ export class VkUnreadDialogRecoveryService {
       missing_message: 0,
       non_dm: 0,
       outbound: 0,
-      payload: 0,
       stale: 0,
     };
   }

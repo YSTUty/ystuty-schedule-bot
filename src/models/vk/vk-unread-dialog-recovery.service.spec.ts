@@ -291,7 +291,7 @@ describe('VkUnreadDialogRecoveryService', () => {
     expect(handleWebhookUpdate).toHaveBeenCalledTimes(2);
   });
 
-  it('skips stale, outbound and payload messages', async () => {
+  it('skips stale and outbound messages but replays a payload keyboard command', async () => {
     const { getConversations, handleWebhookUpdate, send, service } =
       createService();
     getConversations.mockResolvedValue({
@@ -338,8 +338,17 @@ describe('VkUnreadDialogRecoveryService', () => {
       new Date('2026-09-15T12:00:00.000Z'),
     );
 
-    expect(send).not.toHaveBeenCalled();
-    expect(handleWebhookUpdate).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(handleWebhookUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        object: expect.objectContaining({
+          message: expect.objectContaining({
+            id: 3,
+            payload: '{"phrase":"button.schedule.for_today"}',
+          }),
+        }),
+      }),
+    );
   });
 
   it('logs a safe recovery summary with filters and skip reasons', async () => {

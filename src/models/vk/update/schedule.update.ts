@@ -76,10 +76,6 @@ export class ScheduleUpdate {
     );
     if (!target) return;
 
-    try {
-      await ctx.setActivity();
-    } catch {}
-
     let message: string | false | null;
     let days: number = 0;
     if (isTomorrow) {
@@ -175,10 +171,6 @@ export class ScheduleUpdate {
       isPersonalTeacherRequest,
     );
     if (!target) return;
-
-    try {
-      await ctx.setActivity();
-    } catch {}
 
     const weekView = await this.scheduleService.getScheduleWeekView({
       targetId: target.id,

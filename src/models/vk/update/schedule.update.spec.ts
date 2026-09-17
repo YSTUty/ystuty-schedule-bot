@@ -60,7 +60,6 @@ describe('VK ScheduleUpdate', () => {
         isChat: false,
         state: { userSocial: { groupName: 'ЦИС-46' } },
         $match: { groups: {} },
-        setActivity: jest.fn(),
         send: jest.fn(),
         scene: { enter: jest.fn() },
         i18n: {
@@ -112,7 +111,6 @@ describe('VK ScheduleUpdate', () => {
         },
         state: { userSocial: { groupName: 'ЦИС-46' } },
         $match: { groups: {} },
-        setActivity: jest.fn(),
         send: jest.fn(),
         scene: { enter: jest.fn() },
         i18n: { t: jest.fn((phrase) => phrase) },

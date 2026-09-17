@@ -145,6 +145,29 @@ describe('formatScheduleWeekDays', () => {
     expect(result).not.toMatch(/null|undefined|N\/A/);
   });
 
+  it('renders new Schedule API flags in compact and detailed presentations', () => {
+    const flags = LessonFlags.PhysicalTraining | LessonFlags.School21;
+
+    expect(format([lesson({ type: flags })])).toContain(
+      '[Физ. культура, Школа 21]',
+    );
+    expect(
+      format([lesson({ type: flags })], {
+        targetType: 'group',
+        presentation: 'detailed',
+      }),
+    ).toContain('🏫 Физ. культура · Школа 21');
+  });
+
+  it('keeps a valid API type when it is combined with Unsupported', () => {
+    const result = format([
+      lesson({ type: LessonFlags.Event | LessonFlags.Unsupported }),
+    ]);
+
+    expect(result).toContain('[Событие]');
+    expect(result).not.toContain('N/A');
+  });
+
   it('renders a continuation once after all subgroups of a long lesson', () => {
     const result = format([
       lesson({
@@ -203,6 +226,27 @@ describe('formatScheduleWeekDays', () => {
     expect(result).toContain('Первый семинар');
     expect(result).toContain('Четвёртый семинар');
     expect(result).not.toContain('👨‍🏫');
+  });
+
+  it('does not collapse same-time lessons that differ only by new type flags', () => {
+    const result = format(
+      [
+        LessonFlags.Practice,
+        LessonFlags.Event,
+        LessonFlags.Tenzor,
+        LessonFlags.School21,
+      ].map((type) =>
+        lesson({
+          number: 5,
+          lessonName: 'Специальное занятие',
+          teacherName: 'Иванов И. И.',
+          type,
+        }),
+      ),
+    );
+
+    expect(result?.match(/Специальное занятие/g)).toHaveLength(4);
+    expect(result).not.toContain('👨‍🏫 Преподаватели:');
   });
 
   it('renders no-lesson days and week hashtags', () => {

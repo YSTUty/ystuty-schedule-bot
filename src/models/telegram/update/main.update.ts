@@ -7,7 +7,6 @@ import type { Update as TgUpdate } from 'telegraf-hardened/types';
 import {
   allowerHtmlTags,
   md5,
-  patternGroupName,
   selectGroupCommandRegExp,
   teacherListCommandRegExp,
   teacherSearchCommandRegExp,
@@ -30,6 +29,10 @@ import {
 
 import { ScheduleService } from '../../schedule/schedule.service';
 import { TeacherListStateService } from '../../schedule/teacher-list-state.service';
+import {
+  getScheduleCalendarButtonUrl,
+  getScheduleCalendarWebUrl,
+} from '../../schedule/util/schedule-calendar-link.util';
 import { UserService } from '../../user/user.service';
 import { TelegramMarkup as Markup } from '../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
@@ -607,47 +610,59 @@ export class MainUpdate {
     await ctx.replyWithHTML(content, keyboard);
   }
 
-  @Hears(
-    new RegExp(`\\/(?<command>cal(endar)?)(\\s+)?${patternGroupName}?`, 'i'),
-  )
-  async onCalendar(@Ctx() ctx: IMessageContext) {
+  @Hears(/^\/(?:cal|calendar)(?:@\w+)?(?:\s+(?<groupName>.+))?$/i)
+  @TgHearsLocale(LocalePhrase.Button_Calendar)
+  @Action('calendar:open')
+  async onCalendar(@Ctx() ctx: ICbQOrMsg) {
+    if (ctx.updateType === 'callback_query') {
+      await ctx.tryAnswerCbQuery();
+    }
+
+    const requestedGroupName = ctx.match?.groups?.groupName?.trim();
     const selectedGroupName =
-      ctx.chat.type === 'private'
-        ? ctx.userSocial.groupName
+      ctx.chat?.type === 'private'
+        ? ctx.userSocial?.groupName
         : ctx.conversation?.groupName;
+    const groupNameQuery = requestedGroupName || selectedGroupName;
+    const groupName = groupNameQuery
+      ? this.scheduleService.getGroupByName(groupNameQuery) ||
+        this.scheduleService.parseGroupName(groupNameQuery) ||
+        null
+      : null;
 
-    const groupNameFromMath = ctx.match?.groups?.groupName;
-    const groupNameQuery = groupNameFromMath || selectedGroupName;
-    const groupName =
-      groupNameQuery &&
-      (this.scheduleService.getGroupByName(groupNameQuery) ||
-        this.scheduleService.parseGroupName(groupNameQuery));
+    if (requestedGroupName && !groupName) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+          groupName: requestedGroupName,
+        }),
+      );
+      return;
+    }
 
-    if (!groupName) {
-      if (selectedGroupName) {
-        await ctx.replyWithHTML(
-          ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
-            groupName: groupNameFromMath,
-          }),
-        );
-        return;
-      }
+    const teacherId =
+      !requestedGroupName && ctx.chat?.type === 'private'
+        ? ctx.session.teacherId
+        : undefined;
+    if (!groupName && !teacherId) {
       await ctx.scene.enter(SELECT_GROUP_SCENE);
       return;
     }
 
-    // TODO: update it
-    const keyboard = this.keyboardFactory.getICalendarInline(
-      ctx,
-      `https://ical.ystuty.ru/group/${groupName}.ical`,
-      `Calendar: ${groupName}`,
-    );
+    const targets = [groupName, teacherId];
+    const calendarUrl = getScheduleCalendarWebUrl(targets);
+    const calendarButtonUrl = getScheduleCalendarButtonUrl(targets);
+
+    if (!calendarUrl || !calendarButtonUrl) {
+      this.logger.error(
+        '[iCalendar] YSTUTY_ICALENDAR_ADDRESS is not configured',
+      );
+      await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Common_Error));
+      return;
+    }
+
     await ctx.replyWithHTML(
-      `Ссылка для импорта расписания в сервис календаря:\n` +
-        `<code>https://ical.ystuty.ru/group/${groupName}.ical</code>\n` +
-        `<a href="https://ical.ystuty.ru/group/${groupName}.ical">Try me</a>\n\n` +
-        `<a href="https://ics.ystuty.ru/#${groupName}">Пеерйти на сайт импорта</a>`,
-      keyboard,
+      `${ctx.i18n.t(LocalePhrase.Page_Calendar)}\n\n<code>${calendarUrl}</code>`,
+      this.keyboardFactory.getCalendarInline(ctx, calendarButtonUrl),
     );
   }
 

@@ -65,6 +65,50 @@ describe('Telegram MainUpdate', () => {
     expect(ctx.replyWithHTML).toHaveBeenCalledWith('Помощь', keyboard);
   });
 
+  it('opens the browser calendar for the selected group and teacher', async () => {
+    const keyboard = { reply_markup: { inline_keyboard: [] } };
+    (update as any).keyboardFactory.getCalendarInline = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    getGroupByName.mockReturnValue('САР-34');
+    const ctx = {
+      updateType: 'message',
+      chat: { type: 'private' },
+      userSocial: { groupName: 'САР-34' },
+      session: { teacherId: 603 },
+      i18n: { t: jest.fn((phrase) => phrase) },
+      replyWithHTML: jest.fn(),
+    } as any;
+
+    await update.onCalendar(ctx);
+
+    expect(ctx.replyWithHTML).toHaveBeenCalledWith(
+      expect.stringContaining('https://ics.ystuty.ru/#САР-34,603'),
+      keyboard,
+    );
+    expect(
+      (update as any).keyboardFactory.getCalendarInline,
+    ).toHaveBeenCalledWith(
+      ctx,
+      'https://ics.ystuty.ru/#%D0%A1%D0%90%D0%A0-34,603',
+    );
+  });
+
+  it('opens group selection when no calendar target is selected', async () => {
+    const scene = { enter: jest.fn() };
+    const ctx = {
+      updateType: 'message',
+      chat: { type: 'private' },
+      userSocial: { groupName: null },
+      session: {},
+      scene,
+    } as any;
+
+    await update.onCalendar(ctx);
+
+    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE');
+  });
+
   it('sends a feature card after the start message in a private chat', async () => {
     const startKeyboard = { reply_markup: { keyboard: [] } };
     const welcomeKeyboard = { reply_markup: { inline_keyboard: [] } };

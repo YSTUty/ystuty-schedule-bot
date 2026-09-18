@@ -109,6 +109,7 @@ export class TelegramKeyboardFactory {
         ? [
             ...(ctx.user ? [[ctx.i18n.t(LocalePhrase.Button_Profile)]] : []),
             [ctx.i18n.t(LocalePhrase.Button_ScheduleNotif)],
+            [ctx.i18n.t(LocalePhrase.Button_Calendar)],
           ]
         : []),
       ...(isPrivate ? [[ctx.i18n.t(LocalePhrase.Button_Feedback)]] : []),
@@ -222,6 +223,13 @@ export class TelegramKeyboardFactory {
         TelegramButtons.callback(
           ctx.i18n.t(LocalePhrase.Button_Welcome_Guide),
           'help:open',
+          { style: 'primary' },
+        ),
+      ],
+      [
+        TelegramButtons.callback(
+          ctx.i18n.t(LocalePhrase.Button_Calendar),
+          'calendar:open',
           { style: 'primary' },
         ),
       ],
@@ -1885,9 +1893,18 @@ export class TelegramKeyboardFactory {
     };
   }
 
-  public getICalendarInline(ctx: IContext, link: string, title: string) {
+  /** Открывает страницу создания календарной подписки с уже выбранными целями. */
+  public getCalendarInline(ctx: IContext, link: string) {
     return {
-      ...Markup.inlineKeyboard([[Markup.button.url(title, link)]]),
+      ...Markup.inlineKeyboard([
+        [
+          TelegramButtons.url(
+            ctx.i18n.t(LocalePhrase.Button_Calendar_Open),
+            link,
+            { style: 'primary' },
+          ),
+        ],
+      ]),
     };
   }
 }

@@ -47,6 +47,11 @@ describe('TelegramKeyboardFactory', () => {
           style: 'primary',
         }),
         expect.objectContaining({
+          callback_data: 'calendar:open',
+          text: LocalePhrase.Button_Calendar,
+          style: 'primary',
+        }),
+        expect.objectContaining({
           url: expect.stringContaining('?startgroup=invite'),
         }),
       ]),
@@ -68,6 +73,7 @@ describe('TelegramKeyboardFactory', () => {
       expect.arrayContaining([
         [LocalePhrase.Button_Profile],
         [LocalePhrase.Button_ScheduleNotif],
+        [LocalePhrase.Button_Calendar],
       ]),
     );
   });

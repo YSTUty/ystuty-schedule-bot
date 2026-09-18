@@ -98,6 +98,7 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     const start = [
       { command: 'start', description: 'Запустить бота' },
       { command: 'day', description: 'Расписание на день' },
+      { command: 'calendar', description: 'Добавить расписание в календарь' },
       { command: 'feedback', description: 'Оставить обратную связь' },
       // { command: 'week', description: 'Расписание на неделю' },
       { command: 'cancel', description: 'Отменить текущее действие' },

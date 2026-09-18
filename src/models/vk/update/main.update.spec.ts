@@ -53,6 +53,9 @@ describe('VK MainUpdate', () => {
     expect(
       getMessageEventCondition(MainUpdate.prototype, 'onHelpMessageEvent'),
     ).toEqual({ mainAction: 'help' });
+    expect(
+      getMessageEventCondition(MainUpdate.prototype, 'onCalendarMessageEvent'),
+    ).toEqual({ phrase: LocalePhrase.Button_Calendar });
   });
 
   it('acknowledges the inline help button before showing help', async () => {
@@ -78,6 +81,33 @@ describe('VK MainUpdate', () => {
       text: 'Открываю справку',
     });
     expect(ctx.send).toHaveBeenCalledWith('Помощь', { keyboard: 'start' });
+  });
+
+  it('opens the browser calendar for selected VK group and teacher', async () => {
+    const keyboard = { inline: jest.fn().mockReturnValue('calendar') };
+    (update as any).keyboardFactory.getCalendarInline = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    const ctx = {
+      isDM: true,
+      state: { userSocial: { groupName: 'САР-34' } },
+      session: { teacherId: 603 },
+      i18n: { t: jest.fn((phrase) => phrase) },
+      send: jest.fn(),
+    } as any;
+
+    await (update as any).openCalendar(ctx);
+
+    expect(ctx.send).toHaveBeenCalledWith(
+      expect.stringContaining('https://ics.ystuty.ru/#САР-34,603'),
+      { keyboard },
+    );
+    expect(
+      (update as any).keyboardFactory.getCalendarInline,
+    ).toHaveBeenCalledWith(
+      ctx,
+      'https://ics.ystuty.ru/#%D0%A1%D0%90%D0%A0-34,603',
+    );
   });
 
   it('sends a feature card after the start message in a VK DM', async () => {

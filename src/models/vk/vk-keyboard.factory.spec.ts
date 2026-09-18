@@ -1,3 +1,5 @@
+import * as xEnv from '@my-environment';
+
 import { LocalePhrase } from '@my-interfaces';
 
 import { ScheduleNotifPeriod } from '../schedule-notif/schedule-notif.types';
@@ -8,6 +10,10 @@ describe('VKKeyboardFactory', () => {
   const ctx = {
     i18n: { t: jest.fn((phrase: string) => phrase) },
   } as any;
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('limits schedule notif group labels to 40 characters', () => {
     const keyboard = new VKKeyboardFactory().getPagination({
@@ -52,6 +58,13 @@ describe('VKKeyboardFactory', () => {
         }),
         expect.objectContaining({
           action: expect.objectContaining({
+            label: LocalePhrase.Button_Calendar,
+            payload: JSON.stringify({ phrase: LocalePhrase.Button_Calendar }),
+          }),
+          color: 'primary',
+        }),
+        expect.objectContaining({
+          action: expect.objectContaining({
             app_id: 6441755,
             owner_id: -42,
           }),
@@ -80,9 +93,60 @@ describe('VKKeyboardFactory', () => {
       (row: any[]) =>
         row[0]?.action.label === LocalePhrase.Button_ScheduleNotif,
     );
+    const calendarRow = buttons.find((row: any[]) =>
+      row.some(
+        (button: any) => button.action.label === LocalePhrase.Button_Calendar,
+      ),
+    );
 
     expect(profileRow).toHaveLength(1);
     expect(notificationRow).toHaveLength(1);
+    expect(calendarRow).toBeDefined();
+  });
+
+  it('adds the configured schedule web view as an external VK link', () => {
+    jest.replaceProperty(xEnv, 'SOCIAL_VK_WEB_VIEW_URL', 'beta-view.ystuty.ru');
+
+    const keyboard = new VKKeyboardFactory().getStart({
+      ...ctx,
+      isDM: true,
+      peerId: 42,
+      senderId: 42,
+      session: {},
+      state: { user: {}, userSocial: {} },
+    });
+    const buttons = JSON.parse(String(keyboard)).buttons.flat();
+
+    expect(buttons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: LocalePhrase.Button_ScheduleWeb,
+            link: 'https://beta-view.ystuty.ru',
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it('puts calendar subscription and web schedule actions in one inline row', () => {
+    jest.replaceProperty(xEnv, 'SOCIAL_VK_WEB_VIEW_URL', 'beta-view.ystuty.ru');
+
+    const factory = new VKKeyboardFactory();
+    const calendarKeyboard = JSON.parse(
+      String(factory.getCalendarInline(ctx, 'https://ics.ystuty.ru/#САР-34')),
+    );
+    const welcomeKeyboard = JSON.parse(
+      String(factory.getWelcomeFeatures({ ...ctx, $groupId: 42 }).inline()),
+    );
+    const calendarRow = welcomeKeyboard.buttons.find((row: any[]) =>
+      row.some(
+        (button: any) => button.action.label === LocalePhrase.Button_Calendar,
+      ),
+    );
+
+    expect(calendarKeyboard.buttons[0]).toHaveLength(2);
+    expect(calendarRow).toHaveLength(2);
   });
 
   it('builds the fallback help button as an inline callback', () => {

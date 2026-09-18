@@ -26,6 +26,10 @@ import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { ScheduleService } from '../../schedule/schedule.service';
 import { TeacherListStateService } from '../../schedule/teacher-list-state.service';
+import {
+  getScheduleCalendarButtonUrl,
+  getScheduleCalendarWebUrl,
+} from '../../schedule/util/schedule-calendar-link.util';
 import { UserService } from '../../user/user.service';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../vk.constants';
@@ -243,6 +247,17 @@ export class MainUpdate {
       .getStart(ctx)
       .inline(this.keyboardFactory.needInline(ctx));
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Help), { keyboard });
+  }
+
+  @VkHearsLocale(LocalePhrase.Button_Calendar)
+  async hearCalendar(@Ctx() ctx: IMessageContext) {
+    await this.openCalendar(ctx);
+  }
+
+  @OnMessageEvent({ phrase: LocalePhrase.Button_Calendar })
+  async onCalendarMessageEvent(@Ctx() ctx: IMessageEventContext) {
+    await ctx.answer({ type: 'show_snackbar', text: 'Открываю календарь' });
+    await this.openCalendar(ctx);
   }
 
   @On('chat_invite_user')
@@ -612,6 +627,39 @@ export class MainUpdate {
     }
 
     await ctx.send(message, { keyboard });
+  }
+
+  /** Открывает страницу создания календарной подписки для выбранных целей. */
+  private async openCalendar(ctx: IMessageContext | IMessageEventContext) {
+    const groupName = ctx.isDM
+      ? ctx.state.userSocial.groupName
+      : ctx.state.conversation?.groupName;
+    const teacherId = ctx.isDM ? ctx.session.teacherId : undefined;
+    if (!groupName && !teacherId) {
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
+      return;
+    }
+
+    const targets = [groupName, teacherId];
+    const calendarUrl = getScheduleCalendarWebUrl(targets);
+    const calendarButtonUrl = getScheduleCalendarButtonUrl(targets);
+    if (!calendarUrl || !calendarButtonUrl) {
+      this.logger.error(
+        '[iCalendar] YSTUTY_ICALENDAR_ADDRESS is not configured',
+      );
+      await ctx.send(ctx.i18n.t(LocalePhrase.Common_Error));
+      return;
+    }
+
+    await ctx.send(
+      `${ctx.i18n.t(LocalePhrase.Page_Calendar)}\n\n${calendarUrl}`,
+      {
+        keyboard: this.keyboardFactory.getCalendarInline(
+          ctx,
+          calendarButtonUrl,
+        ),
+      },
+    );
   }
 
   /** Проверяет, что callback относится к списку текущего пользователя и диалога. */

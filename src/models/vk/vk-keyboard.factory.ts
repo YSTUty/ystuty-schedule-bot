@@ -25,6 +25,7 @@ import {
   ScheduleNotifTargetDayOffset,
 } from '../schedule-notif/schedule-notif.types';
 import type { ScheduleWeekView } from '../schedule/schedule.service';
+import { getWebsiteUrl } from '../schedule/util/schedule-calendar-link.util';
 
 export type VKPaginationItem =
   | string
@@ -67,6 +68,7 @@ export class VKKeyboardFactory {
 
     const hasGroup = !!ctx.state.userSocial?.groupName;
     const hasTeacher = !!ctx.session.teacherId;
+    const webViewUrl = getWebsiteUrl(xEnv.SOCIAL_VK_WEB_VIEW_URL);
 
     return Keyboard.keyboard([
       ...(hasGroup
@@ -133,6 +135,21 @@ export class VKKeyboardFactory {
                 color: Keyboard.SECONDARY_COLOR,
               }),
             ],
+            [
+              Keyboard.textButton({
+                label: ctx.i18n.t(LocalePhrase.Button_Calendar),
+                payload: { phrase: LocalePhrase.Button_Calendar },
+                color: Keyboard.SECONDARY_COLOR,
+              }),
+              ...(webViewUrl
+                ? [
+                    Keyboard.urlButton({
+                      label: ctx.i18n.t(LocalePhrase.Button_ScheduleWeb),
+                      url: webViewUrl,
+                    }),
+                  ]
+                : []),
+            ],
           ]
         : []),
       ...(ctx.isDM
@@ -192,6 +209,28 @@ export class VKKeyboardFactory {
           payload: { mainAction: 'help' },
           color: Keyboard.SECONDARY_COLOR,
         }),
+      ],
+    ]).inline();
+  }
+
+  /** Открывает страницу создания календарной подписки с уже выбранными целями. */
+  public getCalendarInline(ctx: IContext, link: string) {
+    const webViewUrl = getWebsiteUrl(xEnv.SOCIAL_VK_WEB_VIEW_URL);
+
+    return Keyboard.keyboard([
+      [
+        Keyboard.urlButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Calendar_Open),
+          url: link,
+        }),
+        ...(webViewUrl
+          ? [
+              Keyboard.urlButton({
+                label: ctx.i18n.t(LocalePhrase.Button_ScheduleWeb),
+                url: webViewUrl,
+              }),
+            ]
+          : []),
       ],
     ]).inline();
   }
@@ -271,6 +310,8 @@ export class VKKeyboardFactory {
 
   /** Быстрые действия из приветственной карточки личного чата. */
   public getWelcomeFeatures(ctx: IContext) {
+    const webViewUrl = getWebsiteUrl(xEnv.SOCIAL_VK_WEB_VIEW_URL);
+
     return Keyboard.keyboard([
       [
         Keyboard.callbackButton({
@@ -292,6 +333,21 @@ export class VKKeyboardFactory {
           payload: { mainAction: 'help' },
           color: Keyboard.PRIMARY_COLOR,
         }),
+      ],
+      [
+        Keyboard.callbackButton({
+          label: ctx.i18n.t(LocalePhrase.Button_Calendar),
+          payload: { phrase: LocalePhrase.Button_Calendar },
+          color: Keyboard.PRIMARY_COLOR,
+        }),
+        ...(webViewUrl
+          ? [
+              Keyboard.urlButton({
+                label: ctx.i18n.t(LocalePhrase.Button_ScheduleWeb),
+                url: webViewUrl,
+              }),
+            ]
+          : []),
       ],
       [
         Keyboard.applicationButton({

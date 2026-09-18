@@ -81,6 +81,10 @@ describe('TelegramService', () => {
       [
         { command: 'start', description: 'Запустить бота' },
         { command: 'day', description: 'Расписание на день' },
+        {
+          command: 'calendar',
+          description: 'Добавить расписание в календарь',
+        },
         { command: 'feedback', description: 'Оставить обратную связь' },
         { command: 'cancel', description: 'Отменить текущее действие' },
         { command: 'auth', description: 'Авторизоваться' },
@@ -121,6 +125,10 @@ describe('TelegramService', () => {
       [
         { command: 'start', description: 'Запустить бота' },
         { command: 'day', description: 'Расписание на день' },
+        {
+          command: 'calendar',
+          description: 'Добавить расписание в календарь',
+        },
         { command: 'feedback', description: 'Оставить обратную связь' },
         { command: 'cancel', description: 'Отменить текущее действие' },
         { command: 'week', description: 'Расписание на неделю' },
@@ -161,6 +169,10 @@ describe('TelegramService', () => {
       [
         { command: 'start', description: 'Запустить бота' },
         { command: 'day', description: 'Расписание на день' },
+        {
+          command: 'calendar',
+          description: 'Добавить расписание в календарь',
+        },
         { command: 'feedback', description: 'Оставить обратную связь' },
         { command: 'cancel', description: 'Отменить текущее действие' },
         {

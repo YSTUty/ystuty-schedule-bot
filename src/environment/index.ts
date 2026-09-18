@@ -27,6 +27,9 @@ export const SCHEDULE_API_TOKEN: string | null =
 
 export const YSTUTY_WEB_VIEW_ADDRESS: string =
   process.env.YSTUTY_WEB_VIEW_ADDRESS || '';
+/** Адрес страницы, которая создаёт ссылки на подписку календаря (.ics / CalDAV). */
+export const YSTUTY_ICALENDAR_ADDRESS: string =
+  process.env.YSTUTY_ICALENDAR_ADDRESS || '';
 
 // * Postgres
 const postgresDatabase = process.env.POSTGRES_DATABASE || 'ystuty-schedule-bot';
@@ -86,6 +89,9 @@ export const SOCIAL_VK_ADMIN_IDS: number[] =
   (process.env.SOCIAL_VK_ADMIN_IDS &&
     JSON.parse(process.env.SOCIAL_VK_ADMIN_IDS)) ||
   [];
+/** Внешняя ссылка на web-версию расписания для пользователей VK. */
+export const SOCIAL_VK_WEB_VIEW_URL: string =
+  process.env.SOCIAL_VK_WEB_VIEW_URL || '';
 
 // Telegram
 export const SOCIAL_TELEGRAM_BOT_NAME =

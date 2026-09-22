@@ -34,7 +34,10 @@ import {
   getScheduleCalendarWebUrl,
 } from '../../schedule/util/schedule-calendar-link.util';
 import { UserService } from '../../user/user.service';
-import { TelegramMarkup as Markup } from '../telegram-buttons.util';
+import {
+  TelegramMarkup as Markup,
+  TelegramButtons,
+} from '../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { AUTH_SCENE, SELECT_GROUP_SCENE } from '../telegram.constants';
 import { TelegramService } from '../telegram.service';
@@ -403,6 +406,15 @@ export class MainUpdate {
       })),
       actionPrefix: 'pager:glist:',
       columnizer: true,
+      additionalButtons: [
+        [
+          TelegramButtons.callback(
+            ctx.i18n.t(LocalePhrase.Button_Groups_ListGroups),
+            'pager:glist',
+            { style: 'primary' },
+          ),
+        ],
+      ],
     });
 
     const content = xs`
@@ -425,7 +437,9 @@ export class MainUpdate {
 
   @Command('groups')
   @Command('glist')
-  @Hears(/^групп(а|ы)$/i)
+  // legacy button
+  @Hears(/^📚 Список групп 📚$/i)
+  @Hears(/^группы$/i)
   @Action(
     /pager:glist(:(?<instituteHash>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
   )
@@ -668,8 +682,9 @@ export class MainUpdate {
 
   @Action(LocalePhrase.Button_SelectGroup)
   async onSelectGroup(@Ctx() ctx: ICallbackQueryContext) {
-    await ctx.scene.enter(SELECT_GROUP_SCENE);
-    await ctx.tryAnswerCbQuery();
+    // await ctx.scene.enter(SELECT_GROUP_SCENE);
+    // await ctx.tryAnswerCbQuery();
+    await this.onInstitutesList(ctx);
   }
 
   @TgHearsLocale([
@@ -721,6 +736,11 @@ export class MainUpdate {
           throw err;
         }
       }
+    }
+
+    if (!groupName) {
+      await this.onInstitutesList(ctx);
+      return;
     }
 
     await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });

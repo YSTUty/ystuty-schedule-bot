@@ -13,7 +13,7 @@ export const teacherSearchSlashCommandRegExp =
 
 /** Явная команда выбора группы; название валидируется по данным Schedule API. */
 export const selectGroupCommandRegExp =
-  /^(?<trigger>group|группа)\s+(?<groupName>.+)$/i;
+  /^(?<trigger>group|группа|выбрать(?: учебную)? группу|учебная группа)\s+(?<groupName>.+)$/i;
 
 /** Словесная команда личного расписания выбранного преподавателя на день. */
 export const personalTeacherScheduleCommandRegExp =

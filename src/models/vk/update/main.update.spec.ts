@@ -369,4 +369,33 @@ describe('VK MainUpdate', () => {
 
     expect(conversation.isLeaved).toBe(false);
   });
+
+  it('opens institutes from the generic VK group selection callback', async () => {
+    const renderInstitutesList = jest
+      .spyOn(update as any, 'renderInstitutesList')
+      .mockResolvedValue(undefined);
+    const ctx = { eventPayload: { phrase: LocalePhrase.Button_SelectGroup } };
+
+    await update.onOpenGroupSelect(ctx as any);
+
+    expect(renderInstitutesList).toHaveBeenCalledWith(ctx);
+  });
+
+  it('opens institutes instead of the VK group scene for a targetless selection request', async () => {
+    const renderInstitutesList = jest
+      .spyOn(update as any, 'renderInstitutesList')
+      .mockResolvedValue(undefined);
+    const scene = { enter: jest.fn() };
+    const ctx = {
+      isChat: false,
+      state: {},
+      $match: { groups: {} },
+      scene,
+    } as any;
+
+    await update.hearSelectGroup(ctx);
+
+    expect(renderInstitutesList).toHaveBeenCalledWith(ctx);
+    expect(scene.enter).not.toHaveBeenCalled();
+  });
 });

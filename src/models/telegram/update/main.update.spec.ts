@@ -298,6 +298,7 @@ describe('Telegram MainUpdate', () => {
       updateType: 'callback_query',
       callbackQuery: { data: 'pager:inst-list' },
       match: { groups: {} },
+      i18n: { t: jest.fn((phrase) => phrase) },
       tryAnswerCbQuery: jest.fn(async () => calls.push('answer')),
       editMessageText: jest.fn(async () => calls.push('edit')),
     } as any;
@@ -389,5 +390,60 @@ describe('Telegram MainUpdate', () => {
 
     expect(getStart).toHaveBeenCalledTimes(1);
     expect(parseChatTitle).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens institutes instead of the group scene for a targetless selection request', async () => {
+    const onInstitutesList = jest
+      .spyOn(update, 'onInstitutesList')
+      .mockResolvedValue(undefined);
+    const scene = { enter: jest.fn() };
+    const ctx = {
+      chat: { type: 'private' },
+      state: {},
+      userSocial: {},
+      match: { groups: {} },
+      scene,
+    } as any;
+
+    try {
+      await update.hearSelectGroup(ctx);
+
+      expect(onInstitutesList).toHaveBeenCalledWith(ctx);
+      expect(scene.enter).not.toHaveBeenCalled();
+    } finally {
+      onInstitutesList.mockRestore();
+    }
+  });
+
+  it('adds an all-groups callback below the Telegram institute list', async () => {
+    const getPagination = jest.fn().mockReturnValue('keyboard');
+    (update as any).keyboardFactory.getPagination = getPagination;
+    (update as any).scheduleService.groupsInstitutesList = jest.fn(() => ({
+      items: ['Институт'],
+      currentPage: 1,
+      totalPages: 1,
+    }));
+    const ctx = {
+      updateType: 'message',
+      message: { text: '/institutes' },
+      state: {},
+      i18n: { t: jest.fn((phrase) => phrase) },
+      replyWithHTML: jest.fn(),
+    } as any;
+
+    await update.onInstitutesList(ctx);
+
+    expect(getPagination).toHaveBeenCalledWith(
+      expect.objectContaining({
+        additionalButtons: [
+          [
+            expect.objectContaining({
+              callback_data: 'pager:glist',
+              text: LocalePhrase.Button_Groups_ListGroups,
+            }),
+          ],
+        ],
+      }),
+    );
   });
 });

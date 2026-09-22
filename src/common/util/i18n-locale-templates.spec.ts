@@ -2,7 +2,11 @@ import { readFileSync } from 'fs';
 import { load } from 'js-yaml';
 import { resolve } from 'path';
 
-import { patternGroupName, patternScheduleGroupTarget } from './schedule.util';
+import {
+  patternGroupName,
+  patternGroupName0,
+  patternScheduleGroupTarget,
+} from './schedule.util';
 import { i18n as telegramI18n } from './tg/i18n.util';
 import { i18n as vkI18n } from './vk/i18n.util';
 
@@ -166,18 +170,21 @@ const getTemplatePathsForTransport = (transport: 'telegram' | 'vk') => {
 
 const getScheduleRegExp = (
   transport: 'telegram' | 'vk',
-  period: 'for_one_day' | 'for_week',
+  command: 'for_one_day' | 'for_week' | 'select_group',
 ) => {
   const path = resolve(__dirname, `../../../locales/${transport}/ru.yaml`);
   const locale = load(readFileSync(path, 'utf8')) as {
-    regexp: { schedule: Record<typeof period, string> };
+    regexp: {
+      schedule: Record<'for_one_day' | 'for_week' | 'select_group', string>;
+    };
   };
-  const source = locale.regexp.schedule[period];
+  const source = locale.regexp.schedule[command];
   const [, pattern, flags] = source.match(/^\/(.*)\/([a-z]*)$/i) || [];
 
   return new RegExp(
     pattern
       .replace('${patternGroupName}', patternGroupName)
+      .replace('${patternGroupName0}', patternGroupName0)
       .replace('${patternScheduleGroupTarget}', patternScheduleGroupTarget),
     flags,
   );
@@ -264,6 +271,18 @@ describe.each(['telegram', 'vk'] as const)(
         detailed: ' подробно',
         groupTarget: 'Научно-исслед сем',
       });
+    });
+
+    it.each([
+      'группа',
+      'выбрать группу',
+      'выбрать учебную группу',
+      'учебная группа',
+    ])('opens group selection without a group target for "%s"', (command) => {
+      const match = getScheduleRegExp(transport, 'select_group').exec(command);
+
+      expect(match?.groups).toMatchObject({ trigger: command });
+      expect(match?.groups?.groupName).toBeUndefined();
     });
   },
 );

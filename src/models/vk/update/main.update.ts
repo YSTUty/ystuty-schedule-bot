@@ -421,9 +421,10 @@ export class MainUpdate {
 
   @OnMessageEvent({ phrase: LocalePhrase.Button_SelectGroup })
   async onOpenGroupSelect(@Ctx() ctx: IMessageEventContext) {
-    const groupName = ctx.eventPayload.groupName as string;
-    await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
-    await ctx.answer({ type: 'show_snackbar', text: 'Run' });
+    // const groupName = ctx.eventPayload.groupName as string;
+    // await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });
+    // await ctx.answer({ type: 'show_snackbar', text: 'Run' });
+    await this.renderInstitutesList(ctx);
   }
 
   @OnMessageEvent((payload) =>
@@ -453,7 +454,9 @@ export class MainUpdate {
 
   @Hears('/groups')
   @Hears('/glist')
-  @Hears(/^групп(а|ы)$/i)
+  // legacy button
+  @Hears(/^📚 Список групп 📚$/i)
+  @Hears(/^группы$/i)
   async onGroupsList(@Ctx() ctx: IMessageContext | IMessageEventContext) {
     await this.renderGroupsList(ctx);
   }
@@ -710,6 +713,11 @@ export class MainUpdate {
           throw error;
         }
       }
+    }
+
+    if (!groupName) {
+      await this.renderInstitutesList(ctx);
+      return;
     }
 
     await ctx.scene.enter(SELECT_GROUP_SCENE, { state: { groupName } });

@@ -133,7 +133,7 @@ button:
     submit: 📨 Отправить
   groups:
     list_inst_and_groups: 🏫 Список институтов и групп 📚
-    list_groups: 📚 Список групп 📚
+    list_groups: 📚 Все группы 📚
     list_institutes: 🏫 Список институтов 🏫
     change_institute: 🏫 Сменить институт 🏫
 
@@ -141,7 +141,7 @@ regexp:
   start: //?(start|старт|начать)( .*)?/i
   help: //?(help|помощь)/i
   schedule:
-    select_group: /^(?<trigger>(group|группа) ?)?${patternGroupName0}?$/i
+    select_group: /^(?<trigger>(выбрать( учебную)? группу|учебная группа|group|группа) ?)?${patternGroupName0}?$/i
     for_one_day: /^(расписание|.тт)((?<tomorrow> на завтра)|( через (?<skipDays>[0-9]{1,3})))?( ${patternScheduleGroupTarget})?(?<detailed> подробно)?$/i
     for_week: /^(((расписание|.тт) на(?<next> (след(ующую)?))? неделю)|\.рбн)( ${patternScheduleGroupTarget})?(?<detailed> подробно)?$/i
 

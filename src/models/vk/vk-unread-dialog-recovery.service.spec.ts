@@ -525,6 +525,7 @@ describe('VkUnreadDialogRecoveryService', () => {
 
   it('retries a message once its processing lease has expired', async () => {
     jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-09-15T12:00:00.000Z'));
     try {
       const {
         getConversations,

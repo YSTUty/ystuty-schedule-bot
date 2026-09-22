@@ -100,6 +100,27 @@ describe('formatScheduleWeekDays', () => {
     }
   });
 
+  it('uses subInfo when the Schedule API does not provide a lesson name', () => {
+    const compact = format([
+      lesson({
+        lessonName: '   ',
+        subInfo: 'Защита курсового проекта',
+      }),
+    ]);
+    const detailed = format(
+      [
+        lesson({
+          lessonName: undefined,
+          subInfo: 'Защита курсового проекта',
+        }),
+      ],
+      { targetType: 'group', presentation: 'detailed' },
+    );
+
+    expect(compact).toContain('Защита курсового проекта');
+    expect(detailed).toContain('Защита курсового проекта');
+  });
+
   it('renders the detailed view as separate readable lesson fields', () => {
     const result = format(
       [

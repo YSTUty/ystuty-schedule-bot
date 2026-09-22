@@ -27,6 +27,10 @@ type ScheduleFormatterOptions = {
 const getLessonTime = (lesson: Lesson) =>
   lesson.timeRange || lesson.time || '—';
 
+/** Использует дополнительную информацию, когда Schedule API не передал предмет. */
+const getLessonName = (lesson: Lesson) =>
+  lesson.lessonName?.trim() || lesson.subInfo?.trim() || '—';
+
 const getDate = (value?: string) => {
   if (!value) return null;
 
@@ -90,7 +94,7 @@ const formatCompactLesson = ({
   const auditoryName = getAuditories(lesson);
   const lessonTypes = getLessonTypes(lesson);
   const targets = getTargets(lesson, targetType);
-  const lessonName = lesson.lessonName?.trim() || '—';
+  const lessonName = getLessonName(lesson);
   const auditory = auditoryName
     ? withTags
       ? ` {<code>${auditoryName}</code>}`
@@ -135,7 +139,7 @@ const getCompactSubgroupSignature = (lesson: Lesson) =>
     time: getLessonTime(lesson),
     auditory: getAuditories(lesson),
     types: getLessonTypes(lesson),
-    lessonName: lesson.lessonName?.trim() || '—',
+    lessonName: getLessonName(lesson),
     isDistant: !!lesson.isDistant,
   });
 
@@ -210,7 +214,7 @@ const formatDetailedLesson = ({
     lesson.isDistant ? 'онлайн' : '',
   ].filter(Boolean);
   const targets = getTargets(lesson, targetType);
-  const lessonName = lesson.lessonName?.trim() || '—';
+  const lessonName = getLessonName(lesson);
   const title = `${scheduleUtil.getNumberEmoji(lesson.number)} ${withStrike(
     getLessonTime(lesson),
     isDone,

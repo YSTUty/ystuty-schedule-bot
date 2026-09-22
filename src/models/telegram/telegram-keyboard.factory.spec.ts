@@ -3,7 +3,11 @@ import * as xEnv from '@my-environment';
 import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 
+import { TgBroadcastKeyboardFactory } from './model/broadcaster/tg-broadcast-keyboard.factory';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
+
+const createBroadcastKeyboardFactory = () =>
+  new TgBroadcastKeyboardFactory(new TelegramKeyboardFactory());
 
 describe('TelegramKeyboardFactory', () => {
   const ctx = {
@@ -151,7 +155,7 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('keeps the broadcast campaigns page in detail and back callbacks', () => {
-    const keyboard = new TelegramKeyboardFactory().getBroadcastCampaignsList(
+    const keyboard = createBroadcastKeyboardFactory().getBroadcastCampaignsList(
       ctx,
       {
         items: Array.from({ length: 8 }, (_, index) => ({
@@ -163,7 +167,7 @@ describe('TelegramKeyboardFactory', () => {
       },
     );
     const buttons = keyboard.reply_markup.inline_keyboard.flat();
-    const detailsKeyboard = new TelegramKeyboardFactory()
+    const detailsKeyboard = createBroadcastKeyboardFactory()
       .getBroadcastCampaignDetails(ctx, {
         campaignId: 12,
         page: 2,
@@ -195,8 +199,9 @@ describe('TelegramKeyboardFactory', () => {
     const factory = new TelegramKeyboardFactory();
     const feedbackButtons =
       factory.getFeedbackCollector(ctx).reply_markup.inline_keyboard;
-    const queueButtons = factory.getBroadcastQueueControls(ctx, true)
-      .reply_markup.inline_keyboard;
+    const queueButtons =
+      createBroadcastKeyboardFactory().getBroadcastQueueControls(ctx, true)
+        .reply_markup.inline_keyboard;
     const deleteButtons = factory.getScheduleNotifDeleteConfirmation(ctx, 7)
       .reply_markup.inline_keyboard;
     const scheduleButtons = factory.getScheduleInline(ctx, {
@@ -363,10 +368,13 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('opens the audience filters editor from broadcast settings', () => {
-    const keyboard = new TelegramKeyboardFactory().getBroadcastSettings(ctx, {
-      onlyAuthorized: true,
-      groupName: 'ЦИС-21',
-    });
+    const keyboard = createBroadcastKeyboardFactory().getBroadcastSettings(
+      ctx,
+      {
+        onlyAuthorized: true,
+        groupName: 'ЦИС-21',
+      },
+    );
     const callbacks = keyboard.reply_markup.inline_keyboard
       .flat()
       .map((button) => ('callback_data' in button ? button.callback_data : ''));
@@ -377,7 +385,7 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('offers the keyboard message text setting only for forwards with buttons', () => {
-    const factory = new TelegramKeyboardFactory();
+    const factory = createBroadcastKeyboardFactory();
     const getCallbacks = (
       mode: 'copy' | 'forward',
       hasRecipientKeyboard: boolean,
@@ -402,7 +410,7 @@ describe('TelegramKeyboardFactory', () => {
 
   it('renders recipient actions, a URL link and feedback into separate inline rows', () => {
     const keyboard =
-      new TelegramKeyboardFactory().getBroadcastRecipientKeyboard({
+      createBroadcastKeyboardFactory().getBroadcastRecipientKeyboard({
         deliveryId: 15,
         actionKeyboard: [
           { type: 'select_group' },
@@ -444,20 +452,21 @@ describe('TelegramKeyboardFactory', () => {
       'button.broadcast.action_start_text': 'Text: start',
       'button.broadcast.action_link_text': 'Text: link',
     };
-    const keyboard = new TelegramKeyboardFactory().getBroadcastActionSettings(
-      {
-        i18n: {
-          t: (phrase: keyof typeof actionTextLabels) =>
-            actionTextLabels[phrase] || phrase,
-        },
-      } as any,
-      [
-        { type: 'select_group' },
-        { type: 'auth' },
-        { type: 'start' },
-        { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
-      ],
-    );
+    const keyboard =
+      createBroadcastKeyboardFactory().getBroadcastActionSettings(
+        {
+          i18n: {
+            t: (phrase: keyof typeof actionTextLabels) =>
+              actionTextLabels[phrase] || phrase,
+          },
+        } as any,
+        [
+          { type: 'select_group' },
+          { type: 'auth' },
+          { type: 'start' },
+          { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
+        ],
+      );
     const buttons = keyboard.reply_markup.inline_keyboard.flat();
     const getButton = (callbackData: string) =>
       buttons.find(
@@ -480,10 +489,10 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('offers every feedback button behavior after the initial click', () => {
-    const keyboard = new TelegramKeyboardFactory().getBroadcastFeedbackSettings(
-      ctx,
-      { text: '🫡' },
-    );
+    const keyboard =
+      createBroadcastKeyboardFactory().getBroadcastFeedbackSettings(ctx, {
+        text: '🫡',
+      });
     const callbacks = keyboard.reply_markup.inline_keyboard
       .flat()
       .map((button) => ('callback_data' in button ? button.callback_data : ''));

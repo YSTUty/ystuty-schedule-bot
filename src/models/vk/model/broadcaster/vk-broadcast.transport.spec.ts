@@ -11,6 +11,7 @@ describe('VkBroadcastTransport', () => {
       vkService as any,
       {} as any,
       keyboardFactory as any,
+      {} as any,
     );
 
     const result = await transport.sendCampaignDelivery({

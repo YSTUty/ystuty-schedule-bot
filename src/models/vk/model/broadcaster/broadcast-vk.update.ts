@@ -12,13 +12,16 @@ import { BroadcastService } from '../../../broadcast/broadcast.service';
 import { BroadcastCampaignStatus } from '../../../broadcast/broadcast.types';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
+import { VkBroadcastKeyboardFactory } from './vk-broadcast-keyboard.factory';
+
 @Update()
 @UseFilters(VkExceptionFilter)
 @UseGuards(VkAdminGuard(true))
 export class BroadcastVkUpdate {
   constructor(
     private readonly broadcastService: BroadcastService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkBroadcastKeyboardFactory,
+    private readonly baseKeyboardFactory: VKKeyboardFactory,
   ) {}
 
   @Hears('/broadcast')
@@ -339,7 +342,7 @@ export class BroadcastVkUpdate {
               .getBroadcastQueueControls(ctx, status.paused)
               .inline(),
           }
-        : { keyboard: this.keyboardFactory.getClose(ctx).inline() }),
+        : { keyboard: this.baseKeyboardFactory.getClose(ctx).inline() }),
     });
   }
 

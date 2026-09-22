@@ -20,6 +20,8 @@ import { BroadcastTransportRegistry } from '../../../broadcast/transport/broadca
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TelegramService } from '../../telegram.service';
 
+import { TgBroadcastKeyboardFactory } from './tg-broadcast-keyboard.factory';
+
 @Injectable()
 export class TelegramBroadcastTransport
   implements BroadcastTransport, OnModuleInit
@@ -32,7 +34,8 @@ export class TelegramBroadcastTransport
   constructor(
     private readonly telegramService: TelegramService,
     private readonly registry: BroadcastTransportRegistry,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgBroadcastKeyboardFactory,
+    private readonly baseKeyboardFactory: TelegramKeyboardFactory,
   ) {}
 
   onModuleInit() {
@@ -211,7 +214,7 @@ export class TelegramBroadcastTransport
         {
           parse_mode: 'HTML',
           ...(isFinal
-            ? this.keyboardFactory.getClear(true)
+            ? this.baseKeyboardFactory.getClear(true)
             : this.keyboardFactory.getBroadcastQueueControls(
                 this.fakeCtx,
                 params.paused,

@@ -20,6 +20,7 @@ describe('TelegramBroadcastTransport', () => {
       { bot: { telegram } } as any,
       {} as any,
       keyboardFactory as any,
+      {} as any,
     );
 
     const result = await transport.sendCampaignDelivery({
@@ -50,6 +51,7 @@ describe('TelegramBroadcastTransport', () => {
     };
     const transport = new TelegramBroadcastTransport(
       { bot: { telegram } } as any,
+      {} as any,
       {} as any,
       {} as any,
     );

@@ -15,7 +15,8 @@ import {
   BroadcastFeedbackButton,
   getBroadcastFeedbackAfterClickMode,
 } from '../../../broadcast/broadcast.types';
-import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+
+import { VkBroadcastKeyboardFactory } from './vk-broadcast-keyboard.factory';
 
 /** Обрабатывает feedback получателей без требования прав администратора. */
 @Update()
@@ -25,7 +26,7 @@ export class BroadcastVkFeedbackUpdate {
 
   constructor(
     private readonly broadcastService: BroadcastService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkBroadcastKeyboardFactory,
   ) {}
 
   @OnMessageEvent((payload) =>

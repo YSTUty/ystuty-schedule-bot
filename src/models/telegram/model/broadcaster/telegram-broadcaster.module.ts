@@ -6,9 +6,11 @@ import { BroadcastTelegramUnsubscribeUpdate } from './broadcast-telegram-unsubsc
 import { BroadcastTelegramUpdate } from './broadcast-telegram.update';
 import { TelegramBroadcastScene } from './telegram-broadcast.scene';
 import { TelegramBroadcastTransport } from './telegram-broadcast.transport';
+import { TgBroadcastKeyboardFactory } from './tg-broadcast-keyboard.factory';
 
 @Module({
   providers: [
+    TgBroadcastKeyboardFactory,
     BroadcastTelegramUpdate,
     BroadcastTelegramFeedbackUpdate,
     BroadcastTelegramRecipientActionUpdate,

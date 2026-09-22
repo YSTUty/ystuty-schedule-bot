@@ -25,6 +25,8 @@ import { BaseScene } from '../../scene/base.scene';
 import { TelegramMarkup as Markup } from '../../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 
+import { TgBroadcastKeyboardFactory } from './tg-broadcast-keyboard.factory';
+
 type TelegramBroadcastState = {
   /** Совместимые параметры выбранной прошлой кампании, без сообщения и history. */
   reusedSettings?: BroadcastCampaignSettings;
@@ -58,7 +60,8 @@ export class TelegramBroadcastScene extends BaseScene {
     private readonly broadcastService: BroadcastService,
     private readonly groupFilterService: BroadcastAudienceGroupFilterService,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgBroadcastKeyboardFactory,
+    private readonly baseKeyboardFactory: TelegramKeyboardFactory,
   ) {
     super();
   }
@@ -829,7 +832,7 @@ export class TelegramBroadcastScene extends BaseScene {
     await this.leaveScene(ctx);
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_Done),
-      this.keyboardFactory.getStart(ctx),
+      this.baseKeyboardFactory.getStart(ctx),
     );
   }
 
@@ -1027,7 +1030,7 @@ export class TelegramBroadcastScene extends BaseScene {
   private async continueToSource(ctx: IStepCtx) {
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_SendSample),
-      this.keyboardFactory.getClear(false),
+      this.baseKeyboardFactory.getClear(false),
     );
     ctx.wizard.next();
   }
@@ -1088,7 +1091,7 @@ export class TelegramBroadcastScene extends BaseScene {
       limit: 8,
     });
     const selected = new Set(state.selectedRecipientIds);
-    const keyboard = this.keyboardFactory.getPagination({
+    const keyboard = this.baseKeyboardFactory.getPagination({
       name: 'broadcast-recipients',
       currentPage: page.currentPage,
       totalPages: page.totalPages,
@@ -1438,7 +1441,7 @@ export class TelegramBroadcastScene extends BaseScene {
       page,
       limit: 8,
     });
-    const keyboard = this.keyboardFactory.getPagination({
+    const keyboard = this.baseKeyboardFactory.getPagination({
       name: 'broadcast-filter-institutes',
       currentPage: result.currentPage,
       totalPages: result.totalPages,
@@ -1516,7 +1519,7 @@ export class TelegramBroadcastScene extends BaseScene {
     const allSelected = result.institute.groups.every((group) =>
       selected.has(group.groupName),
     );
-    const keyboard = this.keyboardFactory.getPagination({
+    const keyboard = this.baseKeyboardFactory.getPagination({
       name: 'broadcast-filter-groups',
       currentPage: result.currentPage,
       totalPages: result.totalPages,
@@ -1705,7 +1708,7 @@ export class TelegramBroadcastScene extends BaseScene {
   override async onСancel(ctx: IStepCtx) {
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Broadcast_Canceled),
-      this.keyboardFactory.getStart(ctx),
+      this.baseKeyboardFactory.getStart(ctx),
     );
   }
 }

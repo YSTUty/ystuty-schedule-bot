@@ -8,7 +8,8 @@ import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { UserService } from '../../../user/user.service';
-import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+
+import { VkBroadcastKeyboardFactory } from './vk-broadcast-keyboard.factory';
 
 /** Отдельный flow отключения и восстановления персональных рассылок. */
 @Update()
@@ -16,7 +17,7 @@ import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 export class BroadcastVkUnsubscribeUpdate {
   constructor(
     private readonly userService: UserService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkBroadcastKeyboardFactory,
   ) {}
 
   @Hears(['/unsubscribe', 'отписаться', 'больше не студент'])

@@ -18,6 +18,8 @@ import { BroadcastTransportRegistry } from '../../../broadcast/transport/broadca
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { VkService } from '../../vk.service';
 
+import { VkBroadcastKeyboardFactory } from './vk-broadcast-keyboard.factory';
+
 @Injectable()
 export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
   public readonly social = SocialType.Vkontakte;
@@ -28,7 +30,8 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
   constructor(
     private readonly vkService: VkService,
     private readonly registry: BroadcastTransportRegistry,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkBroadcastKeyboardFactory,
+    private readonly baseKeyboardFactory: VKKeyboardFactory,
   ) {}
 
   onModuleInit() {
@@ -124,7 +127,7 @@ export class VkBroadcastTransport implements BroadcastTransport, OnModuleInit {
       { conversation_message_id: params.reportMessage.messageId },
       params.text.replace(/<[^>]+>/g, ''),
       isFinal
-        ? { keyboard: this.keyboardFactory.getClose().inline() }
+        ? { keyboard: this.baseKeyboardFactory.getClose().inline() }
         : {
             keyboard: this.keyboardFactory
               .getBroadcastQueueControls(this.fakeCtx, params.paused)

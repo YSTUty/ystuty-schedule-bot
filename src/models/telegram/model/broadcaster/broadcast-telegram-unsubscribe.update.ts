@@ -10,7 +10,8 @@ import {
 } from '@my-interfaces/telegram';
 
 import { UserService } from '../../../user/user.service';
-import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+
+import { TgBroadcastKeyboardFactory } from './tg-broadcast-keyboard.factory';
 
 /** Отдельный flow отключения и восстановления персональных рассылок. */
 @Update()
@@ -18,7 +19,7 @@ import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 export class BroadcastTelegramUnsubscribeUpdate {
   constructor(
     private readonly userService: UserService,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgBroadcastKeyboardFactory,
   ) {}
 
   @Command('unsubscribe')

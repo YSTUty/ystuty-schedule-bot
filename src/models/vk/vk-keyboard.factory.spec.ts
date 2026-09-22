@@ -4,7 +4,11 @@ import { LocalePhrase } from '@my-interfaces';
 
 import { ScheduleNotifPeriod } from '../schedule-notif/schedule-notif.types';
 
+import { VkBroadcastKeyboardFactory } from './model/broadcaster/vk-broadcast-keyboard.factory';
 import { VKKeyboardFactory } from './vk-keyboard.factory';
+
+const createBroadcastKeyboardFactory = () =>
+  new VkBroadcastKeyboardFactory(new VKKeyboardFactory());
 
 describe('VKKeyboardFactory', () => {
   const ctx = {
@@ -404,10 +408,13 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('opens the audience filters editor from broadcast settings', () => {
-    const keyboard = new VKKeyboardFactory().getBroadcastSettings(ctx, {
-      onlyAuthorized: true,
-      groupName: 'ЦИС-21',
-    });
+    const keyboard = createBroadcastKeyboardFactory().getBroadcastSettings(
+      ctx,
+      {
+        onlyAuthorized: true,
+        groupName: 'ЦИС-21',
+      },
+    );
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const actions = renderedKeyboard.buttons
       .flat()
@@ -417,14 +424,17 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('keeps the broadcast campaigns list within the VK inline keyboard row limit', () => {
-    const keyboard = new VKKeyboardFactory().getBroadcastCampaignsList(ctx, {
-      items: Array.from({ length: 4 }, (_, index) => ({
-        id: index + 1,
-        status: 'completed',
-      })),
-      currentPage: 2,
-      totalPages: 3,
-    });
+    const keyboard = createBroadcastKeyboardFactory().getBroadcastCampaignsList(
+      ctx,
+      {
+        items: Array.from({ length: 4 }, (_, index) => ({
+          id: index + 1,
+          status: 'completed',
+        })),
+        currentPage: 2,
+        totalPages: 3,
+      },
+    );
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
     expect(renderedKeyboard.buttons).toHaveLength(6);
@@ -444,15 +454,16 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('renders recipient actions, a URL link and feedback within VK inline keyboard limits', () => {
-    const keyboard = new VKKeyboardFactory().getBroadcastRecipientKeyboard({
-      deliveryId: 15,
-      actionKeyboard: [
-        { type: 'select_group' },
-        { type: 'start' },
-        { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
-      ],
-      feedbackButton: { text: '🫡' },
-    });
+    const keyboard =
+      createBroadcastKeyboardFactory().getBroadcastRecipientKeyboard({
+        deliveryId: 15,
+        actionKeyboard: [
+          { type: 'select_group' },
+          { type: 'start' },
+          { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
+        ],
+        feedbackButton: { text: '🫡' },
+      });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
     expect(renderedKeyboard.buttons).toHaveLength(4);
@@ -480,21 +491,22 @@ describe('VKKeyboardFactory', () => {
       'button.broadcast.action_link_url': 'Edit URL',
       'button.broadcast.back_to_settings': 'Back',
     };
-    const keyboard = new VKKeyboardFactory().getBroadcastActionSettings(
-      {
-        i18n: {
-          t: (phrase: keyof typeof actionTextLabels) =>
-            actionTextLabels[phrase] || phrase,
-        },
-      } as any,
-      [
-        { type: 'select_group' },
-        { type: 'auth' },
-        { type: 'start' },
-        { type: 'unsubscribe' },
-        { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
-      ],
-    );
+    const keyboard =
+      createBroadcastKeyboardFactory().getBroadcastActionSettings(
+        {
+          i18n: {
+            t: (phrase: keyof typeof actionTextLabels) =>
+              actionTextLabels[phrase] || phrase,
+          },
+        } as any,
+        [
+          { type: 'select_group' },
+          { type: 'auth' },
+          { type: 'start' },
+          { type: 'unsubscribe' },
+          { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
+        ],
+      );
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const buttons = renderedKeyboard.buttons.flat();
     const getButton = (action: string) =>
@@ -512,18 +524,19 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('shows all enabled action buttons on the separate text selector', () => {
-    const keyboard = new VKKeyboardFactory().getBroadcastActionTextSelector(
-      {
-        i18n: { t: (phrase: string) => phrase },
-      } as any,
-      [
-        { type: 'select_group' },
-        { type: 'auth' },
-        { type: 'start' },
-        { type: 'unsubscribe' },
-        { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
-      ],
-    );
+    const keyboard =
+      createBroadcastKeyboardFactory().getBroadcastActionTextSelector(
+        {
+          i18n: { t: (phrase: string) => phrase },
+        } as any,
+        [
+          { type: 'select_group' },
+          { type: 'auth' },
+          { type: 'start' },
+          { type: 'unsubscribe' },
+          { type: 'link', text: 'Открыть сайт', url: 'https://ystuty.ru/' },
+        ],
+      );
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const actions = renderedKeyboard.buttons
       .flat()
@@ -543,9 +556,10 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('offers every feedback button behavior after the initial click', () => {
-    const keyboard = new VKKeyboardFactory().getBroadcastFeedbackSettings(ctx, {
-      text: '🫡',
-    });
+    const keyboard =
+      createBroadcastKeyboardFactory().getBroadcastFeedbackSettings(ctx, {
+        text: '🫡',
+      });
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
     const actions = renderedKeyboard.buttons
       .flat()
@@ -561,10 +575,11 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('highlights the selected feedback behavior in green', () => {
-    const keyboard = new VKKeyboardFactory().getBroadcastFeedbackSettings(ctx, {
-      text: '🫡',
-      afterClickMode: 'keep',
-    });
+    const keyboard =
+      createBroadcastKeyboardFactory().getBroadcastFeedbackSettings(ctx, {
+        text: '🫡',
+        afterClickMode: 'keep',
+      });
     const buttons = JSON.parse(String(keyboard.inline())).buttons.flat();
     const getButton = (action: string) =>
       buttons.find(

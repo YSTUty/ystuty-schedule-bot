@@ -25,6 +25,8 @@ import { BroadcastAudienceGroupFilterService } from '../../../broadcast/filter/b
 import { ScheduleService } from '../../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 
+import { VkBroadcastKeyboardFactory } from './vk-broadcast-keyboard.factory';
+
 type VkBroadcastState = {
   /** Совместимые параметры выбранной прошлой кампании, без сообщения и history. */
   reusedSettings?: BroadcastCampaignSettings;
@@ -58,7 +60,8 @@ export class VkBroadcastScene {
     private readonly broadcastService: BroadcastService,
     private readonly groupFilterService: BroadcastAudienceGroupFilterService,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkBroadcastKeyboardFactory,
+    private readonly baseKeyboardFactory: VKKeyboardFactory,
   ) {}
 
   @AddStep()
@@ -107,7 +110,7 @@ export class VkBroadcastScene {
   async step2(@Ctx() ctx: IStepCtx) {
     if (ctx.text === '/cancel') {
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_Canceled), {
-        keyboard: this.keyboardFactory.getStart(ctx),
+        keyboard: this.baseKeyboardFactory.getStart(ctx),
       });
       return ctx.scene.leave();
     }
@@ -196,7 +199,7 @@ export class VkBroadcastScene {
   async step3(@Ctx() ctx: IStepCtx) {
     if (ctx.text === '/cancel') {
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_Canceled), {
-        keyboard: this.keyboardFactory.getStart(ctx),
+        keyboard: this.baseKeyboardFactory.getStart(ctx),
       });
       return ctx.scene.leave();
     }
@@ -240,7 +243,7 @@ export class VkBroadcastScene {
         cmid: ctx.scene.state.confirmMessage.messageId,
         message: this.renderReady(ctx),
         keep_forward_messages: true,
-        keyboard: this.keyboardFactory.getClose(ctx).inline(),
+        keyboard: this.baseKeyboardFactory.getClose(ctx).inline(),
       });
     }
 
@@ -268,7 +271,7 @@ export class VkBroadcastScene {
       });
     }
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_Done), {
-      keyboard: this.keyboardFactory.getStart(ctx),
+      keyboard: this.baseKeyboardFactory.getStart(ctx),
     });
     return ctx.scene.leave();
   }
@@ -1491,7 +1494,7 @@ export class VkBroadcastScene {
   private async continueToSource(ctx: IStepCtx) {
     ctx.scene.state.awaitingSource = true;
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Broadcast_SendSample), {
-      keyboard: this.keyboardFactory.getClose(ctx),
+      keyboard: this.baseKeyboardFactory.getClose(ctx),
     });
   }
 
@@ -1603,7 +1606,7 @@ export class VkBroadcastScene {
       }),
       {
         keep_forward_messages: true,
-        keyboard: this.keyboardFactory
+        keyboard: this.baseKeyboardFactory
           .getPagination({
             currentPage: result.currentPage,
             totalPages: result.totalPages,
@@ -1695,7 +1698,7 @@ export class VkBroadcastScene {
       }),
       {
         keep_forward_messages: true,
-        keyboard: this.keyboardFactory
+        keyboard: this.baseKeyboardFactory
           .getPagination({
             currentPage: result.currentPage,
             totalPages: result.totalPages,

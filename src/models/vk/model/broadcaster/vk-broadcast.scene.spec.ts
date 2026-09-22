@@ -11,6 +11,7 @@ describe('VkBroadcastScene', () => {
       {} as any,
       {} as any,
       keyboardFactory as any,
+      {} as any,
     );
     const ctx = {
       scene: {
@@ -41,6 +42,7 @@ describe('VkBroadcastScene', () => {
 
   it('uses a wall attachment and explicit admin text from a forwarded post', () => {
     const scene = new VkBroadcastScene(
+      {} as any,
       {} as any,
       {} as any,
       {} as any,
@@ -76,6 +78,7 @@ describe('VkBroadcastScene', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
     const ctx = {
       id: 18,
@@ -98,6 +101,7 @@ describe('VkBroadcastScene', () => {
 
   it('keeps all attachable VK attachments in one broadcast source', () => {
     const scene = new VkBroadcastScene(
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

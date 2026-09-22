@@ -9,6 +9,7 @@ describe('TelegramBroadcastScene', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
     const state = {
       filter: { hasDM: true, isBlockedBot: false },
@@ -44,6 +45,7 @@ describe('TelegramBroadcastScene', () => {
       {} as any,
       {} as any,
       keyboardFactory as any,
+      {} as any,
     );
     const ctx = {
       scene: {
@@ -79,6 +81,7 @@ describe('TelegramBroadcastScene', () => {
       {} as any,
       {} as any,
       keyboardFactory as any,
+      {} as any,
     );
     const ctx = {
       scene: {
@@ -128,6 +131,7 @@ describe('TelegramBroadcastScene', () => {
       {} as any,
       {} as any,
       { getBroadcastConfirm: jest.fn().mockReturnValue({}) } as any,
+      {} as any,
     );
     const state: any = {
       filter: { hasDM: true, isBlockedBot: false },

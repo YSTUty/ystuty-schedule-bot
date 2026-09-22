@@ -12,7 +12,8 @@ import {
   BroadcastFeedbackAction,
   getBroadcastFeedbackAfterClickMode,
 } from '../../../broadcast/broadcast.types';
-import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+
+import { TgBroadcastKeyboardFactory } from './tg-broadcast-keyboard.factory';
 
 /** Обрабатывает feedback получателей без требования прав администратора. */
 @Update()
@@ -20,7 +21,7 @@ import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 export class BroadcastTelegramFeedbackUpdate {
   constructor(
     private readonly broadcastService: BroadcastService,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgBroadcastKeyboardFactory,
   ) {}
 
   @Action(/broadcast:feedback:(?<deliveryId>\d+):(?<action>initial|repeat)/)

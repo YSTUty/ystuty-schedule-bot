@@ -16,7 +16,8 @@ import {
 import { TELEGRAM_BROADCAST_SCENE } from '../../../broadcast/broadcast.constants';
 import { BroadcastService } from '../../../broadcast/broadcast.service';
 import { BroadcastCampaignStatus } from '../../../broadcast/broadcast.types';
-import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+
+import { TgBroadcastKeyboardFactory } from './tg-broadcast-keyboard.factory';
 
 type ExtraEditMessageText = Omit<
   Opts<'editMessageText'>,
@@ -29,7 +30,7 @@ type ExtraEditMessageText = Omit<
 export class BroadcastTelegramUpdate {
   constructor(
     private readonly broadcastService: BroadcastService,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgBroadcastKeyboardFactory,
   ) {}
 
   @Command('broadcast')

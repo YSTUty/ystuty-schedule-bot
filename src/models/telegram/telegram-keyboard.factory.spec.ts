@@ -4,10 +4,13 @@ import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 
 import { TgBroadcastKeyboardFactory } from './model/broadcaster/tg-broadcast-keyboard.factory';
+import { TgScheduleNotifKeyboardFactory } from './model/schedule-notif/tg-schedule-notif-keyboard.factory';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 
 const createBroadcastKeyboardFactory = () =>
   new TgBroadcastKeyboardFactory(new TelegramKeyboardFactory());
+const createScheduleNotifKeyboardFactory = () =>
+  new TgScheduleNotifKeyboardFactory(new TelegramKeyboardFactory());
 
 describe('TelegramKeyboardFactory', () => {
   const ctx = {
@@ -19,7 +22,7 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('shows all notif hours when creating a notif', () => {
-    const keyboard = new TelegramKeyboardFactory().getScheduleNotifHours(
+    const keyboard = createScheduleNotifKeyboardFactory().getScheduleNotifHours(
       ctx,
       1,
     );
@@ -105,6 +108,7 @@ describe('TelegramKeyboardFactory', () => {
     );
 
     const factory = new TelegramKeyboardFactory();
+    const scheduleNotifKeyboardFactory = createScheduleNotifKeyboardFactory();
     const privateKeyboard = factory.getStart({
       chat: { type: 'private' },
       from: { id: 42 },
@@ -197,22 +201,25 @@ describe('TelegramKeyboardFactory', () => {
 
   it('uses Telegram button colors for primary, successful and destructive actions', () => {
     const factory = new TelegramKeyboardFactory();
+    const scheduleNotifKeyboardFactory = createScheduleNotifKeyboardFactory();
     const feedbackButtons =
       factory.getFeedbackCollector(ctx).reply_markup.inline_keyboard;
     const queueButtons =
       createBroadcastKeyboardFactory().getBroadcastQueueControls(ctx, true)
         .reply_markup.inline_keyboard;
-    const deleteButtons = factory.getScheduleNotifDeleteConfirmation(ctx, 7)
-      .reply_markup.inline_keyboard;
+    const deleteButtons =
+      scheduleNotifKeyboardFactory.getScheduleNotifDeleteConfirmation(ctx, 7)
+        .reply_markup.inline_keyboard;
     const scheduleButtons = factory.getScheduleInline(ctx, {
       type: 'group',
       id: 'ЦИС-46',
     }).reply_markup.inline_keyboard;
-    const settingsButtons = factory.getScheduleNotifSettings(
-      ctx,
-      [{ id: 7, isEnabled: true, targetLabel: 'Группа: ЦИС-11' }],
-      true,
-    ).reply_markup.inline_keyboard;
+    const settingsButtons =
+      scheduleNotifKeyboardFactory.getScheduleNotifSettings(
+        ctx,
+        [{ id: 7, isEnabled: true, targetLabel: 'Группа: ЦИС-11' }],
+        true,
+      ).reply_markup.inline_keyboard;
 
     expect(
       factory.getUnknownMessageHelp(ctx).reply_markup.inline_keyboard[0][0],
@@ -292,15 +299,16 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('opens hour selection before choosing minutes in the notif editor', () => {
-    const keyboard = new TelegramKeyboardFactory().getScheduleNotifEditor(ctx, {
-      id: 7,
-      deliveryHour: 8,
-      deliveryMinute: 30,
-      period: 'day',
-      targetDayOffset: 0,
-      weekdays: [1],
-      isEnabled: true,
-    });
+    const keyboard =
+      createScheduleNotifKeyboardFactory().getScheduleNotifEditor(ctx, {
+        id: 7,
+        deliveryHour: 8,
+        deliveryMinute: 30,
+        period: 'day',
+        targetDayOffset: 0,
+        weekdays: [1],
+        isEnabled: true,
+      });
 
     expect(keyboard.reply_markup.inline_keyboard[0][0]).toMatchObject({
       callback_data: 'scheduleNotif:editTime:7',
@@ -335,11 +343,8 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('offers the current week as a schedule-notification target', () => {
-    const keyboard = new TelegramKeyboardFactory().getScheduleNotifTarget(
-      ctx,
-      8,
-      30,
-    );
+    const keyboard =
+      createScheduleNotifKeyboardFactory().getScheduleNotifTarget(ctx, 8, 30);
     const callbacks = keyboard.reply_markup.inline_keyboard
       .flat()
       .map((button) => ('callback_data' in button ? button.callback_data : ''));
@@ -354,12 +359,13 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('adds a back button when changing an existing notif target', () => {
-    const keyboard = new TelegramKeyboardFactory().getScheduleNotifTargetType(
-      ctx,
-      'scheduleNotif:targetType:7',
-      true,
-      'scheduleNotif:edit:7',
-    );
+    const keyboard =
+      createScheduleNotifKeyboardFactory().getScheduleNotifTargetType(
+        ctx,
+        'scheduleNotif:targetType:7',
+        true,
+        'scheduleNotif:edit:7',
+      );
     const callbacks = keyboard.reply_markup.inline_keyboard
       .flat()
       .map((button) => ('callback_data' in button ? button.callback_data : ''));

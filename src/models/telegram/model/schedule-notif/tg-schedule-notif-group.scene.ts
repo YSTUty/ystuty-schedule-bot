@@ -21,6 +21,8 @@ import { TelegramMarkup as Markup } from '../../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TgGroupPicker } from '../tg-group-picker';
 
+import { TgScheduleNotifKeyboardFactory } from './tg-schedule-notif-keyboard.factory';
+
 export const TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE =
   'TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE';
 
@@ -37,7 +39,8 @@ export class TgScheduleNotifGroupScene extends BaseScene {
     private readonly draftService: ScheduleNotifDraftService,
     private readonly groupPicker: TgGroupPicker,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgScheduleNotifKeyboardFactory,
+    private readonly baseKeyboardFactory: TelegramKeyboardFactory,
   ) {
     super();
   }
@@ -242,7 +245,7 @@ export class TgScheduleNotifGroupScene extends BaseScene {
     await this.editOrReply(
       ctx,
       ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
-      this.keyboardFactory.getPagination({
+      this.baseKeyboardFactory.getPagination({
         name: 'schedule-notif-not-found',
         currentPage: 1,
         totalPages: 1,

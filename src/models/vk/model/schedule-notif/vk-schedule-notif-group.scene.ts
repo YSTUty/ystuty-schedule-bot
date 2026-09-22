@@ -19,6 +19,8 @@ import { ScheduleService } from '../../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { VkGroupPicker } from '../vk-group-picker';
 
+import { VkScheduleNotifKeyboardFactory } from './vk-schedule-notif-keyboard.factory';
+
 export const VK_SCHEDULE_NOTIFICATION_GROUP_SCENE =
   'VK_SCHEDULE_NOTIFICATION_GROUP_SCENE';
 
@@ -38,7 +40,8 @@ export class VkScheduleNotifGroupScene {
     private readonly draftService: ScheduleNotifDraftService,
     private readonly groupPicker: VkGroupPicker,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkScheduleNotifKeyboardFactory,
+    private readonly baseKeyboardFactory: VKKeyboardFactory,
   ) {}
 
   @AddStep()
@@ -137,7 +140,7 @@ export class VkScheduleNotifGroupScene {
         }),
         additionalButtons: [
           [
-            this.keyboardFactory.getInstitutesListButton(ctx, {
+            this.baseKeyboardFactory.getInstitutesListButton(ctx, {
               scheduleNotifGroupAction: 'back',
               notifId,
             }),
@@ -273,14 +276,14 @@ export class VkScheduleNotifGroupScene {
     notifId: number | undefined,
     groupName: string,
   ) {
-    const keyboard = this.keyboardFactory.getPagination({
+    const keyboard = this.baseKeyboardFactory.getPagination({
       currentPage: 1,
       totalPages: 1,
       items: [],
       getPagePayload: () => ({}),
       additionalButtons: [
         [
-          this.keyboardFactory.getInstitutesListButton(ctx, {
+          this.baseKeyboardFactory.getInstitutesListButton(ctx, {
             scheduleNotifGroupAction: 'institutes',
             notifId,
           }),

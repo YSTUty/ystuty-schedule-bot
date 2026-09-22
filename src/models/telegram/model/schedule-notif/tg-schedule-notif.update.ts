@@ -25,10 +25,10 @@ import {
   ScheduleNotifTargetType,
 } from '../../../schedule-notif/schedule-notif.types';
 import { ScheduleService } from '../../../schedule/schedule.service';
-import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { TelegramService } from '../../telegram.service';
 
 import { TELEGRAM_SCHEDULE_NOTIFICATION_GROUP_SCENE } from './tg-schedule-notif-group.scene';
+import { TgScheduleNotifKeyboardFactory } from './tg-schedule-notif-keyboard.factory';
 import { TELEGRAM_SCHEDULE_NOTIFICATION_TEACHER_SCENE } from './tg-schedule-notif-teacher.scene';
 
 @Update()
@@ -37,7 +37,7 @@ export class TgScheduleNotifUpdate {
     private readonly notifService: ScheduleNotifService,
     private readonly draftService: ScheduleNotifDraftService,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgScheduleNotifKeyboardFactory,
     private readonly telegramService: TelegramService,
   ) {}
 

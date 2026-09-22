@@ -27,10 +27,10 @@ import {
   ScheduleNotifTargetType,
 } from '../../../schedule-notif/schedule-notif.types';
 import { ScheduleService } from '../../../schedule/schedule.service';
-import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { VkService } from '../../vk.service';
 
 import { VK_SCHEDULE_NOTIFICATION_GROUP_SCENE } from './vk-schedule-notif-group.scene';
+import { VkScheduleNotifKeyboardFactory } from './vk-schedule-notif-keyboard.factory';
 import { VK_SCHEDULE_NOTIFICATION_TEACHER_SCENE } from './vk-schedule-notif-teacher.scene';
 
 @Update()
@@ -40,7 +40,7 @@ export class VkScheduleNotifUpdate {
     private readonly notifService: ScheduleNotifService,
     private readonly draftService: ScheduleNotifDraftService,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkScheduleNotifKeyboardFactory,
     private readonly vkService: VkService,
   ) {}
 

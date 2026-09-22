@@ -14,6 +14,7 @@ describe('TgScheduleNotifGroupScene', () => {
       groupPicker as any,
       {} as any,
       {} as any,
+      {} as any,
     );
     const ctx = {
       callbackQuery: { data: 'scheduleNotif:createTarget:0123456789ab:group' },
@@ -79,6 +80,7 @@ describe('TgScheduleNotifGroupScene', () => {
       {} as any,
       scheduleService as any,
       keyboardFactory as any,
+      {} as any,
     );
     const ctx = {
       callbackQuery: { data: 'sched-notif-group:select:group-hash' },
@@ -149,6 +151,7 @@ describe('TgScheduleNotifGroupScene', () => {
       {
         getScheduleNotifEditor: jest.fn().mockReturnValue({ reply_markup: {} }),
       } as any,
+      {} as any,
     );
     const ctx = {
       callbackQuery: { data: 'sched-notif-group:select:group-hash' },
@@ -195,6 +198,7 @@ describe('TgScheduleNotifGroupScene', () => {
       {} as any,
       scheduleService as any,
       keyboardFactory as any,
+      {} as any,
     );
     const ctx = {
       callbackQuery: { data: 'sched-notif-group:select:group-hash' },

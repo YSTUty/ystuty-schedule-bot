@@ -12,7 +12,8 @@ import { ScheduleNotifDraftService } from '../../../schedule-notif/schedule-noti
 import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.service';
 import { ScheduleNotifTargetType } from '../../../schedule-notif/schedule-notif.types';
 import { ScheduleService } from '../../../schedule/schedule.service';
-import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+
+import { VkScheduleNotifKeyboardFactory } from './vk-schedule-notif-keyboard.factory';
 
 export const VK_SCHEDULE_NOTIFICATION_TEACHER_SCENE =
   'VK_SCHEDULE_NOTIFICATION_TEACHER_SCENE';
@@ -31,7 +32,7 @@ export class VkScheduleNotifTeacherScene {
     private readonly notifService: ScheduleNotifService,
     private readonly draftService: ScheduleNotifDraftService,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkScheduleNotifKeyboardFactory,
   ) {}
 
   @AddStep()

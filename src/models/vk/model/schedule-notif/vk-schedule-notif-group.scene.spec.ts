@@ -41,6 +41,7 @@ describe('VkScheduleNotifGroupScene', () => {
           .fn()
           .mockReturnValue({ inline: jest.fn().mockReturnValue({}) }),
       } as any,
+      {} as any,
     );
     const ctx = {
       isDM: true,
@@ -95,6 +96,7 @@ describe('VkScheduleNotifGroupScene', () => {
       {
         getScheduleNotifGroupPickerCancelButton: jest.fn(),
       } as any,
+      {} as any,
     );
     const ctx = {
       eventPayload: { scheduleNotifAction: 'changeGroup' },
@@ -123,9 +125,11 @@ describe('VkScheduleNotifGroupScene', () => {
         keyboard: { inline: jest.fn() },
       }),
     };
-    const keyboardFactory = {
+    const baseKeyboardFactory = {
       getPagination: jest.fn().mockReturnValue({ inline: jest.fn() }),
       getInstitutesListButton: jest.fn(),
+    };
+    const keyboardFactory = {
       getScheduleNotifGroupPickerCancelButton: jest.fn(),
     };
     const scene = new VkScheduleNotifGroupScene(
@@ -134,6 +138,7 @@ describe('VkScheduleNotifGroupScene', () => {
       groupPicker as any,
       {} as any,
       keyboardFactory as any,
+      baseKeyboardFactory as any,
     );
     const ctx = {
       eventPayload: {
@@ -179,6 +184,7 @@ describe('VkScheduleNotifGroupScene', () => {
       {} as any,
       scheduleService as any,
       { getScheduleNotifEditor: jest.fn() } as any,
+      {} as any,
     );
     const ctx = {
       isDM: true,
@@ -224,6 +230,7 @@ describe('VkScheduleNotifGroupScene', () => {
           .fn()
           .mockReturnValue({ inline: jest.fn() }),
       } as any,
+      {} as any,
     );
     const ctx = {
       isDM: false,

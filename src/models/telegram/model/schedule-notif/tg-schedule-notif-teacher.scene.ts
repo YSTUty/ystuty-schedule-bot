@@ -13,7 +13,8 @@ import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.ser
 import { ScheduleNotifTargetType } from '../../../schedule-notif/schedule-notif.types';
 import { ScheduleService } from '../../../schedule/schedule.service';
 import { BaseScene } from '../../scene/base.scene';
-import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+
+import { TgScheduleNotifKeyboardFactory } from './tg-schedule-notif-keyboard.factory';
 
 export const TELEGRAM_SCHEDULE_NOTIFICATION_TEACHER_SCENE =
   'TELEGRAM_SCHEDULE_NOTIFICATION_TEACHER_SCENE';
@@ -31,7 +32,7 @@ export class TgScheduleNotifTeacherScene extends BaseScene {
     private readonly notifService: ScheduleNotifService,
     private readonly draftService: ScheduleNotifDraftService,
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgScheduleNotifKeyboardFactory,
   ) {
     super();
   }

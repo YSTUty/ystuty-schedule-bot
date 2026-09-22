@@ -6,10 +6,12 @@ jest.mock('@my-environment', () => ({
 
 describe('TelegramFeedbackScene', () => {
   const keyboardFactory = {
-    getFeedbackCategories: jest.fn().mockReturnValue('categories'),
-    getFeedbackCollector: jest.fn().mockReturnValue('collector'),
     getStart: jest.fn().mockReturnValue('start'),
     getWelcomeFeatures: jest.fn().mockReturnValue('welcome'),
+  };
+  const feedbackKeyboardFactory = {
+    getFeedbackCategories: jest.fn().mockReturnValue('categories'),
+    getFeedbackCollector: jest.fn().mockReturnValue('collector'),
   };
   const telegramService = {
     bot: {
@@ -27,6 +29,7 @@ describe('TelegramFeedbackScene', () => {
     feedbackDeliveryService as any,
     telegramService as any,
     keyboardFactory as any,
+    feedbackKeyboardFactory as any,
   );
 
   beforeEach(() => {

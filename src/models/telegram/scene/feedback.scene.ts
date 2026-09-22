@@ -14,6 +14,7 @@ import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
 import { TelegramService } from '../telegram.service';
 
 import { BaseScene } from './base.scene';
+import { TgFeedbackKeyboardFactory } from './tg-feedback-keyboard.factory';
 
 export const TELEGRAM_FEEDBACK_SCENE = 'TELEGRAM_FEEDBACK_SCENE';
 const MAX_FEEDBACK_MESSAGES = 10;
@@ -34,6 +35,7 @@ export class TelegramFeedbackScene extends BaseScene {
     private readonly feedbackDeliveryService: TelegramFeedbackDeliveryService,
     private readonly telegramService: TelegramService,
     private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly feedbackKeyboardFactory: TgFeedbackKeyboardFactory,
   ) {
     super();
   }
@@ -45,7 +47,7 @@ export class TelegramFeedbackScene extends BaseScene {
     ctx.scene.state.mediaCount = 0;
     const menuMessage = await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_Feedback_SelectCategory),
-      this.keyboardFactory.getFeedbackCategories(ctx),
+      this.feedbackKeyboardFactory.getFeedbackCategories(ctx),
     );
     ctx.scene.state.menuMessageId = menuMessage.message_id;
   }
@@ -64,7 +66,7 @@ export class TelegramFeedbackScene extends BaseScene {
     await ctx.editMessageText(
       ctx.i18n.t(LocalePhrase.Page_Feedback_EnterContent),
       {
-        ...this.keyboardFactory.getFeedbackCollector(ctx),
+        ...this.feedbackKeyboardFactory.getFeedbackCollector(ctx),
         parse_mode: 'HTML',
       },
     );
@@ -102,7 +104,7 @@ export class TelegramFeedbackScene extends BaseScene {
       await ctx.react('🏆').catch(() => undefined);
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_Feedback_FirstMessage),
-        this.keyboardFactory.getFeedbackCollector(ctx),
+        this.feedbackKeyboardFactory.getFeedbackCollector(ctx),
       );
     } else if (input.text) {
       await ctx.react('🫡').catch(() => undefined);
@@ -111,7 +113,7 @@ export class TelegramFeedbackScene extends BaseScene {
     if (state.messages.length === MAX_FEEDBACK_MESSAGES) {
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_Feedback_MessageLimitReached),
-        this.keyboardFactory.getFeedbackCollector(ctx),
+        this.feedbackKeyboardFactory.getFeedbackCollector(ctx),
       );
     }
   }

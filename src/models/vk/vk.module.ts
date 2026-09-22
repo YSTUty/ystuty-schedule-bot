@@ -9,6 +9,7 @@ import { VkScheduleNotifModule } from './model/schedule-notif/vk-schedule-notif.
 import { AuthScene } from './scene/auth.scene';
 import { VkFeedbackScene } from './scene/feedback.scene';
 import { SelectGroupScene } from './scene/select-group.scene';
+import { VkFeedbackKeyboardFactory } from './scene/vk-feedback-keyboard.factory';
 import { VkFeedbackUpdate } from './update/feedback.update';
 import { MainUpdate } from './update/main.update';
 import { ScheduleUpdate } from './update/schedule.update';
@@ -20,6 +21,7 @@ import { VkService } from './vk.service';
 const baseProviders = [
   VkService,
   VKKeyboardFactory,
+  VkFeedbackKeyboardFactory,
   VkFeedbackDeliveryService,
   VkUnreadDialogRecoveryService,
 ];

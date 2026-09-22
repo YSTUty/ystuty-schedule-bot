@@ -15,6 +15,8 @@ import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { VK_REACTION_IDS, VkReactionEmoji } from '../vk.constants';
 import { VkService } from '../vk.service';
 
+import { VkFeedbackKeyboardFactory } from './vk-feedback-keyboard.factory';
+
 export const VK_FEEDBACK_SCENE = 'VK_FEEDBACK_SCENE';
 const MAX_FEEDBACK_MESSAGES = 10;
 const MAX_FEEDBACK_MEDIA = 10;
@@ -39,6 +41,7 @@ export class VkFeedbackScene {
     private readonly feedbackDeliveryService: VkFeedbackDeliveryService,
     private readonly vkService: VkService,
     private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly feedbackKeyboardFactory: VkFeedbackKeyboardFactory,
   ) {}
 
   @AddStep()
@@ -50,7 +53,7 @@ export class VkFeedbackScene {
       state.cancelToStartScreen = true;
       const menuMessageId = await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_Feedback_SelectCategory),
-        { keyboard: this.keyboardFactory.getFeedbackCategories(ctx) },
+        { keyboard: this.feedbackKeyboardFactory.getFeedbackCategories(ctx) },
       );
       if (typeof menuMessageId === 'number') {
         state.menuMessageId = menuMessageId;
@@ -118,7 +121,7 @@ export class VkFeedbackScene {
     if (isPrimary) {
       await this.reactToMessage(ctx, '🏆');
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_Feedback_FirstMessage), {
-        keyboard: this.keyboardFactory.getFeedbackCollector(ctx),
+        keyboard: this.feedbackKeyboardFactory.getFeedbackCollector(ctx),
       });
     } else if (input.text) {
       await this.reactToMessage(ctx, '👌');
@@ -127,7 +130,7 @@ export class VkFeedbackScene {
     if (state.messages.length === MAX_FEEDBACK_MESSAGES) {
       await ctx.send(
         ctx.i18n.t(LocalePhrase.Page_Feedback_MessageLimitReached),
-        { keyboard: this.keyboardFactory.getFeedbackCollector(ctx) },
+        { keyboard: this.feedbackKeyboardFactory.getFeedbackCollector(ctx) },
       );
     }
   }
@@ -143,12 +146,12 @@ export class VkFeedbackScene {
       await ctx.answer({ type: 'show_snackbar', text: 'Категория выбрана' });
       await ctx.editMessage({
         message: ctx.i18n.t(LocalePhrase.Page_Feedback_EnterContent),
-        keyboard: this.keyboardFactory.getFeedbackCollector(ctx),
+        keyboard: this.feedbackKeyboardFactory.getFeedbackCollector(ctx),
       });
       return;
     }
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Feedback_EnterContent), {
-      keyboard: this.keyboardFactory.getFeedbackCollector(ctx),
+      keyboard: this.feedbackKeyboardFactory.getFeedbackCollector(ctx),
     });
   }
 
@@ -235,7 +238,7 @@ export class VkFeedbackScene {
 
     state.categoryHintShownAt = now;
     await ctx.send(ctx.i18n.t(LocalePhrase.Page_Feedback_CategoryRequired), {
-      keyboard: this.keyboardFactory.getFeedbackCategories(ctx),
+      keyboard: this.feedbackKeyboardFactory.getFeedbackCategories(ctx),
     });
   }
 

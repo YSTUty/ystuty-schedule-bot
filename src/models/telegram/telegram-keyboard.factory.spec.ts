@@ -108,7 +108,6 @@ describe('TelegramKeyboardFactory', () => {
     );
 
     const factory = new TelegramKeyboardFactory();
-    const scheduleNotifKeyboardFactory = createScheduleNotifKeyboardFactory();
     const privateKeyboard = factory.getStart({
       chat: { type: 'private' },
       from: { id: 42 },
@@ -202,8 +201,6 @@ describe('TelegramKeyboardFactory', () => {
   it('uses Telegram button colors for primary, successful and destructive actions', () => {
     const factory = new TelegramKeyboardFactory();
     const scheduleNotifKeyboardFactory = createScheduleNotifKeyboardFactory();
-    const feedbackButtons =
-      factory.getFeedbackCollector(ctx).reply_markup.inline_keyboard;
     const queueButtons =
       createBroadcastKeyboardFactory().getBroadcastQueueControls(ctx, true)
         .reply_markup.inline_keyboard;
@@ -224,8 +221,6 @@ describe('TelegramKeyboardFactory', () => {
     expect(
       factory.getUnknownMessageHelp(ctx).reply_markup.inline_keyboard[0][0],
     ).toMatchObject({ style: 'primary' });
-    expect(feedbackButtons[0][0]).toMatchObject({ style: 'success' });
-    expect(feedbackButtons[1][0]).toMatchObject({ style: 'danger' });
     expect(queueButtons[0][0]).toMatchObject({ style: 'success' });
     expect(queueButtons[1][0]).toMatchObject({ style: 'danger' });
     expect(deleteButtons[0][0]).toMatchObject({ style: 'danger' });

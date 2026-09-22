@@ -8,8 +8,6 @@ jest.mock('@my-environment', () => ({
 
 describe('VkFeedbackScene', () => {
   const keyboardFactory = {
-    getFeedbackCategories: jest.fn().mockReturnValue('categories'),
-    getFeedbackCollector: jest.fn().mockReturnValue('collector'),
     getStart: jest
       .fn()
       .mockReturnValue({ inline: jest.fn().mockReturnValue('start') }),
@@ -17,6 +15,10 @@ describe('VkFeedbackScene', () => {
       .fn()
       .mockReturnValue({ inline: jest.fn().mockReturnValue('welcome') }),
     needInline: jest.fn().mockReturnValue(false),
+  };
+  const feedbackKeyboardFactory = {
+    getFeedbackCategories: jest.fn().mockReturnValue('categories'),
+    getFeedbackCollector: jest.fn().mockReturnValue('collector'),
   };
   const feedbackService = { setDeliveryResult: jest.fn() };
   const feedbackDeliveryService = { deliver: jest.fn() };
@@ -29,6 +31,7 @@ describe('VkFeedbackScene', () => {
     feedbackDeliveryService as any,
     vkService as any,
     keyboardFactory as any,
+    feedbackKeyboardFactory as any,
   );
 
   beforeEach(() => {

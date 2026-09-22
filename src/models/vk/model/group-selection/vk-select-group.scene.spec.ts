@@ -1,13 +1,15 @@
-import { SelectGroupScene } from './select-group.scene';
+import { VkSelectGroupScene } from './vk-select-group.scene';
 
-describe('VK SelectGroupScene', () => {
+describe('VkSelectGroupScene', () => {
   it('ignores a foreign callback while the group selection scene is active', async () => {
     const scheduleService = {
       getGroupByName: jest.fn(),
       parseGroupName: jest.fn(),
     };
-    const scene = new SelectGroupScene(
+    const scene = new VkSelectGroupScene(
       scheduleService as any,
+      {} as any,
+      {} as any,
       {} as any,
       {} as any,
     );
@@ -33,9 +35,11 @@ describe('VK SelectGroupScene', () => {
 
   it('renders the initial group prompt from a recipient action callback', async () => {
     const keyboard = { inline: jest.fn().mockReturnValue('keyboard') };
-    const scene = new SelectGroupScene(
+    const scene = new VkSelectGroupScene(
       { randomGroupName: 'ЦИС-11' } as any,
+      {} as any,
       { getSelectGroupScene: jest.fn().mockReturnValue(keyboard) } as any,
+      {} as any,
       {} as any,
     );
     const ctx = {
@@ -64,12 +68,13 @@ describe('VK SelectGroupScene', () => {
       parseGroupName: jest.fn(),
     };
     const keyboard = { inline: jest.fn().mockReturnValue('schedule keyboard') };
-    const scene = new SelectGroupScene(
+    const scene = new VkSelectGroupScene(
       scheduleService as any,
       {
-        getSchedule: jest.fn().mockReturnValue(keyboard),
         getStart: jest.fn().mockReturnValue('start keyboard'),
       } as any,
+      {} as any,
+      { getSchedule: jest.fn().mockReturnValue(keyboard) } as any,
       {} as any,
     );
     const ctx = {

@@ -10,11 +10,8 @@ import {
 
 import * as xEnv from '@my-environment';
 
-import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
-
-import type { ScheduleWeekView } from '../schedule/schedule.service';
 
 import {
   TelegramMarkup as Markup,
@@ -281,84 +278,6 @@ export class TelegramKeyboardFactory {
     };
   }
 
-  public getSelectGroupInline(ctx: IContext, groupName?: string) {
-    return Markup.inlineKeyboard([
-      [
-        groupName
-          ? TelegramButtons.callback(
-              ctx.i18n.t(LocalePhrase.Button_SelectGroup_X, { groupName }),
-              `selectGroup:${md5(groupName).slice(0, 12)}`,
-              { style: 'primary' },
-            )
-          : TelegramButtons.callback(
-              ctx.i18n.t(LocalePhrase.Button_SelectGroup),
-              LocalePhrase.Button_SelectGroup,
-              { style: 'primary' },
-            ),
-      ],
-    ]);
-  }
-
-  public getScheduleInline(
-    ctx: IContext,
-    target: { type: 'group'; id: string } | { type: 'teacher'; id: number },
-    weekView?: Pick<ScheduleWeekView, 'previousWeekNumber' | 'nextWeekNumber'>,
-  ) {
-    // callback_data Telegram ограничен 64 байтами, поэтому группу передаём
-    // коротким hash, а не её полным динамическим названием.
-    const groupTarget =
-      target.type === 'group' ? `g:${md5(target.id).slice(0, 12)}` : null;
-    const makeButton = (
-      phrase: LocalePhrase,
-      style?: TelegramButtonOptions['style'],
-    ) =>
-      TelegramButtons.callback(
-        ctx.i18n.t(phrase),
-        target.type === 'teacher'
-          ? `${phrase}:teacher:${target.id}`
-          : `${phrase}:${groupTarget}`,
-        { style },
-      );
-
-    const navigationButtons: ReturnType<typeof TelegramButtons.callback>[] = [];
-    if (weekView?.previousWeekNumber !== undefined) {
-      navigationButtons.push(
-        TelegramButtons.callback(
-          ctx.i18n.t(LocalePhrase.Button_Schedule_PreviousWeek, {
-            weekNumber: weekView.previousWeekNumber,
-          }),
-          target.type === 'teacher'
-            ? `${LocalePhrase.Button_Schedule_PreviousWeek}:teacher:${target.id}:week:${weekView.previousWeekNumber}`
-            : `${LocalePhrase.Button_Schedule_PreviousWeek}:${groupTarget}:week:${weekView.previousWeekNumber}`,
-        ),
-      );
-    }
-    if (weekView?.nextWeekNumber !== undefined) {
-      navigationButtons.push(
-        TelegramButtons.callback(
-          ctx.i18n.t(LocalePhrase.Button_Schedule_NextWeek, {
-            weekNumber: weekView.nextWeekNumber,
-          }),
-          target.type === 'teacher'
-            ? `${LocalePhrase.Button_Schedule_NextWeek}:teacher:${target.id}:week:${weekView.nextWeekNumber}`
-            : `${LocalePhrase.Button_Schedule_NextWeek}:${groupTarget}:week:${weekView.nextWeekNumber}`,
-        ),
-      );
-    }
-
-    return Markup.inlineKeyboard([
-      [
-        makeButton(LocalePhrase.Button_Schedule_ForToday, 'primary'),
-        makeButton(LocalePhrase.Button_Schedule_ForTomorrow),
-      ],
-      [
-        makeButton(LocalePhrase.Button_Schedule_ForWeek, 'primary'),
-        makeButton(LocalePhrase.Button_Schedule_ForNextWeek),
-      ],
-      ...(navigationButtons.length ? [navigationButtons] : []),
-    ]);
-  }
-
   /** Собирает keyboard пагинации из item-рядов, pager и дополнительных кнопок. */
   public getPagination<T extends PaginationItemType>(
     options: TelegramPaginationOptions<T>,
@@ -537,33 +456,6 @@ export class TelegramKeyboardFactory {
     ) as Hideable<InlineKeyboardButton>[][];
   }
 
-  /**
-   * Строит pagination конкретного списка преподавателей.
-   * listId связывает callbacks с query и page size исходного сообщения.
-   */
-  public getTeachersListPagination(
-    ctx: IContext,
-    params: {
-      listId: string;
-      items: { id: number; name: string }[];
-      currentPage: number;
-      totalPages: number;
-    },
-  ) {
-    return this.getPagination({
-      name: `teacher-list:${params.listId}`,
-      currentPage: params.currentPage,
-      totalPages: params.totalPages,
-      items: params.items.map((teacher) => ({
-        title: teacher.name,
-        payload: `${params.listId}:${teacher.id}`,
-      })),
-      actionPrefix: 'selectTeacher:',
-      columnizer: true,
-      sortByLength: false,
-    });
-  }
-
   public getActioner<T extends PaginationItemType>(
     ctx: IContext,
     items?: (T | T[])[],
@@ -611,21 +503,6 @@ export class TelegramKeyboardFactory {
             ctx.i18n.t(LocalePhrase.Button_Cancel),
             LocalePhrase.Button_Cancel,
             { style: 'danger' },
-          ),
-        ],
-      ]),
-    };
-  }
-
-  /** Открывает страницу создания календарной подписки с уже выбранными целями. */
-  public getCalendarInline(ctx: IContext, link: string) {
-    return {
-      ...Markup.inlineKeyboard([
-        [
-          TelegramButtons.url(
-            ctx.i18n.t(LocalePhrase.Button_Calendar_Open),
-            link,
-            { style: 'primary' },
           ),
         ],
       ]),

@@ -6,12 +6,15 @@ import { ScheduleNotifPeriod } from '../schedule-notif/schedule-notif.types';
 
 import { VkBroadcastKeyboardFactory } from './model/broadcaster/vk-broadcast-keyboard.factory';
 import { VkScheduleNotifKeyboardFactory } from './model/schedule-notif/vk-schedule-notif-keyboard.factory';
+import { VkScheduleKeyboardFactory } from './model/schedule/vk-schedule-keyboard.factory';
 import { VKKeyboardFactory } from './vk-keyboard.factory';
 
 const createBroadcastKeyboardFactory = () =>
   new VkBroadcastKeyboardFactory(new VKKeyboardFactory());
 const createScheduleNotifKeyboardFactory = () =>
   new VkScheduleNotifKeyboardFactory(new VKKeyboardFactory());
+const createScheduleKeyboardFactory = () =>
+  new VkScheduleKeyboardFactory(new VKKeyboardFactory());
 
 describe('VKKeyboardFactory', () => {
   const ctx = {
@@ -141,7 +144,12 @@ describe('VKKeyboardFactory', () => {
 
     const factory = new VKKeyboardFactory();
     const calendarKeyboard = JSON.parse(
-      String(factory.getCalendarInline(ctx, 'https://ics.ystuty.ru/#САР-34')),
+      String(
+        createScheduleKeyboardFactory().getCalendarInline(
+          ctx,
+          'https://ics.ystuty.ru/#САР-34',
+        ),
+      ),
     );
     const welcomeKeyboard = JSON.parse(
       String(factory.getWelcomeFeatures({ ...ctx, $groupId: 42 }).inline()),
@@ -167,7 +175,7 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('adds week navigation with the target and selected week in callback payload', () => {
-    const keyboard = new VKKeyboardFactory().getSchedule(
+    const keyboard = createScheduleKeyboardFactory().getSchedule(
       ctx,
       { type: 'teacher', id: 42 },
       { previousWeekNumber: 4, nextWeekNumber: 6 },
@@ -200,7 +208,7 @@ describe('VKKeyboardFactory', () => {
   });
 
   it('creates all inline schedule controls as callbacks', () => {
-    const keyboard = new VKKeyboardFactory().getSchedule(ctx, {
+    const keyboard = createScheduleKeyboardFactory().getSchedule(ctx, {
       type: 'group',
       id: 'ЦИС-46',
     });

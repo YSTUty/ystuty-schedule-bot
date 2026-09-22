@@ -531,4 +531,16 @@ export class VkScheduleNotifKeyboardFactory {
       color: Keyboard.SECONDARY_COLOR,
     });
   }
+
+  /** Возвращает из списка групп к институтам, не смешивая payload с основным выбором. */
+  public getScheduleNotifGroupPickerBackButton(
+    ctx: IContext,
+    payload: Record<string, unknown>,
+  ) {
+    return Keyboard.callbackButton({
+      label: ctx.i18n.t(LocalePhrase.Button_Groups_ChangeInstitute),
+      payload,
+      color: Keyboard.PRIMARY_COLOR,
+    });
+  }
 }

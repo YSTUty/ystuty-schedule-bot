@@ -1,8 +1,11 @@
 import { LocalePhrase } from '@my-interfaces';
 
-import { ScheduleUpdate, vkScheduleWeekTextPhrases } from './schedule.update';
+import {
+  VkScheduleUpdate,
+  vkScheduleWeekTextPhrases,
+} from './vk-schedule.update';
 
-describe('VK ScheduleUpdate', () => {
+describe('VkScheduleUpdate', () => {
   it('does not register dynamic week navigation labels as text commands', () => {
     expect(vkScheduleWeekTextPhrases).not.toContain(
       'button.schedule.previous_week',
@@ -17,8 +20,10 @@ describe('VK ScheduleUpdate', () => {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
     };
-    const update = new ScheduleUpdate(
+    const update = new VkScheduleUpdate(
       scheduleService as any,
+      {} as any,
+      {} as any,
       {} as any,
       {} as any,
     );
@@ -58,9 +63,11 @@ describe('VK ScheduleUpdate', () => {
       const keyboardFactory = {
         getSchedule: jest.fn(() => ({ inline: jest.fn(() => ({})) })),
       };
-      const update = new ScheduleUpdate(
+      const update = new VkScheduleUpdate(
         scheduleService as any,
         keyboardFactory as any,
+        {} as any,
+        {} as any,
         {} as any,
       );
       const ctx = {
@@ -104,9 +111,11 @@ describe('VK ScheduleUpdate', () => {
       const keyboardFactory = {
         getSchedule: jest.fn(() => ({ inline: jest.fn(() => ({})) })),
       };
-      const update = new ScheduleUpdate(
+      const update = new VkScheduleUpdate(
         scheduleService as any,
         keyboardFactory as any,
+        {} as any,
+        {} as any,
         {} as any,
       );
       const ctx = {
@@ -161,9 +170,11 @@ describe('VK ScheduleUpdate', () => {
     const vkService = {
       tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
     };
-    const update = new ScheduleUpdate(
+    const update = new VkScheduleUpdate(
       scheduleService as any,
       keyboardFactory as any,
+      {} as any,
+      {} as any,
       vkService as any,
     );
     const ctx = {
@@ -213,9 +224,11 @@ describe('VK ScheduleUpdate', () => {
     const vkService = {
       tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
     };
-    const update = new ScheduleUpdate(
+    const update = new VkScheduleUpdate(
       scheduleService as any,
       keyboardFactory as any,
+      {} as any,
+      {} as any,
       vkService as any,
     );
     const ctx = {
@@ -270,9 +283,11 @@ describe('VK ScheduleUpdate', () => {
     const vkService = {
       tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
     };
-    const update = new ScheduleUpdate(
+    const update = new VkScheduleUpdate(
       scheduleService as any,
       keyboardFactory as any,
+      {} as any,
+      {} as any,
       vkService as any,
     );
     const ctx = {

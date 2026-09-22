@@ -3,10 +3,10 @@ import { LocalePhrase } from '@my-interfaces';
 import {
   createGroupScheduleActionRegExp,
   createGroupScheduleWeekNavigationActionRegExp,
-  ScheduleUpdate,
-} from './schedule.update';
+  TgScheduleUpdate,
+} from './tg-schedule.update';
 
-describe('Telegram ScheduleUpdate', () => {
+describe('TgScheduleUpdate', () => {
   it('matches a callback with a nonstandard long group name', () => {
     const match = createGroupScheduleActionRegExp(
       LocalePhrase.Button_Schedule_ForWeek,
@@ -39,10 +39,62 @@ describe('Telegram ScheduleUpdate', () => {
     };
 
     return {
-      update: new ScheduleUpdate({} as any, scheduleService as any),
+      update: new TgScheduleUpdate(
+        {} as any,
+        {} as any,
+        scheduleService as any,
+        {} as any,
+        {} as any,
+      ),
       scheduleService,
     };
   };
+
+  it('opens the browser calendar for the selected group and teacher', async () => {
+    const { update, scheduleService } = createUpdate();
+    const keyboard = { reply_markup: { inline_keyboard: [] } };
+    scheduleService.getGroupByName.mockReturnValue('САР-34');
+    (update as any).keyboardFactory.getCalendarInline = jest
+      .fn()
+      .mockReturnValue(keyboard);
+    const ctx = {
+      updateType: 'message',
+      chat: { type: 'private' },
+      userSocial: { groupName: 'САР-34' },
+      session: { teacherId: 603 },
+      i18n: { t: jest.fn((phrase) => phrase) },
+      replyWithHTML: jest.fn(),
+    } as any;
+
+    await update.onCalendar(ctx);
+
+    expect(ctx.replyWithHTML).toHaveBeenCalledWith(
+      expect.stringContaining('https://ics.ystuty.ru/#САР-34,603'),
+      keyboard,
+    );
+    expect(
+      (update as any).keyboardFactory.getCalendarInline,
+    ).toHaveBeenCalledWith(
+      ctx,
+      'https://ics.ystuty.ru/#%D0%A1%D0%90%D0%A0-34,603',
+    );
+  });
+
+  it('opens group selection when no calendar target is selected', async () => {
+    const { update } = createUpdate();
+    const scene = { enter: jest.fn() };
+    const ctx = {
+      updateType: 'message',
+      chat: { type: 'private' },
+      userSocial: { groupName: null },
+      session: {},
+      scene,
+    } as any;
+
+    await update.onCalendar(ctx);
+
+    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE');
+  });
 
   it('uses the persistent conversation group for a group chat schedule', async () => {
     const { update, scheduleService } = createUpdate();

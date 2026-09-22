@@ -20,6 +20,8 @@ describe('UserService authUserSocial', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
       {
         exclusiveLocal: jest.fn(async (_key, callback) => callback()),
         buildKey: jest.fn(),
@@ -137,6 +139,8 @@ describe('UserService authUserSocial', () => {
       {} as any,
       { userCounter: { inc: jest.fn() } } as any,
       telegramService as any,
+      {} as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

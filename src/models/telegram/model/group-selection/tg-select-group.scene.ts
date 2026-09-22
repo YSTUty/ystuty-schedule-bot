@@ -4,34 +4,34 @@ import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { ICbQOrMsg, IContext, IStepContext } from '@my-interfaces/telegram';
 
-import { ScheduleService } from '../../schedule/schedule.service';
-import {
-  TelegramMarkup as Markup,
-  TelegramButtons,
-} from '../telegram-buttons.util';
 // import { UserService } from '../../user/user.service';
-import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
-import { SELECT_GROUP_SCENE } from '../telegram.constants';
-import { TelegramService } from '../telegram.service';
-import { MainUpdate } from '../update/main.update';
+import { ScheduleService } from '../../../schedule/schedule.service';
+import { BaseScene } from '../../scene/base.scene';
+import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+import { SELECT_GROUP_SCENE } from '../../telegram.constants';
+import { TelegramService } from '../../telegram.service';
+import { TgScheduleKeyboardFactory } from '../schedule/tg-schedule-keyboard.factory';
 
-import { BaseScene } from './base.scene';
+import { TgGroupSelectionKeyboardFactory } from './tg-group-selection-keyboard.factory';
+import { TgGroupSelectionUpdate } from './tg-group-selection.update';
 
 @Wizard(SELECT_GROUP_SCENE)
-export class SelectGroupScene extends BaseScene {
+export class TgSelectGroupScene extends BaseScene {
   constructor(
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly baseKeyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgGroupSelectionKeyboardFactory,
+    private readonly scheduleKeyboardFactory: TgScheduleKeyboardFactory,
     private readonly scheduleService: ScheduleService,
     private readonly telegramService: TelegramService,
     // private readonly userService: UserService,
-    private readonly mainUpdate: MainUpdate,
+    private readonly groupSelectionUpdate: TgGroupSelectionUpdate,
   ) {
     super();
   }
 
   async onСancel(ctx: IContext) {
     const msg = ctx.i18n.t(LocalePhrase.Common_Canceled);
-    const keyboard = this.keyboardFactory.getStart(ctx);
+    const keyboard = this.baseKeyboardFactory.getStart(ctx);
     if (ctx.updateType === 'callback_query') {
       await ctx.tryAnswerCbQuery(msg);
       await ctx.deleteMessage();
@@ -74,7 +74,7 @@ export class SelectGroupScene extends BaseScene {
     ) {
       await ctx.scene.leave();
       // next();
-      this.mainUpdate.onInstitutesList(ctx as unknown as ICbQOrMsg);
+      this.groupSelectionUpdate.onInstitutesList(ctx as unknown as ICbQOrMsg);
       return;
     }
 
@@ -110,42 +110,13 @@ export class SelectGroupScene extends BaseScene {
         content,
       ].join('\n\n');
       if (ctx.callbackQuery && !state.forceNewMessage) {
-        // const keyboard = this.keyboardFactory.getCancelInline(ctx);
-        const keyboard = Markup.inlineKeyboard([
-          [
-            TelegramButtons.callback(
-              ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
-              'pager:inst-list',
-              { style: 'primary' },
-            ),
-          ],
-          [
-            TelegramButtons.callback(
-              ctx.i18n.t(LocalePhrase.Button_Cancel),
-              LocalePhrase.Button_Cancel,
-              { style: 'danger' },
-            ),
-          ],
-        ]);
+        const keyboard = this.keyboardFactory.getSelectGroupPrompt(ctx, true);
         await ctx.editMessageText(prompt, {
           ...keyboard,
           parse_mode: 'HTML',
         });
       } else {
-        // const keyboard = this.keyboardFactory.getCancel(ctx);
-        const keyboard = Markup.keyboard([
-          [
-            TelegramButtons.text(ctx.i18n.t(LocalePhrase.Button_Cancel), {
-              style: 'danger',
-            }),
-          ],
-          [
-            TelegramButtons.text(
-              ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
-              { style: 'primary' },
-            ),
-          ],
-        ]).resize();
+        const keyboard = this.keyboardFactory.getSelectGroupPrompt(ctx, false);
         await ctx.replyWithHTML(prompt, keyboard);
       }
       return;
@@ -167,7 +138,7 @@ export class SelectGroupScene extends BaseScene {
         await this.syncPrivateChatCommands(ctx);
       }
 
-      const keyboard = this.keyboardFactory.getStart(ctx);
+      const keyboard = this.baseKeyboardFactory.getStart(ctx);
       await ctx.replyWithHTML(
         ctx.i18n.t(LocalePhrase.Page_SelectGroup_Reset),
         keyboard,
@@ -191,7 +162,7 @@ export class SelectGroupScene extends BaseScene {
         // await this.userService.saveUserSocial(ctx.userSocial);
       }
 
-      const keyboard = this.keyboardFactory.getScheduleInline(ctx, {
+      const keyboard = this.scheduleKeyboardFactory.getScheduleInline(ctx, {
         type: 'group',
         id: selectedGroupName,
       });
@@ -204,27 +175,14 @@ export class SelectGroupScene extends BaseScene {
       if (ctx.chat?.type === 'private') {
         await ctx.replyWithHTML(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_KeyboardUpdated),
-          this.keyboardFactory.getStart(ctx),
+          this.baseKeyboardFactory.getStart(ctx),
         );
       }
       await ctx.scene.leave();
       return;
     }
 
-    // const keyboard = this.keyboardFactory.getCancel(ctx);
-    const keyboard = Markup.keyboard([
-      [
-        TelegramButtons.text(ctx.i18n.t(LocalePhrase.Button_Cancel), {
-          style: 'danger',
-        }),
-      ],
-      [
-        TelegramButtons.text(
-          ctx.i18n.t(LocalePhrase.Button_Groups_ListInstAndGroups),
-          { style: 'primary' },
-        ),
-      ],
-    ]).resize();
+    const keyboard = this.keyboardFactory.getSelectGroupPrompt(ctx, false);
     await ctx.replyWithHTML(
       ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, { groupName }),
       keyboard,

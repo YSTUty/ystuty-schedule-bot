@@ -127,10 +127,10 @@ describe('VkScheduleNotifGroupScene', () => {
     };
     const baseKeyboardFactory = {
       getPagination: jest.fn().mockReturnValue({ inline: jest.fn() }),
-      getInstitutesListButton: jest.fn(),
     };
     const keyboardFactory = {
       getScheduleNotifGroupPickerCancelButton: jest.fn(),
+      getScheduleNotifGroupPickerBackButton: jest.fn(),
     };
     const scene = new VkScheduleNotifGroupScene(
       {} as any,

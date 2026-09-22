@@ -1,29 +1,39 @@
-import { UseFilters } from '@nestjs/common';
-import { Ctx, Hears, OnMessageEvent, Update } from 'nestjs-vk';
+import { Logger, UseFilters } from '@nestjs/common';
+import { Ctx, HearFallback, Hears, OnMessageEvent, Update } from 'nestjs-vk';
 
 import {
   isPersonalTeacherScheduleCommand,
   isPersonalTeacherWeekCommand,
   personalTeacherScheduleCommandRegExp,
   personalTeacherWeekCommandRegExp,
+  teacherListCommandRegExp,
+  teacherSearchCommandRegExp,
+  teacherSearchSlashCommandRegExp,
   VkExceptionFilter,
 } from '@my-common';
 import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
-import { ScheduleService } from '../../schedule/schedule.service';
-import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
+import { ScheduleService } from '../../../schedule/schedule.service';
+import { TeacherListStateService } from '../../../schedule/teacher-list-state.service';
+import {
+  getScheduleCalendarButtonUrl,
+  getScheduleCalendarWebUrl,
+} from '../../../schedule/util/schedule-calendar-link.util';
+import { appendScheduleTargetFooter } from '../../../schedule/util/schedule-formatter.util';
 import {
   formatScheduleTargetDate,
   getScheduleAcademicWeekNumber,
   getScheduleTargetDate,
   getScheduleWeekDateRange,
   getScheduleWeekDistance,
-} from '../../schedule/util/schedule.util';
-import { VKKeyboardFactory } from '../vk-keyboard.factory';
-import { SELECT_GROUP_SCENE } from '../vk.constants';
-import { VkService } from '../vk.service';
+} from '../../../schedule/util/schedule.util';
+import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+import { SELECT_GROUP_SCENE } from '../../vk.constants';
+import { VkService } from '../../vk.service';
+
+import { VkScheduleKeyboardFactory } from './vk-schedule-keyboard.factory';
 
 type SchedulePayload = {
   phrase?: LocalePhrase;
@@ -41,12 +51,242 @@ export const vkScheduleWeekTextPhrases: LocalePhrase[] = [
 
 @Update()
 @UseFilters(VkExceptionFilter)
-export class ScheduleUpdate {
+export class VkScheduleUpdate {
+  private readonly logger = new Logger(VkScheduleUpdate.name);
+
   constructor(
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkScheduleKeyboardFactory,
+    private readonly baseKeyboardFactory: VKKeyboardFactory,
+    private readonly teacherListStateService: TeacherListStateService,
     private readonly vkService: VkService,
   ) {}
+
+  @VkHearsLocale(LocalePhrase.Button_Calendar)
+  async hearCalendar(@Ctx() ctx: IMessageContext) {
+    await this.openCalendar(ctx);
+  }
+
+  @OnMessageEvent({ phrase: LocalePhrase.Button_Calendar })
+  async onCalendarMessageEvent(@Ctx() ctx: IMessageEventContext) {
+    await ctx.answer({ type: 'show_snackbar', text: 'Открываю календарь' });
+    await this.openCalendar(ctx);
+  }
+
+  @OnMessageEvent({ teacherAction: 'list' })
+  async onTeacherList(@Ctx() ctx: IMessageEventContext) {
+    const state = await this.getTeacherListState(ctx);
+    if (!state) {
+      await this.openTeachersList(ctx, '');
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+      });
+      return;
+    }
+
+    await this.renderTeachersList(
+      ctx,
+      String(ctx.eventPayload.listId),
+      state.query,
+      state.pageSize,
+      Number(ctx.eventPayload.page) || 1,
+    );
+  }
+
+  @OnMessageEvent({ teacherAction: 'select' })
+  async onTeacherSelect(@Ctx() ctx: IMessageEventContext) {
+    const state = await this.getTeacherListState(ctx);
+    if (!state) {
+      await this.openTeachersList(ctx, '');
+      await ctx.answer({
+        type: 'show_snackbar',
+        text: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+      });
+      return;
+    }
+
+    const teacherId = Number(ctx.eventPayload.teacherId);
+    const teacher = this.scheduleService.getTeacher(teacherId);
+    if (!teacher) {
+      await ctx.answer({ type: 'show_snackbar', text: 'Not found' });
+      return;
+    }
+
+    ctx.session.teacherId = teacher.id;
+    await ctx.api.messages.edit({
+      peer_id: ctx.peerId,
+      cmid: ctx.conversationMessageId,
+      message: ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
+        teacher,
+      }),
+      keyboard: this.keyboardFactory
+        .getSchedule(ctx, { type: 'teacher', id: teacher.id })
+        .inline(),
+    });
+    if (ctx.isDM) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
+        { keyboard: this.baseKeyboardFactory.getStart(ctx) },
+      );
+    }
+  }
+
+  @OnMessageEvent({ phrase: LocalePhrase.Button_Schedule_Teacher })
+  async onOpenTeachersList(@Ctx() ctx: IMessageEventContext) {
+    await this.openTeachersList(ctx, '');
+  }
+
+  @Hears('/tlist')
+  @Hears(teacherListCommandRegExp)
+  @VkHearsLocale(LocalePhrase.Button_Schedule_Teacher)
+  async onTeachersList(@Ctx() ctx: IMessageContext) {
+    await this.openTeachersList(ctx, '');
+  }
+
+  @Hears(teacherSearchSlashCommandRegExp)
+  @Hears(teacherSearchCommandRegExp)
+  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
+    const query = ctx.$match?.groups?.query?.trim();
+    if (!query) {
+      await ctx.send(ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint));
+      return;
+    }
+
+    const { totalCount } = this.scheduleService.teachersList(1, 20, query);
+    if (totalCount === 0) {
+      await ctx.send(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, { query }),
+      );
+      return;
+    }
+
+    await this.openTeachersList(ctx, query);
+  }
+
+  /** Создаёт отдельное Redis-состояние для нового сообщения со списком преподавателей. */
+  private async openTeachersList(
+    ctx: IMessageContext | IMessageEventContext,
+    query: string,
+  ) {
+    const pageSize = 5;
+    const listId = await this.teacherListStateService.create({
+      transport: 'vkontakte',
+      ownerId: ctx.senderId || ctx.userId,
+      peerId: ctx.peerId,
+      query,
+      pageSize,
+    });
+
+    await this.renderTeachersList(ctx, listId, query, pageSize);
+  }
+
+  /** Рендерит страницу списка по query, сохранённому в state конкретного сообщения. */
+  private async renderTeachersList(
+    ctx: IMessageContext | IMessageEventContext,
+    listId: string,
+    query: string,
+    pageSize: number,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages } =
+      this.scheduleService.teachersList(page, pageSize, query);
+    const message = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
+      currentPage,
+      totalPages,
+      query,
+    });
+
+    const keyboard = this.keyboardFactory
+      .getTeachersList({ ctx, listId, items, currentPage, totalPages })
+      .inline();
+
+    if ('eventPayload' in ctx) {
+      await ctx.api.messages.edit({
+        peer_id: ctx.peerId,
+        cmid: ctx.conversationMessageId,
+        message,
+        keyboard,
+      });
+      return;
+    }
+
+    await ctx.send(message, { keyboard });
+  }
+
+  /** Открывает страницу создания календарной подписки для выбранных целей. */
+  private async openCalendar(ctx: IMessageContext | IMessageEventContext) {
+    const groupName = ctx.isDM
+      ? ctx.state.userSocial.groupName
+      : ctx.state.conversation?.groupName;
+    const teacherId = ctx.isDM ? ctx.session.teacherId : undefined;
+    if (!groupName && !teacherId) {
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
+      return;
+    }
+
+    const targets = [groupName, teacherId];
+    const calendarUrl = getScheduleCalendarWebUrl(targets);
+    const calendarButtonUrl = getScheduleCalendarButtonUrl(targets);
+    if (!calendarUrl || !calendarButtonUrl) {
+      this.logger.error(
+        '[iCalendar] YSTUTY_ICALENDAR_ADDRESS is not configured',
+      );
+      await ctx.send(ctx.i18n.t(LocalePhrase.Common_Error));
+      return;
+    }
+
+    await ctx.send(
+      `${ctx.i18n.t(LocalePhrase.Page_Calendar)}\n\n${calendarUrl}`,
+      {
+        keyboard: this.keyboardFactory.getCalendarInline(
+          ctx,
+          calendarButtonUrl,
+        ),
+      },
+    );
+  }
+
+  /** Проверяет, что callback относится к списку текущего пользователя и диалога. */
+  private async getTeacherListState(ctx: IMessageEventContext) {
+    const listId = ctx.eventPayload.listId;
+    if (typeof listId !== 'string') return null;
+
+    return await this.teacherListStateService.get(listId, {
+      transport: 'vkontakte',
+      ownerId: ctx.senderId || ctx.userId,
+      peerId: ctx.peerId,
+    });
+  }
+
+  @HearFallback()
+  async onHearFallback(@Ctx() ctx: IMessageContext) {
+    if (!ctx.isDM || !ctx.isMessageContext()) {
+      return;
+    }
+
+    const query = ctx.text?.trim();
+    if (!query) {
+      return;
+    }
+
+    const groupName = this.scheduleService.getGroupByName(query);
+    if (groupName) {
+      await ctx.scene.enter(SELECT_GROUP_SCENE, {
+        state: { groupName },
+      });
+      return;
+    }
+
+    if (this.scheduleService.isTeacherSearchFallbackQuery(query)) {
+      await this.openTeachersList(ctx, query);
+      return;
+    }
+
+    await ctx.send(ctx.i18n.t(LocalePhrase.Page_UnknownMessage), {
+      keyboard: this.baseKeyboardFactory.getUnknownMessageHelp(ctx),
+    });
+  }
 
   @VkHearsLocale([
     LocalePhrase.RegExp_Schedule_For_OneDay,

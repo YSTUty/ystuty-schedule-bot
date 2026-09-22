@@ -4,11 +4,11 @@ import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/telegram';
 
-import { ScheduleService } from '../../schedule/schedule.service';
+import { ScheduleService } from '../../../schedule/schedule.service';
 import {
   TelegramKeyboardFactory,
   TelegramPaginationOptions,
-} from '../telegram-keyboard.factory';
+} from '../../telegram-keyboard.factory';
 
 type TgPickerButtons = TelegramPaginationOptions['additionalButtons'];
 

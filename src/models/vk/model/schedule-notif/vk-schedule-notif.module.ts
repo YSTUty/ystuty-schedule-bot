@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { VkGroupPicker } from '../vk-group-picker';
+import { VkGroupPicker } from '../group-selection/vk-group-picker';
 
 import { VkScheduleNotifGroupScene } from './vk-schedule-notif-group.scene';
 import { VkScheduleNotifKeyboardFactory } from './vk-schedule-notif-keyboard.factory';

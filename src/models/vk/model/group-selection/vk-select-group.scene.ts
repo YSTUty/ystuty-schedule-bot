@@ -5,18 +5,23 @@ import { VkExceptionFilter } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IStepContext } from '@my-interfaces/vk';
 
-import { ScheduleService } from '../../schedule/schedule.service';
-import { MainUpdate } from '../update/main.update';
-import { VKKeyboardFactory } from '../vk-keyboard.factory';
-import { SELECT_GROUP_SCENE } from '../vk.constants';
+import { ScheduleService } from '../../../schedule/schedule.service';
+import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+import { SELECT_GROUP_SCENE } from '../../vk.constants';
+import { VkScheduleKeyboardFactory } from '../schedule/vk-schedule-keyboard.factory';
+
+import { VkGroupSelectionKeyboardFactory } from './vk-group-selection-keyboard.factory';
+import { VkGroupSelectionUpdate } from './vk-group-selection.update';
 
 @Scene(SELECT_GROUP_SCENE)
 @UseFilters(VkExceptionFilter)
-export class SelectGroupScene {
+export class VkSelectGroupScene {
   constructor(
     private readonly scheduleService: ScheduleService,
-    private readonly keyboardFactory: VKKeyboardFactory,
-    private readonly mainUpdate: MainUpdate,
+    private readonly baseKeyboardFactory: VKKeyboardFactory,
+    private readonly keyboardFactory: VkGroupSelectionKeyboardFactory,
+    private readonly scheduleKeyboardFactory: VkScheduleKeyboardFactory,
+    private readonly groupSelectionUpdate: VkGroupSelectionUpdate,
   ) {}
 
   @AddStep()
@@ -35,7 +40,7 @@ export class SelectGroupScene {
       ctx.eventPayload?.groupAction === 'institutes'
     ) {
       await ctx.scene.leave();
-      await this.mainUpdate.onInstitutesList(ctx);
+      await this.groupSelectionUpdate.onInstitutesList(ctx);
       return;
     }
 
@@ -97,9 +102,9 @@ export class SelectGroupScene {
         ctx.state.userSocial.groupName = null;
       }
 
-      const keyboard = this.keyboardFactory
+      const keyboard = this.baseKeyboardFactory
         .getStart(ctx)
-        .inline(this.keyboardFactory.needInline(ctx));
+        .inline(this.baseKeyboardFactory.needInline(ctx));
       await ctx.send(ctx.i18n.t(LocalePhrase.Page_SelectGroup_Reset), {
         keyboard,
       });
@@ -119,7 +124,7 @@ export class SelectGroupScene {
         ctx.state.userSocial.groupName = selectedGroupName;
       }
 
-      const keyboard = this.keyboardFactory
+      const keyboard = this.scheduleKeyboardFactory
         .getSchedule(ctx, { type: 'group', id: selectedGroupName })
         .inline();
       if (ctx.isMessageEventContext() && !state.forceNewMessage) {
@@ -140,7 +145,7 @@ export class SelectGroupScene {
       if (ctx.isDM) {
         await ctx.send(
           ctx.i18n.t(LocalePhrase.Page_SelectGroup_KeyboardUpdated),
-          { keyboard: this.keyboardFactory.getStart(ctx) },
+          { keyboard: this.baseKeyboardFactory.getStart(ctx) },
         );
       }
       return ctx.scene.leave();

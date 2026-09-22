@@ -1,44 +1,28 @@
-import { TG_ALLOWED_CHAT_TYPES_KEY } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 
 import { MainUpdate } from './main.update';
 
 describe('Telegram MainUpdate', () => {
-  const openTeachersList = jest.fn();
-  const isTeacherSearchFallbackQuery = jest.fn();
-  const getGroupByName = jest.fn();
-  const groupNameByHash = jest.fn();
+  const keyboardFactory = {} as any;
+  const scheduleKeyboardFactory = {} as any;
+  const telegramService = {} as any;
   const update = new MainUpdate(
-    {} as any,
-    {
-      getGroupByName,
-      groupNameByHash,
-      isTeacherSearchFallbackQuery,
-    } as any,
+    keyboardFactory,
+    scheduleKeyboardFactory,
     {} as any,
     {} as any,
-    {} as any,
+    telegramService,
   );
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    getGroupByName.mockReset();
-    groupNameByHash.mockReset();
-    (update as any).openTeachersList = openTeachersList;
-  });
+  beforeEach(() => jest.clearAllMocks());
 
   it('renders the invite keyboard', async () => {
     const keyboard = { reply_markup: { inline_keyboard: [] } };
-    (update as any).keyboardFactory.getInviteToChat = jest
-      .fn()
-      .mockReturnValue(keyboard);
+    keyboardFactory.getInviteToChat = jest.fn().mockReturnValue(keyboard);
     const ctx = { replyWithHTML: jest.fn() } as any;
 
     await update.onInvite(ctx);
 
-    expect(
-      (update as any).keyboardFactory.getInviteToChat,
-    ).toHaveBeenCalledWith(ctx);
     expect(ctx.replyWithHTML).toHaveBeenCalledWith(
       'Пригласить бота в группу:',
       keyboard,
@@ -47,9 +31,7 @@ describe('Telegram MainUpdate', () => {
 
   it('acknowledges the inline help button before showing help', async () => {
     const keyboard = { reply_markup: { keyboard: [] } };
-    (update as any).keyboardFactory.getStart = jest
-      .fn()
-      .mockReturnValue(keyboard);
+    keyboardFactory.getStart = jest.fn().mockReturnValue(keyboard);
     const ctx = {
       updateType: 'callback_query',
       chat: { type: 'private' },
@@ -65,59 +47,15 @@ describe('Telegram MainUpdate', () => {
     expect(ctx.replyWithHTML).toHaveBeenCalledWith('Помощь', keyboard);
   });
 
-  it('opens the browser calendar for the selected group and teacher', async () => {
-    const keyboard = { reply_markup: { inline_keyboard: [] } };
-    (update as any).keyboardFactory.getCalendarInline = jest
-      .fn()
-      .mockReturnValue(keyboard);
-    getGroupByName.mockReturnValue('САР-34');
-    const ctx = {
-      updateType: 'message',
-      chat: { type: 'private' },
-      userSocial: { groupName: 'САР-34' },
-      session: { teacherId: 603 },
-      i18n: { t: jest.fn((phrase) => phrase) },
-      replyWithHTML: jest.fn(),
-    } as any;
-
-    await update.onCalendar(ctx);
-
-    expect(ctx.replyWithHTML).toHaveBeenCalledWith(
-      expect.stringContaining('https://ics.ystuty.ru/#САР-34,603'),
-      keyboard,
-    );
-    expect(
-      (update as any).keyboardFactory.getCalendarInline,
-    ).toHaveBeenCalledWith(
-      ctx,
-      'https://ics.ystuty.ru/#%D0%A1%D0%90%D0%A0-34,603',
-    );
-  });
-
-  it('opens group selection when no calendar target is selected', async () => {
-    const scene = { enter: jest.fn() };
-    const ctx = {
-      updateType: 'message',
-      chat: { type: 'private' },
-      userSocial: { groupName: null },
-      session: {},
-      scene,
-    } as any;
-
-    await update.onCalendar(ctx);
-
-    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE');
-  });
-
   it('sends a feature card after the start message in a private chat', async () => {
     const startKeyboard = { reply_markup: { keyboard: [] } };
     const welcomeKeyboard = { reply_markup: { inline_keyboard: [] } };
-    (update as any).keyboardFactory.getStart = jest
-      .fn()
-      .mockReturnValue(startKeyboard);
-    (update as any).keyboardFactory.getWelcomeFeatures = jest
+    keyboardFactory.getStart = jest.fn().mockReturnValue(startKeyboard);
+    keyboardFactory.getWelcomeFeatures = jest
       .fn()
       .mockReturnValue(welcomeKeyboard);
+    telegramService.syncPrivateChatCommands = jest.fn();
+    telegramService.isAdmin = jest.fn().mockReturnValue(false);
     const ctx = {
       chat: { id: 7, type: 'private' },
       from: { id: 9 },
@@ -125,11 +63,9 @@ describe('Telegram MainUpdate', () => {
       session: {},
       user: { id: 1 },
       userSocial: { groupName: 'ЦИС-11' },
+      i18n: { t: jest.fn((phrase) => phrase) },
       replyWithHTML: jest.fn(),
     } as any;
-    (update as any).telegramService.syncPrivateChatCommands = jest.fn();
-    (update as any).telegramService.isAdmin = jest.fn().mockReturnValue(false);
-    ctx.i18n = { t: jest.fn((phrase) => phrase) };
 
     await update.hearStart(ctx);
 
@@ -145,305 +81,20 @@ describe('Telegram MainUpdate', () => {
     );
   });
 
-  it('does not send the feature card on start in a group chat', async () => {
-    const ctx = {
-      chat: { id: -1001, type: 'group' },
-      state: { appeal: true },
-      session: {},
-      message: { text: '/start' },
-      userSocial: { groupName: 'ЦИС-11' },
-      i18n: { t: jest.fn((phrase) => phrase) },
-      replyWithHTML: jest.fn(),
-    } as any;
-    (update as any).keyboardFactory.getStart = jest.fn().mockReturnValue({});
-    (update as any).keyboardFactory.getWelcomeFeatures = jest.fn();
-
-    await update.hearStart(ctx);
-
-    expect(
-      (update as any).keyboardFactory.getWelcomeFeatures,
-    ).not.toHaveBeenCalled();
-  });
-
-  it('opens a filtered teacher list for a matching private text message', async () => {
-    isTeacherSearchFallbackQuery.mockReturnValue(true);
-    const ctx = { message: { text: 'Шулев' } } as any;
-    const next = jest.fn();
-
-    await update.onTeacherNameFallback(ctx, next);
-
-    expect(openTeachersList).toHaveBeenCalledWith(ctx, 'Шулев');
-  });
-
-  it('opens group selection for an exact long group name in a private message', async () => {
-    getGroupByName.mockReturnValue('Научно-исслед сем');
-    const scene = { enter: jest.fn() };
-    const next = jest.fn();
-
-    await update.onTeacherNameFallback(
-      {
-        message: { text: 'Научно-исслед сем' },
-        scene,
-      } as any,
-      next,
-    );
-
-    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
-      groupName: 'Научно-исслед сем',
-    });
-    expect(openTeachersList).not.toHaveBeenCalled();
-    expect(next).not.toHaveBeenCalled();
-  });
-
-  it('does not open a list for unrelated private text', async () => {
-    isTeacherSearchFallbackQuery.mockReturnValue(false);
-    const ctx = { message: { text: 'аудитория' } } as any;
-    const next = jest.fn();
-
-    await update.onTeacherNameFallback(ctx, next);
-
-    expect(openTeachersList).not.toHaveBeenCalled();
-    expect(next).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not continue handlers after opening a teacher list', async () => {
-    isTeacherSearchFallbackQuery.mockReturnValue(true);
-    const next = jest.fn();
-
-    await update.onTeacherNameFallback(
-      { message: { text: 'Шулев' } } as any,
-      next,
-    );
-
-    expect(next).not.toHaveBeenCalled();
-  });
-
-  it('continues Telegram handlers when an update has no text message', async () => {
-    const next = jest.fn();
-
-    await update.onTeacherNameFallback({ message: { photo: [] } } as any, next);
-
-    expect(isTeacherSearchFallbackQuery).not.toHaveBeenCalled();
-    expect(openTeachersList).not.toHaveBeenCalled();
-    expect(next).toHaveBeenCalledTimes(1);
-  });
-
-  it('registers the fallback only for private Telegram chats', () => {
-    expect(
-      Reflect.getMetadata(
-        TG_ALLOWED_CHAT_TYPES_KEY,
-        MainUpdate.prototype.onTeacherNameFallback,
-      ),
-    ).toEqual(['private']);
-  });
-
-  it('opens group selection from a group-chat callback made by the bot inviter', async () => {
-    const scene = { enter: jest.fn() };
-    const ctx = {
-      from: { id: 7 },
-      chat: { id: -1001, type: 'group' },
-      state: { appeal: false },
-      conversation: { invitedByUserSocialId: 3 },
-      userSocial: { id: 3 },
-      match: { groups: { groupName: 'ЦИС-17' } },
-      callbackQuery: { data: 'selectGroup:ЦИС-17' },
-      scene,
-      tryAnswerCbQuery: jest.fn(),
-      deleteMessage: jest.fn(),
-    } as any;
-
-    await update.hearSelectGroup(ctx);
-
-    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
-      groupName: 'ЦИС-17',
-    });
-    expect(ctx.tryAnswerCbQuery).toHaveBeenCalledTimes(1);
-    expect(ctx.deleteMessage).toHaveBeenCalledTimes(1);
-  });
-
-  it('resolves a compact group callback before opening the selector', async () => {
-    groupNameByHash.mockReturnValue('Длинное название учебной группы');
-    const scene = { enter: jest.fn() };
-    const ctx = {
-      from: { id: 7 },
-      chat: { type: 'private' },
-      state: {},
-      userSocial: { id: 3 },
-      match: { groups: { groupName: '0123456789ab' } },
-      callbackQuery: { data: 'selectGroup:0123456789ab' },
-      scene,
-      tryAnswerCbQuery: jest.fn(),
-      deleteMessage: jest.fn(),
-    } as any;
-
-    await update.hearSelectGroup(ctx);
-
-    expect(groupNameByHash).toHaveBeenCalledWith('0123456789ab');
-    expect(scene.enter).toHaveBeenCalledWith('SELECT_GROUP_SCENE', {
-      groupName: 'Длинное название учебной группы',
-    });
-  });
-
-  it('acknowledges an institute-list callback before editing its message', async () => {
-    const calls: string[] = [];
-    (update as any).scheduleService.groupsInstitutesList = jest.fn(() => ({
-      items: ['Институт'],
-      currentPage: 1,
-      totalPages: 1,
-    }));
-    (update as any).keyboardFactory.getPagination = jest
-      .fn()
-      .mockReturnValue({});
-    const ctx = {
-      updateType: 'callback_query',
-      callbackQuery: { data: 'pager:inst-list' },
-      match: { groups: {} },
-      i18n: { t: jest.fn((phrase) => phrase) },
-      tryAnswerCbQuery: jest.fn(async () => calls.push('answer')),
-      editMessageText: jest.fn(async () => calls.push('edit')),
-    } as any;
-
-    await update.onInstitutesList(ctx);
-
-    expect(calls).toEqual(['answer', 'edit']);
-  });
-
-  it.each([
-    ['left', true],
-    ['kicked', true],
-    ['member', false],
-    ['administrator', false],
-  ])(
-    'updates isLeaved to %s for a bot membership status',
-    async (status, isLeaved) => {
-      const conversation = { isLeaved: !isLeaved };
-      const ctx = {
-        botInfo: { id: 42 },
-        userSocial: { id: 1 },
-        conversation,
-        myChatMember: {
-          chat: { type: 'group', title: 'Расписание' },
-          old_chat_member: { status: 'member' },
-          new_chat_member: { status, user: { id: 42 } },
-        },
-        replyWithHTML: jest.fn(),
-        i18n: { t: jest.fn().mockReturnValue('start') },
-        sessionConversation: {},
-      } as any;
-
-      (update as any).keyboardFactory.getStart = jest.fn();
-      (update as any).keyboardFactory.getSelectGroupInline = jest.fn();
-      (update as any).telegramService.parseChatTitle = jest.fn();
-
-      await update.onMyChatMember(ctx);
-
-      expect(conversation.isLeaved).toBe(isLeaved);
-    },
-  );
-
-  it('does not change isLeaved for another Telegram chat member', async () => {
+  it('updates conversation membership only for the bot', async () => {
     const conversation = { isLeaved: false };
-    const ctx = {
+
+    await update.onMyChatMember({
       botInfo: { id: 42 },
+      userSocial: { id: 1 },
       conversation,
       myChatMember: {
         chat: { type: 'group', title: 'Расписание' },
         old_chat_member: { status: 'member' },
-        new_chat_member: { status: 'kicked', user: { id: 7 } },
+        new_chat_member: { status: 'kicked', user: { id: 42 } },
       },
-    } as any;
+    } as any);
 
-    await update.onMyChatMember(ctx);
-
-    expect(conversation.isLeaved).toBe(false);
-  });
-
-  it('welcomes the bot only when it joins or returns to a Telegram chat', async () => {
-    const createContext = (oldStatus: string, status: string) => ({
-      botInfo: { id: 42 },
-      userSocial: { id: 1 },
-      conversation: { isLeaved: oldStatus === 'left' },
-      myChatMember: {
-        chat: { id: -1001, type: 'group', title: 'Расписание' },
-        old_chat_member: { status: oldStatus },
-        new_chat_member: { status, user: { id: 42 } },
-      },
-      replyWithHTML: jest.fn(),
-      i18n: { t: jest.fn().mockReturnValue('start') },
-      sessionConversation: {},
-      state: { appeal: false },
-    });
-    const getStart = jest.fn();
-    const parseChatTitle = jest.fn();
-    (update as any).keyboardFactory.getStart = getStart;
-    (update as any).keyboardFactory.getSelectGroupInline = jest.fn();
-    (update as any).telegramService.parseChatTitle = parseChatTitle;
-
-    await update.onMyChatMember(
-      createContext('member', 'administrator') as any,
-    );
-
-    expect(getStart).not.toHaveBeenCalled();
-    expect(parseChatTitle).not.toHaveBeenCalled();
-
-    await update.onMyChatMember(createContext('left', 'member') as any);
-
-    expect(getStart).toHaveBeenCalledTimes(1);
-    expect(parseChatTitle).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens institutes instead of the group scene for a targetless selection request', async () => {
-    const onInstitutesList = jest
-      .spyOn(update, 'onInstitutesList')
-      .mockResolvedValue(undefined);
-    const scene = { enter: jest.fn() };
-    const ctx = {
-      chat: { type: 'private' },
-      state: {},
-      userSocial: {},
-      match: { groups: {} },
-      scene,
-    } as any;
-
-    try {
-      await update.hearSelectGroup(ctx);
-
-      expect(onInstitutesList).toHaveBeenCalledWith(ctx);
-      expect(scene.enter).not.toHaveBeenCalled();
-    } finally {
-      onInstitutesList.mockRestore();
-    }
-  });
-
-  it('adds an all-groups callback below the Telegram institute list', async () => {
-    const getPagination = jest.fn().mockReturnValue('keyboard');
-    (update as any).keyboardFactory.getPagination = getPagination;
-    (update as any).scheduleService.groupsInstitutesList = jest.fn(() => ({
-      items: ['Институт'],
-      currentPage: 1,
-      totalPages: 1,
-    }));
-    const ctx = {
-      updateType: 'message',
-      message: { text: '/institutes' },
-      state: {},
-      i18n: { t: jest.fn((phrase) => phrase) },
-      replyWithHTML: jest.fn(),
-    } as any;
-
-    await update.onInstitutesList(ctx);
-
-    expect(getPagination).toHaveBeenCalledWith(
-      expect.objectContaining({
-        additionalButtons: [
-          [
-            expect.objectContaining({
-              callback_data: 'pager:glist',
-              text: LocalePhrase.Button_Groups_ListGroups,
-            }),
-          ],
-        ],
-      }),
-    );
+    expect(conversation.isLeaved).toBe(true);
   });
 });

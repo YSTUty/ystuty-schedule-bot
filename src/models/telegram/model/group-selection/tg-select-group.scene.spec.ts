@@ -1,16 +1,18 @@
-import { SelectGroupScene } from './select-group.scene';
+import { TgSelectGroupScene } from './tg-select-group.scene';
 
-describe('SelectGroupScene', () => {
+describe('TgSelectGroupScene', () => {
   it('saves a group selected by an authorized group-chat callback', async () => {
-    const keyboardFactory = {
+    const scheduleKeyboardFactory = {
       getScheduleInline: jest.fn().mockReturnValue('schedule keyboard'),
     };
     const scheduleService = {
       getGroupByName: jest.fn().mockReturnValue('ЦИС-17'),
       parseGroupName: jest.fn(),
     };
-    const scene = new SelectGroupScene(
-      keyboardFactory as any,
+    const scene = new TgSelectGroupScene(
+      {} as any,
+      {} as any,
+      scheduleKeyboardFactory as any,
       scheduleService as any,
       {} as any,
       {} as any,
@@ -40,16 +42,20 @@ describe('SelectGroupScene', () => {
   });
 
   it('restores the private reply keyboard after sending the schedule shortcuts', async () => {
-    const keyboardFactory = {
-      getScheduleInline: jest.fn().mockReturnValue('schedule keyboard'),
+    const baseKeyboardFactory = {
       getStart: jest.fn().mockReturnValue('start keyboard'),
+    };
+    const scheduleKeyboardFactory = {
+      getScheduleInline: jest.fn().mockReturnValue('schedule keyboard'),
     };
     const telegramService = {
       isAdmin: jest.fn().mockReturnValue(false),
       syncPrivateChatCommands: jest.fn(),
     };
-    const scene = new SelectGroupScene(
-      keyboardFactory as any,
+    const scene = new TgSelectGroupScene(
+      baseKeyboardFactory as any,
+      {} as any,
+      scheduleKeyboardFactory as any,
       {
         getGroupByName: jest.fn().mockReturnValue('ЦИС-17'),
         parseGroupName: jest.fn(),
@@ -87,7 +93,9 @@ describe('SelectGroupScene', () => {
   });
 
   it('shows the current personal group in the initial prompt', async () => {
-    const scene = new SelectGroupScene(
+    const scene = new TgSelectGroupScene(
+      {} as any,
+      { getSelectGroupPrompt: jest.fn().mockReturnValue({}) } as any,
       {} as any,
       { randomGroupName: 'ЦИС-11' } as any,
       {} as any,
@@ -118,7 +126,9 @@ describe('SelectGroupScene', () => {
   });
 
   it('sends a new initial prompt for a protected callback message', async () => {
-    const scene = new SelectGroupScene(
+    const scene = new TgSelectGroupScene(
+      {} as any,
+      { getSelectGroupPrompt: jest.fn().mockReturnValue({}) } as any,
       {} as any,
       { randomGroupName: 'ЦИС-11' } as any,
       {} as any,

@@ -19,7 +19,7 @@ import { ScheduleService } from '../../../schedule/schedule.service';
 import { BaseScene } from '../../scene/base.scene';
 import { TelegramMarkup as Markup } from '../../telegram-buttons.util';
 import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
-import { TgGroupPicker } from '../tg-group-picker';
+import { TgGroupPicker } from '../group-selection/tg-group-picker';
 
 import { TgScheduleNotifKeyboardFactory } from './tg-schedule-notif-keyboard.factory';
 

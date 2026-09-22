@@ -17,7 +17,7 @@ import { ScheduleNotifService } from '../../../schedule-notif/schedule-notif.ser
 import { ScheduleNotifTargetType } from '../../../schedule-notif/schedule-notif.types';
 import { ScheduleService } from '../../../schedule/schedule.service';
 import { VKKeyboardFactory } from '../../vk-keyboard.factory';
-import { VkGroupPicker } from '../vk-group-picker';
+import { VkGroupPicker } from '../group-selection/vk-group-picker';
 
 import { VkScheduleNotifKeyboardFactory } from './vk-schedule-notif-keyboard.factory';
 
@@ -140,7 +140,7 @@ export class VkScheduleNotifGroupScene {
         }),
         additionalButtons: [
           [
-            this.baseKeyboardFactory.getInstitutesListButton(ctx, {
+            this.keyboardFactory.getScheduleNotifGroupPickerBackButton(ctx, {
               scheduleNotifGroupAction: 'back',
               notifId,
             }),
@@ -283,7 +283,7 @@ export class VkScheduleNotifGroupScene {
       getPagePayload: () => ({}),
       additionalButtons: [
         [
-          this.baseKeyboardFactory.getInstitutesListButton(ctx, {
+          this.keyboardFactory.getScheduleNotifGroupPickerBackButton(ctx, {
             scheduleNotifGroupAction: 'institutes',
             notifId,
           }),

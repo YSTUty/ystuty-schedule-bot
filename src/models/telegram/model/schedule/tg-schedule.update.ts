@@ -1,5 +1,5 @@
-import { UseFilters } from '@nestjs/common';
-import { Command, Ctx, Hears, On, Update } from 'nestjs-telega';
+import { Logger, UseFilters } from '@nestjs/common';
+import { Command, Ctx, Hears, Next, On, Update } from 'nestjs-telega';
 
 import * as tg from 'telegraf-hardened/types';
 import type { Update as TgUpdate } from 'telegraf-hardened/types';
@@ -11,23 +11,42 @@ import {
   patternTeacherId,
   personalTeacherScheduleCommandRegExp,
   personalTeacherWeekCommandRegExp,
+  teacherListCommandRegExp,
+  teacherSearchCommandRegExp,
   TelegrafExceptionFilter,
 } from '@my-common';
-import { Action, TgHearsLocale } from '@my-common/decorator/tg';
+import {
+  Action,
+  AllowedChatTypes,
+  TgHearsLocale,
+} from '@my-common/decorator/tg';
 import { LocalePhrase, TelegramLocalePhrase } from '@my-interfaces';
-import { IContext, IMessageContext } from '@my-interfaces/telegram';
+import {
+  ICallbackQueryContext,
+  ICbQOrMsg,
+  IContext,
+  IMessageContext,
+} from '@my-interfaces/telegram';
 
-import { ScheduleService } from '../../schedule/schedule.service';
-import { appendScheduleTargetFooter } from '../../schedule/util/schedule-formatter.util';
+import { ScheduleService } from '../../../schedule/schedule.service';
+import { TeacherListStateService } from '../../../schedule/teacher-list-state.service';
+import {
+  getScheduleCalendarButtonUrl,
+  getScheduleCalendarWebUrl,
+} from '../../../schedule/util/schedule-calendar-link.util';
+import { appendScheduleTargetFooter } from '../../../schedule/util/schedule-formatter.util';
 import {
   formatScheduleTargetDate,
   getScheduleAcademicWeekNumber,
   getScheduleTargetDate,
   getScheduleWeekDateRange,
   getScheduleWeekDistance,
-} from '../../schedule/util/schedule.util';
-import { TelegramKeyboardFactory } from '../telegram-keyboard.factory';
-import { SELECT_GROUP_SCENE } from '../telegram.constants';
+} from '../../../schedule/util/schedule.util';
+import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
+import { SELECT_GROUP_SCENE } from '../../telegram.constants';
+import { TelegramService } from '../../telegram.service';
+
+import { TgScheduleKeyboardFactory } from './tg-schedule-keyboard.factory';
 
 /**
  * Группа в callback — значение из клавиатуры, а не текстовая команда.
@@ -51,10 +70,15 @@ export const createGroupScheduleWeekNavigationActionRegExp = (
 
 @Update()
 @UseFilters(TelegrafExceptionFilter)
-export class ScheduleUpdate {
+export class TgScheduleUpdate {
+  private readonly logger = new Logger(TgScheduleUpdate.name);
+
   constructor(
-    private readonly keyboardFactory: TelegramKeyboardFactory,
+    private readonly keyboardFactory: TgScheduleKeyboardFactory,
+    private readonly baseKeyboardFactory: TelegramKeyboardFactory,
     private readonly scheduleService: ScheduleService,
+    private readonly teacherListStateService: TeacherListStateService,
+    private readonly telegramService: TelegramService,
   ) {}
 
   @On('inline_query')
@@ -207,6 +231,261 @@ export class ScheduleUpdate {
       is_personal: true,
       cache_time: 60,
     });
+  }
+
+  @Command('tlist')
+  @Hears(teacherListCommandRegExp)
+  @TgHearsLocale(LocalePhrase.Button_Schedule_Teacher)
+  @Action(LocalePhrase.Button_Schedule_Teacher)
+  async onTeachersList(@Ctx() ctx: ICbQOrMsg) {
+    await this.openTeachersList(ctx, '');
+  }
+
+  @Action(/pager:teacher-list:(?<listId>[a-f0-9]{12}):(?<page>[0-9]+)/i)
+  async onTeachersListPage(@Ctx() ctx: ICallbackQueryContext) {
+    const listId = ctx.match?.groups?.listId;
+    const page = Number(ctx.match?.groups?.page) || 1;
+    const state =
+      listId && ctx.chat
+        ? await this.teacherListStateService.get(listId, {
+            transport: 'telegram',
+            ownerId: ctx.from.id,
+            peerId: ctx.chat.id,
+          })
+        : null;
+
+    if (!state) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+      );
+      return;
+    }
+
+    await this.renderTeachersList(
+      ctx,
+      listId!,
+      state.query,
+      state.pageSize,
+      page,
+    );
+  }
+
+  @Command('teacher')
+  @Hears(teacherSearchCommandRegExp)
+  async onTeacherSearch(@Ctx() ctx: IMessageContext) {
+    const query = ctx.payload?.trim() || ctx.match?.groups?.query?.trim();
+    if (!query) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSearchHint),
+      );
+      return;
+    }
+
+    const { totalCount } = this.scheduleService.teachersList(1, 10, query);
+    if (totalCount === 0) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
+          query: allowerHtmlTags(query, ''),
+        }),
+      );
+      return;
+    }
+
+    await this.openTeachersList(ctx, query);
+  }
+
+  /** Создаёт отдельное Redis-состояние для нового сообщения со списком преподавателей. */
+  private async openTeachersList(ctx: ICbQOrMsg, query: string) {
+    if (!ctx.chat) return;
+
+    const pageSize = 10;
+    const listId = await this.teacherListStateService.create({
+      transport: 'telegram',
+      ownerId: ctx.from.id,
+      peerId: ctx.chat.id,
+      query,
+      pageSize,
+    });
+
+    await this.renderTeachersList(ctx, listId, query, pageSize);
+  }
+
+  /** Рендерит указанную страницу, используя query исходного сообщения, а не session. */
+  private async renderTeachersList(
+    ctx: ICbQOrMsg,
+    listId: string,
+    query: string,
+    pageSize: number,
+    page = 1,
+  ) {
+    const { items, currentPage, totalPages } =
+      this.scheduleService.teachersList(page, pageSize, query);
+    const keyboard = this.keyboardFactory.getTeachersListPagination(ctx, {
+      listId,
+      items,
+      currentPage,
+      totalPages,
+    });
+    const content = ctx.i18n.t(LocalePhrase.Page_Schedule_TeachersList, {
+      currentPage,
+      totalPages,
+      query: allowerHtmlTags(query, ''),
+    });
+
+    if (ctx.callbackQuery) {
+      await ctx.tryAnswerCbQuery();
+      try {
+        await ctx.editMessageText(content, {
+          ...keyboard,
+          parse_mode: 'HTML',
+        });
+      } catch {}
+      return;
+    }
+
+    await ctx.replyWithHTML(content, keyboard);
+  }
+
+  @Hears(/^\/(?:cal|calendar)(?:@\w+)?(?:\s+(?<groupName>.+))?$/i)
+  @TgHearsLocale(LocalePhrase.Button_Calendar)
+  @Action('calendar:open')
+  async onCalendar(@Ctx() ctx: ICbQOrMsg) {
+    if (ctx.updateType === 'callback_query') {
+      await ctx.tryAnswerCbQuery();
+    }
+
+    const requestedGroupName = ctx.match?.groups?.groupName?.trim();
+    const selectedGroupName =
+      ctx.chat?.type === 'private'
+        ? ctx.userSocial?.groupName
+        : ctx.conversation?.groupName;
+    const groupNameQuery = requestedGroupName || selectedGroupName;
+    const groupName = groupNameQuery
+      ? this.scheduleService.getGroupByName(groupNameQuery) ||
+        this.scheduleService.parseGroupName(groupNameQuery) ||
+        null
+      : null;
+
+    if (requestedGroupName && !groupName) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_SelectGroup_NotFound, {
+          groupName: requestedGroupName,
+        }),
+      );
+      return;
+    }
+
+    const teacherId =
+      !requestedGroupName && ctx.chat?.type === 'private'
+        ? ctx.session.teacherId
+        : undefined;
+    if (!groupName && !teacherId) {
+      await ctx.scene.enter(SELECT_GROUP_SCENE);
+      return;
+    }
+
+    const targets = [groupName, teacherId];
+    const calendarUrl = getScheduleCalendarWebUrl(targets);
+    const calendarButtonUrl = getScheduleCalendarButtonUrl(targets);
+
+    if (!calendarUrl || !calendarButtonUrl) {
+      this.logger.error(
+        '[iCalendar] YSTUTY_ICALENDAR_ADDRESS is not configured',
+      );
+      await ctx.replyWithHTML(ctx.i18n.t(LocalePhrase.Common_Error));
+      return;
+    }
+
+    await ctx.replyWithHTML(
+      `${ctx.i18n.t(LocalePhrase.Page_Calendar)}\n\n<code>${calendarUrl}</code>`,
+      this.keyboardFactory.getCalendarInline(ctx, calendarButtonUrl),
+    );
+  }
+
+  @Action(/selectTeacher:(?<listId>[a-f0-9]{12}):(?<teacherId>[0-9]+)/i)
+  async hearSelectTeacher(@Ctx() ctx: ICallbackQueryContext) {
+    const listId = ctx.match?.groups?.listId;
+    const teacherId = Number(ctx.match?.groups?.teacherId);
+    const state =
+      listId && ctx.chat
+        ? await this.teacherListStateService.get(listId, {
+            transport: 'telegram',
+            ownerId: ctx.from.id,
+            peerId: ctx.chat.id,
+          })
+        : null;
+
+    if (!state) {
+      await ctx.tryAnswerCbQuery(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherListExpired),
+      );
+      return;
+    }
+
+    const teacher = this.scheduleService.getTeacher(teacherId);
+    if (!teacher) {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherNotFound, {
+          query: teacherId,
+        }),
+      );
+      return;
+    }
+
+    ctx.session.teacherId = teacherId;
+    if (ctx.chat?.type === 'private') {
+      await this.telegramService.syncPrivateChatCommands({
+        chatId: ctx.chat.id,
+        isAuthorized: !!ctx.user,
+        isAdmin: this.telegramService.isAdmin(ctx.from.id, ctx.user?.role),
+        hasGroup: !!ctx.userSocial.groupName,
+        teacherId,
+      });
+    }
+    const safeTeacher = {
+      ...teacher,
+      name: allowerHtmlTags(teacher.name, ''),
+    };
+    await ctx.replyWithHTML(
+      ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherSelected, {
+        teacher: safeTeacher,
+      }),
+      this.keyboardFactory.getScheduleInline(ctx, {
+        type: 'teacher',
+        id: teacher.id,
+      }),
+    );
+
+    if (ctx.chat?.type === 'private') {
+      await ctx.replyWithHTML(
+        ctx.i18n.t(LocalePhrase.Page_Schedule_TeacherKeyboardUpdated),
+        this.baseKeyboardFactory.getStart(ctx),
+      );
+    }
+
+    if (ctx.callbackQuery) {
+      await ctx.tryAnswerCbQuery();
+      await ctx.deleteMessage();
+    }
+  }
+
+  /** Обрабатывает нераспознанное ФИО преподавателя только в личных сообщениях. */
+  @On('text')
+  @AllowedChatTypes('private')
+  async onTeacherNameFallback(@Ctx() ctx: IMessageContext, @Next() next) {
+    if (!('text' in ctx.message)) return next();
+
+    const query = ctx.message.text.trim();
+    const groupName = this.scheduleService.getGroupByName(query);
+    if (groupName) {
+      await ctx.scene.enter(SELECT_GROUP_SCENE, { groupName });
+      return;
+    }
+
+    if (!this.scheduleService.isTeacherSearchFallbackQuery(query))
+      return next();
+
+    await this.openTeachersList(ctx, query);
   }
 
   @Command('tt')

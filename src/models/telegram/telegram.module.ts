@@ -13,10 +13,15 @@ import { MetricsMiddleware } from './middleware/metrics.middleware';
 import { UnhandledPrivateMessageMiddleware } from './middleware/unhandled-private-message.middleware';
 import { UserMiddleware } from './middleware/user.middleware';
 import { TelegramBroadcasterModule } from './model/broadcaster/telegram-broadcaster.module';
+import { TgGroupPicker } from './model/group-selection/tg-group-picker';
+import { TgGroupSelectionKeyboardFactory } from './model/group-selection/tg-group-selection-keyboard.factory';
+import { TgGroupSelectionUpdate } from './model/group-selection/tg-group-selection.update';
+import { TgSelectGroupScene } from './model/group-selection/tg-select-group.scene';
 import { TgScheduleNotifModule } from './model/schedule-notif/tg-schedule-notif.module';
+import { TgScheduleKeyboardFactory } from './model/schedule/tg-schedule-keyboard.factory';
+import { TgScheduleUpdate } from './model/schedule/tg-schedule.update';
 import { AuthScene } from './scene/auth.scene';
 import { TelegramFeedbackScene } from './scene/feedback.scene';
-import { SelectGroupScene } from './scene/select-group.scene';
 import { TgFeedbackKeyboardFactory } from './scene/tg-feedback-keyboard.factory';
 import { TelegramFeedbackDeliveryService } from './telegram-feedback-delivery.service';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
@@ -24,7 +29,6 @@ import { TelegramService } from './telegram.service';
 import { AdminUpdate } from './update/admin.update';
 import { TelegramFeedbackUpdate } from './update/feedback.update';
 import { MainUpdate } from './update/main.update';
-import { ScheduleUpdate } from './update/schedule.update';
 
 const TelegramRedisSession =
   RedisSession as unknown as typeof RedisSession.default;
@@ -60,6 +64,9 @@ export const attachTelegramRedisSessionDiagnostics = (
 const baseProviders = [
   TelegramService,
   TelegramKeyboardFactory,
+  TgScheduleKeyboardFactory,
+  TgGroupSelectionKeyboardFactory,
+  TgGroupPicker,
   TgFeedbackKeyboardFactory,
   TelegramFeedbackDeliveryService,
 ];
@@ -71,10 +78,11 @@ const providers = [
   AdminUpdate,
   TelegramFeedbackUpdate,
   MainUpdate,
-  ScheduleUpdate,
+  TgScheduleUpdate,
+  TgGroupSelectionUpdate,
   AuthScene,
   TelegramFeedbackScene,
-  SelectGroupScene,
+  TgSelectGroupScene,
 ];
 
 @Global()

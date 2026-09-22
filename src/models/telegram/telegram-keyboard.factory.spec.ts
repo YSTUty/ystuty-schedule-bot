@@ -5,12 +5,15 @@ import { LocalePhrase } from '@my-interfaces';
 
 import { TgBroadcastKeyboardFactory } from './model/broadcaster/tg-broadcast-keyboard.factory';
 import { TgScheduleNotifKeyboardFactory } from './model/schedule-notif/tg-schedule-notif-keyboard.factory';
+import { TgScheduleKeyboardFactory } from './model/schedule/tg-schedule-keyboard.factory';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
 
 const createBroadcastKeyboardFactory = () =>
   new TgBroadcastKeyboardFactory(new TelegramKeyboardFactory());
 const createScheduleNotifKeyboardFactory = () =>
   new TgScheduleNotifKeyboardFactory(new TelegramKeyboardFactory());
+const createScheduleKeyboardFactory = () =>
+  new TgScheduleKeyboardFactory(new TelegramKeyboardFactory());
 
 describe('TelegramKeyboardFactory', () => {
   const ctx = {
@@ -207,10 +210,13 @@ describe('TelegramKeyboardFactory', () => {
     const deleteButtons =
       scheduleNotifKeyboardFactory.getScheduleNotifDeleteConfirmation(ctx, 7)
         .reply_markup.inline_keyboard;
-    const scheduleButtons = factory.getScheduleInline(ctx, {
-      type: 'group',
-      id: 'ЦИС-46',
-    }).reply_markup.inline_keyboard;
+    const scheduleButtons = createScheduleKeyboardFactory().getScheduleInline(
+      ctx,
+      {
+        type: 'group',
+        id: 'ЦИС-46',
+      },
+    ).reply_markup.inline_keyboard;
     const settingsButtons =
       scheduleNotifKeyboardFactory.getScheduleNotifSettings(
         ctx,
@@ -230,7 +236,7 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('adds week navigation only for available neighboring weeks', () => {
-    const keyboard = new TelegramKeyboardFactory().getScheduleInline(
+    const keyboard = createScheduleKeyboardFactory().getScheduleInline(
       ctx,
       { type: 'group', id: 'ЦИС-46' },
       { previousWeekNumber: 4, nextWeekNumber: 6 },
@@ -258,7 +264,7 @@ describe('TelegramKeyboardFactory', () => {
   });
 
   it('keeps schedule callback data within Telegram limits for a long group', () => {
-    const buttons = new TelegramKeyboardFactory()
+    const buttons = createScheduleKeyboardFactory()
       .getScheduleInline(
         ctx,
         { type: 'group', id: 'Научно-исслед сем' },
@@ -272,24 +278,6 @@ describe('TelegramKeyboardFactory', () => {
           Buffer.byteLength(button.callback_data, 'utf8'),
         ).toBeLessThanOrEqual(64);
       }
-    }
-  });
-
-  it('uses a compact callback for a long selected group', () => {
-    const groupName = 'Очень длинное название учебной группы для проверки';
-    const button = new TelegramKeyboardFactory().getSelectGroupInline(
-      ctx,
-      groupName,
-    ).reply_markup.inline_keyboard[0][0];
-
-    expect(button).toMatchObject({
-      callback_data: `selectGroup:${md5(groupName).slice(0, 12)}`,
-    });
-    expect('callback_data' in button).toBe(true);
-    if ('callback_data' in button) {
-      expect(
-        Buffer.byteLength(button.callback_data, 'utf8'),
-      ).toBeLessThanOrEqual(64);
     }
   });
 

@@ -4,8 +4,11 @@ import { md5 } from '@my-common';
 import { LocalePhrase } from '@my-interfaces';
 import { IContext } from '@my-interfaces/vk';
 
-import { ScheduleService } from '../../schedule/schedule.service';
-import { VKKeyboardFactory, VKPaginationOptions } from '../vk-keyboard.factory';
+import { ScheduleService } from '../../../schedule/schedule.service';
+import {
+  VKKeyboardFactory,
+  VKPaginationOptions,
+} from '../../vk-keyboard.factory';
 
 type VkPickerButtons = VKPaginationOptions['additionalButtons'];
 

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { TgGroupPicker } from '../tg-group-picker';
+import { TgGroupPicker } from '../group-selection/tg-group-picker';
 
 import { TgScheduleNotifGroupScene } from './tg-schedule-notif-group.scene';
 import { TgScheduleNotifKeyboardFactory } from './tg-schedule-notif-keyboard.factory';

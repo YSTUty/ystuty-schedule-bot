@@ -19,8 +19,10 @@ import * as vkConstants from '../vk/vk.constants';
 import { ConcurrencyService } from '../concurrency/concurrency.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { SocialConnectService } from '../social-connect/social-connect.service';
+import { TgGroupSelectionKeyboardFactory } from '../telegram/model/group-selection/tg-group-selection-keyboard.factory';
 import { TelegramKeyboardFactory } from '../telegram/telegram-keyboard.factory';
 import { TelegramService } from '../telegram/telegram.service';
+import { VkGroupSelectionKeyboardFactory } from '../vk/model/group-selection/vk-group-selection-keyboard.factory';
 import { VKKeyboardFactory } from '../vk/vk-keyboard.factory';
 import { VkService } from '../vk/vk.service';
 
@@ -49,7 +51,9 @@ export class UserService {
     @Inject(forwardRef(() => VkService))
     private readonly vkService: VkService,
     private readonly tgKeyboardFactory: TelegramKeyboardFactory,
+    private readonly tgGroupSelectionKeyboardFactory: TgGroupSelectionKeyboardFactory,
     private readonly vkKeyboardFactory: VKKeyboardFactory,
+    private readonly vkGroupSelectionKeyboardFactory: VkGroupSelectionKeyboardFactory,
   ) {}
 
   private getMessengerService(socialType: SocialType) {
@@ -272,17 +276,18 @@ export class UserService {
           linkedUser.groupName !== userSocial.groupName
         ) {
           if (socialType === SocialType.Telegram) {
-            const keyboard = this.tgKeyboardFactory.getSelectGroupInline(
-              { i18n } as any,
-              linkedUser.groupName,
-            );
+            const keyboard =
+              this.tgGroupSelectionKeyboardFactory.getSelectGroupInline(
+                { i18n } as any,
+                linkedUser.groupName,
+              );
             await socialService.sendMessage(
               socialId,
               '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴',
               keyboard,
             );
           } else if (socialType === SocialType.Vkontakte) {
-            const keyboard = this.vkKeyboardFactory
+            const keyboard = this.vkGroupSelectionKeyboardFactory
               .getSelectGroup({ i18n } as any, linkedUser.groupName)
               .inline();
             await this.vkService.sendMessage(socialId, '┬┴┬┴┤ ͜ʖ ͡°) ├┬┴┬┴', {

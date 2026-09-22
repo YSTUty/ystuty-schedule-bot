@@ -174,7 +174,7 @@ export class ScheduleNotifDeliveryService {
       }),
     );
     this.logger.warn(
-      `Schedule notif delivery #${delivery.id} skipped: ${error}`,
+      `Schedule notif delivery #${delivery.id} skipped: ${error} [transport=${notif.transport}, ${this.getTargetLogContext(notif)}]`,
     );
     if (isDeactivated) {
       const recipient: ScheduleNotifRecipient | undefined = notif.userSocial
@@ -249,6 +249,13 @@ export class ScheduleNotifDeliveryService {
         : undefined;
     }
     return undefined;
+  }
+
+  /** Формирует компактный контекст цели для диагностики пропущенной доставки. */
+  private getTargetLogContext(notif: ScheduleNotif) {
+    return notif.targetType === ScheduleNotifTargetType.Group
+      ? `group="${notif.targetId}"`
+      : `teacherId=${notif.targetId}`;
   }
 
   /** В июле и августе не проверяем исчезновение цели: списки API могут быть неполными. */

@@ -1,3 +1,5 @@
+import { Logger } from '@nestjs/common';
+
 import { SocialType } from '@my-common/constants';
 
 import { UserSocial } from '../user/entity/user-social.entity';
@@ -103,6 +105,7 @@ describe('ScheduleNotifDeliveryService', () => {
   it('skips a notif whose group is absent from the current Schedule API list', async () => {
     const { service, scheduleService, transport, deliveryRepository } =
       createService();
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     scheduleService.getGroupByName.mockReturnValue(undefined);
 
     await service.deliver(notif, delivery);
@@ -114,6 +117,9 @@ describe('ScheduleNotifDeliveryService', () => {
       }),
     );
     expect(notif.lastError).toBe('Group is absent from Schedule API');
+    expect(warn).toHaveBeenCalledWith(
+      'Schedule notif delivery #1 skipped: Group is absent from Schedule API [transport=telegram, group="ЦИС-11"]',
+    );
   });
 
   it('sends tomorrow schedule and records the returned message id', async () => {

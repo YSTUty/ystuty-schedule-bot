@@ -524,8 +524,16 @@ describe('ScheduleService', () => {
       ).toHaveBeenCalledWith('group', 'joined_local');
     });
 
-    it('adds a calm cache marker only for a stale fallback response', () => {
+    // it('marks a cache response older than five minutes', () => {
+    it('keeps a soft-stale cache response free from technical markers', () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-09-16T08:00:00Z'));
+      expect(
+        (service as any).appendScheduleCacheNotice('Расписание', {
+          cacheState: 'soft_stale',
+          fetchedAt: new Date('2026-09-16T07:54:00Z'),
+        }),
+      ).toBe('Расписание');
+      // ).toBe('Расписание\n\n♻️ Кэш обновляется');
       expect(
         (service as any).appendScheduleCacheNotice('Расписание', {
           cacheState: 'stale',

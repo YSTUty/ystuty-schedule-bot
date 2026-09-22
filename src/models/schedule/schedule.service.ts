@@ -984,11 +984,14 @@ export class ScheduleService implements OnModuleInit {
     return Math.max(0, Date.now() - new Date(fetchedAt).getTime());
   }
 
-  /** Показывает, что ответ получен из устаревшего fallback, без тревожного текста. */
+  /** Показывает, что локальный снимок расписания уже не свежий. */
   private appendScheduleCacheNotice(
     message: string,
     response: ScheduleLoadResult,
   ) {
+    // if (response.cacheState === 'soft_stale') {
+    //   return `${message}\n\n♻️ Кэш обновляется`;
+    // }
     if (response.cacheState !== 'stale') return message;
 
     const cacheAgeMs = this.getCacheAgeMs(response.fetchedAt.toISOString());

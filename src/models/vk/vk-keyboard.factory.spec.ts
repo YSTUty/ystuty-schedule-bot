@@ -192,6 +192,36 @@ describe('VKKeyboardFactory', () => {
     });
   });
 
+  it('creates all inline schedule controls as callbacks', () => {
+    const keyboard = new VKKeyboardFactory().getSchedule(ctx, {
+      type: 'group',
+      id: 'ЦИС-46',
+    });
+    const buttons = JSON.parse(String(keyboard.inline())).buttons.flat();
+
+    expect(buttons).toHaveLength(4);
+    expect(buttons.map((button: any) => button.action.type)).toEqual([
+      'callback',
+      'callback',
+      'callback',
+      'callback',
+    ]);
+    expect(
+      buttons.map((button: any) => JSON.parse(button.action.payload)),
+    ).toEqual([
+      { phrase: LocalePhrase.Button_Schedule_ForToday, groupName: 'ЦИС-46' },
+      {
+        phrase: LocalePhrase.Button_Schedule_ForTomorrow,
+        groupName: 'ЦИС-46',
+      },
+      { phrase: LocalePhrase.Button_Schedule_ForWeek, groupName: 'ЦИС-46' },
+      {
+        phrase: LocalePhrase.Button_Schedule_ForNextWeek,
+        groupName: 'ЦИС-46',
+      },
+    ]);
+  });
+
   it('creates a schedule notif editor within VK inline keyboard limits', () => {
     const keyboard = new VKKeyboardFactory().getScheduleNotifEditor(ctx, {
       id: 1,

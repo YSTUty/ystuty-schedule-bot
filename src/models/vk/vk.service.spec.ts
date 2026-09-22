@@ -39,6 +39,37 @@ describe('VkService', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('sends a new message when editing an old message fails', async () => {
+    const edit = jest.fn().mockRejectedValue(new Error('Message not found'));
+    const send = jest.fn().mockResolvedValue(42);
+    const service = new VkService(
+      { api: { messages: { edit, send } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+
+    await expect(
+      service.tryEditOrSendMessage(
+        123,
+        { conversation_message_id: 456 },
+        'Расписание',
+      ),
+    ).resolves.toBe(42);
+
+    expect(edit).toHaveBeenCalledWith({
+      peer_id: 123,
+      conversation_message_id: 456,
+      message: 'Расписание',
+    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ peer_id: 123, message: 'Расписание' }),
+    );
+  });
+
   it('caches conversation members for two minutes', async () => {
     const items = [{ member_id: 1, is_admin: true }];
     const bot = {

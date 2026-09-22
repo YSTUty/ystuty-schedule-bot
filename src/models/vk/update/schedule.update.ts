@@ -23,6 +23,7 @@ import {
 } from '../../schedule/util/schedule.util';
 import { VKKeyboardFactory } from '../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../vk.constants';
+import { VkService } from '../vk.service';
 
 type SchedulePayload = {
   phrase?: LocalePhrase;
@@ -44,6 +45,7 @@ export class ScheduleUpdate {
   constructor(
     private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: VKKeyboardFactory,
+    private readonly vkService: VkService,
   ) {}
 
   @VkHearsLocale([
@@ -55,21 +57,31 @@ export class ScheduleUpdate {
   ])
   @Hears('/tday')
   @Hears(personalTeacherScheduleCommandRegExp)
-  async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
-    const teacherIdFromPayload = Number(ctx.messagePayload?.teacherId);
+  /** Обрабатывает inline-переход к расписанию на сегодня или завтра. */
+  @OnMessageEvent((payload) =>
+    [
+      LocalePhrase.Button_Schedule_ForToday,
+      LocalePhrase.Button_Schedule_ForTomorrow,
+    ].includes(payload.phrase as LocalePhrase),
+  )
+  async hearSchedul_OneDay(@Ctx() ctx: IMessageContext | IMessageEventContext) {
+    const payload: SchedulePayload | undefined =
+      ctx.messagePayload || ctx.eventPayload;
+    const text = 'text' in ctx ? ctx.text : undefined;
+    const teacherIdFromPayload = Number(payload?.teacherId);
     const isPersonalTeacherRequest =
-      ctx.text?.trim().toLowerCase() === '/tday' ||
-      isPersonalTeacherScheduleCommand(ctx.text) ||
-      ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_MyTeacher;
+      text?.trim().toLowerCase() === '/tday' ||
+      isPersonalTeacherScheduleCommand(text) ||
+      payload?.phrase === LocalePhrase.Button_Schedule_MyTeacher;
     const _skipDays = ctx.$match?.groups?.skipDays ?? null;
     let skipDays = Number(_skipDays) || 0;
     const presentation = ctx.$match?.groups?.detailed ? 'detailed' : 'compact';
     const isTomorrow =
       !!ctx.$match?.groups?.tomorrow ||
-      ctx.messagePayload?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
+      payload?.phrase === LocalePhrase.Button_Schedule_ForTomorrow;
     const target = await this.resolveScheduleTarget(
       ctx,
-      ctx.messagePayload,
+      payload,
       teacherIdFromPayload ||
         (isPersonalTeacherRequest ? this.getPersonalTeacherId(ctx) : undefined),
       isPersonalTeacherRequest,
@@ -125,25 +137,49 @@ export class ScheduleUpdate {
           : { type: 'group', id: String(target.id) },
       )
       .inline(true);
-    await ctx.send(appendScheduleTargetFooter(message, target.name), {
-      keyboard,
-    });
+    const content = appendScheduleTargetFooter(message, target.name);
+    if ('eventPayload' in ctx) {
+      if (ctx.conversationMessageId === undefined) {
+        await ctx.send(content, { keyboard });
+        ctx.state.eventAnswered = true;
+        return;
+      }
+      const result = await this.vkService.tryEditOrSendMessage(
+        ctx.peerId,
+        { conversation_message_id: ctx.conversationMessageId },
+        content,
+        { keyboard },
+      );
+      if (result !== false) {
+        ctx.state.eventAnswered = true;
+      }
+      return;
+    }
+    await ctx.send(content, { keyboard });
   }
 
   @VkHearsLocale(vkScheduleWeekTextPhrases)
   @Hears('/tweek')
   @Hears(personalTeacherWeekCommandRegExp)
   /** Обрабатывает inline-переход между доступными неделями расписания. */
-  @OnMessageEvent(
-    (payload) =>
-      [
-        LocalePhrase.Button_Schedule_PreviousWeek,
-        LocalePhrase.Button_Schedule_NextWeek,
-      ].includes(payload.phrase as LocalePhrase) &&
-      Number.isInteger(Number(payload.weekNumber)) &&
+  @OnMessageEvent((payload) => {
+    const phrase = payload.phrase as LocalePhrase;
+    const isInitialWeekRequest = [
+      LocalePhrase.Button_Schedule_ForWeek,
+      LocalePhrase.Button_Schedule_ForNextWeek,
+    ].includes(phrase);
+    const isWeekNavigation = [
+      LocalePhrase.Button_Schedule_PreviousWeek,
+      LocalePhrase.Button_Schedule_NextWeek,
+    ].includes(phrase);
+
+    return (
+      (isInitialWeekRequest ||
+        (isWeekNavigation && Number.isInteger(Number(payload.weekNumber)))) &&
       (typeof payload.groupName === 'string' ||
-        Number.isSafeInteger(Number(payload.teacherId))),
-  )
+        Number.isSafeInteger(Number(payload.teacherId)))
+    );
+  })
   async onScheduleWeekNavigation(
     @Ctx() ctx: IMessageContext | IMessageEventContext,
   ) {
@@ -217,7 +253,20 @@ export class ScheduleUpdate {
       .inline(true);
     const content = appendScheduleTargetFooter(message, target.name);
     if ('eventPayload' in ctx) {
-      await ctx.editMessage({ message: content, keyboard });
+      if (ctx.conversationMessageId === undefined) {
+        await ctx.send(content, { keyboard });
+        ctx.state.eventAnswered = true;
+        return;
+      }
+      const result = await this.vkService.tryEditOrSendMessage(
+        ctx.peerId,
+        { conversation_message_id: ctx.conversationMessageId },
+        content,
+        { keyboard },
+      );
+      if (result !== false) {
+        ctx.state.eventAnswered = true;
+      }
       return;
     }
     await ctx.send(content, { keyboard });

@@ -1,3 +1,5 @@
+import { LocalePhrase } from '@my-interfaces';
+
 import { ScheduleUpdate, vkScheduleWeekTextPhrases } from './schedule.update';
 
 describe('VK ScheduleUpdate', () => {
@@ -15,7 +17,11 @@ describe('VK ScheduleUpdate', () => {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
     };
-    const update = new ScheduleUpdate(scheduleService as any, {} as any);
+    const update = new ScheduleUpdate(
+      scheduleService as any,
+      {} as any,
+      {} as any,
+    );
     const ctx = {
       isChat: true,
       state: {
@@ -55,6 +61,7 @@ describe('VK ScheduleUpdate', () => {
       const update = new ScheduleUpdate(
         scheduleService as any,
         keyboardFactory as any,
+        {} as any,
       );
       const ctx = {
         isChat: false,
@@ -100,6 +107,7 @@ describe('VK ScheduleUpdate', () => {
       const update = new ScheduleUpdate(
         scheduleService as any,
         keyboardFactory as any,
+        {} as any,
       );
       const ctx = {
         isChat: false,
@@ -150,9 +158,13 @@ describe('VK ScheduleUpdate', () => {
     const keyboardFactory = {
       getSchedule: jest.fn(() => ({ inline: jest.fn(() => keyboard) })),
     };
+    const vkService = {
+      tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
+    };
     const update = new ScheduleUpdate(
       scheduleService as any,
       keyboardFactory as any,
+      vkService as any,
     );
     const ctx = {
       isChat: false,
@@ -164,7 +176,8 @@ describe('VK ScheduleUpdate', () => {
       state: { userSocial: { groupName: 'ЦИС-46' } },
       $match: { groups: {} },
       answer: jest.fn(),
-      editMessage: jest.fn(),
+      peerId: 123,
+      conversationMessageId: 456,
       send: jest.fn(),
       scene: { enter: jest.fn() },
       isMessageEventContext: jest.fn(() => true),
@@ -177,9 +190,115 @@ describe('VK ScheduleUpdate', () => {
     //   type: 'show_snackbar',
     //   text: 'Открываю неделю',
     // });
-    expect(ctx.editMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ keyboard }),
+    expect(vkService.tryEditOrSendMessage).toHaveBeenCalledWith(
+      123,
+      { conversation_message_id: 456 },
+      expect.any(String),
+      { keyboard },
     );
+    expect(ctx.state.eventAnswered).toBe(true);
+    expect(ctx.send).not.toHaveBeenCalled();
+  });
+
+  it('replaces the source message for an inline tomorrow request', async () => {
+    const scheduleService = {
+      getGroupByName: jest.fn((groupName) => groupName),
+      parseGroupName: jest.fn(),
+      findNext: jest.fn().mockResolvedValue([1, 'Расписание на завтра']),
+    };
+    const keyboard = {};
+    const keyboardFactory = {
+      getSchedule: jest.fn(() => ({ inline: jest.fn(() => keyboard) })),
+    };
+    const vkService = {
+      tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
+    };
+    const update = new ScheduleUpdate(
+      scheduleService as any,
+      keyboardFactory as any,
+      vkService as any,
+    );
+    const ctx = {
+      isChat: false,
+      eventPayload: {
+        phrase: LocalePhrase.Button_Schedule_ForTomorrow,
+        groupName: 'ЦИС-46',
+      },
+      state: { userSocial: { groupName: 'ЦИС-46' } },
+      $match: { groups: {} },
+      peerId: 123,
+      conversationMessageId: 456,
+      send: jest.fn(),
+      scene: { enter: jest.fn() },
+      i18n: { t: jest.fn((phrase) => phrase) },
+    } as any;
+
+    await update.hearSchedul_OneDay(ctx);
+
+    expect(scheduleService.findNext).toHaveBeenCalledWith({
+      skipDays: 1,
+      targetId: 'ЦИС-46',
+      targetType: 'group',
+      presentation: 'compact',
+    });
+    expect(vkService.tryEditOrSendMessage).toHaveBeenCalledWith(
+      123,
+      { conversation_message_id: 456 },
+      'Расписание на завтра\n\n[ЦИС-46]',
+      { keyboard },
+    );
+    expect(ctx.state.eventAnswered).toBe(true);
+    expect(ctx.send).not.toHaveBeenCalled();
+  });
+
+  it('replaces the source message for an inline next-week request', async () => {
+    const weekView = {
+      weekNumber: 4,
+      weekStartDate: new Date('2026-09-21T00:00:00.000Z'),
+      dateRange: '21–27 сентября',
+      message: '#НПн',
+    };
+    const scheduleService = {
+      getGroupByName: jest.fn((groupName) => groupName),
+      parseGroupName: jest.fn(),
+      getScheduleWeekView: jest.fn().mockResolvedValue(weekView),
+    };
+    const keyboard = {};
+    const keyboardFactory = {
+      getSchedule: jest.fn(() => ({ inline: jest.fn(() => keyboard) })),
+    };
+    const vkService = {
+      tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
+    };
+    const update = new ScheduleUpdate(
+      scheduleService as any,
+      keyboardFactory as any,
+      vkService as any,
+    );
+    const ctx = {
+      isChat: false,
+      eventPayload: {
+        phrase: LocalePhrase.Button_Schedule_ForNextWeek,
+        groupName: 'ЦИС-46',
+      },
+      state: { userSocial: { groupName: 'ЦИС-46' } },
+      $match: { groups: {} },
+      peerId: 123,
+      conversationMessageId: 456,
+      send: jest.fn(),
+      scene: { enter: jest.fn() },
+      i18n: { t: jest.fn((phrase) => phrase) },
+    } as any;
+
+    await update.onScheduleWeekNavigation(ctx);
+
+    expect(vkService.tryEditOrSendMessage).toHaveBeenCalledWith(
+      123,
+      { conversation_message_id: 456 },
+      expect.any(String),
+      { keyboard },
+    );
+    expect(ctx.state.eventAnswered).toBe(true);
     expect(ctx.send).not.toHaveBeenCalled();
   });
 });

@@ -2127,24 +2127,24 @@ export class VKKeyboardFactory {
 
     return Keyboard.keyboard([
       [
-        Keyboard.textButton({
+        Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForToday),
           payload: payload(LocalePhrase.Button_Schedule_ForToday),
           color: Keyboard.SECONDARY_COLOR,
         }),
-        Keyboard.textButton({
+        Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForTomorrow),
           payload: payload(LocalePhrase.Button_Schedule_ForTomorrow),
           color: Keyboard.POSITIVE_COLOR,
         }),
       ],
       [
-        Keyboard.textButton({
+        Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForWeek),
           payload: payload(LocalePhrase.Button_Schedule_ForWeek),
           color: Keyboard.PRIMARY_COLOR,
         }),
-        Keyboard.textButton({
+        Keyboard.callbackButton({
           label: ctx.i18n.t(LocalePhrase.Button_Schedule_ForNextWeek),
           payload: payload(LocalePhrase.Button_Schedule_ForNextWeek),
           color: Keyboard.PRIMARY_COLOR,

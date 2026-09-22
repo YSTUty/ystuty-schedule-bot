@@ -82,8 +82,8 @@ export interface Lesson {
    * @example '08:30-10:00'
    */
   timeRange: string;
-  /** @deprecated Use `timeRange` for new api */
-  time: string;
+  /** @deprecated В актуальном Schedule API используйте обязательное timeRange. */
+  time?: string;
   /**
    * Timestamp начала пары
    * @example '2024-06-04T09:20:00.000Z'

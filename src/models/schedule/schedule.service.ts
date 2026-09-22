@@ -1,8 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { HttpService } from '@nestjs/axios';
-
-import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
 
 import * as xEnv from '@my-environment';
 
@@ -17,6 +14,8 @@ import {
 import { RedisService } from '../redis/redis.service';
 
 import * as scheduleUtil from './util/schedule.util';
+import type { ScheduleApiInstituteGroupsDto } from './dto';
+import { ScheduleApiClient } from './schedule-api.client';
 import {
   formatScheduleWeekDays,
   SchedulePresentation,
@@ -73,7 +72,7 @@ export class ScheduleService implements OnModuleInit {
   protected allowCaching = true;
 
   constructor(
-    private readonly httpService: HttpService,
+    private readonly scheduleApiClient: ScheduleApiClient,
     private readonly concurrencyService: ConcurrencyService,
     private readonly redisService: RedisService,
     private readonly metricsService: MetricsService,
@@ -108,19 +107,13 @@ export class ScheduleService implements OnModuleInit {
 
   protected async loadAllGroups() {
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.get<{
-          name: string;
-          items: GroupInstitute[];
-        }>('/v1/schedule/actual_groups'),
-      );
-
+      const data = await this.scheduleApiClient.getActualGroups();
       if (!Array.isArray(data.items)) {
         this.logger.warn('YSTU institutes&groups NOT loaded');
         return null;
       }
 
-      const groups = data.items.filter(Boolean);
+      const groups = this.normalizeGroupInstitutes(data.items);
       const checksum = this.getGroupsChecksum(groups);
       const isInitialLoad = this.groupsChecksum === undefined;
       const isChanged = this.groupsChecksum !== checksum;
@@ -152,13 +145,7 @@ export class ScheduleService implements OnModuleInit {
 
   protected async loadAllTeachers() {
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.get<{
-          isCache: boolean;
-          items: Teacher[];
-        }>('/v1/schedule/actual_teachers'),
-      );
-
+      const data = await this.scheduleApiClient.getActualTeachers();
       if (!Array.isArray(data.items)) {
         this.logger.warn('YSTU teachers NOT loaded');
         return null;
@@ -185,6 +172,18 @@ export class ScheduleService implements OnModuleInit {
     }
 
     return false;
+  }
+
+  /** Сводит краткое и расширенное представления групп к текущей модели бота. */
+  private normalizeGroupInstitutes(
+    institutes: readonly ScheduleApiInstituteGroupsDto[],
+  ): GroupInstitute[] {
+    return institutes.filter(Boolean).map((institute) => ({
+      name: institute.name,
+      groups: institute.groups
+        .map((group) => (typeof group === 'string' ? group : group.name))
+        .filter((groupName) => !!groupName?.trim()),
+    }));
   }
 
   /** Формирует order-independent checksum, чтобы не логировать перестановку API-элементов. */
@@ -693,16 +692,22 @@ export class ScheduleService implements OnModuleInit {
     const stopApiTimer =
       this.metricsService.startScheduleApiRequestTimer(targetType);
 
-    let response: { data: { isCache: boolean; items: OneWeek[] } };
+    let response: { isCache: boolean; items: OneWeek[] };
     try {
-      response = await firstValueFrom(
-        this.httpService.get<{
-          isCache: boolean;
-          items: OneWeek[];
-        }>(`/v1/schedule/${targetType}/${encodeURIComponent(targetId)}`, {
-          timeout: options?.requestTimeoutMs ?? SCHEDULE_API_REQUEST_TIMEOUT_MS,
-        }),
-      );
+      const requestOptions = {
+        requestTimeoutMs:
+          options?.requestTimeoutMs ?? SCHEDULE_API_REQUEST_TIMEOUT_MS,
+      };
+      response =
+        targetType === 'group'
+          ? await this.scheduleApiClient.getGroupSchedule(
+              String(targetId),
+              requestOptions,
+            )
+          : await this.scheduleApiClient.getTeacherSchedule(
+              Number(targetId),
+              requestOptions,
+            );
       stopApiTimer('success');
     } catch (error) {
       stopApiTimer('error');
@@ -719,9 +724,7 @@ export class ScheduleService implements OnModuleInit {
       throw error;
     }
 
-    const {
-      data: { items, isCache },
-    } = response;
+    const { items, isCache } = response;
 
     if (items.length === 0) {
       return null;

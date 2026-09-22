@@ -3,6 +3,7 @@ import { HttpModule } from '@nestjs/axios';
 
 import * as xEnv from '@my-environment';
 
+import { ScheduleApiClient } from './schedule-api.client';
 import { ScheduleService } from './schedule.service';
 import { TeacherListStateService } from './teacher-list-state.service';
 
@@ -19,7 +20,7 @@ import { TeacherListStateService } from './teacher-list-state.service';
       },
     }),
   ],
-  providers: [ScheduleService, TeacherListStateService],
+  providers: [ScheduleApiClient, ScheduleService, TeacherListStateService],
   exports: [ScheduleService, TeacherListStateService],
 })
 export class ScheduleModule {}

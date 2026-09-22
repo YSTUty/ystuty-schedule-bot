@@ -3,6 +3,7 @@ import { of, throwError } from 'rxjs';
 import { LockBusyError } from '@my-common/exception';
 import { WeekNumberType } from '@my-interfaces';
 
+import { ScheduleApiClient } from './schedule-api.client';
 import { ScheduleService } from './schedule.service';
 
 describe('ScheduleService', () => {
@@ -46,7 +47,12 @@ describe('ScheduleService', () => {
   };
 
   beforeEach(() => {
-    service = new ScheduleService({} as any, {} as any, {} as any, {} as any);
+    service = new ScheduleService(
+      new ScheduleApiClient({} as any),
+      {} as any,
+      {} as any,
+      {} as any,
+    );
     (service as any).allTeachersList = [
       { id: 1, name: 'Шулева Анна Ивановна' },
       { id: 2, name: 'Петров Иван Сергеевич' },
@@ -100,7 +106,7 @@ describe('ScheduleService', () => {
           ),
       };
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         {} as any,
         {} as any,
         metricsService as any,
@@ -143,7 +149,7 @@ describe('ScheduleService', () => {
           ),
       };
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         {} as any,
         {} as any,
         {} as any,
@@ -192,7 +198,7 @@ describe('ScheduleService', () => {
         }),
       };
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         {} as any,
         {} as any,
         metricsService as any,
@@ -224,9 +230,9 @@ describe('ScheduleService', () => {
     it('keeps the previous snapshot when at least one group request fails', async () => {
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        {
+        new ScheduleApiClient({
           get: jest.fn(() => throwError(() => new Error('Schedule API down'))),
-        } as any,
+        } as any),
         {} as any,
         {} as any,
         metricsService as any,
@@ -263,7 +269,7 @@ describe('ScheduleService', () => {
       const httpService = { get: jest.fn() };
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         createConcurrency() as any,
         { redis } as any,
         metricsService as any,
@@ -290,7 +296,7 @@ describe('ScheduleService', () => {
       const httpService = { get: jest.fn() };
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         createConcurrency() as any,
         { redis } as any,
         metricsService as any,
@@ -319,7 +325,7 @@ describe('ScheduleService', () => {
       });
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        { get: jest.fn() } as any,
+        new ScheduleApiClient({ get: jest.fn() } as any),
         createConcurrency() as any,
         { redis } as any,
         metricsService as any,
@@ -358,7 +364,7 @@ describe('ScheduleService', () => {
       };
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         createConcurrency() as any,
         { redis } as any,
         metricsService as any,
@@ -398,7 +404,7 @@ describe('ScheduleService', () => {
       const httpService = { get: jest.fn() };
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         createConcurrency() as any,
         { redis } as any,
         metricsService as any,
@@ -429,7 +435,7 @@ describe('ScheduleService', () => {
       };
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        httpService as any,
+        new ScheduleApiClient(httpService as any),
         createConcurrency() as any,
         { redis } as any,
         metricsService as any,
@@ -470,7 +476,7 @@ describe('ScheduleService', () => {
       );
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        { get: jest.fn() } as any,
+        new ScheduleApiClient({ get: jest.fn() } as any),
         concurrency as any,
         { redis } as any,
         metricsService as any,
@@ -497,7 +503,7 @@ describe('ScheduleService', () => {
       });
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        { get: jest.fn() } as any,
+        new ScheduleApiClient({ get: jest.fn() } as any),
         createConcurrency() as any,
         { redis } as any,
         metricsService as any,
@@ -545,7 +551,7 @@ describe('ScheduleService', () => {
     it('returns only adjacent weeks that have calendar dates in the schedule', async () => {
       const metricsService = createMetricsService();
       service = new ScheduleService(
-        {} as any,
+        new ScheduleApiClient({} as any),
         {} as any,
         {} as any,
         metricsService as any,

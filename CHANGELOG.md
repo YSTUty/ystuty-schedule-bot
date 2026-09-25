@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.4.4](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.4.3...v0.4.4) (2026-09-25)
+
+### 🧹 Chore
+
+* **schedule:** mark soft-stale schedule cache ([09b8b04](https://github.com/YSTUty/ystuty-schedule-bot/commit/09b8b04c1ac9f90a347ab76a58342515eda2981f))
+
+### 🚀 Features
+
+* **calendar:** add subscription and web view entry points ([d46880a](https://github.com/YSTUty/ystuty-schedule-bot/commit/d46880afd7fa9f6f951f19fc21db82b740bfeda8))
+* **groups:** start selection from institutes ([b0f9327](https://github.com/YSTUty/ystuty-schedule-bot/commit/b0f93271eb1293e553231f2683197f3fe6f73d59))
+* **schedule:** support new lesson type flags ([8a314d6](https://github.com/YSTUty/ystuty-schedule-bot/commit/8a314d6b7d75061c27f032d9c976083dffb121e7))
+* **vk:** recover unanswered direct messages after restart ([64928e4](https://github.com/YSTUty/ystuty-schedule-bot/commit/64928e4393258317b0deba17203bbd1d54a659bc))
+* **vk:** recover unanswered direct messages after restart ([b0e6af9](https://github.com/YSTUty/ystuty-schedule-bot/commit/b0e6af9e3052467c7e124fe628bc543d64ddc3f8))
+* **vk:** recover unanswered direct messages after restart ([3c7dcc1](https://github.com/YSTUty/ystuty-schedule-bot/commit/3c7dcc1606ddd49a65e308102205d8046d4a0af3))
+
+### 🐛 Bug Fixes
+
+* **i18n:** prioritize literal buttons over command regexps ([505984f](https://github.com/YSTUty/ystuty-schedule-bot/commit/505984f5c7df8247721b67c2e55f9e4bb5b37567))
+* **schedule:** fallback to subinfo for missing lesson names ([d75af79](https://github.com/YSTUty/ystuty-schedule-bot/commit/d75af79d8fd9e979a48ac17dd719230e5189b318))
+* **schedule:** serve stale data during api outages ([21c360f](https://github.com/YSTUty/ystuty-schedule-bot/commit/21c360fcfcf889c36e6a65fbb726527c12d2a53a))
+* **schedule:** support full group names in text commands ([95a5614](https://github.com/YSTUty/ystuty-schedule-bot/commit/95a56148dcad39cdf3a2624c14a3773f2503eee2))
+* **vk:** edit schedule messages from inline actions ([dc22493](https://github.com/YSTUty/ystuty-schedule-bot/commit/dc224932f0a4171b1a22837c66419204b65241cd))
+* **vk:** make unread recovery resilient to restarts ([2e85621](https://github.com/YSTUty/ystuty-schedule-bot/commit/2e85621a6d2682648938c2ac4f901942fe5708bd))
+
+### 🌟 Feature Improvements
+
+* **schedule-notif:** add skipped delivery context to logs ([432efbe](https://github.com/YSTUty/ystuty-schedule-bot/commit/432efbeedce9f90ed6c53488905e907c4d2ba3ee))
+* **schedule:** add cache observability metrics ([ffa6c8a](https://github.com/YSTUty/ystuty-schedule-bot/commit/ffa6c8a732147e4f5b00f060309948f9e6c072cc))
+* **schedule:** collapse large subgroup lesson lists ([eddd97b](https://github.com/YSTUty/ystuty-schedule-bot/commit/eddd97b38764d18fcdd6bf28a9f425c30c49aae0))
+
+### 🔧 Code Refactoring
+
+* **broadcast:** isolate transport keyboard factories ([a98d86d](https://github.com/YSTUty/ystuty-schedule-bot/commit/a98d86dd79f38c8fcdec8943f1173b2617c1d692))
+* **feedback:** isolate transport keyboard factories ([19b185f](https://github.com/YSTUty/ystuty-schedule-bot/commit/19b185f4d973afaf4845f82b9eea39bed379e8da))
+* **schedule-notif:** isolate transport keyboard factories ([3940e5d](https://github.com/YSTUty/ystuty-schedule-bot/commit/3940e5d4551da7d96a0f3252062ddc0e50e8799b))
+* **schedule:** colocate transport feature slices ([57d3f6e](https://github.com/YSTUty/ystuty-schedule-bot/commit/57d3f6eb440cba45781a3cbbb1d19f4f51520d38))
+* **schedule:** reuse group pickers and centralize group resolution ([30385c5](https://github.com/YSTUty/ystuty-schedule-bot/commit/30385c57e7470c2f1054d93a1f2950ff1f1a2574))
+* **schedule:** standardize schedule api client contract ([5ea4b9c](https://github.com/YSTUty/ystuty-schedule-bot/commit/5ea4b9cc28fc2b049b1aa62dc1be8ec76ba5aaf0))
+* **vk:** remove ineffective activity requests ([a731f52](https://github.com/YSTUty/ystuty-schedule-bot/commit/a731f52dec4536bfe228bca47893d269d0ec2c48))
+
+### 🐱‍💻 Tests
+
+* **vk:** isolate unread recovery from environment ([3bf5b44](https://github.com/YSTUty/ystuty-schedule-bot/commit/3bf5b448c5f4d6d5b63560a10eac27da9067aa21))
+* **vk:** stabilize unread recovery lease retry ([c100b81](https://github.com/YSTUty/ystuty-schedule-bot/commit/c100b81e5ec7bad5d140595c21b7594bc25bbea0))
+
 ## [0.4.3](https://github.com/YSTUty/ystuty-schedule-bot/compare/v0.4.2...v0.4.3) (2026-09-15)
 
 ### 🚀 Features

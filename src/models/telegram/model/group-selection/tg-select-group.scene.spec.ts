@@ -6,8 +6,7 @@ describe('TgSelectGroupScene', () => {
       getScheduleInline: jest.fn().mockReturnValue('schedule keyboard'),
     };
     const scheduleService = {
-      getGroupByName: jest.fn().mockReturnValue('ЦИС-17'),
-      parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn().mockReturnValue('ЦИС-17'),
     };
     const scene = new TgSelectGroupScene(
       {} as any,
@@ -57,8 +56,7 @@ describe('TgSelectGroupScene', () => {
       {} as any,
       scheduleKeyboardFactory as any,
       {
-        getGroupByName: jest.fn().mockReturnValue('ЦИС-17'),
-        parseGroupName: jest.fn(),
+        resolveGroupName: jest.fn().mockReturnValue('ЦИС-17'),
       } as any,
       telegramService as any,
       {} as any,

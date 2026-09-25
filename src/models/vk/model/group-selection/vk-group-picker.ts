@@ -16,6 +16,9 @@ type VkPickerOptions = {
   onItem: (value: string) => Record<string, unknown>;
   onPage: (hash: string | undefined, page: number) => Record<string, unknown>;
   additionalButtons?: VkPickerButtons;
+  pagerMode?: VKPaginationOptions['pagerMode'];
+  /** Число групп в строке. Выбор зависит от button budget конкретного экрана. */
+  groupColumns?: number;
 };
 
 /** Рендерит VK-списки институтов и групп, сохраняя лимиты inline-клавиатуры. */
@@ -49,14 +52,14 @@ export class VkGroupPicker {
         })),
         getPagePayload: (nextPage) => options.onPage(undefined, nextPage),
         additionalButtons: options.additionalButtons || [],
-        pagerMode: 'compact',
+        pagerMode: options.pagerMode || 'compact',
       }),
     };
   }
 
   public renderGroups(
     ctx: IContext,
-    instituteHash: string,
+    instituteHash: string | null,
     page: number,
     options: VkPickerOptions,
     count = 4,
@@ -66,17 +69,22 @@ export class VkGroupPicker {
       count,
       instituteHash,
     );
+    const groupColumns = options.groupColumns || 2;
     const rows = Array.from(
-      { length: Math.ceil(items.length / 2) },
+      { length: Math.ceil(items.length / groupColumns) },
       (_, index) =>
-        items.slice(index * 2, (index + 1) * 2).map((title) => ({
-          title,
-          payload: options.onItem(title),
-        })),
+        items
+          .slice(index * groupColumns, (index + 1) * groupColumns)
+          .map((title) => ({
+            title,
+            payload: options.onItem(title),
+          })),
     );
     return {
       text: ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
-        instituteName: this.scheduleService.instituteNameByHash(instituteHash),
+        instituteName: instituteHash
+          ? this.scheduleService.instituteNameByHash(instituteHash)
+          : undefined,
         currentPage,
         totalPages,
       }),
@@ -84,9 +92,10 @@ export class VkGroupPicker {
         currentPage,
         totalPages,
         items: rows,
-        getPagePayload: (nextPage) => options.onPage(instituteHash, nextPage),
+        getPagePayload: (nextPage) =>
+          options.onPage(instituteHash || undefined, nextPage),
         additionalButtons: options.additionalButtons || [],
-        pagerMode: 'compact',
+        pagerMode: options.pagerMode || 'compact',
       }),
     };
   }

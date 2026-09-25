@@ -34,6 +34,7 @@ describe('TgScheduleUpdate', () => {
       getGroupByName: jest.fn((groupName) => groupName),
       groupNameByHash: jest.fn(),
       parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn((groupName) => groupName),
       findNext: jest.fn(),
       getScheduleWeekView: jest.fn(),
     };
@@ -53,7 +54,7 @@ describe('TgScheduleUpdate', () => {
   it('opens the browser calendar for the selected group and teacher', async () => {
     const { update, scheduleService } = createUpdate();
     const keyboard = { reply_markup: { inline_keyboard: [] } };
-    scheduleService.getGroupByName.mockReturnValue('САР-34');
+    scheduleService.resolveGroupName.mockReturnValue('САР-34');
     (update as any).keyboardFactory.getCalendarInline = jest
       .fn()
       .mockReturnValue(keyboard);
@@ -110,7 +111,7 @@ describe('TgScheduleUpdate', () => {
 
     await (update as any).resolveGroupName(ctx);
 
-    expect(scheduleService.getGroupByName).toHaveBeenCalledWith('ЦИС-21');
+    expect(scheduleService.resolveGroupName).toHaveBeenCalledWith('ЦИС-21');
     expect(ctx.scene.enter).not.toHaveBeenCalled();
   });
 
@@ -128,7 +129,7 @@ describe('TgScheduleUpdate', () => {
     expect(scheduleService.groupNameByHash).toHaveBeenCalledWith(
       '1a2b3c4d5e6f',
     );
-    expect(scheduleService.getGroupByName).not.toHaveBeenCalled();
+    expect(scheduleService.resolveGroupName).not.toHaveBeenCalled();
   });
 
   it('names the requested date when the daily schedule is unavailable', async () => {

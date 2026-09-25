@@ -68,8 +68,7 @@ describe('TgScheduleNotifGroupScene', () => {
     };
     const scheduleService = {
       groupNameByHash: jest.fn().mockReturnValue('ЦИС-11'),
-      getGroupByName: jest.fn().mockReturnValue('ЦИС-11'),
-      parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn().mockReturnValue('ЦИС-11'),
     };
     const keyboardFactory = {
       getScheduleNotifEditor: jest.fn().mockReturnValue({ reply_markup: {} }),
@@ -145,8 +144,7 @@ describe('TgScheduleNotifGroupScene', () => {
       {} as any,
       {
         groupNameByHash: jest.fn().mockReturnValue('ЦИС-11'),
-        getGroupByName: jest.fn().mockReturnValue('ЦИС-11'),
-        parseGroupName: jest.fn(),
+        resolveGroupName: jest.fn().mockReturnValue('ЦИС-11'),
       } as any,
       {
         getScheduleNotifEditor: jest.fn().mockReturnValue({ reply_markup: {} }),
@@ -186,8 +184,7 @@ describe('TgScheduleNotifGroupScene', () => {
     };
     const scheduleService = {
       groupNameByHash: jest.fn().mockReturnValue('ЦИС-11'),
-      getGroupByName: jest.fn().mockReturnValue('ЦИС-11'),
-      parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn().mockReturnValue('ЦИС-11'),
     };
     const keyboardFactory = {
       getScheduleNotifEditor: jest.fn().mockReturnValue({ reply_markup: {} }),

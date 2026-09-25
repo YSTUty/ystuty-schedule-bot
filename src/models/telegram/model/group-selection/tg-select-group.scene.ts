@@ -1,5 +1,6 @@
 import { Ctx, Hears, Wizard, WizardStep } from 'nestjs-telega';
 
+import { xs } from '@my-common';
 import { Action } from '@my-common/decorator/tg';
 import { LocalePhrase } from '@my-interfaces';
 import { ICbQOrMsg, IContext, IStepContext } from '@my-interfaces/telegram';
@@ -12,8 +13,8 @@ import { SELECT_GROUP_SCENE } from '../../telegram.constants';
 import { TelegramService } from '../../telegram.service';
 import { TgScheduleKeyboardFactory } from '../schedule/tg-schedule-keyboard.factory';
 
+import { TgGroupPicker } from './tg-group-picker';
 import { TgGroupSelectionKeyboardFactory } from './tg-group-selection-keyboard.factory';
-import { TgGroupSelectionUpdate } from './tg-group-selection.update';
 
 @Wizard(SELECT_GROUP_SCENE)
 export class TgSelectGroupScene extends BaseScene {
@@ -23,8 +24,8 @@ export class TgSelectGroupScene extends BaseScene {
     private readonly scheduleKeyboardFactory: TgScheduleKeyboardFactory,
     private readonly scheduleService: ScheduleService,
     private readonly telegramService: TelegramService,
+    private readonly groupPicker: TgGroupPicker,
     // private readonly userService: UserService,
-    private readonly groupSelectionUpdate: TgGroupSelectionUpdate,
   ) {
     super();
   }
@@ -73,8 +74,7 @@ export class TgSelectGroupScene extends BaseScene {
         ctx.callbackQuery.data === 'pager:inst-list')
     ) {
       await ctx.scene.leave();
-      // next();
-      this.groupSelectionUpdate.onInstitutesList(ctx as unknown as ICbQOrMsg);
+      await this.renderInstitutes(ctx as unknown as ICbQOrMsg);
       return;
     }
 
@@ -147,10 +147,7 @@ export class TgSelectGroupScene extends BaseScene {
       return;
     }
 
-    const selectedGroupName =
-      groupName &&
-      (this.scheduleService.getGroupByName(groupName) ||
-        this.scheduleService.parseGroupName(groupName));
+    const selectedGroupName = this.scheduleService.resolveGroupName(groupName);
     if (selectedGroupName) {
       if (isConv) {
         if (ctx.conversation) {
@@ -200,5 +197,34 @@ export class TgSelectGroupScene extends BaseScene {
       hasGroup: !!ctx.userSocial.groupName,
       teacherId: ctx.session.teacherId,
     });
+  }
+
+  /** Открывает обычный список институтов без зависимости сцены от update-handler. */
+  private async renderInstitutes(ctx: ICbQOrMsg) {
+    const { text, keyboard } = this.groupPicker.renderInstitutes(
+      ctx,
+      1,
+      {
+        prefix: 'pager:glist:',
+        pagerName: 'inst-list-26',
+        onItem: (instituteHash) => instituteHash,
+        additionalButtons: [[this.keyboardFactory.getAllGroupsListButton(ctx)]],
+        formatText: ({ currentPage, totalPages }) => xs`
+          <b>Список институтов</b>
+          <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+        `,
+      },
+      26,
+    );
+
+    if (ctx.callbackQuery) {
+      await ctx.tryAnswerCbQuery();
+      try {
+        await ctx.editMessageText(text, { ...keyboard, parse_mode: 'HTML' });
+      } catch {}
+      return;
+    }
+
+    await ctx.replyWithHTML(text, keyboard);
   }
 }

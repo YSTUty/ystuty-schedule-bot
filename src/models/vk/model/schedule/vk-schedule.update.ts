@@ -551,10 +551,7 @@ export class VkScheduleUpdate {
       typeof payload?.groupName === 'string' ? payload.groupName : undefined;
     const groupNameQuery =
       groupNameFromMatch || groupNameFromPayload || selectedGroupName;
-    const groupName =
-      groupNameQuery &&
-      (this.scheduleService.getGroupByName(groupNameQuery) ||
-        this.scheduleService.parseGroupName(groupNameQuery));
+    const groupName = this.scheduleService.resolveGroupName(groupNameQuery);
 
     if (groupName) {
       return { id: groupName, type: 'group', name: groupName };

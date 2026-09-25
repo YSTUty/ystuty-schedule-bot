@@ -3,8 +3,7 @@ import { VkSelectGroupScene } from './vk-select-group.scene';
 describe('VkSelectGroupScene', () => {
   it('ignores a foreign callback while the group selection scene is active', async () => {
     const scheduleService = {
-      getGroupByName: jest.fn(),
-      parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn(),
     };
     const scene = new VkSelectGroupScene(
       scheduleService as any,
@@ -28,8 +27,7 @@ describe('VkSelectGroupScene', () => {
 
     await scene.step1(ctx as any);
 
-    expect(scheduleService.getGroupByName).not.toHaveBeenCalled();
-    expect(scheduleService.parseGroupName).not.toHaveBeenCalled();
+    expect(scheduleService.resolveGroupName).not.toHaveBeenCalled();
     expect(ctx.send).not.toHaveBeenCalled();
   });
 
@@ -64,8 +62,7 @@ describe('VkSelectGroupScene', () => {
 
   it('saves a group selected by the scene callback', async () => {
     const scheduleService = {
-      getGroupByName: jest.fn().mockReturnValue('ДПО'),
-      parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn().mockReturnValue('ДПО'),
     };
     const keyboard = { inline: jest.fn().mockReturnValue('schedule keyboard') };
     const scene = new VkSelectGroupScene(
@@ -96,7 +93,7 @@ describe('VkSelectGroupScene', () => {
 
     await scene.step1(ctx as any);
 
-    expect(scheduleService.getGroupByName).toHaveBeenCalledWith('ДПО');
+    expect(scheduleService.resolveGroupName).toHaveBeenCalledWith('ДПО');
     expect(ctx.state.userSocial.groupName).toBe('ДПО');
     expect(ctx.editMessage).toHaveBeenCalledWith({
       message: 'Группа выбрана',

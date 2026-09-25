@@ -19,6 +19,7 @@ describe('VkScheduleUpdate', () => {
     const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn((groupName) => groupName),
     };
     const update = new VkScheduleUpdate(
       scheduleService as any,
@@ -46,7 +47,7 @@ describe('VkScheduleUpdate', () => {
     );
 
     expect(target).toEqual({ id: 'ЦИС-21', type: 'group', name: 'ЦИС-21' });
-    expect(scheduleService.getGroupByName).toHaveBeenCalledWith('ЦИС-21');
+    expect(scheduleService.resolveGroupName).toHaveBeenCalledWith('ЦИС-21');
     expect(ctx.scene.enter).not.toHaveBeenCalled();
   });
 
@@ -58,6 +59,7 @@ describe('VkScheduleUpdate', () => {
       const scheduleService = {
         getGroupByName: jest.fn((groupName) => groupName),
         parseGroupName: jest.fn(),
+        resolveGroupName: jest.fn((groupName) => groupName),
         getScheduleWeekView: jest.fn().mockResolvedValue(null),
       };
       const keyboardFactory = {
@@ -215,6 +217,7 @@ describe('VkScheduleUpdate', () => {
     const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn((groupName) => groupName),
       findNext: jest.fn().mockResolvedValue([1, 'Расписание на завтра']),
     };
     const keyboard = {};
@@ -274,6 +277,7 @@ describe('VkScheduleUpdate', () => {
     const scheduleService = {
       getGroupByName: jest.fn((groupName) => groupName),
       parseGroupName: jest.fn(),
+      resolveGroupName: jest.fn((groupName) => groupName),
       getScheduleWeekView: jest.fn().mockResolvedValue(weekView),
     };
     const keyboard = {};

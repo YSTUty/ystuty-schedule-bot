@@ -77,6 +77,29 @@ describe('ScheduleService', () => {
     });
   });
 
+  describe('resolveGroupName', () => {
+    beforeEach(() => {
+      (service as any).allGroupsList = [
+        { name: 'ИИТ', groups: ['ЦИС-17', 'Научно-исслед сем'] },
+      ];
+    });
+
+    it('returns the canonical group name for an exact normalized match', () => {
+      expect(service.resolveGroupName('цис 17')).toBe('ЦИС-17');
+    });
+
+    it('extracts a group name from a schedule request', () => {
+      expect(service.resolveGroupName('Расписание для ЦИС-17')).toBe('ЦИС-17');
+    });
+
+    it.each([undefined, null, '', 'несуществующая группа'])(
+      'returns null when the group cannot be resolved: %p',
+      (value) => {
+        expect(service.resolveGroupName(value)).toBeNull();
+      },
+    );
+  });
+
   describe('reference data loading logs', () => {
     it('logs groups only after the first load and when their content changes', async () => {
       const metricsService = createMetricsService();

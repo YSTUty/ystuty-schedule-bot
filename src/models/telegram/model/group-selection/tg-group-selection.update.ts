@@ -4,7 +4,6 @@ import { Command, Ctx, Hears, Update } from 'nestjs-telega';
 import { TelegramError } from 'telegraf-hardened';
 
 import {
-  md5,
   selectGroupCommandRegExp,
   TelegrafExceptionFilter,
   xs,
@@ -14,10 +13,10 @@ import { LocalePhrase } from '@my-interfaces';
 import { ICallbackQueryContext, ICbQOrMsg } from '@my-interfaces/telegram';
 
 import { ScheduleService } from '../../../schedule/schedule.service';
-import { TelegramKeyboardFactory } from '../../telegram-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../../telegram.constants';
 import { TelegramService } from '../../telegram.service';
 
+import { TgGroupPicker } from './tg-group-picker';
 import { TgGroupSelectionKeyboardFactory } from './tg-group-selection-keyboard.factory';
 
 @Update()
@@ -27,7 +26,7 @@ export class TgGroupSelectionUpdate {
 
   constructor(
     private readonly keyboardFactory: TgGroupSelectionKeyboardFactory,
-    private readonly baseKeyboardFactory: TelegramKeyboardFactory,
+    private readonly groupPicker: TgGroupPicker,
     private readonly scheduleService: ScheduleService,
     private readonly telegramService: TelegramService,
   ) {}
@@ -52,28 +51,26 @@ export class TgGroupSelectionUpdate {
     page = page || 1;
     count = count || 26;
 
-    const { items, currentPage, totalPages } =
-      this.scheduleService.groupsInstitutesList(page, count);
-
-    const keyboard = this.baseKeyboardFactory.getPagination({
-      name: `inst-list-${count}`,
-      currentPage,
-      totalPages,
-      items: items.map((title) => ({ title, payload: md5(title) })),
-      actionPrefix: 'pager:glist:',
-      columnizer: true,
-      additionalButtons: [[this.keyboardFactory.getAllGroupsListButton(ctx)]],
-    });
-
-    const content = xs`
-      <b>Список институтов</b>
-      <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
-    `;
+    const { text, keyboard } = this.groupPicker.renderInstitutes(
+      ctx,
+      page,
+      {
+        prefix: 'pager:glist:',
+        pagerName: `inst-list-${count}`,
+        onItem: (instituteHash) => instituteHash,
+        additionalButtons: [[this.keyboardFactory.getAllGroupsListButton(ctx)]],
+        formatText: ({ currentPage, totalPages }) => xs`
+          <b>Список институтов</b>
+          <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+        `,
+      },
+      count,
+    );
 
     if (ctx.callbackQuery) {
       await ctx.tryAnswerCbQuery();
       try {
-        await ctx.editMessageText(content, {
+        await ctx.editMessageText(text, {
           ...keyboard,
           parse_mode: 'HTML',
         });
@@ -81,7 +78,7 @@ export class TgGroupSelectionUpdate {
       return;
     }
 
-    await ctx.replyWithHTML(content, keyboard);
+    await ctx.replyWithHTML(text, keyboard);
   }
 
   @Command('groups')
@@ -90,7 +87,7 @@ export class TgGroupSelectionUpdate {
   @Hears(/^📚 Список групп 📚$/i)
   @Hears(/^группы$/i)
   @Action(
-    /pager:glist(:(?<instituteHash>[a-f0-9]{32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
+    /pager:glist(:(?<instituteHash>[a-f0-9]{12,32}))?(-(?<count>[0-9]+))?(:(?<page>[0-9]+))?/i,
   )
   async onGroupsList(@Ctx() ctx: ICbQOrMsg) {
     let page: number | null = null;
@@ -110,38 +107,29 @@ export class TgGroupSelectionUpdate {
     page = page || 1;
     count = count || 26;
 
-    // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
-    const { items, currentPage, totalPages } = this.scheduleService.groupsList(
-      page,
-      count,
+    const { text, keyboard } = this.groupPicker.renderGroups(
+      ctx,
       instituteHash,
+      page,
+      {
+        prefix: 'selectGroup:',
+        pagerName: (hash) => `glist${hash ? `:${hash}` : ''}-${count}`,
+        onItem: (groupHash) => groupHash,
+        additionalButtons: instituteHash
+          ? [this.keyboardFactory.getInstitutesListButton(ctx)]
+          : [],
+        formatText: ({ instituteName, currentPage, totalPages }) => xs`
+          <b>Список групп${instituteName ? ` <i>(${instituteName})</i>` : ''}</b>
+          <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
+        `,
+      },
+      count,
     );
-    const keyboard = this.baseKeyboardFactory.getPagination({
-      name: `glist${instituteHash ? `:${instituteHash}` : ''}-${count}`,
-      currentPage,
-      totalPages,
-      items: items.map((groupName) => ({
-        title: groupName,
-        payload: md5(groupName).slice(0, 12),
-      })),
-      actionPrefix: 'selectGroup:',
-      additionalButtons: instituteHash
-        ? [this.keyboardFactory.getInstitutesListButton(ctx)]
-        : [],
-      columnizer: true,
-    });
-    const instituteName = instituteHash
-      ? this.scheduleService.instituteNameByHash(instituteHash)
-      : null;
-    const content = xs`
-      <b>Список групп${instituteName ? ` <i>(${instituteName})</i>` : ''}</b>
-      <code>---☼ (${currentPage}/${totalPages}) ☼---</code>
-    `;
 
     if (ctx.callbackQuery) {
       await ctx.tryAnswerCbQuery();
       try {
-        await ctx.editMessageText(content, {
+        await ctx.editMessageText(text, {
           ...keyboard,
           parse_mode: 'HTML',
         });
@@ -149,7 +137,7 @@ export class TgGroupSelectionUpdate {
       return;
     }
 
-    await ctx.replyWithHTML(content, keyboard);
+    await ctx.replyWithHTML(text, keyboard);
   }
 
   @Action(LocalePhrase.Button_SelectGroup)

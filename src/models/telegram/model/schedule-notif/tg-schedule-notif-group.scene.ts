@@ -174,9 +174,7 @@ export class TgScheduleNotifGroupScene extends BaseScene {
     notifId: number | undefined,
     groupName: string,
   ) {
-    const selectedGroupName =
-      this.scheduleService.getGroupByName(groupName) ||
-      this.scheduleService.parseGroupName(groupName);
+    const selectedGroupName = this.scheduleService.resolveGroupName(groupName);
     if (!selectedGroupName) {
       await this.renderNotFound(ctx, groupName);
       return;

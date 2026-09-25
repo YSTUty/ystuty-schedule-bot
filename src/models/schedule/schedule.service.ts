@@ -244,6 +244,13 @@ export class ScheduleService implements OnModuleInit {
     return false;
   }
 
+  /** Возвращает каноническое имя группы по точному имени или фрагменту текста. */
+  public resolveGroupName(value?: string | null): string | null {
+    if (!value) return null;
+
+    return this.getGroupByName(value) || this.parseGroupName(value) || null;
+  }
+
   /** Нормализует список групп из скопированного текста, сохраняя порядок ввода. */
   public parseGroupNames(text: string): string[] {
     const candidates = text

@@ -12,11 +12,19 @@ import {
 
 type TgPickerButtons = TelegramPaginationOptions['additionalButtons'];
 
+type TgPickerTextParams = {
+  currentPage: number;
+  totalPages: number;
+  instituteName?: string;
+};
+
 type TgPickerOptions = {
   prefix: string;
   pagerName: string | ((hash: string) => string);
   onItem: (hash: string) => string;
   additionalButtons?: TgPickerButtons;
+  /** Позволяет профильному экрану сохранить собственную HTML-разметку. */
+  formatText?: (params: TgPickerTextParams) => string;
 };
 
 /** Рендерит переиспользуемые TG-списки институтов и групп через pagination factory. */
@@ -35,11 +43,11 @@ export class TgGroupPicker {
   ) {
     const { items, currentPage, totalPages } =
       this.scheduleService.groupsInstitutesList(page, count);
+    const textParams = { currentPage, totalPages };
     return {
-      text: ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, {
-        currentPage,
-        totalPages,
-      }),
+      text:
+        options.formatText?.(textParams) ||
+        ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, textParams),
       keyboard: this.keyboardFactory.getPagination({
         name:
           typeof options.pagerName === 'function'
@@ -62,7 +70,7 @@ export class TgGroupPicker {
 
   public renderGroups(
     ctx: IContext,
-    instituteHash: string,
+    instituteHash: string | null,
     page: number,
     options: TgPickerOptions,
     count = 26,
@@ -72,16 +80,21 @@ export class TgGroupPicker {
       count,
       instituteHash,
     );
+    const textParams = {
+      instituteName: instituteHash
+        ? this.scheduleService.instituteNameByHash(instituteHash)
+        : undefined,
+      currentPage,
+      totalPages,
+    };
     return {
-      text: ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
-        instituteName: this.scheduleService.instituteNameByHash(instituteHash),
-        currentPage,
-        totalPages,
-      }),
+      text:
+        options.formatText?.(textParams) ||
+        ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, textParams),
       keyboard: this.keyboardFactory.getPagination({
         name:
           typeof options.pagerName === 'function'
-            ? options.pagerName(instituteHash)
+            ? options.pagerName(instituteHash || '')
             : options.pagerName,
         currentPage,
         totalPages,

@@ -11,27 +11,23 @@ describe('TgGroupSelectionUpdate', () => {
       })),
       getInstitutesListButton: jest.fn(),
     };
-    const baseKeyboardFactory = { getPagination: jest.fn(() => ({})) };
+    const groupPicker = {
+      renderInstitutes: jest.fn(() => ({ text: 'Институты', keyboard: {} })),
+      renderGroups: jest.fn(() => ({ text: 'Группы', keyboard: {} })),
+    };
     const scheduleService = {
       groupNameByHash: jest.fn(),
-      groupsInstitutesList: jest.fn(() => ({
-        items: ['Институт'],
-        currentPage: 1,
-        totalPages: 1,
-      })),
-      groupsList: jest.fn(),
-      instituteNameByHash: jest.fn(),
     };
 
     return {
       update: new TgGroupSelectionUpdate(
         keyboardFactory as any,
-        baseKeyboardFactory as any,
+        groupPicker as any,
         scheduleService as any,
         {} as any,
       ),
       keyboardFactory,
-      baseKeyboardFactory,
+      groupPicker,
       scheduleService,
     };
   };
@@ -131,7 +127,7 @@ describe('TgGroupSelectionUpdate', () => {
   });
 
   it('adds an all-groups callback below the Telegram institute list', async () => {
-    const { update, baseKeyboardFactory } = createUpdate();
+    const { update, groupPicker } = createUpdate();
     const ctx = {
       updateType: 'message',
       message: { text: '/institutes' },
@@ -142,7 +138,9 @@ describe('TgGroupSelectionUpdate', () => {
 
     await update.onInstitutesList(ctx);
 
-    expect(baseKeyboardFactory.getPagination).toHaveBeenCalledWith(
+    expect(groupPicker.renderInstitutes).toHaveBeenCalledWith(
+      ctx,
+      1,
       expect.objectContaining({
         additionalButtons: [
           [
@@ -153,6 +151,7 @@ describe('TgGroupSelectionUpdate', () => {
           ],
         ],
       }),
+      26,
     );
   });
 });

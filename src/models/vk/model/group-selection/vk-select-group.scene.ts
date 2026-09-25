@@ -10,8 +10,8 @@ import { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../../vk.constants';
 import { VkScheduleKeyboardFactory } from '../schedule/vk-schedule-keyboard.factory';
 
+import { VkGroupPicker } from './vk-group-picker';
 import { VkGroupSelectionKeyboardFactory } from './vk-group-selection-keyboard.factory';
-import { VkGroupSelectionUpdate } from './vk-group-selection.update';
 
 @Scene(SELECT_GROUP_SCENE)
 @UseFilters(VkExceptionFilter)
@@ -21,7 +21,7 @@ export class VkSelectGroupScene {
     private readonly baseKeyboardFactory: VKKeyboardFactory,
     private readonly keyboardFactory: VkGroupSelectionKeyboardFactory,
     private readonly scheduleKeyboardFactory: VkScheduleKeyboardFactory,
-    private readonly groupSelectionUpdate: VkGroupSelectionUpdate,
+    private readonly groupPicker: VkGroupPicker,
   ) {}
 
   @AddStep()
@@ -40,7 +40,7 @@ export class VkSelectGroupScene {
       ctx.eventPayload?.groupAction === 'institutes'
     ) {
       await ctx.scene.leave();
-      await this.groupSelectionUpdate.onInstitutesList(ctx);
+      await this.renderInstitutes(ctx);
       return;
     }
 
@@ -111,10 +111,7 @@ export class VkSelectGroupScene {
       return ctx.scene.leave();
     }
 
-    const selectedGroupName =
-      groupName &&
-      (this.scheduleService.getGroupByName(groupName) ||
-        this.scheduleService.parseGroupName(groupName));
+    const selectedGroupName = this.scheduleService.resolveGroupName(groupName);
     if (selectedGroupName) {
       if (isConv) {
         if (ctx.state.conversation) {
@@ -167,5 +164,33 @@ export class VkSelectGroupScene {
     //     .getClose(ctx)
     //     .inline(this.keyboardFactory.onlyInline(ctx));
     // ctx.send(ctx.i18n.t('Done.'), { keyboard });
+  }
+
+  /** Открывает список институтов без вызова update-handler из активной сцены. */
+  private async renderInstitutes(ctx: IStepContext) {
+    const { text, keyboard } = this.groupPicker.renderInstitutes(
+      ctx,
+      1,
+      {
+        onItem: (instituteHash) => ({
+          groupAction: 'groups',
+          instituteHash,
+        }),
+        onPage: (_instituteHash, page) => ({
+          groupAction: 'institutes',
+          page,
+        }),
+        pagerMode: 'edges',
+      },
+      5,
+    );
+    const inlineKeyboard = keyboard.inline();
+
+    if (ctx.isMessageEventContext()) {
+      await ctx.editMessage({ message: text, keyboard: inlineKeyboard });
+      return;
+    }
+
+    await ctx.send(text, { keyboard: inlineKeyboard });
   }
 }

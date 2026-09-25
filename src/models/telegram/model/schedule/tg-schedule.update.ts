@@ -87,10 +87,7 @@ export class TgScheduleUpdate {
 
     const groupNameQuery =
       ctx.inlineQuery.query.trim() || ctx.userSocial?.groupName;
-    const groupName =
-      groupNameQuery &&
-      (this.scheduleService.getGroupByName(groupNameQuery) ||
-        this.scheduleService.parseGroupName(groupNameQuery));
+    const groupName = this.scheduleService.resolveGroupName(groupNameQuery);
     if (!groupName) {
       if (ctx.userSocial?.groupName) {
         await ctx.answerInlineQuery(
@@ -360,11 +357,7 @@ export class TgScheduleUpdate {
         ? ctx.userSocial?.groupName
         : ctx.conversation?.groupName;
     const groupNameQuery = requestedGroupName || selectedGroupName;
-    const groupName = groupNameQuery
-      ? this.scheduleService.getGroupByName(groupNameQuery) ||
-        this.scheduleService.parseGroupName(groupNameQuery) ||
-        null
-      : null;
+    const groupName = this.scheduleService.resolveGroupName(groupNameQuery);
 
     if (requestedGroupName && !groupName) {
       await ctx.replyWithHTML(
@@ -851,11 +844,7 @@ export class TgScheduleUpdate {
       return this.scheduleService.groupNameByHash(groupHash);
     }
 
-    return (
-      groupNameQuery &&
-      (this.scheduleService.getGroupByName(groupNameQuery) ||
-        this.scheduleService.parseGroupName(groupNameQuery))
-    );
+    return this.scheduleService.resolveGroupName(groupNameQuery);
   }
 
   /** Возвращает личную группу либо группу, сохранённую у conversation. */

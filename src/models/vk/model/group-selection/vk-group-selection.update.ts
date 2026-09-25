@@ -3,16 +3,17 @@ import { Ctx, Hears, OnMessageEvent, Update } from 'nestjs-vk';
 
 import { APIError } from 'vk-io';
 
-import { md5, selectGroupCommandRegExp, VkExceptionFilter } from '@my-common';
+import { selectGroupCommandRegExp, VkExceptionFilter } from '@my-common';
 import { VkHearsLocale } from '@my-common/decorator/vk';
 import { LocalePhrase } from '@my-interfaces';
 import { IMessageContext, IMessageEventContext } from '@my-interfaces/vk';
 
 import { ScheduleService } from '../../../schedule/schedule.service';
-import { VKKeyboardFactory } from '../../vk-keyboard.factory';
+import type { VKKeyboardFactory } from '../../vk-keyboard.factory';
 import { SELECT_GROUP_SCENE } from '../../vk.constants';
 import { VkService } from '../../vk.service';
 
+import { VkGroupPicker } from './vk-group-picker';
 import { VkGroupSelectionKeyboardFactory } from './vk-group-selection-keyboard.factory';
 
 @Update()
@@ -21,7 +22,7 @@ export class VkGroupSelectionUpdate {
   constructor(
     private readonly scheduleService: ScheduleService,
     private readonly keyboardFactory: VkGroupSelectionKeyboardFactory,
-    private readonly baseKeyboardFactory: VKKeyboardFactory,
+    private readonly groupPicker: VkGroupPicker,
     private readonly vkService: VkService,
   ) {}
 
@@ -72,26 +73,24 @@ export class VkGroupSelectionUpdate {
     ctx: IMessageContext | IMessageEventContext,
     page = 1,
   ) {
-    const { items, currentPage, totalPages } =
-      this.scheduleService.groupsInstitutesList(page, 5);
-    const keyboard = this.baseKeyboardFactory.getPagination({
-      currentPage,
-      totalPages,
-      items: items.map((name) => ({
-        title: name,
-        payload: { groupAction: 'groups', instituteHash: md5(name) },
-      })),
-      getPagePayload: (nextPage) => ({
-        groupAction: 'institutes',
-        page: nextPage,
-      }),
-    });
-    const message = ctx.i18n.t(LocalePhrase.Page_SelectGroup_InstitutesList, {
-      currentPage,
-      totalPages,
-    });
+    const { text, keyboard } = this.groupPicker.renderInstitutes(
+      ctx,
+      page,
+      {
+        onItem: (instituteHash) => ({
+          groupAction: 'groups',
+          instituteHash,
+        }),
+        onPage: (_instituteHash, nextPage) => ({
+          groupAction: 'institutes',
+          page: nextPage,
+        }),
+        pagerMode: 'edges',
+      },
+      5,
+    );
 
-    await this.sendOrEditGroupList(ctx, message, keyboard);
+    await this.sendOrEditGroupList(ctx, text, keyboard);
   }
 
   /** Отображает группы выбранного института или общий список по slash-команде. */
@@ -100,51 +99,28 @@ export class VkGroupSelectionUpdate {
     instituteHash?: string,
     page = 1,
   ) {
-    const columnsCount = 2;
     const pageSize = instituteHash ? 4 : 5;
-    // TODO: после подтверждения picker рассылки перенести профильный список на общий слой.
-    const { items, currentPage, totalPages } = this.scheduleService.groupsList(
-      page,
-      pageSize,
+    const { text, keyboard } = this.groupPicker.renderGroups(
+      ctx,
       instituteHash || null,
+      page,
+      {
+        onItem: (groupName) => ({ groupAction: 'select', groupName }),
+        onPage: (hash, nextPage) => ({
+          groupAction: 'groups',
+          instituteHash: hash,
+          page: nextPage,
+        }),
+        additionalButtons: instituteHash
+          ? [[this.keyboardFactory.getInstitutesListButton(ctx)]]
+          : undefined,
+        pagerMode: 'edges',
+        groupColumns: instituteHash ? 2 : 1,
+      },
+      pageSize,
     );
-    const instituteName = instituteHash
-      ? this.scheduleService.instituteNameByHash(instituteHash)
-      : undefined;
-    const keyboard = this.baseKeyboardFactory.getPagination({
-      currentPage,
-      totalPages,
-      items: this.getGroupListRows(items, columnsCount),
-      getPagePayload: (nextPage) => ({
-        groupAction: 'groups',
-        instituteHash,
-        page: nextPage,
-      }),
-      additionalButtons: instituteHash
-        ? [[this.keyboardFactory.getInstitutesListButton(ctx)]]
-        : undefined,
-    });
-    const message = ctx.i18n.t(LocalePhrase.Page_SelectGroup_GroupsList, {
-      instituteName,
-      currentPage,
-      totalPages,
-    });
 
-    await this.sendOrEditGroupList(ctx, message, keyboard);
-  }
-
-  /** Явно разбивает группы по четыре кнопки, не оставляя это на усмотрение paginator. */
-  private getGroupListRows(groupNames: string[], columnsCount: number) {
-    return Array.from(
-      { length: Math.ceil(groupNames.length / columnsCount) },
-      (_, index) =>
-        groupNames
-          .slice(index * columnsCount, (index + 1) * columnsCount)
-          .map((groupName) => ({
-            title: groupName,
-            payload: { groupAction: 'select', groupName },
-          })),
-    );
+    await this.sendOrEditGroupList(ctx, text, keyboard);
   }
 
   /** Отправляет новый список или заменяет сообщение, от которого пришёл callback. */

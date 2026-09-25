@@ -20,7 +20,10 @@ const getMessageEventCondition = (methodName: string) => {
 describe('VkGroupSelectionUpdate', () => {
   const createUpdate = () => {
     const keyboardFactory = { getInstitutesListButton: jest.fn() };
-    const baseKeyboardFactory = { getPagination: jest.fn() };
+    const groupPicker = {
+      renderInstitutes: jest.fn(),
+      renderGroups: jest.fn(),
+    };
     const scheduleService = {
       groupsInstitutesList: jest.fn(),
       groupsList: jest.fn(),
@@ -31,10 +34,10 @@ describe('VkGroupSelectionUpdate', () => {
       update: new VkGroupSelectionUpdate(
         scheduleService as any,
         keyboardFactory as any,
-        baseKeyboardFactory as any,
+        groupPicker as any,
         {} as any,
       ),
-      baseKeyboardFactory,
+      groupPicker,
     };
   };
 
@@ -94,6 +97,30 @@ describe('VkGroupSelectionUpdate', () => {
     } finally {
       renderInstitutesList.mockRestore();
     }
+  });
+
+  it('uses the shared picker with the original VK institute page budget', async () => {
+    const { update, groupPicker } = createUpdate();
+    groupPicker.renderInstitutes.mockReturnValue({
+      text: 'Институты',
+      keyboard: { inline: jest.fn().mockReturnValue('keyboard') },
+    });
+    const ctx = {
+      isMessageEventContext: jest.fn().mockReturnValue(false),
+      send: jest.fn(),
+    } as any;
+
+    await update.onInstitutesList(ctx);
+
+    expect(groupPicker.renderInstitutes).toHaveBeenCalledWith(
+      ctx,
+      1,
+      expect.objectContaining({ pagerMode: 'edges' }),
+      5,
+    );
+    expect(ctx.send).toHaveBeenCalledWith('Институты', {
+      keyboard: 'keyboard',
+    });
   });
 
   it('opens institutes instead of the VK scene for a targetless selection request', async () => {

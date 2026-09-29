@@ -145,6 +145,11 @@ export class SocialConnectService {
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   async checkAuth() {
+    // При отключённом social-connect не создаём фоновые HTTP-ошибки каждые 10 секунд.
+    if (!this.isAvailable) {
+      return;
+    }
+
     if (this.checkAuthProcess) {
       if (Date.now() - this.checkAuthProcess > 3600) {
         // TODO: alarm?

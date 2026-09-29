@@ -92,6 +92,9 @@ export const SOCIAL_VK_ADMIN_IDS: number[] =
 /** Внешняя ссылка на web-версию расписания для пользователей VK. */
 export const SOCIAL_VK_WEB_VIEW_URL: string =
   process.env.SOCIAL_VK_WEB_VIEW_URL || '';
+/** Позволяет E2E-контейнеру направить VK API на локальный fake server. */
+export const SOCIAL_VK_API_BASE_URL: string =
+  process.env.SOCIAL_VK_API_BASE_URL || '';
 
 // Telegram
 export const SOCIAL_TELEGRAM_BOT_NAME =
@@ -134,3 +137,9 @@ export const OAUTH_CLIENT_SECRET = process.env.OAUTH_CLIENT_SECRET || '';
 
 //
 export const SOCAIL_CONNECT_URI = process.env.SOCAIL_CONNECT_URI || '';
+
+/** Явный предохранитель для изолированного transport E2E-окружения. */
+export const E2E_TEST_MODE = process.env.E2E_TEST_MODE === 'true';
+/** Исключает startup recovery VK из обычных transport-сценариев E2E. */
+export const E2E_SKIP_VK_UNREAD_RECOVERY =
+  process.env.E2E_SKIP_VK_UNREAD_RECOVERY === 'true';

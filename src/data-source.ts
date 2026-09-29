@@ -10,7 +10,8 @@ const dataSourceOptions: PostgresConnectionOptions = {
   ...xEnv.TYPEORM_CONFIG,
   synchronize: false,
   dropSchema: false,
-  logging: true,
+  // E2E runs the same migrations repeatedly and does not need a SQL trace.
+  logging: !xEnv.E2E_TEST_MODE,
   entities: [join(__dirname, '**/*.entity{.ts,.js}')],
   migrations: [join(__dirname, 'migrations/*{.ts,.js}')],
   migrationsTableName: 'migrations',

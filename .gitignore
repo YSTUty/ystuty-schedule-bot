@@ -39,6 +39,7 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 
 /postgres-data
 /redis-data

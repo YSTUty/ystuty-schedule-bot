@@ -29,6 +29,8 @@
     "test:cov": "node --experimental-vm-modules ./node_modules/.bin/jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:bot-e2e": "node --experimental-vm-modules ./node_modules/.bin/jest --config ./test/jest-bot-e2e.json --runInBand",
+    "test:bot-e2e:trace": "BOT_E2E_TRACE=true node --experimental-vm-modules ./node_modules/.bin/jest --config ./test/jest-bot-e2e.json --runInBand",
     "typeorm": "node -r tsconfig-paths/register ./node_modules/typeorm/cli-ts-node-commonjs.js -d ./src/data-source.ts",
     "typeorm:prod": "node ./node_modules/typeorm/cli.js -d ./dist/data-source.js",
     "typeorm:cache": "npm run typeorm cache:clear",

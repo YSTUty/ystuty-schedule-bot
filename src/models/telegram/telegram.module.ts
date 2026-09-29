@@ -25,6 +25,10 @@ import { TelegramFeedbackScene } from './scene/feedback.scene';
 import { TgFeedbackKeyboardFactory } from './scene/tg-feedback-keyboard.factory';
 import { TelegramFeedbackDeliveryService } from './telegram-feedback-delivery.service';
 import { TelegramKeyboardFactory } from './telegram-keyboard.factory';
+import {
+  registerTelegramSessionRedisClient,
+  TelegramRedisSessionLifecycleService,
+} from './telegram-redis-session-lifecycle.service';
 import { TelegramService } from './telegram.service';
 import { AdminUpdate } from './update/admin.update';
 import { TelegramFeedbackUpdate } from './update/feedback.update';
@@ -69,6 +73,7 @@ const baseProviders = [
   TgGroupPicker,
   TgFeedbackKeyboardFactory,
   TelegramFeedbackDeliveryService,
+  TelegramRedisSessionLifecycleService,
 ];
 const middlewares = [MainMiddleware, MetricsMiddleware, UserMiddleware];
 const providers = [
@@ -123,6 +128,7 @@ export class TelegramModule {
               'session',
               this.logger,
             );
+            registerTelegramSessionRedisClient(session.client);
             const sessionConversation = new TelegramRedisSession({
               store: {
                 host: xEnv.REDIS_HOST,
@@ -141,6 +147,7 @@ export class TelegramModule {
               'conversation session',
               this.logger,
             );
+            registerTelegramSessionRedisClient(sessionConversation.client);
 
             return {
               token: xEnv.SOCIAL_TELEGRAM_BOT_TOKEN,

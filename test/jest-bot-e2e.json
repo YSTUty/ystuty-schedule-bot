@@ -1,0 +1,19 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testTimeout": 30000,
+  "testRegex": "test/bot-e2e/scenarios/.*\\.e2e-spec\\.ts$",
+  "openHandlesTimeout": 5000,
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "setupFiles": ["<rootDir>/test/bot-e2e/e2e-env.setup.ts"],
+  "moduleNameMapper": {
+    "^@my-environment$": "<rootDir>/src/environment",
+    "^@my-common$": "<rootDir>/src/common",
+    "^@my-common/(.*)$": "<rootDir>/src/common/$1",
+    "^@my-interfaces$": "<rootDir>/src/interface",
+    "^@my-interfaces/(.*)$": "<rootDir>/src/interface/$1"
+  }
+}

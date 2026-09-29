@@ -30,28 +30,28 @@ export class MetricsModule implements NestModule {
       exports: [MetricsService],
     };
 
-    if (xEnv.PROMETHEUS_ENABLED) {
-      const promOptions: PromModuleOptions = {
-        metricPath: METRIC_PATH,
-        withDefaultsMetrics: true,
-        withDefaultController: true,
-        // Встроенный filter библиотеки рассчитан только на HTTP, но в Nest 11
-        // он перехватывает также ошибки обработчиков Telegraf.
-        withExceptionFilter: false,
-        defaultLabels: {
-          app: xEnv.INSTANCE_NAME,
-          // version: '0.1.0',
-        },
-        // prefix: 'ystuty_',
-      };
+    const promOptions: PromModuleOptions = {
+      metricPath: METRIC_PATH,
+      withDefaultsMetrics: true,
+      // MetricsService always depends on PromService. This flag hides the
+      // public endpoint and HTTP middleware, not the in-process metric registry.
+      withDefaultController: xEnv.PROMETHEUS_ENABLED,
+      // Встроенный filter библиотеки рассчитан только на HTTP, но в Nest 11
+      // он перехватывает также ошибки обработчиков Telegraf.
+      withExceptionFilter: false,
+      defaultLabels: {
+        app: xEnv.INSTANCE_NAME,
+        // version: '0.1.0',
+      },
+      // prefix: 'ystuty_',
+    };
 
-      moduleForRoot.imports!.push(PromModule.forRoot(promOptions));
+    moduleForRoot.imports!.push(PromModule.forRoot(promOptions));
 
-      moduleForRoot.providers!.push({
-        provide: DEFAULT_PROM_OPTIONS,
-        useValue: promOptions,
-      });
-    }
+    moduleForRoot.providers!.push({
+      provide: DEFAULT_PROM_OPTIONS,
+      useValue: promOptions,
+    });
 
     return moduleForRoot;
   }

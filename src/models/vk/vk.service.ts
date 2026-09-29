@@ -68,9 +68,13 @@ export class VkService implements OnModuleInit {
     try {
       await this.bot.updates.start();
       this.logger.log('[Bot] Started');
-      void this.unreadDialogRecoveryService
-        .recoverUnreadDirectMessages()
-        .catch((error) => this.logger.error('[Unread recovery] Failed', error));
+      if (!xEnv.E2E_SKIP_VK_UNREAD_RECOVERY) {
+        void this.unreadDialogRecoveryService
+          .recoverUnreadDirectMessages()
+          .catch((error) =>
+            this.logger.error('[Unread recovery] Failed', error),
+          );
+      }
       // await this.notifyAdmin('🚀 BotServer is running');
     } catch (err) {
       this.logger.error(err);

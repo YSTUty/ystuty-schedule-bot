@@ -1,6 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 import * as nestjsVk from 'nestjs-vk';
 
+import { Agent as HttpAgent } from 'node:http';
+import type { Agent as HttpsAgent } from 'node:https';
+
 import * as xEnv from '@my-environment';
 
 import { MainMiddleware } from './middleware/main.middleware';
@@ -62,6 +65,16 @@ export class VkModule {
             options: {
               pollingGroupId: xEnv.SOCIAL_VK_GROUP_ID!,
               apiMode: 'sequential',
+              ...(xEnv.SOCIAL_VK_API_BASE_URL && {
+                apiBaseUrl: xEnv.SOCIAL_VK_API_BASE_URL,
+              }),
+              // vk-io declares only https.Agent, although Node fetch needs an
+              // http.Agent for the E2E fake API URL. Production never enters
+              // this branch because its VK endpoint remains HTTPS.
+              ...(xEnv.E2E_TEST_MODE &&
+                xEnv.SOCIAL_VK_API_BASE_URL.startsWith('http://') && {
+                  agent: new HttpAgent() as unknown as HttpsAgent,
+                }),
             },
             launchOptions: false,
             // notReplyMessage: true,

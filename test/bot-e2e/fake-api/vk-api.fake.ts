@@ -86,6 +86,29 @@ export class FakeVkApi {
   }
 
   public pushMessage(userId: number, text: string, payload?: string) {
+    this.pushMessageToPeer(userId, userId, text, payload);
+  }
+
+  /** Добавляет входящее сообщение из групповой беседы в настоящий Bots Long Poll. */
+  public pushChatMessage(
+    userId: number,
+    conversationId: number,
+    text: string,
+    payload?: string,
+  ) {
+    if (!Number.isSafeInteger(conversationId) || conversationId < 1) {
+      throw new Error('VK conversationId must be a positive safe integer');
+    }
+
+    this.pushMessageToPeer(userId, 2e9 + conversationId, text, payload);
+  }
+
+  private pushMessageToPeer(
+    userId: number,
+    peerId: number,
+    text: string,
+    payload?: string,
+  ) {
     this.pushUpdate({
       type: 'message_new',
       object: {
@@ -94,7 +117,7 @@ export class FakeVkApi {
           from_id: userId,
           id: this.nextMessageId++,
           out: 0,
-          peer_id: userId,
+          peer_id: peerId,
           conversation_message_id: this.nextMessageId,
           random_id: 0,
           important: false,

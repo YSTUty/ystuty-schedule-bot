@@ -45,17 +45,17 @@ background pass from outliving a fake API during teardown.
 
 ## Current coverage boundary
 
-| Flow | Telegram | VK |
-| --- | --- | --- |
-| `/start`, keyboard, institute → group selection | yes | yes |
-| Persisted `UserSocial.groupName` after middleware | yes | yes |
-| Day/week schedule and inline navigation | yes | yes |
-| Callback acknowledgement and edit/send contract | `answerCallbackQuery`, including edit fallback | edit-or-send fallback for `message_event` |
-| Delivery becomes unavailable and profile restoration after inbound message | not yet | not yet |
-| Cached schedule after Schedule API error | yes | yes |
-| Same-poll burst and transport/session isolation | two Telegram users | two VK users |
-| Group `/start` access policy and conversation persistence | unaddressed command is ignored; explicit appeal creates the chat without private cards | not yet |
-| VK `message_allow` / `message_deny` persistence without outgoing reply | not applicable | yes |
+| Flow                                                                       | Telegram                                                                               | VK                                                               |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `/start`, keyboard, institute → group selection                            | yes                                                                                    | yes                                                              |
+| Persisted `UserSocial.groupName` after middleware                          | yes                                                                                    | yes                                                              |
+| Day/week schedule and inline navigation                                    | yes                                                                                    | yes                                                              |
+| Callback acknowledgement and edit/send contract                            | `answerCallbackQuery`, including edit fallback                                         | edit-or-send fallback for `message_event`                        |
+| Delivery becomes unavailable and profile restoration after inbound message | not yet                                                                                | not yet                                                          |
+| Cached schedule after Schedule API error                                   | yes                                                                                    | yes                                                              |
+| Same-poll burst and transport/session isolation                            | two Telegram users                                                                     | two VK users                                                     |
+| Group `/start` access policy and conversation persistence                  | unaddressed command is ignored; explicit appeal creates the chat without private cards | the same policy is checked for VK `message_new` from a chat peer |
+| VK `message_allow` / `message_deny` persistence without outgoing reply     | not applicable                                                                         | yes                                                              |
 
 The suite intentionally does **not** replace focused service specs for VK
 unread recovery, cache-lock edge cases, rate-limit retry policy, scheduler

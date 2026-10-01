@@ -19,15 +19,18 @@ export type FakeTelegramUser = {
   username?: string;
 };
 
+export type FakeTelegramChat = {
+  id: number;
+  type: 'private' | 'group' | 'supergroup';
+  title?: string;
+  first_name?: string;
+  username?: string;
+};
+
 export type FakeTelegramMessage = {
   message_id: number;
   date: number;
-  chat: {
-    id: number;
-    type: 'private';
-    first_name?: string;
-    username?: string;
-  };
+  chat: FakeTelegramChat;
   from: {
     id: number;
     is_bot: boolean;
@@ -80,6 +83,8 @@ export class FakeTelegramApi {
   private readonly waiters = new Set<CallWaiter>();
   private readonly failures = new Map<string, TelegramApiError[]>();
   private readonly messages = new Map<string, FakeTelegramMessage>();
+  /** Последний входящий чат нужен, чтобы ответ бота сохранял его реальный type. */
+  private readonly chats = new Map<number, FakeTelegramChat>();
   private nextUpdateId = 1;
   private nextMessageId = 1;
 
@@ -118,6 +123,21 @@ export class FakeTelegramApi {
     return message;
   }
 
+  /** Добавляет обычный message update из group/supergroup в настоящий polling. */
+  public pushChatText(
+    user: FakeTelegramUser,
+    chat: Omit<FakeTelegramChat, 'first_name' | 'username'>,
+    text: string,
+  ) {
+    if (chat.type === 'private') {
+      throw new Error('pushChatText expects group or supergroup chat');
+    }
+
+    const message = this.createUserMessage(user, text, chat);
+    this.pushUpdate({ message });
+    return message;
+  }
+
   public pushCallback(
     user: FakeTelegramUser,
     data: string,
@@ -152,6 +172,7 @@ export class FakeTelegramApi {
     this.updates.splice(0);
     this.failures.clear();
     this.messages.clear();
+    this.chats.clear();
   }
 
   public async waitForPolling(timeoutMs = 5e3) {
@@ -373,17 +394,26 @@ export class FakeTelegramApi {
   private createUserMessage(
     user: FakeTelegramUser,
     text: string,
+    chat: Omit<FakeTelegramChat, 'first_name' | 'username'> = {
+      id: user.id,
+      type: 'private',
+    },
   ): FakeTelegramMessage {
     const command = text.match(/^\/(?<name>[^\s@]+)/)?.[0];
+    const resolvedChat: FakeTelegramChat =
+      chat.type === 'private'
+        ? {
+            ...chat,
+            first_name: user.firstName || 'E2E Student',
+            username: user.username,
+          }
+        : chat;
+    this.chats.set(resolvedChat.id, resolvedChat);
+
     return {
       message_id: this.nextMessageId++,
       date: Math.floor(Date.now() / 1e3),
-      chat: {
-        id: user.id,
-        type: 'private',
-        first_name: user.firstName || 'E2E Student',
-        username: user.username,
-      },
+      chat: resolvedChat,
       from: this.createUser(user),
       text,
       ...(command && {
@@ -405,7 +435,7 @@ export class FakeTelegramApi {
     return {
       message_id: messageId,
       date: Math.floor(Date.now() / 1e3),
-      chat: { id: chatId, type: 'private' },
+      chat: this.chats.get(chatId) || { id: chatId, type: 'private' },
       from: {
         id: 900001,
         is_bot: true,

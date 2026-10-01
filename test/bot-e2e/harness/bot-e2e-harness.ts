@@ -9,6 +9,7 @@ import { Client } from 'pg';
 
 import { SocialType } from '@my-common/constants';
 
+import type { Conversation } from '../../../src/models/social/entity/conversation.entity';
 import type { UserSocial } from '../../../src/models/user/entity/user-social.entity';
 import { FakeScheduleApi } from '../fake-api/schedule-api.fake';
 import { FakeTelegramApi } from '../fake-api/telegram-api.fake';
@@ -94,6 +95,18 @@ export class BotE2eHarness {
     const { UserService } =
       await import('../../../src/models/user/user.service');
     return await this.app.get(UserService).findBySocialId(social, socialId);
+  }
+
+  /** Возвращает созданную middleware запись группового чата для E2E-проверки. */
+  public async getConversation(
+    social: SocialType,
+    conversationId: number,
+  ): Promise<Conversation | null> {
+    const { SocialService } =
+      await import('../../../src/models/social/social.service');
+    return await this.app
+      .get(SocialService)
+      .findConversationById(social, conversationId);
   }
 
   /** Ожидает commit из detached transport middleware, а не угадывает delay. */

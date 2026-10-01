@@ -54,6 +54,7 @@ background pass from outliving a fake API during teardown.
 | Delivery becomes unavailable and profile restoration after inbound message | not yet | not yet |
 | Cached schedule after Schedule API error | yes | yes |
 | Same-poll burst and transport/session isolation | two Telegram users | two VK users |
+| Group `/start` access policy and conversation persistence | unaddressed command is ignored; explicit appeal creates the chat without private cards | not yet |
 | VK `message_allow` / `message_deny` persistence without outgoing reply | not applicable | yes |
 
 The suite intentionally does **not** replace focused service specs for VK

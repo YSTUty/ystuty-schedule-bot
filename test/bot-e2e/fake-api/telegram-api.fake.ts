@@ -123,21 +123,35 @@ export class FakeTelegramApi {
     data: string,
     message: FakeTelegramMessage,
   ) {
+    const callbackId = `e2e-callback-${this.nextUpdateId}`;
     this.pushUpdate({
       callback_query: {
-        id: `e2e-callback-${this.nextUpdateId}`,
+        id: callbackId,
         from: this.createUser(user),
         message,
         chat_instance: `e2e-chat-${message.chat.id}`,
         data,
       },
     });
+    return callbackId;
   }
 
   public failNext(method: string, error: TelegramApiError) {
     const failures = this.failures.get(method) || [];
     failures.push(error);
     this.failures.set(method, failures);
+  }
+
+  /**
+   * Сбрасывает состояние одного test-case, не перезапуская настоящий polling.
+   * Это остаётся частью fake Bot API проекта: в `nestjs-telega` позднее можно
+   * вынести lifecycle/dispatch seam, но не неполную модель Telegram API.
+   */
+  public reset() {
+    this.calls.splice(0);
+    this.updates.splice(0);
+    this.failures.clear();
+    this.messages.clear();
   }
 
   public async waitForPolling(timeoutMs = 5e3) {

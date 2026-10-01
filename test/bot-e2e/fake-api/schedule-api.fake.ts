@@ -34,15 +34,34 @@ const TEACHERS = [
 
 const cacheMetadata = { isCache: false, cache: { isCached: false } };
 
+export type FakeScheduleApiFailure = {
+  statusCode: number;
+  body?: unknown;
+};
+
 /** Стабильный HTTP-адаптер Schedule API для transport E2E без внешней сети. */
 export class FakeScheduleApi {
   private readonly server: http.Server;
+  private readonly failures = new Map<string, FakeScheduleApiFailure[]>();
 
+  /** Входящие HTTP-вызовы нужны для cache/error E2E-assertions. */
+  public readonly calls: { path: string; method: string }[] = [];
   public url = '';
 
   private constructor() {
     this.server = http.createServer((request, response) => {
       const path = new URL(request.url || '/', 'http://e2e.local').pathname;
+      this.calls.push({ path, method: request.method || 'GET' });
+
+      const failure = this.failures.get(path)?.shift();
+      if (failure) {
+        sendJson(
+          response,
+          failure.body || { error: `Fake Schedule API failure: ${path}` },
+          failure.statusCode,
+        );
+        return;
+      }
 
       if (request.method !== 'GET') {
         sendJson(response, { error: 'Method not allowed' }, 405);
@@ -100,6 +119,21 @@ export class FakeScheduleApi {
 
   public async close() {
     await closeHttpServer(this.server);
+  }
+
+  /**
+   * Инъецирует ошибку одного upstream route. Контракт специально не знает о
+   * расписании и позднее может стать частью общего fake HTTP test helper.
+   */
+  public failNext(path: string, failure: FakeScheduleApiFailure) {
+    const failures = this.failures.get(path) || [];
+    failures.push(failure);
+    this.failures.set(path, failures);
+  }
+
+  public reset() {
+    this.failures.clear();
+    this.calls.splice(0);
   }
 }
 

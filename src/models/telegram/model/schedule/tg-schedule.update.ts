@@ -641,7 +641,12 @@ export class TgScheduleUpdate {
           ...keyboard,
           parse_mode: 'HTML',
         });
-      } catch {}
+      } catch (error) {
+        this.logger.warn(
+          `[TG][schedule] cannot edit callback message; sending a new response: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        await ctx.replyWithHTML(content, keyboard);
+      }
       await ctx.tryAnswerCbQuery();
     } else {
       await ctx.replyWithHTML(content, keyboard);
@@ -810,7 +815,12 @@ export class TgScheduleUpdate {
           ...keyboard,
           parse_mode: 'HTML',
         });
-      } catch {}
+      } catch (error) {
+        this.logger.warn(
+          `[TG][schedule] cannot edit callback message; sending a new response: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        await ctx.replyWithHTML(content, keyboard);
+      }
       await ctx.tryAnswerCbQuery();
     } else {
       // Use stream message for example

@@ -14,6 +14,11 @@ export type TgEditMessageCall = FakeTelegramApiCall<
   FakeTelegramApiParams,
   FakeTelegramMessage
 >;
+export type TgAnswerCallbackCall = FakeTelegramApiCall<
+  'answerCallbackQuery',
+  FakeTelegramApiParams,
+  true
+>;
 
 type TgInlineButton = Record<string, unknown> & {
   callback_data?: string;

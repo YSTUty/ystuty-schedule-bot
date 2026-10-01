@@ -25,13 +25,16 @@ export const isVkUserUnavailableError = (error: APIError) =>
   // TODO: need valid this codes
   // error.code === APIErrorCode.ACCESS ||
   // error.code === APIErrorCode.ACTION_FAILED ||
-  error.code === APIErrorCode.MESSAGES_USER_BLOCKED ||
-  error.code === APIErrorCode.MESSAGES_DENY_SEND ||
-  error.code === APIErrorCode.MESSAGES_PRIVACY ||
+  [
+    APIErrorCode.MESSAGES_USER_BLOCKED,
+    APIErrorCode.MESSAGES_DENY_SEND,
+    APIErrorCode.MESSAGES_PRIVACY,
+  ].includes(Number(error.code)) ||
   // error.code === APIErrorCode.USER_BANNED ||
   // error.code === APIErrorCode.USER_DEACTIVATED ||
   // error.code === APIErrorCode.USER_DELETED ||
   // TODO: need valid this messages
+  /can't send messages for users without permission/i.test(error.message) ||
   /bot was blocked by the user/i.test(error.message) ||
   /user is deactivated/i.test(error.message);
 
@@ -57,7 +60,7 @@ export const isVkRateLimitError = (error: APIError) =>
 
 /** Возвращает имя метода VK API из безопасной части ответа об ошибке. */
 export const getVkApiErrorMethod = (error: APIError) =>
-  error.params.find((param) => param.key === 'method')?.value;
+  error.params?.find((param) => param.key === 'method')?.value;
 
 @Catch()
 export class VkExceptionFilter implements ExceptionFilter {

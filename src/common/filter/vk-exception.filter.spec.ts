@@ -1,6 +1,9 @@
 import { APIError, APIErrorCode } from 'vk-io';
 
-import { getVkApiErrorMethod } from './vk-exception.filter';
+import {
+  getVkApiErrorMethod,
+  isVkUserUnavailableError,
+} from './vk-exception.filter';
 
 describe('getVkApiErrorMethod', () => {
   it('extracts the failed VK API method without logging request payload', () => {
@@ -24,5 +27,17 @@ describe('getVkApiErrorMethod', () => {
     });
 
     expect(getVkApiErrorMethod(error)).toBeUndefined();
+  });
+});
+
+describe('isVkUserUnavailableError', () => {
+  it('recognizes VK 901 even when vk-io exposes the API code as a string', () => {
+    const error = new APIError({
+      error_code: '901' as unknown as APIErrorCode,
+      error_msg: "Can't send messages for users without permission",
+      request_params: [{ key: 'method', value: 'messages.send' }],
+    });
+
+    expect(isVkUserUnavailableError(error)).toBe(true);
   });
 });

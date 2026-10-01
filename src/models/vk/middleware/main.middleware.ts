@@ -291,7 +291,7 @@ export class MainMiddleware {
           }
         };
       } else if (ctx.is(['message'])) {
-        // ...
+        // Context already provides `send` for message updates.
       } else {
         // * safe `send` method for all context events
         ctx.send = (

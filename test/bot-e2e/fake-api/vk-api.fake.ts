@@ -116,6 +116,30 @@ export class FakeVkApi {
     });
   }
 
+  /**
+   * Имитирует разрешение личных сообщений сообществу. В production это
+   * отдельный VK Bots Long Poll update без текста и peer_id.
+   *
+   * Это protocol fixture проекта. В `nestjs-vk` при будущем выносе может
+   * понадобиться только typed raw-update dispatch, но не fake VK API.
+   */
+  public pushMessageAllow(userId: number) {
+    this.pushUpdate({
+      type: 'message_allow',
+      object: { user_id: userId, key: `e2e-message-allow-${userId}` },
+      group_id: this.groupId,
+    });
+  }
+
+  /** Имитирует отзыв разрешения на личные сообщения сообществу. */
+  public pushMessageDeny(userId: number) {
+    this.pushUpdate({
+      type: 'message_deny',
+      object: { user_id: userId, key: `e2e-message-deny-${userId}` },
+      group_id: this.groupId,
+    });
+  }
+
   public pushMessageEvent(
     userId: number,
     conversationMessageId: number,
@@ -138,6 +162,18 @@ export class FakeVkApi {
     const failures = this.failures.get(method) || [];
     failures.push(error);
     this.failures.set(method, failures);
+  }
+
+  /**
+   * Сбрасывает только состояние тестового сценария, не разрывая настоящий
+   * Bots Long Poll. Такой reset зависит от fake HTTP API конкретного проекта;
+   * в `nestjs-vk` позднее может переехать лишь lifecycle/dispatch seam, но не
+   * эта неполная реализация VK Method API.
+   */
+  public reset() {
+    this.calls.splice(0);
+    this.updates.splice(0);
+    this.failures.clear();
   }
 
   public async waitForPolling(timeoutMs = 5e3) {
@@ -244,8 +280,12 @@ export class FakeVkApi {
     normalizeVkParams(params);
     const failure = this.failures.get(method)?.shift();
     if (failure) {
-      this.recordCall(method, params, failure);
-      sendJson(response, { error: failure });
+      const normalizedFailure: VkApiError = {
+        request_params: [{ key: 'method', value: method }],
+        ...failure,
+      };
+      this.recordCall(method, params, normalizedFailure);
+      sendJson(response, { error: normalizedFailure });
       return;
     }
 

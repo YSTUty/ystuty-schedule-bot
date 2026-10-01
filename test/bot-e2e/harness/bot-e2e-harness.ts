@@ -7,6 +7,9 @@ import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Client } from 'pg';
 
+import { SocialType } from '@my-common/constants';
+
+import type { UserSocial } from '../../../src/models/user/entity/user-social.entity';
 import { FakeScheduleApi } from '../fake-api/schedule-api.fake';
 import { FakeTelegramApi } from '../fake-api/telegram-api.fake';
 import { FakeVkApi } from '../fake-api/vk-api.fake';
@@ -67,6 +70,92 @@ export class BotE2eHarness {
     }
   }
 
+  /**
+   * Возвращает контур в исходное состояние между test-case без перезапуска
+   * Nest и long polling. Это project-level helper: он знает об E2E БД и
+   * Redis, поэтому не является кандидатом для Nest transport-библиотек.
+   */
+  public async resetScenario() {
+    // Telegram/VK завершают middleware асинхронно после polling response.
+    // Например, /start сначала отдаёт основную keyboard, а затем welcome card.
+    // Не очищаем БД и recorded calls между этими двумя исходящими запросами.
+    await this.waitForTransportIdle();
+    await clearE2eState();
+    this.telegram.reset();
+    this.vk.reset();
+    this.schedule.reset();
+  }
+
+  /** Проверяет persistent результат middleware, не раскрывая Repository в сценариях. */
+  public async getUserSocial(
+    social: SocialType,
+    socialId: number,
+  ): Promise<UserSocial | null> {
+    const { UserService } =
+      await import('../../../src/models/user/user.service');
+    return await this.app.get(UserService).findBySocialId(social, socialId);
+  }
+
+  /** Ожидает commit из detached transport middleware, а не угадывает delay. */
+  public async waitForUserSocial(
+    social: SocialType,
+    socialId: number,
+    predicate: (userSocial: UserSocial) => boolean = () => true,
+    timeoutMs = 3e3,
+  ) {
+    const startedAt = Date.now();
+    let lastUserSocial: UserSocial | null = null;
+    do {
+      const userSocial = await this.getUserSocial(social, socialId);
+      lastUserSocial = userSocial;
+      if (userSocial && predicate(userSocial)) return userSocial;
+      await delay(25);
+    } while (Date.now() - startedAt < timeoutMs);
+
+    throw new Error(
+      `Timed out waiting for persisted ${social} userSocial=${socialId}; last=${JSON.stringify(
+        lastUserSocial && {
+          hasDM: lastUserSocial.hasDM,
+          isBlockedBot: lastUserSocial.isBlockedBot,
+          groupName: lastUserSocial.groupName,
+        },
+      )}`,
+    );
+  }
+
+  /**
+   * Искусственно старит уже полученный снимок, чтобы E2E проверял путь
+   * stale-if-error от пользовательского update до ответа. Это осознанно
+   * product-specific helper: общий transport package не должен знать ключи
+   * ScheduleService.
+   */
+  public async ageScheduleCache(
+    targetType: 'group' | 'teacher',
+    targetId: string | number,
+    ageMs: number,
+  ) {
+    const { RedisService } =
+      await import('../../../src/models/redis/redis.service');
+    const cacheKey = `schedule:${targetType}:${String(targetId).toLowerCase()}`;
+    const redis = this.app.get(RedisService).redis;
+    const raw = await redis.get(cacheKey);
+    if (!raw) {
+      throw new Error(`Cannot age missing Schedule cache entry ${cacheKey}`);
+    }
+
+    const entry = JSON.parse(raw) as { fetchedAt?: string; items?: unknown[] };
+    if (!Array.isArray(entry.items)) {
+      throw new Error(`Schedule cache entry ${cacheKey} has unexpected shape`);
+    }
+    entry.fetchedAt = new Date(Date.now() - ageMs).toISOString();
+    const ttlMs = await redis.pttl(cacheKey);
+    if (ttlMs > 0) {
+      await redis.set(cacheKey, JSON.stringify(entry), 'PX', ttlMs);
+    } else {
+      await redis.set(cacheKey, JSON.stringify(entry));
+    }
+  }
+
   public async close() {
     try {
       const [{ TelegramService }, { VkService }] = await Promise.all([
@@ -80,9 +169,8 @@ export class BotE2eHarness {
     }
 
     // vk-io dispatches a long-poll update without awaiting its middleware
-    // promise. Let the final Redis session write finish before its fake API
-    // socket and the Nest data sources are closed.
-    await delay(250);
+    // promise. Дожидаемся quiet period перед закрытием Redis и fake socket.
+    await this.waitForTransportIdle();
     // All pollers have already received stop() above. Let Nest dispose Redis,
     // queues and transport resources before tearing down their fake endpoints.
     await this.app.close();
@@ -94,6 +182,35 @@ export class BotE2eHarness {
       this.vk.close(),
       this.schedule.close(),
     ]);
+  }
+
+  /**
+   * Транспортные SDK не отдают promise, которое означает «все listener-ы
+   * завершены»: polling получил update раньше их async middleware. Поэтому
+   * harness ждёт короткий период без новых Bot API calls, а не фиксированную
+   * паузу. Это относится к project fake servers; будущий lifecycle seam в
+   * `nestjs-telega`/`nestjs-vk` сможет дать более точный drain signal.
+   */
+  public async waitForTransportIdle(quietMs = 250, timeoutMs = 5e3) {
+    let knownCallCount = this.telegram.calls.length + this.vk.calls.length;
+    if (knownCallCount === 0) return;
+
+    const startedAt = Date.now();
+    let quietSince = startedAt;
+    while (Date.now() - startedAt < timeoutMs) {
+      await delay(25);
+      const callCount = this.telegram.calls.length + this.vk.calls.length;
+      if (callCount !== knownCallCount) {
+        knownCallCount = callCount;
+        quietSince = Date.now();
+        continue;
+      }
+      if (Date.now() - quietSince >= quietMs) return;
+    }
+
+    throw new Error(
+      'Timed out waiting for transport middleware to become idle',
+    );
   }
 }
 

@@ -138,6 +138,27 @@ export class FakeTelegramApi {
     return message;
   }
 
+  /** Имитирует добавление бота в чат: Telegram передаёт это через my_chat_member. */
+  public pushBotChatMembership(
+    user: FakeTelegramUser,
+    chat: Omit<FakeTelegramChat, 'first_name' | 'username'>,
+  ) {
+    if (chat.type === 'private') {
+      throw new Error('pushBotChatMembership expects group or supergroup chat');
+    }
+
+    this.chats.set(chat.id, chat);
+    this.pushUpdate({
+      my_chat_member: {
+        chat,
+        from: this.createUser(user),
+        date: Math.floor(Date.now() / 1e3),
+        old_chat_member: { user: this.createBotUser(), status: 'left' },
+        new_chat_member: { user: this.createBotUser(), status: 'member' },
+      },
+    });
+  }
+
   public pushCallback(
     user: FakeTelegramUser,
     data: string,
@@ -436,12 +457,7 @@ export class FakeTelegramApi {
       message_id: messageId,
       date: Math.floor(Date.now() / 1e3),
       chat: this.chats.get(chatId) || { id: chatId, type: 'private' },
-      from: {
-        id: 900001,
-        is_bot: true,
-        first_name: 'YSTUty E2E',
-        username: 'ystuty_schedule_e2e_bot',
-      },
+      from: this.createBotUser(),
       ...(typeof params.text === 'string' && { text: params.text }),
       ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     };
@@ -453,6 +469,15 @@ export class FakeTelegramApi {
       is_bot: false,
       first_name: user.firstName || 'E2E Student',
       username: user.username,
+    };
+  }
+
+  private createBotUser() {
+    return {
+      id: 900001,
+      is_bot: true,
+      first_name: 'YSTUty E2E',
+      username: 'ystuty_schedule_e2e_bot',
     };
   }
 

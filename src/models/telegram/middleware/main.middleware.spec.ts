@@ -1,5 +1,7 @@
 import { TelegramError } from 'telegraf-hardened';
 
+import { SOCIAL_TELEGRAM_BOT_NAME } from '@my-environment';
+
 import { CooldownError, LockBusyError } from '@my-common/exception';
 
 import { MainMiddleware } from './main.middleware';
@@ -23,6 +25,39 @@ describe('Telegram MainMiddleware', () => {
   const flushAsyncWork = async () => {
     await new Promise<void>((resolve) => setImmediate(resolve));
   };
+
+  it('removes a trailing space after a group appeal mention', () => {
+    const middleware = createMiddleware();
+    const ctx = {
+      state: {},
+      update: {
+        message: { text: `Расписание @${SOCIAL_TELEGRAM_BOT_NAME}` },
+      },
+    };
+
+    middleware['checkInGroupAppeal'](ctx as never);
+
+    expect(ctx.update.message.text).toBe('Расписание');
+    expect(ctx.state).toEqual({ appeal: true });
+  });
+
+  it('provides a helper that skips unaddressed text from a group', async () => {
+    const middleware = createMiddleware();
+    const ctx = {
+      from: { id: 1, is_bot: false },
+      chat: { id: -1001, type: 'supergroup' },
+      updateType: 'message',
+      update: { message: { text: 'Расписание' } },
+      state: { appeal: false },
+    };
+
+    await middleware.middleware()(ctx as never, async () => {
+      expect((ctx as any).isUnaddressedGroupMessage()).toBe(true);
+
+      ctx.state.appeal = true;
+      expect((ctx as any).isUnaddressedGroupMessage()).toBe(false);
+    });
+  });
 
   it('ignores an expired callback query acknowledgement', async () => {
     const middleware = createMiddleware();

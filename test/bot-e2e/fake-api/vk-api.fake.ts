@@ -103,11 +103,24 @@ export class FakeVkApi {
     this.pushMessageToPeer(userId, 2e9 + conversationId, text, payload);
   }
 
+  /** Имитирует service update переименования беседы через message.action. */
+  public pushChatTitleUpdate(
+    userId: number,
+    conversationId: number,
+    title: string,
+  ) {
+    this.pushMessageToPeer(userId, 2e9 + conversationId, '', undefined, {
+      type: 'chat_title_update',
+      text: title,
+    });
+  }
+
   private pushMessageToPeer(
     userId: number,
     peerId: number,
     text: string,
     payload?: string,
+    action?: Record<string, unknown>,
   ) {
     this.pushUpdate({
       type: 'message_new',
@@ -126,6 +139,7 @@ export class FakeVkApi {
           fwd_messages: [],
           text,
           ...(payload && { payload }),
+          ...(action && { action }),
         },
         client_info: {
           button_actions: ['text', 'vkpay', 'open_app', 'location', 'callback'],

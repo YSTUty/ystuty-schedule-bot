@@ -71,4 +71,63 @@ describe('VK group dialog (transport E2E)', () => {
     expect(groupReplies).toHaveLength(1);
     e2eTrace('VK', '← group conversation is persisted without private cards');
   });
+
+  it('uses the chat title as its schedule target and ignores unaddressed schedule requests', async () => {
+    const titledConversationId = 710102;
+    const titledPeerId = 2e9 + titledConversationId;
+    const titledMemberId = 720102;
+
+    e2eTrace('VK', '→ chat_title_update: chat title changes to ИВТ-101');
+    harness.vk.pushChatTitleUpdate(
+      titledMemberId,
+      titledConversationId,
+      'ИВТ-101',
+    );
+    await harness.vk.waitForCall<VkSendMessageCall>(
+      'messages.send',
+      (call) =>
+        call.params.peer_id === String(titledPeerId) &&
+        String(call.params.message).includes('выбрана автоматически'),
+    );
+    await waitForBackgroundUpdate();
+    const conversation = await harness.getConversation(
+      SocialType.Vkontakte,
+      titledConversationId,
+    );
+    expect(conversation?.groupName).toBe('ИВТ-101');
+
+    const unaddressedCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ group user sends unaddressed schedule request');
+    harness.vk.pushChatMessage(
+      titledMemberId,
+      titledConversationId,
+      'Расписание',
+    );
+    await waitForBackgroundUpdate();
+    expect(
+      harness.vk.calls
+        .slice(unaddressedCallIndex)
+        .filter((call) => call.method === 'messages.send'),
+    ).toHaveLength(0);
+
+    const scheduleCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ group user addresses the schedule request to the bot');
+    harness.vk.pushChatMessage(
+      titledMemberId,
+      titledConversationId,
+      '[club900001|YSTUty], Расписание',
+    );
+    const scheduleCall = await harness.vk.waitForNextCall<VkSendMessageCall>(
+      scheduleCallIndex,
+      'messages.send',
+      (call) =>
+        call.params.peer_id === String(titledPeerId) &&
+        String(call.params.message).includes('E2E текущая неделя'),
+    );
+    expect(String(scheduleCall.params.message)).toContain('ИВТ-101');
+    e2eTrace(
+      'VK',
+      '← schedule uses Conversation.groupName after explicit appeal',
+    );
+  });
 });

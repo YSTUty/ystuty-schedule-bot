@@ -239,6 +239,8 @@ export class MainMiddleware {
       defineGetter(ctx, 'chatId', () =>
         ctx.isChat ? ctx.peerId - 2e9 : undefined,
       );
+      ctx.isUnaddressedGroupMessage = () =>
+        ctx.isMessageContext() && ctx.isChat && !ctx.state.appeal;
       if (ctx.isMessageSubscriptionContext()) {
         // В message_subscription VK не передаёт peerId, но userId — это peer ЛС.
         Object.defineProperty(ctx, 'peerId', {

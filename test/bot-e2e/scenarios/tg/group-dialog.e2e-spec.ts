@@ -84,4 +84,55 @@ describe('Telegram group dialog (transport E2E)', () => {
     expect(groupReplies).toHaveLength(1);
     e2eTrace('TG', '← group conversation is persisted without private cards');
   });
+
+  it('uses the group title as its schedule target and ignores unaddressed schedule requests', async () => {
+    const titledChat = { ...groupChat, id: -100710102, title: 'ИВТ-101' };
+    const titledMember = { ...groupMember, id: 710102 };
+
+    e2eTrace('TG', '→ my_chat_member: bot joins a chat titled ИВТ-101');
+    harness.telegram.pushBotChatMembership(titledMember, titledChat);
+    await harness.telegram.waitForCall<TgSendMessageCall>(
+      'sendMessage',
+      (call) =>
+        Number(call.params.chat_id) === titledChat.id &&
+        String(call.params.text).includes('выбрана автоматически'),
+    );
+    await waitForBackgroundUpdate();
+    const conversation = await harness.getConversation(
+      SocialType.Telegram,
+      titledChat.id,
+    );
+    expect(conversation?.groupName).toBe('ИВТ-101');
+
+    const unaddressedCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group user sends unaddressed schedule request');
+    harness.telegram.pushChatText(titledMember, titledChat, 'Расписание');
+    await waitForBackgroundUpdate();
+    expect(
+      harness.telegram.calls
+        .slice(unaddressedCallIndex)
+        .filter((call) => call.method === 'sendMessage'),
+    ).toHaveLength(0);
+
+    const scheduleCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group user addresses the schedule request to the bot');
+    harness.telegram.pushChatText(
+      titledMember,
+      titledChat,
+      'Расписание @ystuty_schedule_e2e_bot',
+    );
+    const scheduleCall =
+      await harness.telegram.waitForNextCall<TgSendMessageCall>(
+        scheduleCallIndex,
+        'sendMessage',
+        (call) =>
+          Number(call.params.chat_id) === titledChat.id &&
+          String(call.params.text).includes('E2E текущая неделя'),
+      );
+    expect(String(scheduleCall.params.text)).toContain('ИВТ-101');
+    e2eTrace(
+      'TG',
+      '← schedule uses Conversation.groupName after explicit appeal',
+    );
+  });
 });

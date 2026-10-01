@@ -277,6 +277,11 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
       };
 
       this.checkInGroupAppeal(ctx);
+      ctx.isUnaddressedGroupMessage = () =>
+        !ctx.callbackQuery &&
+        !!ctx.chat &&
+        ctx.chat.type !== 'private' &&
+        !ctx.state.appeal;
 
       const telegramId = ctx.from.id;
       this.concurrencyService
@@ -336,8 +341,9 @@ export class MainMiddleware implements MiddlewareObj<IContext> {
 
     if (triggerRegexp.test(message.text)) {
       const triggerMsg = message.text.match(triggerRegexp)!;
-      // message.text = message.text.slice(triggerMsg[0].length);
-      message.text = message.text.slice(0, -triggerMsg[1].length);
+      // После `Расписание @bot` остаётся пробел. Без trimEnd() exact matcher
+      // локализованных команд не распознаёт текст как действие расписания.
+      message.text = message.text.slice(0, -triggerMsg[1].length).trimEnd();
       ctx.state.appeal = true;
     }
   }

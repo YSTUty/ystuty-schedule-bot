@@ -513,6 +513,8 @@ export class TgScheduleUpdate {
     ),
   )
   async hearSchedul_OneDay(@Ctx() ctx: IMessageContext) {
+    if (ctx.isUnaddressedGroupMessage()) return;
+
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
     const isPersonalTeacherCommand =
       ctx.command === 'tday' ||
@@ -692,6 +694,8 @@ export class TgScheduleUpdate {
     ]),
   )
   async hearSchedul_Week(@Ctx() ctx: IMessageContext) {
+    if (ctx.isUnaddressedGroupMessage()) return;
+
     const teacherIdFromMath = ctx.match?.groups?.teacherId;
     const isPersonalTeacherCommand =
       ctx.command === 'tweek' ||

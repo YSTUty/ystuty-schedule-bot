@@ -59,6 +59,33 @@ describe('VK MainMiddleware message subscription', () => {
     expect(ctx.state).toEqual({ eventAnswered: true });
   });
 
+  it('provides a helper that skips unaddressed text from a group chat', async () => {
+    const middleware = Object.create(
+      MainMiddleware.prototype,
+    ) as MainMiddleware;
+    Object.defineProperty(middleware, 'concurrencyService', {
+      value: {
+        buildKey: jest.fn().mockReturnValue('mw:update:vk:2000000123'),
+        queueLocal: jest.fn(async (_key, callback) => callback()),
+      },
+    });
+    const ctx = {
+      isOutbox: false,
+      type: 'message_new',
+      peerId: 2e9 + 123,
+      state: { appeal: false },
+      is: jest.fn((types: string[]) => types.includes('message_new')),
+      toJSON: jest.fn().mockReturnValue({}),
+    };
+
+    await middleware['featureMiddleware'](ctx as never, async () => {
+      expect((ctx as any).isUnaddressedGroupMessage()).toBe(true);
+
+      ctx.state.appeal = true;
+      expect((ctx as any).isUnaddressedGroupMessage()).toBe(false);
+    });
+  });
+
   it('marks an edited callback message as handled without a snackbar', async () => {
     const middleware = Object.create(
       MainMiddleware.prototype,

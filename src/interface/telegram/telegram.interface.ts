@@ -77,6 +77,8 @@ type CombinedContext = {
     't'
   > &
     LocaleI18nContext;
+  /** Текст из общего чата без явного обращения к боту. */
+  isUnaddressedGroupMessage: () => boolean;
   tryAnswerCbQuery: (
     ...args: Shorthand<'answerCbQuery'>
   ) => Promise<true | null>;

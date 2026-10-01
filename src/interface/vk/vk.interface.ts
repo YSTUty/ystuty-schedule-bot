@@ -65,6 +65,8 @@ type CombinedContext = {
   isChat: boolean;
   chatId?: number;
 
+  /** Текст из беседы без явного обращения к сообществу. */
+  isUnaddressedGroupMessage: () => boolean;
   /** Проверяет, является ли текущий update callback-событием VK. */
   isMessageEventContext: () => this is IMessageEventContext;
   isMessageContext: () => this is IMessageContext;

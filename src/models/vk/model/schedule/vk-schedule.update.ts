@@ -305,6 +305,8 @@ export class VkScheduleUpdate {
     ].includes(payload.phrase as LocalePhrase),
   )
   async hearSchedul_OneDay(@Ctx() ctx: IMessageContext | IMessageEventContext) {
+    if (ctx.isUnaddressedGroupMessage()) return;
+
     const payload: SchedulePayload | undefined =
       ctx.messagePayload || ctx.eventPayload;
     const text = 'text' in ctx ? ctx.text : undefined;
@@ -423,6 +425,8 @@ export class VkScheduleUpdate {
   async onScheduleWeekNavigation(
     @Ctx() ctx: IMessageContext | IMessageEventContext,
   ) {
+    if (ctx.isUnaddressedGroupMessage()) return;
+
     const payload: SchedulePayload | undefined =
       ctx.messagePayload || ctx.eventPayload;
 

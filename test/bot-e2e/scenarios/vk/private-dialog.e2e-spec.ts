@@ -107,6 +107,18 @@ describe('VK private dialog (transport E2E)', () => {
       (call) => String(call.params.message).includes('E2E текущая неделя'),
     );
     expect(dayScheduleCall.params.keyboard).toBeDefined();
+    expect(
+      (
+        JSON.parse(String(dayScheduleCall.params.format_data)) as {
+          items: { type: string }[];
+        }
+      ).items,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'bold' }),
+        expect.objectContaining({ type: 'italic' }),
+      ]),
+    );
     e2eTrace('VK', '← messages.send with current-week schedule');
 
     const weekPayload = getVkCallbackPayload<VkScheduleWeekPayload>(
@@ -126,6 +138,18 @@ describe('VK private dialog (transport E2E)', () => {
           String(call.params.message).includes('E2E'),
       );
     expect(weekScheduleCall.params.keyboard).toBeDefined();
+    expect(
+      (
+        JSON.parse(String(weekScheduleCall.params.format_data)) as {
+          items: { type: string }[];
+        }
+      ).items,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'bold' }),
+        expect.objectContaining({ type: 'italic' }),
+      ]),
+    );
     e2eTrace('VK', '← messages.edit changes schedule to weekly view');
   });
 
@@ -174,6 +198,7 @@ describe('VK private dialog (transport E2E)', () => {
         (call) => String(call.params.message).includes('Расписание на'),
       );
     expect(fallbackScheduleCall.params.keyboard).toBeDefined();
+    expect(fallbackScheduleCall.params.format_data).toBeDefined();
     e2eTrace('VK', '← messages.send falls back after messages.edit error');
   });
 

@@ -93,6 +93,61 @@ describe('VkService', () => {
     );
   });
 
+  it('edits a schedule message with trusted HTML and VK format_data', async () => {
+    const edit = jest.fn().mockResolvedValue(42);
+    const service = new VkService(
+      { api: { messages: { edit } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+    const { extraParams } = htmlToFormattable('<b>Расписание</b>');
+
+    await expect(
+      service.tryEditOrSendMessageHtml(
+        123,
+        { conversation_message_id: 456 },
+        '<b>Расписание</b>',
+      ),
+    ).resolves.toBe(42);
+
+    expect(edit).toHaveBeenCalledWith({
+      peer_id: 123,
+      conversation_message_id: 456,
+      ...extraParams,
+    });
+  });
+
+  it('keeps HTML formatting when editing a schedule message falls back to send', async () => {
+    const edit = jest.fn().mockRejectedValue(new Error('Message not found'));
+    const send = jest.fn().mockResolvedValue(42);
+    const service = new VkService(
+      { api: { messages: { edit, send } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+    const { extraParams } = htmlToFormattable('<i>Расписание</i>');
+
+    await expect(
+      service.tryEditOrSendMessageHtml(
+        123,
+        { conversation_message_id: 456 },
+        '<i>Расписание</i>',
+      ),
+    ).resolves.toBe(42);
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ peer_id: 123, ...extraParams }),
+    );
+  });
+
   it('caches conversation members for two minutes', async () => {
     const items = [{ member_id: 1, is_admin: true }];
     const bot = {

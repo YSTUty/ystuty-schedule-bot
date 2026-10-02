@@ -70,12 +70,13 @@ describe('VkScheduleUpdate', () => {
         keyboardFactory as any,
         {} as any,
         {} as any,
-        {} as any,
+        { sendMessageHtml: jest.fn().mockResolvedValue(1) } as any,
       );
       const ctx = {
         isChat: false,
         isUnaddressedGroupMessage: () => false,
         state: { userSocial: { groupName: 'ЦИС-46' } },
+        peerId: 123,
         $match: { groups: {} },
         send: jest.fn(),
         scene: { enter: jest.fn() },
@@ -86,7 +87,8 @@ describe('VkScheduleUpdate', () => {
 
       await update.onScheduleWeekNavigation(ctx);
 
-      expect(ctx.send).toHaveBeenCalledWith(
+      expect((update as any).vkService.sendMessageHtml).toHaveBeenCalledWith(
+        expect.any(Number),
         'Нет расписания: 7–13 сентября\n\n[ЦИС-46]',
         { keyboard: {} },
       );
@@ -119,7 +121,7 @@ describe('VkScheduleUpdate', () => {
         keyboardFactory as any,
         {} as any,
         {} as any,
-        {} as any,
+        { sendMessageHtml: jest.fn().mockResolvedValue(1) } as any,
       );
       const ctx = {
         isChat: false,
@@ -143,6 +145,7 @@ describe('VkScheduleUpdate', () => {
         targetId: 42,
         targetType: 'teacher',
         requestedWeekNumber: 3,
+        withTags: true,
         presentation: 'compact',
       });
       expect(keyboardFactory.getSchedule).toHaveBeenCalledWith(
@@ -172,7 +175,7 @@ describe('VkScheduleUpdate', () => {
       getSchedule: jest.fn(() => ({ inline: jest.fn(() => keyboard) })),
     };
     const vkService = {
-      tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
+      tryEditOrSendMessageHtml: jest.fn().mockResolvedValue(1),
     };
     const update = new VkScheduleUpdate(
       scheduleService as any,
@@ -206,7 +209,7 @@ describe('VkScheduleUpdate', () => {
     //   type: 'show_snackbar',
     //   text: 'Открываю неделю',
     // });
-    expect(vkService.tryEditOrSendMessage).toHaveBeenCalledWith(
+    expect(vkService.tryEditOrSendMessageHtml).toHaveBeenCalledWith(
       123,
       { conversation_message_id: 456 },
       expect.any(String),
@@ -228,7 +231,7 @@ describe('VkScheduleUpdate', () => {
       getSchedule: jest.fn(() => ({ inline: jest.fn(() => keyboard) })),
     };
     const vkService = {
-      tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
+      tryEditOrSendMessageHtml: jest.fn().mockResolvedValue(1),
     };
     const update = new VkScheduleUpdate(
       scheduleService as any,
@@ -259,9 +262,10 @@ describe('VkScheduleUpdate', () => {
       skipDays: 1,
       targetId: 'ЦИС-46',
       targetType: 'group',
+      withTags: true,
       presentation: 'compact',
     });
-    expect(vkService.tryEditOrSendMessage).toHaveBeenCalledWith(
+    expect(vkService.tryEditOrSendMessageHtml).toHaveBeenCalledWith(
       123,
       { conversation_message_id: 456 },
       'Расписание на завтра\n\n[ЦИС-46]',
@@ -289,7 +293,7 @@ describe('VkScheduleUpdate', () => {
       getSchedule: jest.fn(() => ({ inline: jest.fn(() => keyboard) })),
     };
     const vkService = {
-      tryEditOrSendMessage: jest.fn().mockResolvedValue(1),
+      tryEditOrSendMessageHtml: jest.fn().mockResolvedValue(1),
     };
     const update = new VkScheduleUpdate(
       scheduleService as any,
@@ -316,7 +320,7 @@ describe('VkScheduleUpdate', () => {
 
     await update.onScheduleWeekNavigation(ctx);
 
-    expect(vkService.tryEditOrSendMessage).toHaveBeenCalledWith(
+    expect(vkService.tryEditOrSendMessageHtml).toHaveBeenCalledWith(
       123,
       { conversation_message_id: 456 },
       expect.any(String),

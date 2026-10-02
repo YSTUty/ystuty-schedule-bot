@@ -194,6 +194,31 @@ export class VkService implements OnModuleInit {
     }
   }
 
+  /**
+   * Заменяет inline-сообщение расписания с VK `format_data`; если изменить
+   * сообщение уже нельзя, отправляет такой же HTML как новое.
+   */
+  public async tryEditOrSendMessageHtml(
+    peerId: number,
+    msgId: { conversation_message_id: number } | { message_id: number },
+    htmlMessage: string,
+    extra: MessagesSendParams = {},
+  ) {
+    if (!this.isActive) return false;
+
+    const { extraParams } = htmlToFormattable(htmlMessage);
+    try {
+      return await this.bot.api.messages.edit({
+        ...msgId,
+        peer_id: peerId,
+        ...extraParams,
+        ...extra,
+      });
+    } catch {
+      return await this.sendMessageHtml(peerId, htmlMessage, extra);
+    }
+  }
+
   public async notifyAdmin(message: string, extra: MessagesSendParams = {}) {
     if (!this.isActive) return;
     this.logger.debug(`Notify admin: ${message}`);

@@ -338,6 +338,7 @@ export class VkScheduleUpdate {
         skipDays,
         targetId: target.id,
         targetType: target.type,
+        withTags: true,
         presentation,
       });
     } else if (_skipDays !== null) {
@@ -345,6 +346,7 @@ export class VkScheduleUpdate {
         skipDays,
         targetId: target.id,
         targetType: target.type,
+        withTags: true,
         presentation,
       });
       if (message === false) {
@@ -354,6 +356,7 @@ export class VkScheduleUpdate {
       [days, message] = await this.scheduleService.findNext({
         targetId: target.id,
         targetType: target.type,
+        withTags: true,
         presentation,
       });
     }
@@ -380,24 +383,7 @@ export class VkScheduleUpdate {
       )
       .inline(true);
     const content = appendScheduleTargetFooter(message, target.name);
-    if ('eventPayload' in ctx) {
-      if (ctx.conversationMessageId === undefined) {
-        await ctx.send(content, { keyboard });
-        ctx.state.eventAnswered = true;
-        return;
-      }
-      const result = await this.vkService.tryEditOrSendMessage(
-        ctx.peerId,
-        { conversation_message_id: ctx.conversationMessageId },
-        content,
-        { keyboard },
-      );
-      if (result !== false) {
-        ctx.state.eventAnswered = true;
-      }
-      return;
-    }
-    await ctx.send(content, { keyboard });
+    await this.sendScheduleMessage(ctx, content, { keyboard });
   }
 
   @VkHearsLocale(vkScheduleWeekTextPhrases)
@@ -456,6 +442,7 @@ export class VkScheduleUpdate {
       targetId: target.id,
       targetType: target.type,
       requestedWeekNumber,
+      withTags: true,
       presentation,
     });
     let message: string;
@@ -496,24 +483,28 @@ export class VkScheduleUpdate {
       )
       .inline(true);
     const content = appendScheduleTargetFooter(message, target.name);
-    if ('eventPayload' in ctx) {
-      if (ctx.conversationMessageId === undefined) {
-        await ctx.send(content, { keyboard });
-        ctx.state.eventAnswered = true;
-        return;
-      }
-      const result = await this.vkService.tryEditOrSendMessage(
-        ctx.peerId,
-        { conversation_message_id: ctx.conversationMessageId },
-        content,
-        { keyboard },
-      );
-      if (result !== false) {
-        ctx.state.eventAnswered = true;
-      }
-      return;
+    await this.sendScheduleMessage(ctx, content, { keyboard });
+  }
+
+  /** Единый HTML-путь для текстовых ответов и inline-переходов расписания. */
+  private async sendScheduleMessage(
+    ctx: IMessageContext | IMessageEventContext,
+    content: string,
+    extra: Parameters<VkService['sendMessageHtml']>[2],
+  ) {
+    const result =
+      'eventPayload' in ctx && ctx.conversationMessageId !== undefined
+        ? await this.vkService.tryEditOrSendMessageHtml(
+            ctx.peerId,
+            { conversation_message_id: ctx.conversationMessageId },
+            content,
+            extra,
+          )
+        : await this.vkService.sendMessageHtml(ctx.peerId, content, extra);
+
+    if ('eventPayload' in ctx && result !== false) {
+      ctx.state.eventAnswered = true;
     }
-    await ctx.send(content, { keyboard });
   }
 
   /** Определяет преподавателя или учебную группу для текущего запроса. */

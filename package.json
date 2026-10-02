@@ -139,6 +139,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "maxWorkers": 2,
+    "workerIdleMemoryLimit": "1GB",
     "moduleNameMapper": {
       "^@my-environment$": "<rootDir>/environment",
       "^@my-common$": "<rootDir>/common",

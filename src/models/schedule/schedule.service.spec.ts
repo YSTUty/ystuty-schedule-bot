@@ -1,5 +1,6 @@
 import { of, throwError } from 'rxjs';
 
+import { md5 } from '@my-common';
 import { LockBusyError } from '@my-common/exception';
 import { WeekNumberType } from '@my-interfaces';
 
@@ -98,6 +99,20 @@ describe('ScheduleService', () => {
         expect(service.resolveGroupName(value)).toBeNull();
       },
     );
+  });
+
+  describe('groupsCount', () => {
+    beforeEach(() => {
+      (service as any).allGroupsList = [
+        { name: 'ИИТ', groups: ['ЦИС-17', 'ЦИС-18'] },
+        { name: 'ИПС', groups: ['ПИ-11'] },
+      ];
+    });
+
+    it('counts all groups or only groups of the requested institute', () => {
+      expect(service.groupsCount()).toBe(3);
+      expect(service.groupsCount(md5('ИИТ').slice(0, 12))).toBe(2);
+    });
   });
 
   describe('reference data loading logs', () => {

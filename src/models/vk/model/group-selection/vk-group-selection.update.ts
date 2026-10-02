@@ -16,6 +16,15 @@ import { VkService } from '../../vk.service';
 import { VkGroupPicker } from './vk-group-picker';
 import { VkGroupSelectionKeyboardFactory } from './vk-group-selection-keyboard.factory';
 
+const VK_INSTITUTE_GROUPS_SINGLE_PAGE_SIZE = 8;
+const VK_ALL_GROUPS_SINGLE_PAGE_SIZE = 10;
+const VK_INSTITUTE_GROUPS_TWO_PAGES_SIZE = 7;
+const VK_ALL_GROUPS_TWO_PAGES_SIZE = 8;
+const VK_INSTITUTE_GROUPS_COMPACT_PAGER_PAGE_SIZE = 6;
+const VK_ALL_GROUPS_COMPACT_PAGER_PAGE_SIZE = 7;
+// До десяти страниц шесть-семь групп на экране удобнее edge-навигации.
+const VK_GROUPS_COMPACT_PAGER_MAX_PAGES = 10;
+
 @Update()
 @UseFilters(VkExceptionFilter)
 export class VkGroupSelectionUpdate {
@@ -85,7 +94,7 @@ export class VkGroupSelectionUpdate {
           groupAction: 'institutes',
           page: nextPage,
         }),
-        pagerMode: 'edges',
+        pagerMode: 'adaptive',
       },
       5,
     );
@@ -99,7 +108,7 @@ export class VkGroupSelectionUpdate {
     instituteHash?: string,
     page = 1,
   ) {
-    const pageSize = instituteHash ? 4 : 5;
+    const pagination = this.getGroupsPagination(instituteHash);
     const { text, keyboard } = this.groupPicker.renderGroups(
       ctx,
       instituteHash || null,
@@ -114,13 +123,90 @@ export class VkGroupSelectionUpdate {
         additionalButtons: instituteHash
           ? [[this.keyboardFactory.getInstitutesListButton(ctx)]]
           : undefined,
-        pagerMode: 'edges',
-        groupColumns: instituteHash ? 2 : 1,
+        pagerMode: pagination.pagerMode,
+        groupColumns: pagination.groupColumns,
+        adaptiveTwoPagesWithoutCurrent:
+          pagination.adaptiveTwoPagesWithoutCurrent,
+        adaptiveCompactMaxPages: pagination.adaptiveCompactMaxPages,
+        centerButtonToMiddle: true,
       },
-      pageSize,
+      pagination.pageSize,
     );
 
     await this.sendOrEditGroupList(ctx, text, keyboard);
+  }
+
+  /**
+   * Размер страницы выбирается до запроса списка. Это сохраняет одинаковые
+   * границы страниц и оставляет место для понятного pager со стрелками.
+   */
+  private getGroupsPagination(instituteHash?: string) {
+    const hasInstitute = !!instituteHash;
+    const totalGroups = this.scheduleService.groupsCount(instituteHash || null);
+    const singlePageSize = hasInstitute
+      ? VK_INSTITUTE_GROUPS_SINGLE_PAGE_SIZE
+      : VK_ALL_GROUPS_SINGLE_PAGE_SIZE;
+    const twoPagesSize = hasInstitute
+      ? VK_INSTITUTE_GROUPS_TWO_PAGES_SIZE
+      : VK_ALL_GROUPS_TWO_PAGES_SIZE;
+    const compactPagerPageSize = hasInstitute
+      ? VK_INSTITUTE_GROUPS_COMPACT_PAGER_PAGE_SIZE
+      : VK_ALL_GROUPS_COMPACT_PAGER_PAGE_SIZE;
+    // Пяти-кнопочная edge-навигация резервирует больше button budget.
+    const fullPagerPageSize = hasInstitute ? 4 : 5;
+
+    if (totalGroups <= singlePageSize) {
+      return {
+        pageSize: singlePageSize,
+        groupColumns: 2,
+        pagerMode: 'adaptive' as const,
+        adaptiveTwoPagesWithoutCurrent: false,
+      };
+    }
+
+    // Сначала стараемся сохранить индикатор текущей страницы. Убираем его
+    // только если одна высвобожденная кнопка позволяет не создавать третью.
+    const twoPagesWithIndicatorSize = twoPagesSize - 1;
+    if (Math.ceil(totalGroups / twoPagesWithIndicatorSize) === 2) {
+      return {
+        pageSize: twoPagesWithIndicatorSize,
+        groupColumns: 2,
+        pagerMode: 'adaptive' as const,
+        adaptiveTwoPagesWithoutCurrent: false,
+      };
+    }
+
+    if (Math.ceil(totalGroups / twoPagesSize) === 2) {
+      return {
+        pageSize: twoPagesSize,
+        groupColumns: 2,
+        pagerMode: 'adaptive' as const,
+        adaptiveTwoPagesWithoutCurrent: true,
+      };
+    }
+
+    // Для средних списков используем больше групп и только соседние переходы.
+    // Порог передаётся в factory, поэтому режим остаётся настраиваемым.
+    if (
+      Math.ceil(totalGroups / compactPagerPageSize) <=
+      VK_GROUPS_COMPACT_PAGER_MAX_PAGES
+    ) {
+      return {
+        pageSize: compactPagerPageSize,
+        groupColumns: 2,
+        pagerMode: 'adaptive' as const,
+        adaptiveTwoPagesWithoutCurrent: false,
+        adaptiveCompactMaxPages: VK_GROUPS_COMPACT_PAGER_MAX_PAGES,
+      };
+    }
+
+    return {
+      pageSize: fullPagerPageSize,
+      groupColumns: 2,
+      pagerMode: 'edges' as const,
+      adaptiveTwoPagesWithoutCurrent: false,
+      adaptiveCompactMaxPages: undefined,
+    };
   }
 
   /** Отправляет новый список или заменяет сообщение, от которого пришёл callback. */

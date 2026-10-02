@@ -1,3 +1,5 @@
+import { Keyboard } from 'vk-io';
+
 import * as xEnv from '@my-environment';
 
 import { LocalePhrase } from '@my-interfaces';
@@ -36,6 +38,205 @@ describe('VKKeyboardFactory', () => {
     const renderedKeyboard = JSON.parse(String(keyboard.inline()));
 
     expect(renderedKeyboard.buttons[0][0].action.label).toHaveLength(40);
+  });
+
+  it('does not create a pager row for a single VK pagination page', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 1,
+      items: [
+        'Группа 1',
+        'Группа 2',
+        'Группа 3',
+        'Группа 4',
+        'Группа 5',
+        'Группа 6',
+      ],
+      getPagePayload: () => ({}),
+      pagerMode: 'adaptive',
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons).toHaveLength(6);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(6);
+    expect(
+      renderedKeyboard.buttons.flat().map((button: any) => button.action.label),
+    ).toEqual([
+      'Группа 1',
+      'Группа 2',
+      'Группа 3',
+      'Группа 4',
+      'Группа 5',
+      'Группа 6',
+    ]);
+  });
+
+  it('keeps only neighbouring arrows for a three-page adaptive VK pagination', () => {
+    const getPagePayload = jest.fn((page: number) => ({ page }));
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 2,
+      totalPages: 3,
+      getPagePayload,
+      pagerMode: 'adaptive',
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+    const pagerButtons = renderedKeyboard.buttons[0];
+
+    expect(pagerButtons.map((button: any) => button.action.label)).toEqual([
+      '‹1',
+      '-2/3-',
+      '3›',
+    ]);
+    expect(
+      pagerButtons.map((button: any) => JSON.parse(button.action.payload)),
+    ).toEqual([{ page: 1 }, { page: 2 }, { page: 3 }]);
+    expect(getPagePayload).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not create a callback back to the current first adaptive page', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 3,
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'adaptive',
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(
+      renderedKeyboard.buttons[0].map((button: any) => button.action.label),
+    ).toEqual(['-', '-1/3-', '2›']);
+    expect(JSON.parse(renderedKeyboard.buttons[0][0].action.payload)).toEqual({
+      nope: {},
+    });
+  });
+
+  it('uses a compact but numbered pager for two pages', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 2,
+      items: [
+        ['Группа 1', 'Группа 2'],
+        ['Группа 3', 'Группа 4'],
+        ['Группа 5', 'Группа 6'],
+      ],
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'adaptive',
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(9);
+    expect(
+      renderedKeyboard.buttons[3].map((button: any) => button.action.label),
+    ).toEqual(['-', '-1/2-', '2›']);
+  });
+
+  it('can omit the two-page indicator when a group list needs its button budget', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 2,
+      items: [
+        ['Группа 1', 'Группа 2'],
+        ['Группа 3', 'Группа 4'],
+        ['Группа 5', 'Группа 6'],
+        ['Группа 7', 'Группа 8'],
+      ],
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'adaptive',
+      adaptiveTwoPagesWithoutCurrent: true,
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(10);
+    expect(
+      renderedKeyboard.buttons[4].map((button: any) => button.action.label),
+    ).toEqual(['-', '2›']);
+  });
+
+  it('keeps edge navigation for a long adaptive VK pagination', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 3,
+      totalPages: 5,
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'adaptive',
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(
+      renderedKeyboard.buttons[0].map((button: any) => button.action.label),
+    ).toEqual(['«1', '‹2', '-3-', '4›', '5»']);
+  });
+
+  it('keeps an adaptive pager compact through the configured page threshold', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 5,
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'adaptive',
+      adaptiveCompactMaxPages: 10,
+      centerButtonToMiddle: true,
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(
+      renderedKeyboard.buttons[0].map((button: any) => button.action.label),
+    ).toEqual(['-', '-1/5-', '2›']);
+    expect(JSON.parse(renderedKeyboard.buttons[0][1].action.payload)).toEqual({
+      page: 3,
+    });
+  });
+
+  it('keeps a compact pager on the first page of a four-page list', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 4,
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'adaptive',
+      centerButtonToMiddle: true,
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(
+      renderedKeyboard.buttons[0].map((button: any) => button.action.label),
+    ).toEqual(['-', '-1/4-', '2›']);
+    expect(JSON.parse(renderedKeyboard.buttons[0][1].action.payload)).toEqual({
+      page: 2,
+    });
+  });
+
+  it('uses the central pager button as a shortcut to the middle of a long list', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 5,
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'edges',
+      centerButtonToMiddle: true,
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(JSON.parse(renderedKeyboard.buttons[0][2].action.payload)).toEqual({
+      page: 3,
+    });
+  });
+
+  it('fits six group buttons, a compact four-page pager and an extra action', () => {
+    const keyboard = new VKKeyboardFactory().getPagination({
+      currentPage: 1,
+      totalPages: 4,
+      items: [
+        ['Группа 1', 'Группа 2'],
+        ['Группа 3', 'Группа 4'],
+        ['Группа 5', 'Группа 6'],
+      ],
+      getPagePayload: (page) => ({ page }),
+      pagerMode: 'adaptive',
+      additionalButtons: [
+        [Keyboard.callbackButton({ label: 'К институтам', payload: {} })],
+      ],
+    });
+    const renderedKeyboard = JSON.parse(String(keyboard.inline()));
+
+    expect(renderedKeyboard.buttons).toHaveLength(5);
+    expect(renderedKeyboard.buttons.flat()).toHaveLength(10);
   });
 
   it('builds welcome quick actions for selecting a group, notifications, guide and chat invite', () => {

@@ -182,7 +182,7 @@ export class VkSelectGroupScene {
           groupAction: 'institutes',
           page,
         }),
-        pagerMode: 'edges',
+        pagerMode: 'adaptive',
       },
       5,
     );

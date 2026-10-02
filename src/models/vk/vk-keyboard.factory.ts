@@ -22,9 +22,20 @@ export type VKPaginationOptions = {
   additionalButtons?: IKeyboardProxyButton[][];
   /** @default 'edges' */
   pagerMode?: PaginationPagerMode;
+  /** Для двух страниц освобождает кнопку текущей страницы под элемент списка. */
+  adaptiveTwoPagesWithoutCurrent?: boolean;
+  /** До какого числа страниц adaptive pager остаётся компактным. @default 4 */
+  adaptiveCompactMaxPages?: number;
+  /** Центральный индикатор возвращает к середине списка вместо текущей страницы. */
+  centerButtonToMiddle?: boolean;
 };
 
-type PaginationPagerMode = 'compact' | 'compact-pages' | 'edges' | 'nearby';
+export type PaginationPagerMode =
+  | 'compact'
+  | 'compact-pages'
+  | 'adaptive'
+  | 'edges'
+  | 'nearby';
 
 const VK_BUTTON_LABEL_MAX_LENGTH = 40;
 const VK_INLINE_KEYBOARD_MAX_ROWS = 6;
@@ -251,7 +262,11 @@ export class VKKeyboardFactory {
   public getPagination(params: VKPaginationOptions) {
     const itemRows = this.getPaginationBuild(params);
     const pagerRow = this.getPaginationPager(params);
-    const rows = [...itemRows, pagerRow, ...(params.additionalButtons || [])];
+    const rows = [
+      ...itemRows,
+      ...(pagerRow.length ? [pagerRow] : []),
+      ...(params.additionalButtons || []),
+    ];
     const buttonsCount = rows.reduce((count, row) => count + row.length, 0);
 
     if (rows.length > VK_INLINE_KEYBOARD_MAX_ROWS) {
@@ -270,10 +285,12 @@ export class VKKeyboardFactory {
   /** Строит item-ряды с учётом ограничений VK на кнопки, строки и колонки. */
   public getPaginationBuild(params: VKPaginationOptions) {
     const additionalButtons = params.additionalButtons || [];
-    // VK позволяет максимум шесть рядов, один из них всегда занят pager.
+    // Одностраничному списку pager не нужен: освободившийся ряд можно отдать элементам.
     const maxItemsRows = Math.max(
       0,
-      VK_INLINE_KEYBOARD_MAX_ROWS - 1 - additionalButtons.length,
+      VK_INLINE_KEYBOARD_MAX_ROWS -
+        (this.shouldShowPaginationPager(params) ? 1 : 0) -
+        additionalButtons.length,
     );
     const itemRows = params.items || [];
     if (itemRows.length > maxItemsRows) {
@@ -316,12 +333,35 @@ export class VKKeyboardFactory {
       Keyboard.callbackButton({ label: '-', payload: { nope: {} } });
     const { currentPage: curPage, totalPages } = params;
     const mode = params.pagerMode || 'edges';
+    // Для длинного выбора групп центральная кнопка служит быстрым возвратом
+    // к середине; остальные pagination по умолчанию сохраняют прежний callback.
+    const middlePage = Math.ceil(totalPages / 2);
+    const currentPageButton = (label: string) =>
+      toBtn(params.centerButtonToMiddle ? middlePage : curPage, label);
+
+    if (!this.shouldShowPaginationPager(params)) {
+      return [];
+    }
+
+    if (mode === 'adaptive') {
+      // Заголовок списка уже содержит N/M. Для короткого списка оставляем
+      // читаемые переходы со стрелками и номерами целевых страниц.
+      const adaptiveCompactMaxPages = params.adaptiveCompactMaxPages ?? 4;
+      if (totalPages <= adaptiveCompactMaxPages) {
+        return this.getAdaptivePaginationPager(
+          params,
+          toBtn,
+          noop,
+          params.centerButtonToMiddle ? middlePage : curPage,
+          adaptiveCompactMaxPages,
+        );
+      }
+    }
 
     if (mode === 'compact' || mode === 'compact-pages') {
       return [
         curPage > 1 ? toBtn(curPage - 1, '‹') : noop(),
-        toBtn(
-          curPage,
+        currentPageButton(
           mode === 'compact-pages'
             ? `-${curPage}/${totalPages}-`
             : `-${curPage}-`,
@@ -330,11 +370,11 @@ export class VKKeyboardFactory {
       ];
     }
 
-    if (mode === 'edges') {
+    if (mode === 'edges' || mode === 'adaptive') {
       return [
         curPage > 1 ? toBtn(1, '«1') : noop(),
         curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
-        toBtn(curPage, `-${curPage}-`),
+        currentPageButton(`-${curPage}-`),
         curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
         curPage < totalPages ? toBtn(totalPages, `${totalPages}»`) : noop(),
       ];
@@ -347,11 +387,79 @@ export class VKKeyboardFactory {
         ? toBtn(previousMiddle, `«${previousMiddle}`)
         : noop(),
       curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
-      toBtn(curPage, `-${curPage}-`),
+      currentPageButton(`-${curPage}-`),
       nextMiddle > curPage && nextMiddle < totalPages
         ? toBtn(nextMiddle, `${nextMiddle}»`)
         : noop(),
       curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
+    ];
+  }
+
+  private shouldShowPaginationPager(params: VKPaginationOptions) {
+    return params.totalPages > 1;
+  }
+
+  /**
+   * До четырёх страниц достаточно переходов к соседней. Edge-переходы нужны
+   * только с пяти страниц; на границах сохраняем ширину ряда через noop.
+   */
+  private getAdaptivePaginationPager(
+    params: VKPaginationOptions,
+    toBtn: (page: number, label: string) => IKeyboardProxyButton,
+    noop: () => IKeyboardProxyButton,
+    middlePage: number,
+    compactMaxPages: number,
+  ) {
+    const { currentPage: curPage, totalPages } = params;
+    const currentPageButton = () =>
+      toBtn(middlePage, `-${curPage}/${totalPages}-`);
+
+    if (totalPages === 2) {
+      if (params.adaptiveTwoPagesWithoutCurrent) {
+        return curPage === 1
+          ? [noop(), toBtn(2, '2›')]
+          : [toBtn(1, '‹1'), noop()];
+      }
+      if (curPage === 1) {
+        return [noop(), currentPageButton(), toBtn(2, '2›')];
+      }
+      return [toBtn(1, '‹1'), currentPageButton(), noop()];
+    }
+
+    if (totalPages <= compactMaxPages) {
+      return [
+        curPage > 1 ? toBtn(curPage - 1, `‹${curPage - 1}`) : noop(),
+        currentPageButton(),
+        curPage < totalPages ? toBtn(curPage + 1, `${curPage + 1}›`) : noop(),
+      ];
+    }
+
+    if (curPage === 1) {
+      return [
+        noop(),
+        noop(),
+        currentPageButton(),
+        toBtn(2, '2›'),
+        toBtn(totalPages, `${totalPages}»`),
+      ];
+    }
+
+    if (curPage === totalPages) {
+      return [
+        toBtn(1, '«1'),
+        toBtn(totalPages - 1, `‹${totalPages - 1}`),
+        currentPageButton(),
+        noop(),
+        noop(),
+      ];
+    }
+
+    return [
+      toBtn(1, '«1'),
+      toBtn(curPage - 1, `‹${curPage - 1}`),
+      currentPageButton(),
+      toBtn(curPage + 1, `${curPage + 1}›`),
+      toBtn(totalPages, `${totalPages}»`),
     ];
   }
 

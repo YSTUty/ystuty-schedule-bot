@@ -314,6 +314,18 @@ export class ScheduleService implements OnModuleInit {
     };
   }
 
+  /** Число групп в общем списке или в одном институте из in-memory справочника. */
+  public groupsCount(instituteHash: string | null = null) {
+    return this.allGroupsList.reduce(
+      (count, institute) =>
+        count +
+        (!instituteHash || md5(institute.name).startsWith(instituteHash)
+          ? institute.groups.length
+          : 0),
+      0,
+    );
+  }
+
   public groupsInstitutesList(page = 1, count = 20) {
     const { allGroupsList } = this;
     const totalCount = allGroupsList.length;

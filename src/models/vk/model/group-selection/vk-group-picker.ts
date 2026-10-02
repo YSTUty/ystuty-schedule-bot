@@ -17,6 +17,9 @@ type VkPickerOptions = {
   onPage: (hash: string | undefined, page: number) => Record<string, unknown>;
   additionalButtons?: VkPickerButtons;
   pagerMode?: VKPaginationOptions['pagerMode'];
+  adaptiveTwoPagesWithoutCurrent?: boolean;
+  adaptiveCompactMaxPages?: number;
+  centerButtonToMiddle?: boolean;
   /** Число групп в строке. Выбор зависит от button budget конкретного экрана. */
   groupColumns?: number;
 };
@@ -53,6 +56,9 @@ export class VkGroupPicker {
         getPagePayload: (nextPage) => options.onPage(undefined, nextPage),
         additionalButtons: options.additionalButtons || [],
         pagerMode: options.pagerMode || 'compact',
+        adaptiveTwoPagesWithoutCurrent: options.adaptiveTwoPagesWithoutCurrent,
+        adaptiveCompactMaxPages: options.adaptiveCompactMaxPages,
+        centerButtonToMiddle: options.centerButtonToMiddle,
       }),
     };
   }
@@ -70,10 +76,11 @@ export class VkGroupPicker {
       instituteHash,
     );
     const groupColumns = options.groupColumns || 2;
+    const layoutItems = this.optimizeGroupButtons(items, groupColumns);
     const rows = Array.from(
-      { length: Math.ceil(items.length / groupColumns) },
+      { length: Math.ceil(layoutItems.length / groupColumns) },
       (_, index) =>
-        items
+        layoutItems
           .slice(index * groupColumns, (index + 1) * groupColumns)
           .map((title) => ({
             title,
@@ -96,7 +103,41 @@ export class VkGroupPicker {
           options.onPage(instituteHash || undefined, nextPage),
         additionalButtons: options.additionalButtons || [],
         pagerMode: options.pagerMode || 'compact',
+        adaptiveTwoPagesWithoutCurrent: options.adaptiveTwoPagesWithoutCurrent,
+        adaptiveCompactMaxPages: options.adaptiveCompactMaxPages,
+        centerButtonToMiddle: options.centerButtonToMiddle,
       }),
     };
+  }
+
+  /**
+   * Одиночная кнопка на последней строке получает всю ширину VK-клавиатуры.
+   * Если она короче одной из парных групп, меняем их местами, чтобы длинное
+   * название не обрезалось там, где его можно показать полностью.
+   */
+  private optimizeGroupButtons(items: string[], groupColumns: number) {
+    if (groupColumns !== 2 || items.length < 3 || items.length % 2 === 0) {
+      return items;
+    }
+
+    const layoutItems = [...items];
+    const lastIndex = layoutItems.length - 1;
+    const longestPairIndex = layoutItems
+      .slice(0, lastIndex)
+      .reduce(
+        (longestIndex, title, index, titles) =>
+          title.length > titles[longestIndex].length ? index : longestIndex,
+        0,
+      );
+
+    if (layoutItems[longestPairIndex].length <= layoutItems[lastIndex].length) {
+      return layoutItems;
+    }
+
+    [layoutItems[longestPairIndex], layoutItems[lastIndex]] = [
+      layoutItems[lastIndex],
+      layoutItems[longestPairIndex],
+    ];
+    return layoutItems;
   }
 }

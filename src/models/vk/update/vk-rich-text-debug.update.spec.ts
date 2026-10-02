@@ -2,26 +2,15 @@ import { VkRichTextDebugUpdate } from './vk-rich-text-debug.update';
 
 describe('VkRichTextDebugUpdate', () => {
   const sendMessageHtml = jest.fn();
-  const sendMessageFormatData = jest.fn();
   const update = new VkRichTextDebugUpdate({
     sendMessageHtml,
-    sendMessageFormatData,
   } as any);
 
   beforeEach(() => {
     sendMessageHtml.mockReset().mockResolvedValue(1);
-    sendMessageFormatData.mockReset().mockResolvedValue(1);
   });
 
-  it('uses markdown-to-vk output only through the confirmed format_data sender', async () => {
-    const ctx = {
-      isDM: true,
-      peerId: 10,
-      senderId: 10,
-      $match: { groups: { variant: 'markdown' } },
-      send: jest.fn(),
-    } as any;
-
+  async function runDebugCommand(ctx: any) {
     jest.useFakeTimers();
     try {
       const processing = update.onDebugRichText(ctx);
@@ -30,49 +19,27 @@ describe('VkRichTextDebugUpdate', () => {
     } finally {
       jest.useRealTimers();
     }
+  }
 
-    expect(sendMessageHtml).not.toHaveBeenCalled();
-    expect(sendMessageFormatData).toHaveBeenCalledTimes(12);
-    expect(sendMessageFormatData).toHaveBeenCalledWith(
-      10,
-      expect.stringContaining('Markdown: жирный текст'),
-      expect.arrayContaining([expect.objectContaining({ type: 'bold' })]),
-    );
-    expect(sendMessageFormatData).toHaveBeenCalledWith(
-      10,
-      expect.stringContaining('Markdown: ссылка на YSTUty'),
-      expect.arrayContaining([expect.objectContaining({ type: 'url' })]),
-    );
-  });
-
-  it('renders the full markdown compatibility sample in one message chunk', async () => {
+  it('sends only confirmed HTML rich-text variants', async () => {
     const ctx = {
       isDM: true,
       peerId: 10,
       senderId: 10,
-      $match: { groups: { variant: 'markdown_full' } },
+      $match: { groups: { variant: 'basic' } },
       send: jest.fn(),
     } as any;
 
-    jest.useFakeTimers();
-    try {
-      const processing = update.onDebugRichText(ctx);
-      await jest.runAllTimersAsync();
-      await processing;
-    } finally {
-      jest.useRealTimers();
-    }
+    await runDebugCommand(ctx);
 
-    expect(sendMessageHtml).not.toHaveBeenCalled();
-    expect(sendMessageFormatData).toHaveBeenCalledTimes(1);
-    expect(sendMessageFormatData).toHaveBeenCalledWith(
+    expect(sendMessageHtml).toHaveBeenCalledTimes(5);
+    expect(sendMessageHtml).toHaveBeenCalledWith(
       10,
-      expect.stringContaining('БОЛЬШОЙ MARKDOWN → VK'),
-      expect.arrayContaining([
-        expect.objectContaining({ type: 'bold' }),
-        expect.objectContaining({ type: 'italic' }),
-        expect.objectContaining({ type: 'url' }),
-      ]),
+      expect.stringContaining('<b>Жирный текст</b>'),
+    );
+    expect(sendMessageHtml).toHaveBeenCalledWith(
+      10,
+      expect.stringContaining('<a href="https://ystuty.ru">'),
     );
   });
 
@@ -86,7 +53,7 @@ describe('VkRichTextDebugUpdate', () => {
       send: jest.fn(),
     } as any;
 
-    await update.onDebugRichText(ctx);
+    await runDebugCommand(ctx);
 
     expect(sendMessageHtml).toHaveBeenCalledTimes(4);
     expect(sendMessageHtml).toHaveBeenCalledWith(

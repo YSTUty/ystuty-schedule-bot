@@ -149,11 +149,7 @@ export class VkService implements OnModuleInit {
     );
   }
 
-  /**
-   * Низкоуровневая отправка подтверждённых VK `format_data`-сущностей.
-   * Не передавать неподдерживаемые клиентами VK типы (code, strike и т. п.).
-   */
-  public async sendMessageFormatData(
+  private async sendMessageFormatData(
     peerId: number,
     message: string,
     items: readonly VkFormatEntity[],
@@ -163,9 +159,6 @@ export class VkService implements OnModuleInit {
 
     const orderedItems = removeNestedDuplicateVkFormatEntities(items);
     const format_data = JSON.stringify({ version: '1', items: orderedItems });
-    this.logger.debug(
-      `[VK][rich-text] peer=${peerId} length=${message.length} entities=${orderedItems.length} types=${orderedItems.map((item) => item.type).join(',') || '-'}`,
-    );
     try {
       return await this.bot.api.messages.send({
         random_id: getRandomId(),

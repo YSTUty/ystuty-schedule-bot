@@ -31,17 +31,10 @@ export class VkScheduleNotifTransport
         ? params.recipient.userSocial.socialId
         : // only for vk conversation
           params.recipient.conversationId + 2e9;
-    const messageId = await this.vkService.sendMessageOrThrow(
-      peerId,
-      params.text,
-    );
-    if (typeof messageId === 'number') {
-      return { messageId: String(messageId) };
-    }
-    if (!messageId || !Array.isArray(messageId)) {
-      throw new Error('VK did not accept the schedule notif');
-    }
-    return { messageId: String(messageId[0].conversation_message_id) };
+    const messageId = params.html
+      ? await this.vkService.sendMessageHtmlOrThrow(peerId, params.html)
+      : await this.vkService.sendMessageOrThrow(peerId, params.text);
+    return this.getMessageId(messageId);
   }
 
   /** Отправляет личное сервисное сообщение получателю рассылки. */
@@ -52,10 +45,17 @@ export class VkScheduleNotifTransport
       params.recipient.socialId,
       params.text,
     );
+    return this.getMessageId(messageId);
+  }
+
+  /** Нормализует разные формы успешного ответа messages.send из vk-io. */
+  private getMessageId(
+    messageId: number | { conversation_message_id: number }[],
+  ) {
     if (typeof messageId === 'number') {
       return { messageId: String(messageId) };
     }
-    if (!messageId || !Array.isArray(messageId)) {
+    if (!messageId.length) {
       throw new Error('VK did not accept the schedule notif');
     }
     // TODO: conversation_message_id | message_id | peer_id

@@ -11,6 +11,9 @@ describe('VkScheduleNotifTransport', () => {
           conversation_message_id: 42,
         },
       ]),
+      sendMessageHtmlOrThrow: jest
+        .fn()
+        .mockResolvedValue([{ conversation_message_id: 42 }]),
     };
     const transportRegistry = {
       register: jest.fn(),
@@ -69,5 +72,21 @@ describe('VkScheduleNotifTransport', () => {
         text: 'Расписание',
       }),
     ).resolves.toEqual({ messageId: '42' });
+  });
+
+  it('sends a trusted HTML notification through VK format_data', async () => {
+    const { transport, vkService } = createTransport();
+
+    await transport.sendScheduleNotif({
+      recipient: { type: 'conversation', conversationId: 1 },
+      text: 'Расписание',
+      html: '<b>Расписание</b>',
+    });
+
+    expect(vkService.sendMessageHtmlOrThrow).toHaveBeenCalledWith(
+      2000000001,
+      '<b>Расписание</b>',
+    );
+    expect(vkService.sendMessageOrThrow).not.toHaveBeenCalled();
   });
 });

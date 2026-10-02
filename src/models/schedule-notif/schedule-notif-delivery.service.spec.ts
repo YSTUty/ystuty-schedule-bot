@@ -133,6 +133,12 @@ describe('ScheduleNotifDeliveryService', () => {
     expect(scheduleService.findNext).toHaveBeenCalledWith({
       groupName: 'ЦИС-11',
       skipDays: 1,
+      withTags: true,
+    });
+    expect(transport.sendScheduleNotif).toHaveBeenCalledWith({
+      recipient: { type: 'user', userSocial },
+      text: 'Schedule\n[ЦИС-11]',
+      html: '<b>Schedule</b>\n[ЦИС-11]',
     });
     expect(delivery.status).toBe(ScheduleNotifDeliveryStatus.Sent);
     expect(delivery.sentMessageId).toBe('42');
@@ -165,7 +171,25 @@ describe('ScheduleNotifDeliveryService', () => {
     expect(scheduleService.findNext).toHaveBeenCalledWith({
       groupName: 'ЦИС-11',
       isWeek: true,
+      withTags: true,
     });
+  });
+
+  it('keeps trusted schedule HTML separate from the plain fallback text', async () => {
+    const { service, scheduleService, transport } = createService();
+    Object.assign(notif, { targetId: 'Группа <42>' });
+    scheduleService.getGroupByName.mockReturnValue('Группа <42>');
+    scheduleService.findNext.mockResolvedValue([1, '<b>Расписание</b>']);
+    transport.sendScheduleNotif.mockResolvedValue({ messageId: '42' });
+
+    await service.deliver(notif, delivery);
+
+    expect(transport.sendScheduleNotif).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: 'Расписание\n[Группа <42>]',
+        html: '<b>Расписание</b>\n[Группа &lt;42&gt;]',
+      }),
+    );
   });
 
   it('delivers a conversation notif to its persistent messenger conversation id', async () => {

@@ -122,20 +122,35 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   ) {
     if (!this.isActive) return false;
     try {
-      return await this.bot.telegram.callApi(
-        'sendMessage',
-        {
-          chat_id: chatId,
-          text,
-          parse_mode: 'HTML',
-          ...extra,
-        },
-        { signal: AbortSignal.timeout(SEND_MESSAGE_TIMEOUT_MS) },
-      );
+      return await this.sendMessageOrThrow(chatId, text, extra);
     } catch (err) {
       this.logger.error(err);
       return false;
     }
+  }
+
+  /**
+   * Отправляет фоновое сообщение без подавления Telegram API-ошибки.
+   * Очередь рассылок использует исходный 429, чтобы выдержать retry_after.
+   */
+  public async sendMessageOrThrow(
+    chatId: number,
+    text: string,
+    extra: ExtraReplyMessage = {},
+  ) {
+    if (!this.isActive) {
+      throw new Error('Telegram bot is inactive');
+    }
+    return await this.bot.telegram.callApi(
+      'sendMessage',
+      {
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        ...extra,
+      },
+      { signal: AbortSignal.timeout(SEND_MESSAGE_TIMEOUT_MS) },
+    );
   }
 
   public async notifyAdmin(message: string, extra: ExtraReplyMessage = {}) {

@@ -21,5 +21,7 @@ export interface ScheduleNotifTransport {
   sendScheduleNotif(params: {
     recipient: ScheduleNotifRecipient;
     text: string;
+    /** HTML-вариант доверенного текста для транспортов с поддержкой разметки. */
+    html?: string;
   }): Promise<ScheduleNotifTransportResult>;
 }

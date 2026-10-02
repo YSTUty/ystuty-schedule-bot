@@ -62,6 +62,24 @@ describe('VkService', () => {
     );
   });
 
+  it('preserves a VK format_data error for background delivery retries', async () => {
+    const error = new Error('VK rate limit');
+    const send = jest.fn().mockRejectedValue(error);
+    const service = new VkService(
+      { api: { messages: { send } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+
+    await expect(
+      service.sendMessageHtmlOrThrow(123, '<b>Расписание</b>'),
+    ).rejects.toBe(error);
+  });
+
   it('sends a new message when editing an old message fails', async () => {
     const edit = jest.fn().mockRejectedValue(new Error('Message not found'));
     const send = jest.fn().mockResolvedValue(42);

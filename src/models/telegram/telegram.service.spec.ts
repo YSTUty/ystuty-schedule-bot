@@ -37,6 +37,20 @@ describe('TelegramService', () => {
     expect(callApi).not.toHaveBeenCalled();
   });
 
+  it('preserves an outgoing API error for background delivery retries', async () => {
+    const error = new Error('429: retry after 3');
+    const callApi = jest.fn().mockRejectedValue(error);
+    const service = new TelegramService(
+      { telegram: { callApi } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+
+    await expect(service.sendMessageOrThrow(123, 'Hello')).rejects.toBe(error);
+  });
+
   it('enables polling conflict retry on launch', async () => {
     const bot = {
       catch: jest.fn(),

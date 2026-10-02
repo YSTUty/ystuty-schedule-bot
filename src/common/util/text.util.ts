@@ -1,3 +1,5 @@
+import { parse } from 'node-html-parser';
+
 /**
  * Remove indents
  */
@@ -92,6 +94,12 @@ const escapables = {
 /** Example use `<code>${escapeHTML(String(str))}</code>` */
 export const escapeHTML = (s: string) =>
   s.replace(/<|>|&|"|'/g, (r) => escapables[r as keyof typeof escapables] || r);
+
+/**
+ * Возвращает читаемый текст доверенного HTML. Нужен transport-адаптерам,
+ * которым недоступна HTML-разметка, но нельзя терять содержимое сообщения.
+ */
+export const htmlToPlainText = (html: string) => parse(html).text;
 
 const escapeHtmlAttr = (s: string) =>
   s

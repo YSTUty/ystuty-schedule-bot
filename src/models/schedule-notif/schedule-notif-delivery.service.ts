@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { escapeHTML, htmlToPlainText } from '@my-common/util/text.util';
+
 import { ScheduleService } from '../schedule/schedule.service';
 
 import { ScheduleNotifDelivery } from './entity/schedule-notif-delivery.entity';
@@ -71,6 +73,7 @@ export class ScheduleNotifDeliveryService {
 
     const [, schedule] = await this.scheduleService.findNext({
       ...target.scheduleTarget,
+      withTags: true,
       ...(notif.period === ScheduleNotifPeriod.Week
         ? { isWeek: true }
         : {
@@ -79,11 +82,12 @@ export class ScheduleNotifDeliveryService {
               notif.targetDayOffset ?? ScheduleNotifTargetDayOffset.Today,
           }),
     });
-    const text = `${schedule || 'На этот день нету расписания'}\n[${target.name}]`;
+    const html = `${schedule || '<b>На этот день нету расписания</b>'}\n[${escapeHTML(target.name)}]`;
     const transport = this.transportRegistry.get(notif.transport);
     const result = await transport.sendScheduleNotif({
       recipient,
-      text,
+      text: htmlToPlainText(html),
+      html,
     });
 
     Object.assign(delivery, {

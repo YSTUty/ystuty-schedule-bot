@@ -30,10 +30,10 @@ export class TgScheduleNotifTransport
       params.recipient.type === 'user'
         ? params.recipient.userSocial.socialId
         : params.recipient.conversationId;
-    const message = await this.telegramService.sendMessage(chatId, params.text);
-    if (!message) {
-      throw new Error('Telegram did not accept the schedule notif');
-    }
+    const message = await this.telegramService.sendMessageOrThrow(
+      chatId,
+      params.html || params.text,
+    );
     return { messageId: String(message.message_id) };
   }
 

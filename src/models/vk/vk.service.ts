@@ -137,26 +137,55 @@ export class VkService implements OnModuleInit {
   ) {
     if (!this.isActive) return false;
 
-    const { extraParams } = htmlToFormattable(htmlMessage);
-    const { items } = JSON.parse(extraParams.format_data) as {
-      items: VkFormatEntity[];
-    };
-    return await this.sendMessageFormatData(
-      peerId,
-      extraParams.message,
-      items,
-      extra,
-    );
+    try {
+      const { message, items } = this.getHtmlMessageFormatData(htmlMessage);
+      return await this.sendMessageFormatDataOrThrow(
+        peerId,
+        message,
+        items,
+        extra,
+      );
+    } catch (error) {
+      if (!(await this.handleSendError(peerId, error))) {
+        this.logger.error(error);
+      }
+      return false;
+    }
   }
 
-  private async sendMessageFormatData(
+  /**
+   * Отправляет доверенный HTML и сохраняет VK API-ошибку для retry policy
+   * фоновых задач, например ежедневной рассылки.
+   */
+  public async sendMessageHtmlOrThrow(
+    peerId: number,
+    htmlMessage: string,
+    extra: MessagesSendParams = {},
+  ) {
+    if (!this.isActive) {
+      throw new Error('VK bot is inactive');
+    }
+
+    try {
+      const { message, items } = this.getHtmlMessageFormatData(htmlMessage);
+      return await this.sendMessageFormatDataOrThrow(
+        peerId,
+        message,
+        items,
+        extra,
+      );
+    } catch (error) {
+      await this.handleSendError(peerId, error);
+      throw error;
+    }
+  }
+
+  private async sendMessageFormatDataOrThrow(
     peerId: number,
     message: string,
     items: readonly VkFormatEntity[],
     extra: MessagesSendParams = {},
   ) {
-    if (!this.isActive) return false;
-
     const orderedItems = removeNestedDuplicateVkFormatEntities(items);
     const format_data = JSON.stringify({ version: '1', items: orderedItems });
     try {
@@ -168,11 +197,17 @@ export class VkService implements OnModuleInit {
         ...extra,
       });
     } catch (error) {
-      if (!(await this.handleSendError(peerId, error))) {
-        this.logger.error(error);
-      }
-      return false;
+      throw error;
     }
+  }
+
+  /** Преобразует доверенный HTML один раз для обычной и background-отправки. */
+  private getHtmlMessageFormatData(htmlMessage: string) {
+    const { extraParams } = htmlToFormattable(htmlMessage);
+    const { items } = JSON.parse(extraParams.format_data) as {
+      items: VkFormatEntity[];
+    };
+    return { message: extraParams.message, items };
   }
 
   public async tryEditOrSendMessage(

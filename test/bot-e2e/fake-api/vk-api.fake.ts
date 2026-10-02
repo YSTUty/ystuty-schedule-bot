@@ -182,11 +182,47 @@ export class FakeVkApi {
     conversationMessageId: number,
     payload: Record<string, unknown>,
   ) {
+    this.pushMessageEventToPeer(userId, userId, conversationMessageId, payload);
+  }
+
+  /** Добавляет callback из групповой беседы в настоящий Bots Long Poll. */
+  public pushChatMessageEvent(
+    userId: number,
+    conversationId: number,
+    conversationMessageId: number,
+    payload: Record<string, unknown>,
+  ) {
+    if (!Number.isSafeInteger(conversationId) || conversationId < 1) {
+      throw new Error('VK conversationId must be a positive safe integer');
+    }
+
+    this.pushMessageEventToPeer(
+      userId,
+      2e9 + conversationId,
+      conversationMessageId,
+      payload,
+    );
+  }
+
+  /** Имитирует service update приглашения сообщества в беседу. */
+  public pushChatInviteUser(userId: number, conversationId: number) {
+    this.pushMessageToPeer(userId, 2e9 + conversationId, '', undefined, {
+      type: 'chat_invite_user',
+      member_id: -this.groupId,
+    });
+  }
+
+  private pushMessageEventToPeer(
+    userId: number,
+    peerId: number,
+    conversationMessageId: number,
+    payload: Record<string, unknown>,
+  ) {
     this.pushUpdate({
       type: 'message_event',
       object: {
         user_id: userId,
-        peer_id: userId,
+        peer_id: peerId,
         conversation_message_id: conversationMessageId,
         event_id: `e2e-event-${this.nextMessageId++}`,
         payload,

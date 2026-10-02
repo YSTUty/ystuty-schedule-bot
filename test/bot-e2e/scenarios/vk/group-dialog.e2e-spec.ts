@@ -4,11 +4,20 @@ import { e2eTrace } from '../../e2e-trace.util';
 import { BotE2eHarness } from '../../harness/bot-e2e-harness';
 import { waitForBackgroundUpdate } from '../scenario.util';
 
-import type { VkSendMessageCall } from './vk-scenario.util';
+import { getVkCallbackPayload } from './vk-scenario.util';
+import type {
+  VkCallbackPayload,
+  VkEditMessageCall,
+  VkSendMessageCall,
+} from './vk-scenario.util';
 
 const conversationId = 710101;
 const peerId = 2e9 + conversationId;
 const groupMemberId = 720101;
+
+type VkOpenGroupSelectorPayload = VkCallbackPayload & {
+  phrase: 'button.select_group';
+};
 
 describe('VK group dialog (transport E2E)', () => {
   let harness: BotE2eHarness;
@@ -129,5 +138,80 @@ describe('VK group dialog (transport E2E)', () => {
       'VK',
       '← schedule uses Conversation.groupName after explicit appeal',
     );
+  });
+
+  it('ignores unaddressed group utility text but keeps its inline selector usable', async () => {
+    const selectorConversationId = 710103;
+    const selectorPeerId = 2e9 + selectorConversationId;
+    const selectorMemberId = 720103;
+
+    // VK service event records the inviter and sends the same selector card
+    // that the bot shows after it is added to a real group conversation.
+    e2eTrace('VK', '→ chat_invite_user: bot joins a chat without a group');
+    harness.vk.pushChatInviteUser(selectorMemberId, selectorConversationId);
+    const selectorCardCall = await harness.vk.waitForCall<VkSendMessageCall>(
+      'messages.send',
+      (call) =>
+        call.params.peer_id === String(selectorPeerId) &&
+        !!call.params.keyboard &&
+        String(call.params.message).includes('Чтобы посмотреть расписание'),
+    );
+    const selectorPayload = getVkCallbackPayload<VkOpenGroupSelectorPayload>(
+      selectorCardCall,
+      (payload): payload is VkOpenGroupSelectorPayload =>
+        payload.phrase === 'button.select_group',
+    );
+    await harness.waitForTransportIdle();
+
+    const helpCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ group user sends unaddressed help text');
+    harness.vk.pushChatMessage(
+      selectorMemberId,
+      selectorConversationId,
+      'Помощь',
+    );
+    await waitForBackgroundUpdate();
+    expect(harness.vk.calls.slice(helpCallIndex)).toHaveLength(0);
+
+    e2eTrace('VK', '→ group user explicitly addresses help text');
+    harness.vk.pushChatMessage(
+      selectorMemberId,
+      selectorConversationId,
+      '[club900001|YSTUty], Помощь',
+    );
+    await harness.vk.waitForCall<VkSendMessageCall>(
+      'messages.send',
+      (call) =>
+        call.params.peer_id === String(selectorPeerId) &&
+        String(call.params.message).includes('Краткий гайд'),
+    );
+    await harness.waitForTransportIdle();
+
+    const textSelectorCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ group user sends unaddressed group selector text');
+    harness.vk.pushChatMessage(
+      selectorMemberId,
+      selectorConversationId,
+      'Выбрать группу',
+    );
+    await waitForBackgroundUpdate();
+    expect(harness.vk.calls.slice(textSelectorCallIndex)).toHaveLength(0);
+
+    const callbackCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ group user presses the real group-selector callback');
+    harness.vk.pushChatMessageEvent(
+      selectorMemberId,
+      selectorConversationId,
+      selectorCardCall.result,
+      selectorPayload,
+    );
+    await harness.vk.waitForNextCall<VkEditMessageCall>(
+      callbackCallIndex,
+      'messages.edit',
+      (call) =>
+        call.params.peer_id === String(selectorPeerId) &&
+        String(call.params.message).includes('Список институтов'),
+    );
+    e2eTrace('VK', '← group callback opens institutes despite no text appeal');
   });
 });

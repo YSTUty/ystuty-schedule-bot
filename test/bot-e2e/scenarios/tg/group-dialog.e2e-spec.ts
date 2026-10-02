@@ -4,7 +4,12 @@ import { e2eTrace } from '../../e2e-trace.util';
 import { BotE2eHarness } from '../../harness/bot-e2e-harness';
 import { waitForBackgroundUpdate } from '../scenario.util';
 
-import type { TgSendMessageCall } from './tg-scenario.util';
+import { hasTgCallback } from './tg-scenario.util';
+import type {
+  TgAnswerCallbackCall,
+  TgEditMessageCall,
+  TgSendMessageCall,
+} from './tg-scenario.util';
 
 const groupChat = {
   id: -100710101,
@@ -134,5 +139,85 @@ describe('Telegram group dialog (transport E2E)', () => {
       'TG',
       '← schedule uses Conversation.groupName after explicit appeal',
     );
+  });
+
+  it('ignores unaddressed group utility text but keeps its inline selector usable', async () => {
+    const selectorChat = {
+      ...groupChat,
+      id: -100710103,
+      title: 'E2E selector chat',
+    };
+    const selectorMember = { ...groupMember, id: 710103 };
+
+    // `my_chat_member` records this user as the inviter and produces the
+    // initial group-selector card that a real group member can press.
+    e2eTrace('TG', '→ my_chat_member: bot joins a chat without a group title');
+    harness.telegram.pushBotChatMembership(selectorMember, selectorChat);
+    const selectorCardCall =
+      await harness.telegram.waitForCall<TgSendMessageCall>(
+        'sendMessage',
+        (call) =>
+          Number(call.params.chat_id) === selectorChat.id &&
+          hasTgCallback(call.result, 'button.select_group'),
+      );
+    await harness.waitForTransportIdle();
+
+    const helpCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group user sends unaddressed help text');
+    harness.telegram.pushChatText(selectorMember, selectorChat, 'Помощь');
+    await waitForBackgroundUpdate();
+    expect(
+      harness.telegram.calls
+        .slice(helpCallIndex)
+        .filter((call) => call.method !== 'getUpdates'),
+    ).toHaveLength(0);
+
+    e2eTrace('TG', '→ group user explicitly addresses help text');
+    harness.telegram.pushChatText(
+      selectorMember,
+      selectorChat,
+      'Помощь @ystuty_schedule_e2e_bot',
+    );
+    await harness.telegram.waitForCall<TgSendMessageCall>(
+      'sendMessage',
+      (call) =>
+        Number(call.params.chat_id) === selectorChat.id &&
+        String(call.params.text).includes('Краткий гайд'),
+    );
+    await harness.waitForTransportIdle();
+
+    const textSelectorCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group user sends unaddressed group selector text');
+    harness.telegram.pushChatText(
+      selectorMember,
+      selectorChat,
+      'Выбрать группу',
+    );
+    await waitForBackgroundUpdate();
+    expect(
+      harness.telegram.calls
+        .slice(textSelectorCallIndex)
+        .filter((call) => call.method !== 'getUpdates'),
+    ).toHaveLength(0);
+
+    const callbackCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group user presses the real group-selector callback');
+    const callbackId = harness.telegram.pushCallback(
+      selectorMember,
+      'button.select_group',
+      selectorCardCall.result,
+    );
+    const callbackAnswer =
+      await harness.telegram.waitForNextCall<TgAnswerCallbackCall>(
+        callbackCallIndex,
+        'answerCallbackQuery',
+      );
+    expect(callbackAnswer.params.callback_query_id).toBe(callbackId);
+    await harness.telegram.waitForNextCall<TgEditMessageCall>(
+      callbackCallIndex,
+      'editMessageText',
+      (call) => String(call.params.text).includes('Список институтов'),
+    );
+    e2eTrace('TG', '← group callback opens institutes despite no text appeal');
   });
 });

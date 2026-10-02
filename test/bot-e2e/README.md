@@ -56,6 +56,7 @@ background pass from outliving a fake API during teardown.
 | Same-poll burst and transport/session isolation                            | two Telegram users                                                                     | two VK users                                                     |
 | Group `/start` access policy and conversation persistence                  | unaddressed command is ignored; explicit appeal creates the chat without private cards | the same policy is checked for VK `message_new` from a chat peer |
 | Group title → `Conversation.groupName` → schedule                           | title is parsed from `my_chat_member`; only an addressed schedule request is answered  | title is parsed from `chat_title_update`; only an addressed request is answered |
+| Group help and group selector access policy                                  | unaddressed text is ignored; selector callback still opens institutes                    | the same policy is checked with a chat `message_event` callback                 |
 | VK `message_allow` / `message_deny` persistence without outgoing reply     | not applicable                                                                         | yes                                                              |
 
 The suite intentionally does **not** replace focused service specs for VK

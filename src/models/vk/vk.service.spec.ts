@@ -62,6 +62,68 @@ describe('VkService', () => {
     );
   });
 
+  it('sends externally prepared supported format_data entities', async () => {
+    const send = jest.fn().mockResolvedValue(42);
+    const service = new VkService(
+      { api: { messages: { send } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+
+    await expect(
+      service.sendMessageFormatData(123, 'Документация', [
+        {
+          type: 'bold',
+          offset: 0,
+          length: 12,
+        },
+        {
+          type: 'italic',
+          offset: 0,
+          length: 4,
+        },
+        {
+          type: 'url',
+          offset: 0,
+          length: 12,
+          url: 'https://ystuty.ru',
+        },
+      ]),
+    ).resolves.toBe(42);
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        peer_id: 123,
+        message: 'Документация',
+        format_data: JSON.stringify({
+          version: '1',
+          items: [
+            {
+              type: 'bold',
+              offset: 0,
+              length: 12,
+            },
+            {
+              type: 'url',
+              offset: 0,
+              length: 12,
+              url: 'https://ystuty.ru',
+            },
+            {
+              type: 'italic',
+              offset: 0,
+              length: 4,
+            },
+          ],
+        }),
+      }),
+    );
+  });
+
   it('sends a new message when editing an old message fails', async () => {
     const edit = jest.fn().mockRejectedValue(new Error('Message not found'));
     const send = jest.fn().mockResolvedValue(42);

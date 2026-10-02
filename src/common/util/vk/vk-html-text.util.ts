@@ -190,6 +190,44 @@ function cloneEntities(entities: readonly VkFormatEntity[]): VkFormatEntity[] {
   return entities.map((entity) => ({ ...entity }));
 }
 
+/**
+ * VK применяет format_data последовательно. Охватывающая сущность должна идти
+ * раньше вложенной: некоторые внешние Markdown-конвертеры возвращают их в
+ * обратном порядке, из-за чего клиент молча игнорирует всё форматирование.
+ */
+export function sortVkFormatEntities(
+  entities: readonly VkFormatEntity[],
+): VkFormatEntity[] {
+  return cloneEntities(entities).sort(
+    (left, right) => left.offset - right.offset || right.length - left.length,
+  );
+}
+
+/**
+ * Убирает внутренний повтор того же стиля. Например, markdown quote добавляет
+ * italic на всю строку, а `_фрагмент_` внутри создаёт ещё один italic range.
+ * VK игнорирует весь format_data при таком пересечении одинаковых типов.
+ */
+export function removeNestedDuplicateVkFormatEntities(
+  entities: readonly VkFormatEntity[],
+): VkFormatEntity[] {
+  const sorted = sortVkFormatEntities(entities);
+
+  return sorted.filter(
+    (entity, entityIndex) =>
+      !sorted.slice(0, entityIndex).some((outerEntity) => {
+        const outerEnd = outerEntity.offset + outerEntity.length;
+        const entityEnd = entity.offset + entity.length;
+
+        return (
+          outerEntity.type === entity.type &&
+          outerEntity.offset <= entity.offset &&
+          outerEnd >= entityEnd
+        );
+      }),
+  );
+}
+
 function parseVkMentionMatch(text: string): RegExpMatchArray | null {
   const bracketMentionRe =
     /\B\[((id|club|event|public)\d+|[A-Za-z0-9_.]{2,32})\|[^\]\n<]+\]/;
@@ -287,7 +325,10 @@ export function htmlToFormattable(html: string): VkHtmlMessage {
     fmt,
     extraParams: {
       message: fmt.text,
-      format_data: JSON.stringify({ version: '1', items }),
+      format_data: JSON.stringify({
+        version: '1',
+        items: removeNestedDuplicateVkFormatEntities(items),
+      }),
     },
   };
 }

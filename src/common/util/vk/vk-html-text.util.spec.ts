@@ -1,6 +1,8 @@
 import {
   htmlToFormattable,
   normalizeVkMentionEntities,
+  removeNestedDuplicateVkFormatEntities,
+  sortVkFormatEntities,
   type VkFormatEntity,
 } from './vk-html-text.util';
 
@@ -99,6 +101,38 @@ describe('normalizeVkMentionEntities', () => {
       ]),
     ).toEqual([
       { type: 'url', offset: 2, length: 6, url: 'https://ystuty.ru' },
+    ]);
+  });
+});
+
+describe('sortVkFormatEntities', () => {
+  it('places a wrapping entity before its nested entity without mutating input', () => {
+    const source = [
+      { type: 'bold', offset: 8, length: 5 },
+      { type: 'italic', offset: 0, length: 20 },
+      { type: 'url', offset: 8, length: 5, url: 'https://ystuty.ru' },
+    ];
+
+    expect(sortVkFormatEntities(source)).toEqual([
+      { type: 'italic', offset: 0, length: 20 },
+      { type: 'bold', offset: 8, length: 5 },
+      { type: 'url', offset: 8, length: 5, url: 'https://ystuty.ru' },
+    ]);
+    expect(source[0]).toEqual({ type: 'bold', offset: 8, length: 5 });
+  });
+});
+
+describe('removeNestedDuplicateVkFormatEntities', () => {
+  it('removes a redundant italic range nested inside a quoted italic range', () => {
+    expect(
+      removeNestedDuplicateVkFormatEntities([
+        { type: 'italic', offset: 24, length: 7 },
+        { type: 'bold', offset: 15, length: 7 },
+        { type: 'italic', offset: 0, length: 42 },
+      ]),
+    ).toEqual([
+      { type: 'italic', offset: 0, length: 42 },
+      { type: 'bold', offset: 15, length: 7 },
     ]);
   });
 });

@@ -15,7 +15,11 @@ import * as xEnv from '@my-environment';
 
 import { SocialType } from '@my-common/constants';
 import { isVkConversationUnavailableError } from '@my-common/filter/vk-exception.filter';
-import { htmlToFormattable, type VkFormatEntity } from '@my-common/util/vk';
+import {
+  htmlToFormattable,
+  removeNestedDuplicateVkFormatEntities,
+  type VkFormatEntity,
+} from '@my-common/util/vk';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
 import { ConcurrencyService } from '../concurrency/concurrency.service';
@@ -137,14 +141,37 @@ export class VkService implements OnModuleInit {
     const { items } = JSON.parse(extraParams.format_data) as {
       items: VkFormatEntity[];
     };
+    return await this.sendMessageFormatData(
+      peerId,
+      extraParams.message,
+      items,
+      extra,
+    );
+  }
+
+  /**
+   * Низкоуровневая отправка подтверждённых VK `format_data`-сущностей.
+   * Не передавать неподдерживаемые клиентами VK типы (code, strike и т. п.).
+   */
+  public async sendMessageFormatData(
+    peerId: number,
+    message: string,
+    items: readonly VkFormatEntity[],
+    extra: MessagesSendParams = {},
+  ) {
+    if (!this.isActive) return false;
+
+    const orderedItems = removeNestedDuplicateVkFormatEntities(items);
+    const format_data = JSON.stringify({ version: '1', items: orderedItems });
     this.logger.debug(
-      `[VK][rich-text] peer=${peerId} length=${extraParams.message.length} entities=${items.length} types=${items.map((item) => item.type).join(',') || '-'}`,
+      `[VK][rich-text] peer=${peerId} length=${message.length} entities=${orderedItems.length} types=${orderedItems.map((item) => item.type).join(',') || '-'}`,
     );
     try {
       return await this.bot.api.messages.send({
         random_id: getRandomId(),
         peer_id: peerId,
-        ...extraParams,
+        message,
+        format_data,
         ...extra,
       });
     } catch (error) {

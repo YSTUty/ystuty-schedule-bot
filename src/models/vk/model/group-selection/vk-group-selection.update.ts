@@ -150,7 +150,7 @@ export class VkGroupSelectionUpdate {
     const withTrigger = !!ctx.$match?.groups?.trigger;
 
     if (ctx.isChat) {
-      if (!withTrigger && !state.appeal) {
+      if (!withTrigger && ctx.isUnaddressedGroupMessage()) {
         return;
       }
 

@@ -78,6 +78,7 @@ describe('VkSelectGroupScene', () => {
       eventPayload: { groupAction: 'select', groupName: 'ДПО' },
       is: jest.fn((types: string[]) => types.includes('message_event')),
       isMessageEventContext: jest.fn().mockReturnValue(true),
+      isUnaddressedGroupMessage: jest.fn().mockReturnValue(false),
       isChat: false,
       isDM: true,
       state: { userSocial: {} as { groupName?: string } },

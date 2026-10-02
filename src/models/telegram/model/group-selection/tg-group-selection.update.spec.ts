@@ -43,6 +43,7 @@ describe('TgGroupSelectionUpdate', () => {
       userSocial: { id: 3 },
       match: { groups: { groupName: 'ЦИС-17' } },
       callbackQuery: { data: 'selectGroup:ЦИС-17' },
+      isUnaddressedGroupMessage: jest.fn().mockReturnValue(false),
       scene,
       tryAnswerCbQuery: jest.fn(),
       deleteMessage: jest.fn(),

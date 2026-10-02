@@ -36,6 +36,7 @@ describe('Telegram MainUpdate', () => {
       updateType: 'callback_query',
       chat: { type: 'private' },
       state: {},
+      isUnaddressedGroupMessage: jest.fn().mockReturnValue(false),
       i18n: { t: jest.fn().mockReturnValue('Помощь') },
       tryAnswerCbQuery: jest.fn(),
       replyWithHTML: jest.fn(),
@@ -63,6 +64,7 @@ describe('Telegram MainUpdate', () => {
       session: {},
       user: { id: 1 },
       userSocial: { groupName: 'ЦИС-11' },
+      isUnaddressedGroupMessage: jest.fn().mockReturnValue(false),
       i18n: { t: jest.fn((phrase) => phrase) },
       replyWithHTML: jest.fn(),
     } as any;

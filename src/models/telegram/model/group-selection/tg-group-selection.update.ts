@@ -154,7 +154,7 @@ export class TgGroupSelectionUpdate {
   @Hears(selectGroupCommandRegExp)
   @Action(/selectGroup:(?<groupName>(.*))/i)
   async hearSelectGroup(@Ctx() ctx: ICbQOrMsg) {
-    const { from, chat, state, conversation, userSocial } = ctx;
+    const { from, chat, conversation, userSocial } = ctx;
     const callbackGroupName = ctx.match?.groups?.groupName;
     // Старые сообщения ещё содержат полное имя группы; новые передают hash,
     // чтобы не превысить лимит callback_data в Telegram.
@@ -167,7 +167,7 @@ export class TgGroupSelectionUpdate {
     if (!chat || chat.type !== 'private') {
       // Для текстовых команд в беседе требуется обращение к боту. Inline
       // callback уже является явным действием пользователя по кнопке.
-      if (!ctx.callbackQuery && !withTrigger && !state.appeal) {
+      if (!withTrigger && ctx.isUnaddressedGroupMessage()) {
         await ctx.tryAnswerCbQuery();
         return;
       }

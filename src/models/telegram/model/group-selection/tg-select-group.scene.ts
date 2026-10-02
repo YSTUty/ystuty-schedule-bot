@@ -124,7 +124,7 @@ export class TgSelectGroupScene extends BaseScene {
 
     // Право на inline callback проверено до входа в сцену. Для текста в
     // беседе по-прежнему требуется явное обращение к боту.
-    if (isConv && !ctx.callbackQuery && !ctx.state.appeal) {
+    if (ctx.isUnaddressedGroupMessage()) {
       return;
     }
 

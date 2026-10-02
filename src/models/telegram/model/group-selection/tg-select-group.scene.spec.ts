@@ -20,6 +20,7 @@ describe('TgSelectGroupScene', () => {
       chat: { type: 'group' },
       callbackQuery: { data: 'selectGroup:ЦИС-17' },
       state: { appeal: false },
+      isUnaddressedGroupMessage: jest.fn().mockReturnValue(false),
       scene: {
         state: { groupName: 'ЦИС-17', firstTime: false },
         leave: jest.fn(),
@@ -68,6 +69,7 @@ describe('TgSelectGroupScene', () => {
       user: null,
       userSocial: {},
       state: {},
+      isUnaddressedGroupMessage: jest.fn().mockReturnValue(false),
       scene: {
         state: { groupName: 'ЦИС-17', firstTime: false },
         leave: jest.fn(),

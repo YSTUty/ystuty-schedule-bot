@@ -86,8 +86,10 @@ export class VkSelectGroupScene {
       groupName = ctx.text;
     }
 
+    // Inline callback — это явное действие. Проверка обращения относится
+    // только к обычному тексту, полученному в беседе.
     if (
-      (isConv && !ctx.state.appeal) ||
+      ctx.isUnaddressedGroupMessage() ||
       !ctx.is(['message', 'message_event'])
     ) {
       return;

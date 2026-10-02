@@ -89,7 +89,7 @@ export class MainUpdate {
 
   @VkHearsLocale(LocalePhrase.RegExp_Start)
   async hearStart(@Ctx() ctx: IMessageContext) {
-    if (ctx.isChat && !ctx.state.appeal) {
+    if (ctx.isUnaddressedGroupMessage()) {
       return;
     }
 
@@ -211,7 +211,7 @@ export class MainUpdate {
 
   @VkHearsLocale(LocalePhrase.RegExp_Help)
   async hearHelp(@Ctx() ctx: IMessageContext) {
-    if (ctx.isChat && !ctx.state.appeal) {
+    if (ctx.isUnaddressedGroupMessage()) {
       return;
     }
 

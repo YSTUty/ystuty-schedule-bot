@@ -89,7 +89,7 @@ export class MainUpdate {
   @TgHearsLocale(LocalePhrase.RegExp_Start)
   @Start()
   async hearStart(@Ctx() ctx: IMessageContext) {
-    if (ctx.chat.type !== 'private' && !ctx.state.appeal) {
+    if (ctx.isUnaddressedGroupMessage()) {
       return;
     }
 
@@ -245,7 +245,7 @@ export class MainUpdate {
   @TgHearsLocale(LocalePhrase.RegExp_Help)
   @Action('help:open')
   async hearHelp(@Ctx() ctx: ICbQOrMsg) {
-    if (!ctx.chat || (ctx.chat.type !== 'private' && !ctx.state.appeal)) {
+    if (!ctx.chat || ctx.isUnaddressedGroupMessage()) {
       return;
     }
 

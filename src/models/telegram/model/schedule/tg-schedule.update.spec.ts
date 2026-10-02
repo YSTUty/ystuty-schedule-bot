@@ -141,6 +141,7 @@ describe('TgScheduleUpdate', () => {
       scheduleService.findNext.mockResolvedValue([0, null]);
       const ctx = {
         chat: { type: 'private' },
+        isUnaddressedGroupMessage: () => false,
         userSocial: { groupName: 'ЦИС-46' },
         match: { groups: {} },
         scene: { enter: jest.fn() },
@@ -186,6 +187,7 @@ describe('TgScheduleUpdate', () => {
       (update as any).keyboardFactory = keyboardFactory;
       const ctx = {
         chat: { type: 'private' },
+        isUnaddressedGroupMessage: () => false,
         callbackQuery: {},
         userSocial: { groupName: 'ЦИС-46' },
         match: { groups: { groupName: 'ЦИС-46', weekNumber: '3' } },

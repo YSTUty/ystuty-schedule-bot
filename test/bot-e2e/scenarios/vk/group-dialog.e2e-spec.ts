@@ -1,4 +1,5 @@
 import { SocialType } from '@my-common/constants';
+import { LocalePhrase } from '@my-interfaces';
 
 import { e2eTrace } from '../../e2e-trace.util';
 import { BotE2eHarness } from '../../harness/bot-e2e-harness';
@@ -17,6 +18,16 @@ const groupMemberId = 720101;
 
 type VkOpenGroupSelectorPayload = VkCallbackPayload & {
   phrase: 'button.select_group';
+};
+type VkScheduleWeekPayload = VkCallbackPayload & {
+  phrase: LocalePhrase.Button_Schedule_ForWeek;
+};
+type VkScheduleWeekNavigationPayload = VkCallbackPayload & {
+  phrase:
+    | LocalePhrase.Button_Schedule_PreviousWeek
+    | LocalePhrase.Button_Schedule_NextWeek;
+  groupName: string;
+  weekNumber: number;
 };
 
 describe('VK group dialog (transport E2E)', () => {
@@ -81,7 +92,7 @@ describe('VK group dialog (transport E2E)', () => {
     e2eTrace('VK', '← group conversation is persisted without private cards');
   });
 
-  it('uses the chat title as its schedule target and ignores unaddressed schedule requests', async () => {
+  it('keeps group schedule callbacks bound to their original target and falls back from edits', async () => {
     const titledConversationId = 710102;
     const titledPeerId = 2e9 + titledConversationId;
     const titledMemberId = 720102;
@@ -134,9 +145,118 @@ describe('VK group dialog (transport E2E)', () => {
         String(call.params.message).includes('E2E текущая неделя'),
     );
     expect(String(scheduleCall.params.message)).toContain('ИВТ-101');
+
+    // Callback payload уже содержит groupName. После переименования чата
+    // старое расписание не должно неожиданно переключиться на новую группу.
+    const titleUpdateCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ chat title changes to ЭК-201 after opening schedule');
+    harness.vk.pushChatTitleUpdate(
+      titledMemberId,
+      titledConversationId,
+      'ЭК-201',
+    );
+    await harness.vk.waitForNextCall<VkSendMessageCall>(
+      titleUpdateCallIndex,
+      'messages.send',
+      (call) =>
+        call.params.peer_id === String(titledPeerId) &&
+        String(call.params.message).includes('ЭК-201'),
+    );
+    await waitForBackgroundUpdate();
+    await expect(
+      harness.getConversation(SocialType.Vkontakte, titledConversationId),
+    ).resolves.toMatchObject({ groupName: 'ЭК-201' });
+
+    const weekPayload = getVkCallbackPayload<VkScheduleWeekPayload>(
+      scheduleCall,
+      (payload): payload is VkScheduleWeekPayload =>
+        payload.phrase === LocalePhrase.Button_Schedule_ForWeek,
+    );
+    const callbackCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ group user presses “Schedule for week” callback');
+    harness.vk.pushChatMessageEvent(
+      titledMemberId,
+      titledConversationId,
+      scheduleCall.result,
+      weekPayload,
+    );
+    const weekEditCall = await harness.vk.waitForNextCall<VkEditMessageCall>(
+      callbackCallIndex,
+      'messages.edit',
+      (call) =>
+        call.params.peer_id === String(titledPeerId) &&
+        String(call.params.message).includes('Расписание на') &&
+        String(call.params.message).includes('E2E'),
+    );
+    expect(weekEditCall.params.conversation_message_id).toBe(
+      String(scheduleCall.result),
+    );
+    expect(String(weekEditCall.params.message)).toContain('ИВТ-101');
+
+    const nextWeekPayload =
+      getVkCallbackPayload<VkScheduleWeekNavigationPayload>(
+        weekEditCall,
+        (payload): payload is VkScheduleWeekNavigationPayload =>
+          payload.phrase === LocalePhrase.Button_Schedule_NextWeek &&
+          typeof payload.groupName === 'string' &&
+          Number.isInteger(payload.weekNumber),
+      );
+    const nextWeekCallIndex = harness.vk.calls.length;
+    e2eTrace('VK', '→ group user navigates to the next available week');
+    harness.vk.pushChatMessageEvent(
+      titledMemberId,
+      titledConversationId,
+      scheduleCall.result,
+      nextWeekPayload,
+    );
+    const nextWeekEditCall =
+      await harness.vk.waitForNextCall<VkEditMessageCall>(
+        nextWeekCallIndex,
+        'messages.edit',
+        (call) =>
+          call.params.peer_id === String(titledPeerId) &&
+          String(call.params.message).includes('E2E следующая неделя'),
+      );
+    expect(String(nextWeekEditCall.params.message)).toContain('ИВТ-101');
+
+    const previousWeekPayload =
+      getVkCallbackPayload<VkScheduleWeekNavigationPayload>(
+        nextWeekEditCall,
+        (payload): payload is VkScheduleWeekNavigationPayload =>
+          payload.phrase === LocalePhrase.Button_Schedule_PreviousWeek &&
+          typeof payload.groupName === 'string' &&
+          Number.isInteger(payload.weekNumber),
+      );
+    const previousWeekCallIndex = harness.vk.calls.length;
+    // tryEditOrSendMessage() должен сохранить навигацию даже если VK больше
+    // не разрешает менять исходное inline-сообщение.
+    harness.vk.failNext('messages.edit', {
+      error_code: 100,
+      error_msg: 'One of the parameters specified was missing or invalid',
+    });
+    e2eTrace('VK', '→ previous-week callback cannot edit its old message');
+    harness.vk.pushChatMessageEvent(
+      titledMemberId,
+      titledConversationId,
+      scheduleCall.result,
+      previousWeekPayload,
+    );
+    await harness.vk.waitForNextCall<VkEditMessageCall>(
+      previousWeekCallIndex,
+      'messages.edit',
+    );
+    const previousWeekFallback =
+      await harness.vk.waitForNextCall<VkSendMessageCall>(
+        previousWeekCallIndex,
+        'messages.send',
+        (call) =>
+          call.params.peer_id === String(titledPeerId) &&
+          String(call.params.message).includes('E2E текущая неделя'),
+      );
+    expect(String(previousWeekFallback.params.message)).toContain('ИВТ-101');
     e2eTrace(
       'VK',
-      '← schedule uses Conversation.groupName after explicit appeal',
+      '← schedule callbacks preserve target, navigate weeks and recover from edit failure',
     );
   });
 

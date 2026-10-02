@@ -38,6 +38,7 @@ export type FakeTelegramMessage = {
     username?: string;
   };
   text?: string;
+  new_chat_title?: string;
   entities?: {
     offset: number;
     length: number;
@@ -136,6 +137,26 @@ export class FakeTelegramApi {
     const message = this.createUserMessage(user, text, chat);
     this.pushUpdate({ message });
     return message;
+  }
+
+  /** Имитирует штатное переименование group/supergroup через message update. */
+  public pushChatTitleUpdate(
+    user: FakeTelegramUser,
+    chat: Omit<FakeTelegramChat, 'first_name' | 'username'>,
+    title: string,
+  ) {
+    if (chat.type === 'private') {
+      throw new Error('pushChatTitleUpdate expects group or supergroup chat');
+    }
+
+    const updatedChat = { ...chat, title };
+    this.chats.set(updatedChat.id, updatedChat);
+    this.pushUpdate({
+      message: {
+        ...this.createUserMessage(user, '', updatedChat),
+        new_chat_title: title,
+      },
+    });
   }
 
   /** Имитирует добавление бота в чат: Telegram передаёт это через my_chat_member. */

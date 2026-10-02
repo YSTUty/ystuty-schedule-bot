@@ -1,10 +1,11 @@
 import { SocialType } from '@my-common/constants';
+import { LocalePhrase } from '@my-interfaces';
 
 import { e2eTrace } from '../../e2e-trace.util';
 import { BotE2eHarness } from '../../harness/bot-e2e-harness';
 import { waitForBackgroundUpdate } from '../scenario.util';
 
-import { hasTgCallback } from './tg-scenario.util';
+import { getTgCallbackData, hasTgCallback } from './tg-scenario.util';
 import type {
   TgAnswerCallbackCall,
   TgEditMessageCall,
@@ -22,6 +23,11 @@ const groupMember = {
   firstName: 'Участник E2E',
   username: 'e2e_group_member',
 };
+
+type TgScheduleWeekCallbackData =
+  `${LocalePhrase.Button_Schedule_ForWeek}:${string}`;
+type TgScheduleWeekNavigationCallbackData =
+  `${LocalePhrase.Button_Schedule_PreviousWeek | LocalePhrase.Button_Schedule_NextWeek}:g:${string}:week:${number}`;
 
 describe('Telegram group dialog (transport E2E)', () => {
   let harness: BotE2eHarness;
@@ -90,7 +96,7 @@ describe('Telegram group dialog (transport E2E)', () => {
     e2eTrace('TG', '← group conversation is persisted without private cards');
   });
 
-  it('uses the group title as its schedule target and ignores unaddressed schedule requests', async () => {
+  it('keeps group schedule callbacks bound to their original target and falls back from edits', async () => {
     const titledChat = { ...groupChat, id: -100710102, title: 'ИВТ-101' };
     const titledMember = { ...groupMember, id: 710102 };
 
@@ -135,9 +141,122 @@ describe('Telegram group dialog (transport E2E)', () => {
           String(call.params.text).includes('E2E текущая неделя'),
       );
     expect(String(scheduleCall.params.text)).toContain('ИВТ-101');
+
+    // Старое inline-сообщение должно хранить target внутри callback, иначе
+    // переименование чата изменит уже открытый пользователем экран.
+    const titleUpdateCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group title changes to ЭК-201 after opening schedule');
+    harness.telegram.pushChatTitleUpdate(titledMember, titledChat, 'ЭК-201');
+    await harness.telegram.waitForNextCall<TgSendMessageCall>(
+      titleUpdateCallIndex,
+      'sendMessage',
+      (call) =>
+        Number(call.params.chat_id) === titledChat.id &&
+        String(call.params.text).includes('ЭК-201'),
+    );
+    await waitForBackgroundUpdate();
+    await expect(
+      harness.getConversation(SocialType.Telegram, titledChat.id),
+    ).resolves.toMatchObject({ groupName: 'ЭК-201' });
+
+    const weekCallbackData = getTgCallbackData<TgScheduleWeekCallbackData>(
+      scheduleCall,
+      (data): data is TgScheduleWeekCallbackData =>
+        data.startsWith(`${LocalePhrase.Button_Schedule_ForWeek}:`),
+    );
+    const callbackCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group user presses “Schedule for week” callback');
+    const callbackId = harness.telegram.pushCallback(
+      titledMember,
+      weekCallbackData,
+      scheduleCall.result,
+    );
+    const weekEditCall =
+      await harness.telegram.waitForNextCall<TgEditMessageCall>(
+        callbackCallIndex,
+        'editMessageText',
+        (call) =>
+          Number(call.params.chat_id) === titledChat.id &&
+          String(call.params.text).includes('Расписание на') &&
+          String(call.params.text).includes('E2E'),
+      );
+    expect(Number(weekEditCall.params.chat_id)).toBe(titledChat.id);
+    expect(String(weekEditCall.params.text)).toContain('ИВТ-101');
+    const callbackAnswer =
+      await harness.telegram.waitForNextCall<TgAnswerCallbackCall>(
+        callbackCallIndex,
+        'answerCallbackQuery',
+      );
+    expect(callbackAnswer.params.callback_query_id).toBe(callbackId);
+
+    const nextWeekCallbackData =
+      getTgCallbackData<TgScheduleWeekNavigationCallbackData>(
+        weekEditCall,
+        (data): data is TgScheduleWeekNavigationCallbackData =>
+          data.startsWith(`${LocalePhrase.Button_Schedule_NextWeek}:g:`),
+      );
+    const nextWeekCallIndex = harness.telegram.calls.length;
+    e2eTrace('TG', '→ group user navigates to the next available week');
+    const nextWeekCallbackId = harness.telegram.pushCallback(
+      titledMember,
+      nextWeekCallbackData,
+      weekEditCall.result,
+    );
+    const nextWeekEditCall =
+      await harness.telegram.waitForNextCall<TgEditMessageCall>(
+        nextWeekCallIndex,
+        'editMessageText',
+        (call) =>
+          Number(call.params.chat_id) === titledChat.id &&
+          String(call.params.text).includes('E2E следующая неделя'),
+      );
+    expect(String(nextWeekEditCall.params.text)).toContain('ИВТ-101');
+    const nextWeekAnswer =
+      await harness.telegram.waitForNextCall<TgAnswerCallbackCall>(
+        nextWeekCallIndex,
+        'answerCallbackQuery',
+      );
+    expect(nextWeekAnswer.params.callback_query_id).toBe(nextWeekCallbackId);
+
+    const previousWeekCallbackData =
+      getTgCallbackData<TgScheduleWeekNavigationCallbackData>(
+        nextWeekEditCall,
+        (data): data is TgScheduleWeekNavigationCallbackData =>
+          data.startsWith(`${LocalePhrase.Button_Schedule_PreviousWeek}:g:`),
+      );
+    const previousWeekCallIndex = harness.telegram.calls.length;
+    // Устаревшее callback-сообщение может стать недоступным для edit. Тогда
+    // навигация обязана показать новый экран в том же чате.
+    harness.telegram.failNext('editMessageText', {
+      error_code: 400,
+      description: 'Bad Request: message to edit not found',
+    });
+    e2eTrace('TG', '→ previous-week callback cannot edit its old message');
+    const previousWeekCallbackId = harness.telegram.pushCallback(
+      titledMember,
+      previousWeekCallbackData,
+      nextWeekEditCall.result,
+    );
+    const previousWeekFallback =
+      await harness.telegram.waitForNextCall<TgSendMessageCall>(
+        previousWeekCallIndex,
+        'sendMessage',
+        (call) =>
+          Number(call.params.chat_id) === titledChat.id &&
+          String(call.params.text).includes('E2E текущая неделя'),
+      );
+    expect(String(previousWeekFallback.params.text)).toContain('ИВТ-101');
+    const previousWeekAnswer =
+      await harness.telegram.waitForNextCall<TgAnswerCallbackCall>(
+        previousWeekCallIndex,
+        'answerCallbackQuery',
+      );
+    expect(previousWeekAnswer.params.callback_query_id).toBe(
+      previousWeekCallbackId,
+    );
     e2eTrace(
       'TG',
-      '← schedule uses Conversation.groupName after explicit appeal',
+      '← schedule callbacks preserve target, navigate weeks and recover from edit failure',
     );
   });
 

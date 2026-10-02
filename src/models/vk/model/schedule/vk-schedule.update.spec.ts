@@ -74,6 +74,7 @@ describe('VkScheduleUpdate', () => {
       );
       const ctx = {
         isChat: false,
+        isUnaddressedGroupMessage: () => false,
         state: { userSocial: { groupName: 'ЦИС-46' } },
         $match: { groups: {} },
         send: jest.fn(),
@@ -122,6 +123,7 @@ describe('VkScheduleUpdate', () => {
       );
       const ctx = {
         isChat: false,
+        isUnaddressedGroupMessage: () => false,
         text: '',
         messagePayload: {
           phrase: 'button.schedule.next_week',
@@ -181,6 +183,7 @@ describe('VkScheduleUpdate', () => {
     );
     const ctx = {
       isChat: false,
+      isUnaddressedGroupMessage: () => false,
       eventPayload: {
         phrase: 'button.schedule.next_week',
         teacherId: 42,
@@ -236,6 +239,7 @@ describe('VkScheduleUpdate', () => {
     );
     const ctx = {
       isChat: false,
+      isUnaddressedGroupMessage: () => false,
       eventPayload: {
         phrase: LocalePhrase.Button_Schedule_ForTomorrow,
         groupName: 'ЦИС-46',
@@ -296,6 +300,7 @@ describe('VkScheduleUpdate', () => {
     );
     const ctx = {
       isChat: false,
+      isUnaddressedGroupMessage: () => false,
       eventPayload: {
         phrase: LocalePhrase.Button_Schedule_ForNextWeek,
         groupName: 'ЦИС-46',

@@ -71,6 +71,7 @@
     "moment": "^2.29.4",
     "nestjs-telega": "1.0.0-rc.2",
     "nestjs-vk": "^4.8.0",
+    "node-html-parser": "^7.1.0",
     "oauth": "^0.10.0",
     "p-queue": "7.4.1",
     "pg": "^8.23.0",

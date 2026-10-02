@@ -15,6 +15,7 @@ import * as xEnv from '@my-environment';
 
 import { SocialType } from '@my-common/constants';
 import { isVkConversationUnavailableError } from '@my-common/filter/vk-exception.filter';
+import { htmlToFormattable, type VkFormatEntity } from '@my-common/util/vk';
 import { IContext, IMessageContext } from '@my-interfaces/vk';
 
 import { ConcurrencyService } from '../concurrency/concurrency.service';
@@ -121,6 +122,36 @@ export class VkService implements OnModuleInit {
     } catch (error) {
       await this.handleSendError(peer_id, error);
       throw error;
+    }
+  }
+
+  /** Отправляет доверенный HTML через внутренний формат VK `format_data`. */
+  public async sendMessageHtml(
+    peerId: number,
+    htmlMessage: string,
+    extra: MessagesSendParams = {},
+  ) {
+    if (!this.isActive) return false;
+
+    const { extraParams } = htmlToFormattable(htmlMessage);
+    const { items } = JSON.parse(extraParams.format_data) as {
+      items: VkFormatEntity[];
+    };
+    this.logger.debug(
+      `[VK][rich-text] peer=${peerId} length=${extraParams.message.length} entities=${items.length} types=${items.map((item) => item.type).join(',') || '-'}`,
+    );
+    try {
+      return await this.bot.api.messages.send({
+        random_id: getRandomId(),
+        peer_id: peerId,
+        ...extraParams,
+        ...extra,
+      });
+    } catch (error) {
+      if (!(await this.handleSendError(peerId, error))) {
+        this.logger.error(error);
+      }
+      return false;
     }
   }
 

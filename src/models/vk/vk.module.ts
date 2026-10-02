@@ -20,6 +20,7 @@ import { VkFeedbackScene } from './scene/feedback.scene';
 import { VkFeedbackKeyboardFactory } from './scene/vk-feedback-keyboard.factory';
 import { VkFeedbackUpdate } from './update/feedback.update';
 import { MainUpdate } from './update/main.update';
+import { VkRichTextDebugUpdate } from './update/vk-rich-text-debug.update';
 import { VkFeedbackDeliveryService } from './vk-feedback-delivery.service';
 import { VKKeyboardFactory } from './vk-keyboard.factory';
 import { VkUnreadDialogRecoveryService } from './vk-unread-dialog-recovery.service';
@@ -40,6 +41,7 @@ const providers = [
   ...middlewares,
   // Приоритет применения слушателей
   MainUpdate,
+  VkRichTextDebugUpdate,
   VkFeedbackUpdate,
   VkScheduleUpdate,
   VkGroupSelectionUpdate,

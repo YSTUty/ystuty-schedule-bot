@@ -1,6 +1,7 @@
 import { APIError, APIErrorCode } from 'vk-io';
 
 import { SocialType } from '@my-common/constants';
+import { htmlToFormattable } from '@my-common/util/vk';
 
 import { VkService } from './vk.service';
 
@@ -37,6 +38,28 @@ describe('VkService', () => {
 
     await expect(service.sendMessage(123, 'Hello')).resolves.toBe(false);
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('sends trusted HTML as VK message and format_data', async () => {
+    const send = jest.fn().mockResolvedValue(42);
+    const service = new VkService(
+      { api: { messages: { send } } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    jest.spyOn(service, 'isActive', 'get').mockReturnValue(true);
+    const { extraParams } = htmlToFormattable('<b>Hello</b>');
+
+    await expect(service.sendMessageHtml(123, '<b>Hello</b>')).resolves.toBe(
+      42,
+    );
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ peer_id: 123, ...extraParams }),
+    );
   });
 
   it('sends a new message when editing an old message fails', async () => {

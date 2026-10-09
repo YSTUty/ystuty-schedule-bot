@@ -1,3 +1,5 @@
+import * as xEnv from '@my-environment';
+
 import { LocalePhrase } from '@my-interfaces';
 
 import {
@@ -7,6 +9,10 @@ import {
 } from './tg-schedule.update';
 
 describe('TgScheduleUpdate', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('matches a callback with a nonstandard long group name', () => {
     const match = createGroupScheduleActionRegExp(
       LocalePhrase.Button_Schedule_ForWeek,
@@ -52,6 +58,9 @@ describe('TgScheduleUpdate', () => {
   };
 
   it('opens the browser calendar for the selected group and teacher', async () => {
+    // CI не хранит адрес frontend-сервиса: задаём prerequisite сценария явно.
+    jest.replaceProperty(xEnv, 'YSTUTY_ICALENDAR_ADDRESS', 'ics.ystuty.ru');
+
     const { update, scheduleService } = createUpdate();
     const keyboard = { reply_markup: { inline_keyboard: [] } };
     scheduleService.resolveGroupName.mockReturnValue('САР-34');

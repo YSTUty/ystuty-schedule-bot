@@ -1,8 +1,23 @@
 import * as rxjs from 'rxjs';
 
+import * as xEnv from '@my-environment';
+
 import { SocialConnectService } from './social-connect.service';
 
 describe('SocialConnectService', () => {
+  beforeEach(() => {
+    // Проверяем именно polling и логирование, а не guard отключённой интеграции.
+    jest.replaceProperty(
+      xEnv,
+      'SOCAIL_CONNECT_URI',
+      'http://social-connect.test',
+    );
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   const createService = () => {
     const post = jest.fn();
     const userService = { auth: jest.fn() };

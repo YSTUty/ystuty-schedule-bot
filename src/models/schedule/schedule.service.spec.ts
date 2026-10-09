@@ -666,5 +666,69 @@ describe('ScheduleService', () => {
         'ЦИС-46',
       );
     });
+
+    it('falls back to the latest available past week only when explicitly allowed', async () => {
+      const metricsService = createMetricsService();
+      service = new ScheduleService(
+        new ScheduleApiClient({} as any),
+        {} as any,
+        {} as any,
+        metricsService as any,
+      );
+      jest.spyOn(service, 'getSchedule').mockResolvedValue({
+        cacheState: 'fresh',
+        fetchedAt: new Date('2026-09-16T08:00:00Z'),
+        isCache: true,
+        items: [
+          {
+            number: 1,
+            days: [
+              {
+                info: {
+                  type: WeekNumberType.Monday,
+                  date: '2026-09-07T00:00:00+03:00',
+                  weekNumber: 1,
+                },
+                lessons: [],
+              },
+            ],
+          },
+          {
+            number: 2,
+            days: [
+              {
+                info: {
+                  type: WeekNumberType.Monday,
+                  date: '2026-09-14T00:00:00+03:00',
+                  weekNumber: 2,
+                },
+                lessons: [],
+              },
+            ],
+          },
+        ],
+      });
+
+      await expect(
+        service.getScheduleWeekView({
+          targetId: 'ЦИС-46',
+          targetType: 'group',
+          requestedWeekNumber: 3,
+        }),
+      ).resolves.toBeNull();
+
+      await expect(
+        service.getScheduleWeekView({
+          targetId: 'ЦИС-46',
+          targetType: 'group',
+          requestedWeekNumber: 3,
+          allowPastFallback: true,
+        }),
+      ).resolves.toMatchObject({
+        weekNumber: 2,
+        previousWeekNumber: 1,
+        nextWeekNumber: undefined,
+      });
+    });
   });
 });

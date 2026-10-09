@@ -757,6 +757,8 @@ export class TgScheduleUpdate {
     const requestedWeekNumber = Number.isInteger(weekNumberFromMatch)
       ? weekNumberFromMatch
       : getScheduleAcademicWeekNumber(getScheduleTargetDate(skipDays));
+    const allowPastFallback =
+      !initialIsNextWeek && !Number.isInteger(weekNumberFromMatch);
 
     if (!ctx.callbackQuery) {
       await ctx.sendChatAction('typing');
@@ -768,6 +770,7 @@ export class TgScheduleUpdate {
       requestedWeekNumber,
       withTags: true,
       presentation,
+      allowPastFallback,
     });
     let message: string;
     let dateRange = getScheduleWeekDateRange(skipDays);

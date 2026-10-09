@@ -214,6 +214,7 @@ describe('TgScheduleUpdate', () => {
         requestedWeekNumber: 3,
         withTags: true,
         presentation: 'compact',
+        allowPastFallback: false,
       });
       expect(ctx.i18n.t).toHaveBeenCalledWith('page.schedule.week_title', {
         weekNumber: 3,
@@ -230,5 +231,34 @@ describe('TgScheduleUpdate', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('allows the regular current-week request to show the latest past week', async () => {
+    const { update, scheduleService } = createUpdate();
+    scheduleService.getScheduleWeekView.mockResolvedValue(null);
+    (update as any).keyboardFactory = {
+      getScheduleInline: jest.fn(() => ({})),
+    };
+    const ctx = {
+      chat: { type: 'private' },
+      isUnaddressedGroupMessage: () => false,
+      userSocial: { groupName: 'ЦИС-46' },
+      match: { groups: {} },
+      scene: { enter: jest.fn() },
+      sendChatAction: jest.fn(),
+      replyWithHTML: jest.fn(),
+      sendStreamingMessage: jest.fn(),
+      i18n: { t: jest.fn((phrase) => phrase) },
+    } as any;
+
+    await update.hearSchedul_Week(ctx);
+
+    expect(scheduleService.getScheduleWeekView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetId: 'ЦИС-46',
+        targetType: 'group',
+        allowPastFallback: true,
+      }),
+    );
   });
 });

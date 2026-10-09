@@ -429,6 +429,8 @@ export class VkScheduleUpdate {
     const requestedWeekNumber = Number.isInteger(weekNumberFromPayload)
       ? weekNumberFromPayload
       : getScheduleAcademicWeekNumber(getScheduleTargetDate(skipDays));
+    const allowPastFallback =
+      !initialIsNextWeek && !Number.isInteger(weekNumberFromPayload);
     const target = await this.resolveScheduleTarget(
       ctx,
       payload,
@@ -444,6 +446,7 @@ export class VkScheduleUpdate {
       requestedWeekNumber,
       withTags: true,
       presentation,
+      allowPastFallback,
     });
     let message: string;
     let dateRange = getScheduleWeekDateRange(skipDays);

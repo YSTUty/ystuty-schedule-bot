@@ -87,6 +87,14 @@ describe('VkScheduleUpdate', () => {
 
       await update.onScheduleWeekNavigation(ctx);
 
+      expect(scheduleService.getScheduleWeekView).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetId: 'ЦИС-46',
+          targetType: 'group',
+          allowPastFallback: true,
+        }),
+      );
+
       expect((update as any).vkService.sendMessageHtml).toHaveBeenCalledWith(
         expect.any(Number),
         'Нет расписания: 7–13 сентября\n\n[ЦИС-46]',
@@ -147,6 +155,7 @@ describe('VkScheduleUpdate', () => {
         requestedWeekNumber: 3,
         withTags: true,
         presentation: 'compact',
+        allowPastFallback: false,
       });
       expect(keyboardFactory.getSchedule).toHaveBeenCalledWith(
         ctx,
@@ -319,6 +328,14 @@ describe('VkScheduleUpdate', () => {
     } as any;
 
     await update.onScheduleWeekNavigation(ctx);
+
+    expect(scheduleService.getScheduleWeekView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetId: 'ЦИС-46',
+        targetType: 'group',
+        allowPastFallback: false,
+      }),
+    );
 
     expect(vkService.tryEditOrSendMessageHtml).toHaveBeenCalledWith(
       123,

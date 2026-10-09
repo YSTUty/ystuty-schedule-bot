@@ -559,7 +559,8 @@ export class ScheduleService implements OnModuleInit {
 
   /**
    * Находит ближайшую доступную неделю не раньше запрошенной и формирует
-   * метаданные для перехода между неделями одного target.
+   * метаданные для перехода между неделями одного target. Для обычного
+   * открытия текущей недели можно разрешить fallback к последней прошедшей.
    */
   public async getScheduleWeekView({
     targetId,
@@ -567,12 +568,15 @@ export class ScheduleService implements OnModuleInit {
     requestedWeekNumber,
     withTags = false,
     presentation = 'compact',
+    allowPastFallback = false,
   }: {
     targetId: string | number;
     targetType: 'group' | 'teacher';
     requestedWeekNumber: number;
     withTags?: boolean;
     presentation?: SchedulePresentation;
+    /** Разрешает показать последнюю доступную прошедшую неделю вместо пустого ответа. */
+    allowPastFallback?: boolean;
   }): Promise<ScheduleWeekView | null | false> {
     this.metricsService.incrementScheduleRequest(targetType, targetId);
 
@@ -611,9 +615,18 @@ export class ScheduleService implements OnModuleInit {
         weekIndex >= 0
           ? weekIndex
           : weeks.findIndex((item) => item.week.number > requestedWeekNumber);
-      if (selectedIndex < 0) return null;
+      // Исторический fallback нужен только при обычном открытии «На неделю».
+      // Callback навигации и запрос следующей недели не должны незаметно
+      // перекидывать пользователя на другую, уже прошедшую неделю.
+      const resolvedIndex =
+        selectedIndex >= 0
+          ? selectedIndex
+          : allowPastFallback
+            ? weeks.length - 1
+            : -1;
+      if (resolvedIndex < 0) return null;
 
-      const selected = weeks[selectedIndex];
+      const selected = weeks[resolvedIndex];
       const message = formatScheduleWeekDays({
         week: selected.week,
         addHashTag: true,
@@ -630,8 +643,8 @@ export class ScheduleService implements OnModuleInit {
           selected.weekStartDate,
         ),
         message: this.appendScheduleCacheNotice(message, response),
-        previousWeekNumber: weeks[selectedIndex - 1]?.week.number,
-        nextWeekNumber: weeks[selectedIndex + 1]?.week.number,
+        previousWeekNumber: weeks[resolvedIndex - 1]?.week.number,
+        nextWeekNumber: weeks[resolvedIndex + 1]?.week.number,
       };
     } catch (error) {
       this.logger.error(

@@ -20,6 +20,7 @@ import { ScheduleService } from '../schedule/schedule.service';
 
 const CHAT_ADMINS_CACHE_TTL_SECONDS = 120;
 const SEND_MESSAGE_TIMEOUT_MS = 20e3;
+const POLLING_RECONNECT_DELAY_MS = 5e3;
 
 type CachedChatAdmin = {
   user: { id: ChatMember['user']['id'] };
@@ -43,6 +44,9 @@ type ExtraReplyMessage = Omit<Opts<'sendMessage'>, 'chat_id' | 'text'>;
 @Injectable()
 export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(TelegramService.name);
+  private pollingLaunchPromise?: Promise<void>;
+  private pollingReconnectTimer?: NodeJS.Timeout;
+  private isShuttingDown = false;
 
   constructor(
     @InjectBot() public readonly bot: Telegraf,
@@ -55,9 +59,9 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
     return !!xEnv.SOCIAL_TELEGRAM_BOT_TOKEN;
   }
 
-  async onModuleInit() {
+  onModuleInit() {
     if (!this.isActive) return;
-    this.launch().catch((e) => this.logger.error(e));
+    void this.launch().catch((error) => this.logger.error(error));
   }
 
   async onApplicationShutdown(signal: string) {
@@ -65,33 +69,21 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   }
 
   public async launch() {
+    this.isShuttingDown = false;
     this.bot.catch((err: Error, ctx) => {
       this.logger.error(`OnUpdateType(${ctx?.updateType}): ${err}`, err.stack);
     });
 
     try {
       await this.bot.telegram.setMyCommands(this.baseCommands());
-      this.bot
-        .launch({
-          allowedUpdates: [
-            'message',
-            'message_reaction',
-            'message_reaction_count',
-            'inline_query',
-            'callback_query',
-            'chat_member',
-            'my_chat_member',
-          ],
-          polling: {
-            retryOnConflict: true,
-          },
-        })
-        .catch((err) => this.logger.error(err));
-      this.logger.log('[Bot] Started');
-      await this.notifyAdmin('🚀 BotServer is running');
     } catch (err) {
-      this.logger.error(err);
+      // Сбой настройки меню не должен оставлять polling выключенным.
+      this.logger.error('Failed to set Telegram bot commands', err);
     }
+
+    this.startPolling();
+    this.logger.log('[Bot] Started');
+    await this.notifyAdmin('🚀 BotServer is running');
   }
 
   public baseCommands(type?: 'start' | 'end') {
@@ -112,7 +104,89 @@ export class TelegramService implements OnModuleInit, OnApplicationShutdown {
   }
 
   public async shutdown(signal: string) {
+    this.isShuttingDown = true;
+    if (this.pollingReconnectTimer) {
+      clearTimeout(this.pollingReconnectTimer);
+      this.pollingReconnectTimer = undefined;
+    }
     await this.notifyAdmin(`⚠️ BotServer shutdown [${signal}]`);
+  }
+
+  /**
+   * `telegraf-hardened` сам повторяет ожидаемые API и сетевые ошибки.
+   * Этот fallback нужен только если polling уже завершился целиком, например
+   * после HTML-ответа reverse proxy вместо JSON.
+   */
+  private startPolling() {
+    if (this.isShuttingDown || this.pollingLaunchPromise) return;
+
+    const pollingPromise = this.bot.launch({
+      allowedUpdates: [
+        'message',
+        'message_reaction',
+        'message_reaction_count',
+        'inline_query',
+        'callback_query',
+        'chat_member',
+        'my_chat_member',
+      ],
+      polling: {
+        retryOnConflict: true,
+      },
+    });
+
+    this.pollingLaunchPromise = pollingPromise;
+    void pollingPromise.then(
+      () => this.handlePollingExit(),
+      (error) => this.handlePollingExit(error),
+    );
+  }
+
+  private handlePollingExit(error?: unknown) {
+    this.pollingLaunchPromise = undefined;
+    if (this.isShuttingDown) return;
+
+    const code = this.getTelegramErrorCode(error);
+    if (code === 401) {
+      this.logger.error(
+        '[Bot] Polling stopped permanently: Telegram rejected the bot token',
+        error instanceof Error ? error.stack : String(error),
+      );
+      return;
+    }
+
+    if (error) {
+      this.logger.error(
+        '[Bot] Polling stopped unexpectedly; scheduling reconnect',
+        error instanceof Error ? error.stack : String(error),
+      );
+    } else {
+      this.logger.warn(
+        '[Bot] Polling stopped unexpectedly; scheduling reconnect',
+      );
+    }
+    this.schedulePollingReconnect();
+  }
+
+  private schedulePollingReconnect() {
+    if (this.isShuttingDown || this.pollingReconnectTimer) return;
+
+    this.logger.warn(
+      `[Bot] Reconnecting polling in ${POLLING_RECONNECT_DELAY_MS} ms`,
+    );
+    this.pollingReconnectTimer = setTimeout(() => {
+      this.pollingReconnectTimer = undefined;
+      this.startPolling();
+    }, POLLING_RECONNECT_DELAY_MS);
+    this.pollingReconnectTimer.unref?.();
+  }
+
+  private getTelegramErrorCode(error: unknown) {
+    if (!error || typeof error !== 'object' || !('code' in error)) {
+      return undefined;
+    }
+    const { code } = error as { code?: unknown };
+    return typeof code === 'number' ? code : undefined;
   }
 
   public async sendMessage(

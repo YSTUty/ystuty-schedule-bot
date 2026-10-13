@@ -54,7 +54,7 @@ describe('TelegramService', () => {
   it('enables polling conflict retry on launch', async () => {
     const bot = {
       catch: jest.fn(),
-      launch: jest.fn().mockResolvedValue(undefined),
+      launch: jest.fn(() => new Promise<void>(() => undefined)),
       telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
     };
     const service = new TelegramService(
@@ -72,6 +72,101 @@ describe('TelegramService', () => {
         polling: { retryOnConflict: true },
       }),
     );
+  });
+
+  it('restarts polling after a proxy returns an HTML error page', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const proxyError = new SyntaxError(
+        'Unexpected token \'<\', "<html>" is not valid JSON',
+      );
+      const bot = {
+        catch: jest.fn(),
+        launch: jest
+          .fn()
+          .mockRejectedValueOnce(proxyError)
+          .mockImplementationOnce(() => new Promise<void>(() => undefined)),
+        telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
+      };
+      const service = new TelegramService(
+        bot as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+      jest.spyOn(service, 'notifyAdmin').mockResolvedValue(false);
+      const loggerError = jest.spyOn((service as any).logger, 'error');
+
+      await service.launch();
+      await Promise.resolve();
+
+      expect(loggerError).toHaveBeenCalledWith(
+        '[Bot] Polling stopped unexpectedly; scheduling reconnect',
+        proxyError.stack,
+      );
+      expect(bot.launch).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(5e3);
+
+      expect(bot.launch).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('cancels a pending polling reconnect during shutdown', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const bot = {
+        catch: jest.fn(),
+        launch: jest.fn().mockRejectedValue(new Error('Proxy unavailable')),
+        telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
+      };
+      const service = new TelegramService(
+        bot as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+      jest.spyOn(service, 'notifyAdmin').mockResolvedValue(false);
+
+      await service.launch();
+      await Promise.resolve();
+      await service.shutdown('SIGTERM');
+      await jest.advanceTimersByTimeAsync(5e3);
+
+      expect(bot.launch).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not retry polling when Telegram rejects the bot token', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const bot = {
+        catch: jest.fn(),
+        launch: jest.fn().mockRejectedValue({ code: 401 }),
+        telegram: { setMyCommands: jest.fn().mockResolvedValue(true) },
+      };
+      const service = new TelegramService(
+        bot as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+      jest.spyOn(service, 'notifyAdmin').mockResolvedValue(false);
+
+      await service.launch();
+      await jest.advanceTimersByTimeAsync(5e3);
+
+      expect(bot.launch).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('sets an authorization command for an unauthorized private-chat user', async () => {
